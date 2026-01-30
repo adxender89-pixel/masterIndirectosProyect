@@ -399,3 +399,11 @@
     color: black !important;
     
 }
+/* casi pegado */
+.topTables {
+    margin-bottom: 0.25rem; 
+}
+.sapMITBContent {
+    padding-top: 0.2rem !important;
+    padding-bottom: 0.2rem !important;
+}
