@@ -255,7 +255,7 @@ sap.ui.define(
       _mapKeyToView: function (sKey) {
         return {
           dashboard: "Dashboard",
-          anticipados: "Anticipados",
+          corrientes: "Anticipados",
           inmov: "Inmovilizados",
         }[sKey];
       },
