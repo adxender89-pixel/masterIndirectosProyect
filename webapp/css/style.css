@@ -406,3 +406,29 @@
     color: black !important;
     
 }
+/* Icona TreeTable */
+.sapUiTableGroupIcon::before, .sapUiTableTreeIcon::before {
+    font-family: "SAP-icons";
+    font-size: 0.6rem;
+    color: #0854a0;
+}
+/* Menor padding TreeTable */
+.sapUiTableDataCell>.sapUiTableCellInner, .sapUiTableCreationRow .sapUiTableCreationRowForm .sapUiTableCell>.sapUiTableCellInner
+ {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    padding: 0rem;
+    white-space: nowrap;
+}
+/* eliminar border top derecha espacio */
+.sapUiTableCellDummy,
+.sapUiTableCellDummy * {
+    border-top: none !important;
+    border-right: none !important;
+    border-left: none !important;
+    background: #f9f9f9;
+}
+
+.sapUiTableTr {
+    border-top: none !important;
+}
