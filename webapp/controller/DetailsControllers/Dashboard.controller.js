@@ -62,7 +62,8 @@ sap.ui.define([
                             impTot: "89.905,64",
                             percTotCost: "0,39%",
                             percTotalCD: "0,41%",
-                            percTotVenta: "0,36%"
+                            percTotVenta: "0,36%",
+                            type: "data"
                         },
                         {
                             concepto: "I.002 - Inmovilizados",
@@ -71,16 +72,47 @@ sap.ui.define([
                             impTot: "151.975,53",
                             percTotCost: "0,66%",
                             percTotalCD: "0,69%",
-                            percTotVenta: "0,60%"
+                            percTotVenta: "0,60%",
+                            type: "data"
                         },
                         {
                             concepto: "I.003 - Corrientes",
-                            impEjec: "315.984,24",
-                            impPend: "56.247,62",
-                            impTot: "372.231,86",
+                            impEjec: "289.181,09",
+                            impPend: "35991,29",
+                            impTot: "402.231,86",
                             percTotCost: "1,62%",
                             percTotalCD: "1,69%",
-                            percTotVenta: "1,48%"
+                            percTotVenta: "1,48%",
+                            type: "data"
+                        },
+                        {
+                            concepto: "Personal",
+                            impEjec: "215.984,24",
+                            impPend: "44.998,10",
+                            impTot: "297.785,49",
+                            percTotCost: "1,29%",
+                            percTotalCD: "1,35%",
+                            percTotVenta: "1,48%",
+                            type: "info"
+                        }, {
+                            concepto: "Financiero",
+                            impEjec: "10000,00",
+                            impPend: "20000,00",
+                            impTot: "30000,00",
+                            percTotCost: "0,75%",
+                            percTotalCD: "1,15%",
+                            percTotVenta: "1,46%",
+                            type: "info"
+                        },
+                        {
+                            concepto: "Resto",
+                            impEjec: "63.196,85",
+                            impPend: "35.991,29",
+                            impTot: "251.975,53",
+                            percTotCost: "1,09%",
+                            percTotalCD: "1,14%",
+                            percTotVenta: "1,00%",
+                            type: "info"
                         },
                         {
                             concepto: "I.004 - Diferidos",
@@ -89,7 +121,8 @@ sap.ui.define([
                             impTot: "251.975,53",
                             percTotCost: "1,09%",
                             percTotalCD: "1,14%",
-                            percTotVenta: "1,00%"
+                            percTotVenta: "1,00%",
+                            type: "data"
                         },
                         {
                             concepto: "I.005 - Externos",
@@ -98,7 +131,8 @@ sap.ui.define([
                             impTot: "89.162,94",
                             percTotCost: "0,39%",
                             percTotalCD: "0,40%",
-                            percTotVenta: "0,35%"
+                            percTotVenta: "0,35%",
+                            type: "data"
                         },
                         {
                             concepto: "TOTAL GASTOS GESTIÓN",
@@ -107,16 +141,28 @@ sap.ui.define([
                             impTot: "955.251,50",
                             percTotCost: "4,15%",
                             percTotalCD: "4,33%",
-                            percTotVenta: "3,79%"
+                            percTotVenta: "3,79%",
+                            type: "total"
+                        }, {
+                            concepto: "RESULTADO",
+                            impEjec: "1.000.000,00",
+                            impPend: "500.000,00",
+                            impTot: "1.500.000,00",
+                            percTotCost: "30,00%",
+                            percTotalCD: "50,00%",
+                            percTotVenta: "10,00%",
+                            type: "total"
                         }
+
+
                     ]
                 };
                 this.getView().setModel(
                     new sap.ui.model.json.JSONModel(oData),
-                    "oModelDashboard" 
+                    "oModelDashboard"
                 );
-                const dataGraphicBar = structuredClone(oData.Dashboard);
-                dataGraphicBar.length = oData.Dashboard.length - 1;
+                let dataGraphicBar = structuredClone(oData.Dashboard);
+                dataGraphicBar = dataGraphicBar.filter(item => item.type === "data");
 
                 const oGraphicBarData = {
                     labelsData: dataGraphicBar.map(item => item.concepto),
