@@ -54,44 +54,73 @@ sap.ui.define([
         /**
          * Gestiona la visibilidad de columnas extendidas al expandir nodos en la TreeTable.
          */
-        onToggleOpenState: function (oEvent) {
+         onToggleOpenState: function (oEvent) {
             var oTable = oEvent.getSource();
             var sTableId = oTable.getId();
             var bExpanded = oEvent.getParameter("expanded");
+            var iRowIndex = oEvent.getParameter("rowIndex");
             var oUiModel = this.getView().getModel("ui");
 
             var oColMonths = this.byId("colMonths");
             var oColNew = this.byId("colNew");
 
-            if (!bExpanded) {
-                // Si se contrae un nodo, verifica si todavía quedan otros expandidos para mantener las columnas.
-                var bAnyExpanded = false;
+            // =========================
+            // EXPAND
+            // =========================
+            if (bExpanded) {
+                var oContext = oTable.getContextByIndex(iRowIndex);
+                var oObject = oContext && oContext.getObject();
+
+                var bIsDetailLevel =
+                    oObject &&
+                    oObject.categories &&
+                    oObject.categories.length > 0 &&
+                    oObject.categories[0].isGroup === true;
+
+                if (oColMonths) oColMonths.setVisible(bIsDetailLevel);
+                if (oColNew) oColNew.setVisible(bIsDetailLevel);
+            }
+
+            // =========================
+            // COLLAPSE
+            // =========================
+            else {
+                var bAnyDetailExpanded = false;
                 var oBinding = oTable.getBinding("rows");
 
                 if (oBinding) {
                     for (var i = 0; i < oBinding.getLength(); i++) {
                         if (oTable.isExpanded(i)) {
-                            bAnyExpanded = true;
-                            break;
+                            var oCtx = oTable.getContextByIndex(i);
+                            var oObj = oCtx && oCtx.getObject();
+
+                            if (
+                                oObj &&
+                                oObj.categories &&
+                                oObj.categories[0] &&
+                                oObj.categories[0].isGroup === true
+                            ) {
+                                bAnyDetailExpanded = true;
+                                break;
+                            }
                         }
                     }
                 }
 
-                if (!bAnyExpanded) {
+                if (!bAnyDetailExpanded) {
                     if (oColMonths) oColMonths.setVisible(false);
                     if (oColNew) oColNew.setVisible(false);
 
                     this._aGroupRanges = [];
                     oUiModel.setProperty("/showStickyAgrupador", false);
-                    return;
+                    oUiModel.setProperty("/showStickyParent", false);
+                    oUiModel.setProperty("/showStickyChild", false);
                 }
-            } else {
-                // Al expandir, asegura que las columnas de detalle sean visibles.
-                if (oColMonths) oColMonths.setVisible(true);
-                if (oColNew) oColNew.setVisible(true);
             }
 
-            // Refresca la lógica de estilos y scroll de la tabla.
+            // =========================
+            // REFRESH POST-TOGGLE
+            // =========================
             setTimeout(function () {
                 this._refreshAfterToggle(sTableId);
             }.bind(this), 0);

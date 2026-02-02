@@ -2,12 +2,11 @@
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
     xmlns:t="sap.ui.table" height="100%"
-    xmlns:vn="masterindirectos.control"
+    xmlns:vn="masterindirectos.control" class="vistaDashboard"
     xmlns:core="sap.ui.core"
     xmlns:l="sap.ui.layout">
 
-    <VBox height="100%" width="100%" class="sapUiSizeCompact">
-
+    <VBox height="100%" width="100%">
         <l:Grid defaultSpan="L4 M6 S12" vSpacing="0" class="sapUiSmallMarginTop">
             <t:Table rows="{oModelCosteTotal>/}" visibleRowCount="1" selectionMode="None" class="technicalTable yellowHeader">
                 <t:columns>
@@ -78,7 +77,7 @@
                 </t:columns>
             </t:Table>
         </l:Grid>
-        <HBox height="20%" justifyContent="SpaceAround" class="sapUiSmallMarginTop">
+        <HBox height="10rem" justifyContent="SpaceAround" class="maxHeight">
 
             <vn:GraphicPie id="idGraphicPieCosteTotal" data="{oModelTartas>/datasets/0}" labels="{oModelTartas>/labels}" title="{i18n>dbCosteTotal}"/>
 
@@ -90,7 +89,7 @@
 
 
 
-        <t:Table class="sapUiMediumMarginBeginEnd" selectionMode="None" rowHeight="20" rows="{oModelDashboard>/Dashboard}" visibleRowCount="6">
+        <t:Table class="sapUiMediumMarginBeginEnd" selectionMode="None" rowHeight="20" rows="{oModelDashboard>/Dashboard}" visibleRowCount="10">
             <t:columns>
 
                 <t:Column>
@@ -132,21 +131,23 @@
                 <t:Column>
                     <Label text="{i18n>totVentas%}" design="Bold" />
                     <t:template>
-
                         <Text text="{oModelDashboard>percTotVenta}" textAlign="End" width="100%" />
                     </t:template>
                 </t:Column>
             </t:columns>
         </t:Table>
 
-        <VBox height="100%">
-
-            <vn:GraphicBar data="{oModelGraphicBar>/}" height="100%" barThickness="5" borderRadius="0" grouped="true">
+        <HBox height="100%" class="maxHeight">
+            <layoutData>
+                <FlexItemData growFactor="1"/>
+            </layoutData>
+            <vn:GraphicBar data="{oModelGraphicBar>/}" class="barras" barThickness="5" borderRadius="0" grouped="true">
                 <vn:layoutData>
                     <FlexItemData growFactor="1"/>
                 </vn:layoutData>
 
             </vn:GraphicBar>
-        </VBox>
+        </HBox>
+
     </VBox>
 </mvc:View>

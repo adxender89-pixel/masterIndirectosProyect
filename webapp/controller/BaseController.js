@@ -220,7 +220,7 @@ sap.ui.define([
 
             aYears.forEach(function (iYear) {
                 var oColumn = new sap.ui.table.Column({
-                    width: "auto",
+                     width: "8rem",
                     minWidth: 60,
                     autoResizable: true,
                     label: new sap.m.Button({

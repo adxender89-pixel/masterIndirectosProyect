@@ -18,7 +18,7 @@ sap.ui.define(
           new JSONModel({
             idNode: "FIDEFERRC5081",
             profitCenter: "C5081",
-            profitCenterDescription: "FASA SERVICIO DE MAQUINARIA",
+            profitCenterDescription: "FASE SERVICIO DE MAQUINARIA",
             application: "FIDE",
             hierarchy: "FERR",
             normList: [],
@@ -171,7 +171,7 @@ sap.ui.define(
         );
 
         this._bNodeExpanded = false;
-        
+
         // Inicializa el modelo UI para controlar la visibilidad de cabeceras fijas y datos sticky.
         this.getView().setModel(
           new sap.ui.model.json.JSONModel({
@@ -237,6 +237,10 @@ sap.ui.define(
 
         if (!this._mViews[sKey]) {
           this._mViews[sKey] = sap.ui.xmlview({
+            height: "100%",
+            layoutData: new sap.m.FlexItemData({
+              growFactor: 1
+            }),
             viewName:
               "masterindirectos.view.DetailsViews." + this._mapKeyToView(sKey),
           });
@@ -251,7 +255,7 @@ sap.ui.define(
       _mapKeyToView: function (sKey) {
         return {
           dashboard: "Dashboard",
-          anticipados: "Anticipados",
+          corrientes: "Anticipados",
           inmov: "Inmovilizados",
         }[sKey];
       },
