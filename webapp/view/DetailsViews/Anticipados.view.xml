@@ -170,7 +170,7 @@
                         <t:template><Text text="{pricetotal}" wrapping="false" /></t:template>
                     </t:Column>
 
-                    <t:Column id="colStart" width="85px">
+                    <t:Column id="colStart" width="85px" hAlign="Center">
                         <t:label>
                             <VBox width="100%" class="fullWidthHeader">
                                 <Label text="{i18n>dbReparto}" design="Bold" textAlign="Center" />
@@ -185,7 +185,7 @@
                         <t:template><Text text="{size}" visible="{= !!${size} }" /></t:template>
                     </t:Column>
 
-                    <t:Column id="colEnd" width="85px">
+                    <t:Column id="colEnd" width="85px" hAlign="Center">
                         <t:label>
                             <VBox width="100%" class="fullWidthHeader">
                                 <Label text="{i18n>dbPendPlanificar}" design="Bold" textAlign="Center" />
@@ -200,7 +200,7 @@
                         <t:template><Text text="{last}" visible="{= !!${last} }" /></t:template>
                     </t:Column>
 
-                    <t:Column id="colMonths" width="80px">
+                    <t:Column id="colMonths" width="80px" hAlign="Center">
                         <t:label>
                             <VBox width="100%" class="fullWidthHeader">
                                 <Label text="&#160;" />
@@ -213,7 +213,7 @@
                         <t:template><Text text="{months}" visible="{= !!${months} }" /></t:template>
                     </t:Column>
 
-                    <t:Column id="colNew" width="120px">
+                    <t:Column id="colNew" width="80px" hAlign="Center">
                         <t:label>
                             <VBox width="100%" class="fullWidthHeader">
                                 <Label text="&#160;"/>
