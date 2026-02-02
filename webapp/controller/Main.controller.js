@@ -171,7 +171,7 @@ sap.ui.define(
         );
 
         this._bNodeExpanded = false;
-        
+
         // Inicializa el modelo UI para controlar la visibilidad de cabeceras fijas y datos sticky.
         this.getView().setModel(
           new sap.ui.model.json.JSONModel({
