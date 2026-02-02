@@ -8,27 +8,33 @@
     xmlns:t="sap.ui.table"
 >
     <VBox width="100%" fitContainer="true">
-        <HBox width="100%"  alignItems="Stretch" justifyContent="SpaceBetween" class="topTables">
+        <HBox width="100%" height="6rem" alignItems="Stretch" justifyContent="SpaceBetween">
             
-            <VBox width="49%" fitContainer="true">
-                <t:Table class="sapUiSizeCompact smallHeaderTable"  rows="{dataTitle>/data}" visibleRowCount="1" width="100%" selectionMode="None">
-                   
+            <VBox width="49%" fitContainer="true" class="sapUiSmallMarginTop">
+                <t:Table class="sapUiSizeCompact smallHeaderTable" rows="{dataTitle>/data}" visibleRowCount="1" width="100%" selectionMode="None">
+                    <!-- <t:extension>
+                        <OverflowToolbar class="yellowToolbar" height="90%">
+                            <ToolbarSpacer />
+                            <Title text="{i18n>inversion}" class="testBold" />
+                            <ToolbarSpacer />
+                        </OverflowToolbar>
+                    </t:extension> -->
                     <t:columns>
                         <t:Column hAlign="Center" class="operacionColumn">
-                            <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>ejecuta}" design="Bold" class="fullWidthHeader" />
+                            <VBox width="100%" class="fullWidthHeader" alignContent="Center">
+                                <Label text="{i18n>inversion} {i18n>ejecutado}" design="Bold" />
                             </VBox>
                             <t:template><Text text="{dataTitle>title}" /></t:template>
                         </t:Column>
                         <t:Column hAlign="Center">
                             <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>pendien}" design="Bold" />
+                                <Label text="{i18n>inversion} {i18n>pendiente}" design="Bold" />
                             </VBox>
                             <t:template><Text text="{dataTitle>title2}" /></t:template>
                         </t:Column>
                         <t:Column hAlign="Center">
                             <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>tota}" design="Bold" />
+                                <Label text="{i18n>inversion} {i18n>total}" design="Bold" />
                             </VBox>
                             <t:template><Text text="{dataTitle>title}" /></t:template>
                         </t:Column>
@@ -36,20 +42,26 @@
                 </t:Table>
             </VBox>
 
-            <VBox width="49%" height="100%">
+            <VBox width="49%" height="100%" class="sapUiSmallMarginTop">
                 <t:Table class="sapUiSizeCompact smallHeaderTable" rows="{dataTitle>/data}" visibleRowCount="1" columnHeaderHeight="10" width="100%" selectionMode="None">
-                   
+                    <!-- <t:extension>
+                        <OverflowToolbar class="yellowToolbar" height="90%">
+                            <ToolbarSpacer />
+                            <Title text="{i18n>amortizacion}" class="testBold" />
+                            <ToolbarSpacer />
+                        </OverflowToolbar>
+                    </t:extension> -->
                     <t:columns>
                         <t:Column hAlign="Center">
-                            <Label text="{i18n>ejecutados}" design="Bold" />
+                            <Label text="{i18n>amortizacion} {i18n>ejecutado}" design="Bold" />
                             <t:template><Text text="{dataTitle>title3}" /></t:template>
                         </t:Column>
                         <t:Column hAlign="Center">
-                            <Label text="{i18n>pendientes}" design="Bold" />
+                            <Label text="{i18n>amortizacion} {i18n>pendiente}" design="Bold" />
                             <t:template><Text text="{dataTitle>title4}" /></t:template>
                         </t:Column>
                         <t:Column hAlign="Center">
-                            <Label text="{i18n>totals}" design="Bold" />
+                            <Label text="{i18n>amortizacion} {i18n>total}" design="Bold" />
                             <t:template><Text text="{dataTitle>title}" /></t:template>
                         </t:Column>
                     </t:columns>
@@ -57,7 +69,7 @@
             </VBox>
         </HBox>
 
-        <VBox width="100%" class="treeTableContainer" >
+        <VBox width="100%" height="100%" class="sapUiSmallMarginTop">
             <layoutData><FlexItemData growFactor="15" /></layoutData>
             <t:TreeTable
                 id="TreeTableBasic"
@@ -83,7 +95,7 @@
                 </t:extension>
 
                 <t:columns>
-                    <t:Column width="100px" hAlign="Center" class="operacionColumn">
+                    <t:Column width="160px" hAlign="Center" class="operacionColumn">
                         <t:label>
                             <VBox width="100%" class="fullWidthHeader">
                                 <Label text="{i18n>operacion}" design="Bold" />
