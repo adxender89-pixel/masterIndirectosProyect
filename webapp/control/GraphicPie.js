@@ -73,7 +73,7 @@ sap.ui.define(["sap/ui/core/Control"], function (Control) {
                     plugins: {
                         legend: {
                             display: true,
-                            position: "bottom",
+                            position: "right",
                             labels: {
                                 boxWidth: 15,
                                 padding: 5

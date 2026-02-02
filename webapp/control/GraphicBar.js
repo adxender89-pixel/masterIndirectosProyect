@@ -20,7 +20,7 @@ sap.ui.define(["sap/ui/core/Control"], function (Control) {
     },
 
     renderer: function (oRm, oControl) {
-      oRm.write('<canvas id="' + oControl.getId() + '-barChart" />');
+      oRm.write('<canvas class="barras" id="' + oControl.getId() + '-barChart" />');
     },
 
     onAfterRendering: function () {
