@@ -155,7 +155,7 @@ sap.ui.define([
                 that.oMessageView.navigateBack();
                 that.oDialogReturn.open();
             });
-            
+
             // Inicialización de tablas dinámicas tras mostrar el retorno
             this.setupDynamicTreeTable("TreeTableBasic");
             this.setupDynamicTreeTable("TreeTableInmov");
@@ -221,7 +221,7 @@ sap.ui.define([
 
             aYears.forEach(function (iYear, index) {
                 var oColumn = new sap.ui.table.Column({
-                     width: "8rem",
+                    width: "8rem",
                     minWidth: 60,
                     autoResizable: true,
                     label: new sap.m.Button({
@@ -358,7 +358,7 @@ sap.ui.define([
 
             var colIndex = oTable.indexOfColumn(oYearColumn);
             var oModel = oTable.getModel();
-            
+
             // Garantiza que el modelo tenga la estructura necesaria para almacenar datos mensuales.
             oTable.getRows().forEach(function (row) {
                 var oContext = row.getBindingContext();
@@ -366,7 +366,7 @@ sap.ui.define([
 
                 var sBasePath = oContext.getPath() + "/monthsData";
                 if (!oModel.getProperty(sBasePath)) oModel.setProperty(sBasePath, {});
-                
+
                 if (!Array.isArray(oModel.getProperty(sBasePath + "/" + sYear))) {
                     oModel.setProperty(sBasePath + "/" + sYear, new Array(nMonthYear).fill(""));
                 }
@@ -514,7 +514,7 @@ sap.ui.define([
                 oViewModel.setProperty("/dynamicRowCount", iRows);
             }
         },
-                _filterCategories: function (aCategories, sKey) {
+        _filterCategories: function (aCategories, sKey) {
             return aCategories
                 .map(function (cat) {
                     var newCat = Object.assign({}, cat);
@@ -538,6 +538,61 @@ sap.ui.define([
                     return null;
                 }.bind(this))
                 .filter(Boolean);
+        },
+        onCollapseFromHeader: function () {
+            var oTable = this.byId("TreeTableBasic");
+            var oUiModel = this.getView().getModel("ui");
+
+            var sTargetPath = oUiModel.getProperty("/stickyHeaderData/path");
+            if (!sTargetPath) {
+                return;
+            }
+
+            var oBinding = oTable.getBinding("rows");
+            var iLength = oBinding.getLength();
+            var iCollapsedIndex = null;
+
+            // 1️⃣ collasso il gruppo corretto
+            for (var i = 0; i < iLength; i++) {
+                var oCtx = oTable.getContextByIndex(i);
+                if (oCtx && oCtx.getPath() === sTargetPath) {
+                    if (oTable.isExpanded(i)) {
+                        oTable.collapse(i);
+                        iCollapsedIndex = i;
+                    }
+                    break;
+                }
+            }
+
+            if (iCollapsedIndex === null) {
+                return;
+            }
+
+            // 2️⃣ attendo che la TreeTable si riallinei (FONDAMENTALE)
+            setTimeout(function () {
+
+                // ricostruisco i range con i dati aggiornati
+                this._buildGroupRanges("TreeTableBasic");
+
+                var iFirstVisible = oTable.getFirstVisibleRow();
+
+                // 3️⃣ riapplico ESATTAMENTE la logica dello scroll
+                this._onScrollLike({
+                    getParameter: function (sName) {
+                        if (sName === "firstVisibleRow") {
+                            return iFirstVisible;
+                        }
+                    }
+                }, "TreeTableBasic");
+
+                // 4️⃣ se non serve sticky → lo spengo
+                if (!oUiModel.getProperty("/showStickyParent") &&
+                    !oUiModel.getProperty("/showStickyChild")) {
+
+                    oUiModel.setProperty("/stickyHeaderData", null);
+                }
+
+            }.bind(this), 0);
         },
     });
 });
