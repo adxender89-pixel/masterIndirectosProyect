@@ -13,9 +13,9 @@ sap.ui.define([
     Input,
     Button,
     Label,
+    BaseController,
     Filter,
-    FilterOperator,
-    BaseController
+    FilterOperator
 ) {
     "use strict";
 
