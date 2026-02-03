@@ -427,7 +427,8 @@ sap.ui.define([
 
             oUiModel.setProperty("/stickyHeaderData", {
                 parent: oActiveGroup.data,
-                child: oActiveGroup.data.categories[0]
+                child: oActiveGroup.data.categories[0],
+                path: oActiveGroup.path
             });
             this._applyCabeceraStyle(sTableId);
         },
@@ -459,7 +460,7 @@ sap.ui.define([
                         oCurrentGroup.end = i - 1;
                         aRanges.push(oCurrentGroup);
                     }
-                    oCurrentGroup = { name: oObj.name, start: i, end: i, data: oObj };
+                    oCurrentGroup = { name: oObj.name, start: i, end: i, data: oObj, path: oCtx.getPath() };
                 }
             }
 
@@ -486,6 +487,62 @@ sap.ui.define([
             if (oViewModel) {
                 oViewModel.setProperty("/dynamicRowCount", iRows);
             }
+        },
+ onCollapseFromHeader: function () {
+    var oTable = this.byId("TreeTableBasic");
+    var oUiModel = this.getView().getModel("ui");
+
+    var sTargetPath = oUiModel.getProperty("/stickyHeaderData/path");
+    if (!sTargetPath) {
+        return;
+    }
+
+    var oBinding = oTable.getBinding("rows");
+    var iLength = oBinding.getLength();
+    var iCollapsedIndex = null;
+
+    // 1️⃣ collasso il gruppo corretto
+    for (var i = 0; i < iLength; i++) {
+        var oCtx = oTable.getContextByIndex(i);
+        if (oCtx && oCtx.getPath() === sTargetPath) {
+            if (oTable.isExpanded(i)) {
+                oTable.collapse(i);
+                iCollapsedIndex = i;
+            }
+            break;
         }
+    }
+
+    if (iCollapsedIndex === null) {
+        return;
+    }
+
+    // 2️⃣ attendo che la TreeTable si riallinei (FONDAMENTALE)
+    setTimeout(function () {
+
+        // ricostruisco i range con i dati aggiornati
+        this._buildGroupRanges("TreeTableBasic");
+
+        var iFirstVisible = oTable.getFirstVisibleRow();
+
+        // 3️⃣ riapplico ESATTAMENTE la logica dello scroll
+        this._onScrollLike({
+            getParameter: function (sName) {
+                if (sName === "firstVisibleRow") {
+                    return iFirstVisible;
+                }
+            }
+        }, "TreeTableBasic");
+
+        // 4️⃣ se non serve sticky → lo spengo
+        if (!oUiModel.getProperty("/showStickyParent") &&
+            !oUiModel.getProperty("/showStickyChild")) {
+
+            oUiModel.setProperty("/stickyHeaderData", null);
+        }
+
+    }.bind(this), 0);
+},
+
     });
 });
