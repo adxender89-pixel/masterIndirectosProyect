@@ -551,7 +551,15 @@
 .headerHeightCustom .sapMBtnIcon {
     font-size: 9px !important; /* Mantiene los iconos en el tamaño original */
 }
-.agrupaLeftText {
-    text-align: left !important;
-    width: 100%;
+/* --- Ajuste del grosor del selector de pestañas (flecha/línea) --- */
+.customTabBar .sapMITBInLine.sapMITBTextOnly>.sapMITBVertical.sapMITBFilter>.sapMITBText + .sapMITBContentArrow {
+    height: 9px !important; /* El valor que encontraste con F12 */
+}
+/* --- Ajuste del contenedor de desplazamiento para compensar márgenes --- */
+.customTabBar .sapMITH .sapMITBScrollContainer {
+    margin: -10px 1.75rem !important;
+}
+/* --- Ajuste del tamaño de fuente de los textos de las pestañas --- */
+.customTabBar .sapMITBTextOnly .sapMITBText {
+    font-size: 11px !important;
 }
