@@ -102,15 +102,18 @@
                 </t:extension>
 
                 <t:columns>
-                    <t:Column width="160px" hAlign="Center" class="operacionColumn">
+                    <t:Column width="160px" hAlign="Center" >
                         <t:label>
                             <VBox width="100%" class="fullWidthHeader">
                                 <Label text="{i18n>operacion}" design="Bold" />
-                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                <HBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
                                     <Text text="{ui>/stickyHeaderData/parent/name}" wrapping="false" width="100%" textAlign="Center" />
-                                </VBox>
-                                <VBox class="parentHeader">
-                                    <Text text="{ui>/stickyHeaderData/child/name}" textAlign="Center" class="secondStickyText" wrapping="false" visible="{ui>/showStickyChild}" />
+                                </HBox>
+                                <VBox >
+                                <HBox class="parentHeader" renderType="Bare" alignContent="Start">
+                                     <Button visible="{ui>/showStickyChild}" class="childHeaderBtn sapUiTinyMarginEnd" icon="sap-icon://navigation-up-arrow" press="onCollapseFromHeader"/> 
+                                    <Text text="{ui>/stickyHeaderData/child/name}" textAlign="Initial" class="agrupaLeftText secondStickyText" wrapping="false" visible="{ui>/showStickyChild}" />
+                                </HBox>
                                 </VBox>
                             </VBox>
                         </t:label>
