@@ -15,7 +15,8 @@ sap.ui.define([
     Label,
     BaseController,
     Filter,
-    FilterOperator
+    FilterOperator,
+    
 ) {
     "use strict";
 
