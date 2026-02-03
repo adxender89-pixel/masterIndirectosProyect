@@ -563,3 +563,8 @@
 .customTabBar .sapMITBTextOnly .sapMITBText {
     font-size: 11px !important;
 }
+/* tercera cabecera con boton*/
+.agrupaLeftText {
+    text-align: left !important;
+    width: 100%;
+}
