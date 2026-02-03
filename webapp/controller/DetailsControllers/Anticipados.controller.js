@@ -4,10 +4,9 @@ sap.ui.define([
     "sap/m/Input",
     "sap/m/Button",
     "sap/m/Label",
+    "masterindirectos/controller/BaseController",
     "sap/ui/model/Filter",
     "sap/ui/model/FilterOperator",
-
-    "masterindirectos/controller/BaseController"
 ], function (
     JSONModel,
     Column,
@@ -47,7 +46,6 @@ sap.ui.define([
                     3
                 );
             }.bind(this));
-
             // --- Cargar JSON de Catalog ---
             var oCatalogModel = new JSONModel();
             this.getView().setModel(oCatalogModel, "catalog");
@@ -72,7 +70,7 @@ sap.ui.define([
         /**
          * Forza el renderizado de la tabla una vez la vista está disponible en el DOM.
          */
-        onAfterRendering: function (oEvent) {
+         onAfterRendering: function (oEvent) {
             this.byId("TreeTableBasic").rerender(true);
         },
         /**
@@ -174,97 +172,93 @@ sap.ui.define([
         /**
          * Gestiona la visibilidad de columnas extendidas al expandir nodos en la TreeTable.
          */
-        onToggleOpenState: function (oEvent) {
-            var oTable = oEvent.getSource();
-            var sTableId = oTable.getId();
-            var bExpanded = oEvent.getParameter("expanded");
-            var iRowIndex = oEvent.getParameter("rowIndex");
-            var oUiModel = this.getView().getModel("ui");
+    onToggleOpenState: function (oEvent) {
+    var oTable = oEvent.getSource();
+    var sTableId = oTable.getId();
+    var bExpanded = oEvent.getParameter("expanded");
+    var iRowIndex = oEvent.getParameter("rowIndex");
+    var oUiModel = this.getView().getModel("ui");
 
-            var oColMonths = this.byId("colMonths");
-            var oColNew = this.byId("colNew");
+    var oColMonths = this.byId("colMonths");
+    var oColNew = this.byId("colNew");
 
-            var oContext = oTable.getContextByIndex(iRowIndex);
-            var oObject = oContext?.getObject();
+    // 🔐 contesto + path STABILE
+    var oContext = oTable.getContextByIndex(iRowIndex);
+    var sPath = oContext && oContext.getPath();
+    var oObject = oContext && oContext.getObject();
 
-            // =========================
-            // EXPAND
-            // =========================
-            if (bExpanded) {
-                if (oObject?.categories?.length) {
-                    setTimeout(function () {
-                        var oBinding = oTable.getBinding("rows");
-                        if (!oBinding) return;
+    // =========================
+    // EXPAND
+    // =========================
+    if (bExpanded) {
 
-                        var iIndex = oBinding.getContexts().findIndex(function (ctx) {
-                            return ctx.getObject() === oObject;
-                        });
+        var bIsDetailLevel =
+            oObject &&
+            oObject.categories &&
+            oObject.categories.length > 0 &&
+            oObject.categories[0].isGroup === true;
 
-                        if (iIndex !== -1) {
-                            oTable.expandToLevel(iIndex, 99); // expandir solo este nodo
-                        }
-                    }, 0);
-                }
+        if (oColMonths) oColMonths.setVisible(bIsDetailLevel);
+        if (oColNew) oColNew.setVisible(bIsDetailLevel);
 
-                var bIsDetailLevel = oObject?.categories?.[0]?.isGroup === true;
+        // ✅ salvo SOLO il padre corretto
+        if (bIsDetailLevel && sPath) {
+            this._sLastExpandedPath = sPath;
+        }
+    }
 
-                if (oColMonths) oColMonths.setVisible(bIsDetailLevel);
-                if (oColNew) oColNew.setVisible(bIsDetailLevel);
-            }
+    // =========================
+    // COLLAPSE
+    // =========================
+    else {
 
-            // =========================
-            // COLLAPSE
-            // =========================
-            else {
-                var oBinding = oTable.getBinding("rows");
-                if (oBinding) {
-                    for (var i = 0; i < oBinding.getLength(); i++) {
-                        var oCtxInner = oTable.getContextByIndex(i);
-                        var oObjInner = oCtxInner?.getObject();
-
-                        // Solo colapsar el nodo actual
-                        if (oObjInner === oObject) {
-                            oTable.collapse(i);
-                            break;
-                        }
-                    }
-                }
-
-                // Lógica de columnas sticky
-                var bAnyDetailExpanded = false;
-                if (oBinding) {
-                    for (var j = 0; j < oBinding.getLength(); j++) {
-                        if (oTable.isExpanded(j)) {
-                            var oCtxCheck = oTable.getContextByIndex(j);
-                            var oObjCheck = oCtxCheck?.getObject();
-
-                            if (oObjCheck?.categories?.[0]?.isGroup === true) {
-                                bAnyDetailExpanded = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                if (!bAnyDetailExpanded) {
-                    if (oColMonths) oColMonths.setVisible(false);
-                    if (oColNew) oColNew.setVisible(false);
-
-                    this._aGroupRanges = [];
-                    oUiModel.setProperty("/showStickyAgrupador", false);
-                    oUiModel.setProperty("/showStickyParent", false);
-                    oUiModel.setProperty("/showStickyChild", false);
-                }
-            }
-
-            // =========================
-            // REFRESH POST-TOGGLE
-            // =========================
-            setTimeout(function () {
-                this._refreshAfterToggle(sTableId);
-            }.bind(this), 0);
+        // se sto chiudendo proprio quel padre, lo pulisco
+        if (this._sLastExpandedPath === sPath) {
+            this._sLastExpandedPath = null;
         }
 
+        var bAnyDetailExpanded = false;
+        var oBinding = oTable.getBinding("rows");
 
+        if (oBinding) {
+            var iLength = oBinding.getLength();
+
+            for (var i = 0; i < iLength; i++) {
+                if (oTable.isExpanded(i)) {
+                    var oCtx = oTable.getContextByIndex(i);
+                    var oObj = oCtx && oCtx.getObject();
+
+                    if (
+                        oObj &&
+                        oObj.categories &&
+                        oObj.categories[0] &&
+                        oObj.categories[0].isGroup === true
+                    ) {
+                        bAnyDetailExpanded = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // nessun dettaglio aperto → reset UI
+        if (!bAnyDetailExpanded) {
+            if (oColMonths) oColMonths.setVisible(false);
+            if (oColNew) oColNew.setVisible(false);
+
+            this._aGroupRanges = [];
+            oUiModel.setProperty("/showStickyAgrupador", false);
+            oUiModel.setProperty("/showStickyParent", false);
+            oUiModel.setProperty("/showStickyChild", false);
+        }
+    }
+
+    // =========================
+    // REFRESH POST-TOGGLE
+    // =========================
+    setTimeout(function () {
+        this._refreshAfterToggle(sTableId);
+    }.bind(this), 0);
+}
     });
 });

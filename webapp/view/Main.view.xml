@@ -6,7 +6,7 @@
     <Page id="page" enableScrolling="false" class="sapUiNoContentPadding sapUiSizeCompact">
         <!-- Cabecera personalizada de la página -->
         <customHeader>
-            <Bar class="headerHeightCustom">
+             <Bar class="headerHeightCustom">
                 <!-- Título de la aplicación -->
                 <contentLeft>
                     <Title text="{selectedScopeModel>/profitCenter} - {selectedScopeModel>/profitCenterDescription}" level="H2" />
@@ -48,10 +48,10 @@
                 <VBox width="100%" height="100%" fitContainer="true">
 
                     <!-- TAB BAR -->
-                    <IconTabBar id="itb" expanded="true" select="onTabSelect" stretchContentHeight="false" class="customTabBar">
+                     <IconTabBar id="itb" expanded="true" select="onTabSelect" stretchContentHeight="false" class="customTabBar">
 
                         <items>
-                            <IconTabFilter key="dashboard" text="{i18n>Home}"/>
+                           <IconTabFilter key="dashboard" text="{i18n>Home}"/>
                             <IconTabFilter key="anticipados" text="{i18n>anticipados}"/>
                             <IconTabFilter key="inmov" text="{i18n>inmovilizados}"/>
                             <IconTabFilter key="corrientes" text="{i18n>corrientes}"/>

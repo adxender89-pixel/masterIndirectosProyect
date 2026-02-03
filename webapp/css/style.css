@@ -153,8 +153,8 @@
 .fullWidthHeader .sapMFlexItem {
     margin: 0 !important;
     padding: 0 !important;
+    max-height: 2.8rem;
     min-height: 0 !important;
-    display: block !important; 
 }
 /* Compacta las etiquetas dentro de las cabeceras completas */
 .fullWidthHeader .sapMLabel {
@@ -168,6 +168,7 @@
 .parentHeader {
     background-color: #9e9b9b;
     font-weight:normal;
+    align-items: center;
     width: 100%;
 }
 /* Reduce la altura general de los botones */
@@ -429,8 +430,40 @@
     background: #f9f9f9;
 }
 
-.sapUiTableTr {
-    border-top: none !important;
+/* bottom tercera cabezera */
+.childHeaderBtn.sapMBtn {
+    height: 1.1rem !important;
+    min-height: 1.1rem !important;
+}
+
+/* contenido interno */
+.childHeaderBtn .sapMBtnInner {
+    height: 1rem !important;
+    line-height: 1.1rem !important;
+    padding: 0rem !important;
+    border: none;
+}
+
+/* icona */
+.childHeaderBtn .sapMBtnIcon {
+    font-size: 0.7rem !important;
+    line-height: 1rem !important;
+    padding-left: 1.3rem;
+    padding-right: 1rem;
+    border:none;
+    background:#9e9b9b;
+}
+
+/* textos segunda columna cabecera*/
+.sapUiTableHeaderCell .sapUiTableCellInner {
+  display: flex;
+  align-items: flex-start;
+}
+.sapUiTableCellInner .fullWidthHeader {
+    padding-bottom: 1rem;
+}
+.sapUiTableCellInner {
+    overflow: visible;
 }
 /* Ajuste de altura de la barra de pestañas de iconos */
 /* Sustituye 80px por la altura deseada */

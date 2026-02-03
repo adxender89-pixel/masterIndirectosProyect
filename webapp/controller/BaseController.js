@@ -453,7 +453,8 @@ sap.ui.define([
 
             oUiModel.setProperty("/stickyHeaderData", {
                 parent: oActiveGroup.data,
-                child: oActiveGroup.data.categories[0]
+                child: oActiveGroup.data.categories[0],
+                path: oActiveGroup.path
             });
             this._applyCabeceraStyle(sTableId);
         },
@@ -485,7 +486,7 @@ sap.ui.define([
                         oCurrentGroup.end = i - 1;
                         aRanges.push(oCurrentGroup);
                     }
-                    oCurrentGroup = { name: oObj.name, start: i, end: i, data: oObj };
+                    oCurrentGroup = { name: oObj.name, start: i, end: i, data: oObj, path: oCtx.getPath() };
                 }
             }
 
