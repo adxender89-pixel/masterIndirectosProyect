@@ -13,9 +13,10 @@ sap.ui.define([
     Input,
     Button,
     Label,
-    BaseController,
+     BaseController,
     Filter,
-    FilterOperator
+    FilterOperator,
+    
 ) {
     "use strict";
 
@@ -111,52 +112,88 @@ sap.ui.define([
                 oTable.setModel(new JSONModel({ categories: aCategories }));
                 oTable.bindRows("/categories");
 
-                oTable.collapseAll();
+        // Expandir solo I.003
+        setTimeout(function () {
+            var oBinding = oTable.getBinding("rows");
+            if (!oBinding) return;
 
-                // Expandir solo I.003
-                setTimeout(function () {
-                    var oBinding = oTable.getBinding("rows");
-                    if (!oBinding) return;
+            for (var i = 0; i < oBinding.getLength(); i++) {
+                var oCtx = oTable.getContextByIndex(i);
+                var oObj = oCtx && oCtx.getObject();
 
-                    for (var i = 0; i < oBinding.getLength(); i++) {
-                        var oCtx = oTable.getContextByIndex(i);
-                        var oObj = oCtx && oCtx.getObject();
+                if (oObj?.name?.replace(/\s/g, '') === "I.003") {
+                    oTable.expand(i);
+                    oTable.invalidate(); // pinta el gris correctamente
 
-                        if (oObj?.name?.replace(/\s/g, '') === "I.003") {
-                            oTable.expand(i);
-                            oTable.invalidate(); // pinta el gris correctamente
-                            break;
-                        }
+                    // 🔹 Activar flechita sticky
+                    this._sLastExpandedPath = oCtx.getPath();
+                    var oUiModel = this.getView().getModel("ui");
+                    if (oUiModel) {
+                        oUiModel.setProperty("/showStickyParent", true);
+                        oUiModel.setProperty("/showStickyChild", true);
                     }
-                }, 0);
 
-                return; //  no seguir
-            }
-
-            //  SELECCIÓN NORMAL
-            var sKey = oSelectedItem.getKey();
-
-            var aFilteredRoot = aCategories.map(function (rootCat) {
-                var newCat = Object.assign({}, rootCat);
-
-                if (rootCat.name && rootCat.name.replace(/\s/g, '').startsWith("I.003")) {
-                    newCat.categories = rootCat.categories
-                        ? this._filterCategories(rootCat.categories, sKey)
-                        : [];
+                    // Llamar refreshAfterToggle para dibujar flechita
+                    this._refreshAfterToggle(oTable.getId());
+                    break;
                 }
+            }
+        }.bind(this), 0);
 
-                return newCat;
-            }.bind(this));
+        return;
+    }
 
-            oTable.setModel(new JSONModel({ categories: aFilteredRoot }));
-            oTable.bindRows("/categories");
+    // ==========================================
+    //  Selección normal
+    // ==========================================
+    var sKey = oSelectedItem.getKey();
 
-            // Expandir todo bajo I.003
-            setTimeout(function () {
-                oTable.expandToLevel(99);
-                oTable.invalidate(); // CLAVE para el gris
-            }, 50);
-        },
+    var aFilteredRoot = aCategories.map(function (rootCat) {
+        var newCat = Object.assign({}, rootCat);
+
+        if (rootCat.name && rootCat.name.replace(/\s/g, '').startsWith("I.003")) {
+            newCat.categories = rootCat.categories
+                ? this._filterCategories(rootCat.categories, sKey)
+                : [];
+        }
+
+        return newCat;
+    }.bind(this));
+
+    oTable.setModel(new JSONModel({ categories: aFilteredRoot }));
+    oTable.bindRows("/categories");
+
+    // Expandir todo bajo I.003 y fijar flechita sticky
+    setTimeout(function () {
+        oTable.expandToLevel(99);
+        oTable.invalidate();
+
+        // 🔹 Buscar fila padre I.003 y fijar flechita sticky
+        var oBinding = oTable.getBinding("rows");
+        if (oBinding) {
+            for (var i = 0; i < oBinding.getLength(); i++) {
+                var oCtx = oTable.getContextByIndex(i);
+                var oObj = oCtx && oCtx.getObject();
+                if (oObj && oObj.name && oObj.name.replace(/\s/g, '').startsWith("I.003")) {
+                    this._sLastExpandedPath = oCtx.getPath(); // path padre
+                    oTable.setFirstVisibleRow(i); // asegura que quede arriba
+
+                    // Activar sticky manualmente usando tu modelo UI
+                    var oUiModel = this.getView().getModel("ui");
+                    if (oUiModel) {
+                        oUiModel.setProperty("/showStickyParent", true);
+                        oUiModel.setProperty("/showStickyChild", true);
+                    }
+
+                    // 🔹 Llamar refreshAfterToggle para que la flechita se pinte
+                    this._refreshAfterToggle(oTable.getId());
+
+                    break;
+                }
+            }
+        }
+    }.bind(this), 50);
+},
         /**
          * Gestiona la visibilidad de columnas extendidas al expandir nodos en la TreeTable.
          */

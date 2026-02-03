@@ -646,9 +646,7 @@ sap.ui.define([
                 }.bind(this))
                 .filter(Boolean);
         },
-
         onCollapseFromHeader: function () {
-
             var oTable = this.byId("TreeTableBasic");
             var oUiModel = this.getView().getModel("ui");
 
@@ -672,7 +670,6 @@ sap.ui.define([
                         oTable.collapse(i);
                         iCollapsedIndex = i;
                     }
-
                     break;
                 }
             }
