@@ -4,13 +4,17 @@ sap.ui.define([
     "sap/m/Input",
     "sap/m/Button",
     "sap/m/Label",
-    "masterindirectos/controller/BaseController"
+    "masterindirectos/controller/BaseController",
+    "sap/ui/model/Filter",
+    "sap/ui/model/FilterOperator",
 ], function (
     JSONModel,
     Column,
     Input,
     Button,
     Label,
+    Filter,
+    FilterOperator,
     BaseController
 ) {
     "use strict";
@@ -42,12 +46,31 @@ sap.ui.define([
                     3
                 );
             }.bind(this));
+            // --- Cargar JSON de Catalog ---
+            var oCatalogModel = new JSONModel();
+            this.getView().setModel(oCatalogModel, "catalog");
+            oCatalogModel.loadData("model/Catalog.json"); // ruta a tu JSON
+
+            // Cuando termine de cargar, llenar el Select
+            oCatalogModel.attachRequestCompleted(function () {
+                var oData = oCatalogModel.getData();
+
+                if (!oData || !oData.catalog || !oData.catalog.models || !oData.catalog.models.categories) {
+                    console.error("Catalog.json sin categorías");
+                    return;
+                }
+
+                // Crear modelo para el Select
+                var aOperaciones = this._getOperacionesI003(oData.catalog.models.categories);
+                var oOperacionesModel = new JSONModel({ items: aOperaciones });
+                this.getView().setModel(oOperacionesModel, "operacionesModel");
+            }.bind(this));
         },
 
         /**
          * Forza el renderizado de la tabla una vez la vista está disponible en el DOM.
          */
-        onAfterRendering: function(oEvent){
+         onAfterRendering: function (oEvent) {
             this.byId("TreeTableBasic").rerender(true);
         },
       

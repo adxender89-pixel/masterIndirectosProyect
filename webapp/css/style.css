@@ -441,12 +441,17 @@
     height: 1rem !important;
     line-height: 1.1rem !important;
     padding: 0rem !important;
+    border: none;
 }
 
 /* icona */
 .childHeaderBtn .sapMBtnIcon {
-    font-size: 0.9rem !important;
+    font-size: 0.7rem !important;
     line-height: 1rem !important;
+    padding-left: 1.3rem;
+    padding-right: 1rem;
+    border:none;
+    background:#9e9b9b;
 }
 
 /* textos segunda columna cabecera*/
@@ -459,4 +464,94 @@
 }
 .sapUiTableCellInner {
     overflow: visible;
+}
+/* Ajuste de altura de la barra de pestañas de iconos */
+/* Sustituye 80px por la altura deseada */
+.customTabBar .sapMITH {
+    height: 40px !important; 
+    line-height: 40px; /* Centra verticalmente el contenido si es necesario */
+}
+
+/* Permite alinear correctamente los elementos internos a la nueva altura */
+.customTabBar .sapMITBHead {
+    height: 80px !important;
+}
+/* --- 1. BARRA (Altura compacta basada en headerDarkBlue) --- */
+.headerHeightCustom.sapMBar {
+    height: 2.1rem !important; 
+    min-height: 2.1rem !important;
+    background-color: #ffffff !important;
+}
+
+/* --- 2. POSICIONAMIENTO (Cada sección en su lado correspondiente) --- */
+.headerHeightCustom .sapMBarLeft {
+    position: absolute;
+    left: 0.5rem;
+    height: 100%;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.headerHeightCustom .sapMBarMiddle {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 100%;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    pointer-events: none;
+}
+
+.headerHeightCustom .sapMBarMiddle > * {
+    pointer-events: auto;
+}
+
+.headerHeightCustom .sapMBarRight {
+    position: absolute;
+    right: 0.5rem;
+    height: 100%;
+    display: flex !important;
+    align-items: center !important;
+}
+
+/* --- 3. PARTE IZQUIERDA (Único elemento de mayor tamaño) --- */
+.headerHeightCustom .sapMTitle {
+    font-size: 1.1rem !important; /* Elemento destacado del conjunto */
+    font-weight: bold !important;
+}
+
+/* --- 4. RESTO DE ELEMENTOS (Tamaño pequeño original) --- */
+
+/* Control de selección central (ComboBox) */
+.headerHeightCustom .sapMComboBox,
+.headerHeightCustom .sapMComboBox .sapMInputBaseContentWrapper {
+    height: 1.2rem !important; /* Mantiene la medida de los inputs originales */
+}
+
+.headerHeightCustom .sapMComboBox .sapMInputBaseInner {
+    font-size: 9px !important; /* Mantiene la fuente pequeña original */
+    height: 100% !important;
+}
+
+/* Botones situados a la derecha */
+.headerHeightCustom .sapMBtn {
+    height: 1.2rem !important;
+}
+
+.headerHeightCustom .sapMBtnInner {
+    height: 100% !important;
+    min-width: 1.2rem !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.headerHeightCustom .sapMBtnIcon {
+    font-size: 9px !important; /* Mantiene los iconos en el tamaño original */
+}
+.agrupaLeftText {
+    text-align: left !important;
+    width: 100%;
 }
