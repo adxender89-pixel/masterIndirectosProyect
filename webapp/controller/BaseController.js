@@ -209,16 +209,17 @@ sap.ui.define([
         /**
          * Crea dinámicamente columnas de años con un botón en la cabecera para ver los meses.
          */
-        createYearColumns: function (sTableId, iStartYear, iHowMany, sModelName) {
+        createYearColumns: function (sTableId, iStartYear, iHowMany, sModelName, iSkipFields) {
             var oTable = this.byId(sTableId);
             if (!oTable) return;
 
+            var iStartFrom = (iSkipFields !== undefined) ? iSkipFields : 10;
             var aYears = [];
             for (var i = 0; i < iHowMany; i++) {
                 aYears.push(iStartYear + i);
             }
 
-            aYears.forEach(function (iYear) {
+            aYears.forEach(function (iYear, index) {
                 var oColumn = new sap.ui.table.Column({
                      width: "8rem",
                     minWidth: 60,
@@ -231,12 +232,37 @@ sap.ui.define([
                             this.onCreateMonthsTable(oEvent, sTableId, sModelName);
                         }.bind(this)
                     }),
-                    template: new sap.m.Input({
+                    // Se utiliza un contenedor mínimo o se gestiona la visibilidad
+                    // directamente si la tecnología lo permite.
+                    // En SAPUI5 table, FlexBox es la forma estándar, pero se puede renderizar "Bare" (desnudo).
+                    template: new sap.m.FlexBox({
+                        renderType: "Bare", // Elimina el wrapper HTML adicional del FlexBox
                         width: "100%",
-                        textAlign: "End",
-                        value: "{y" + iYear + "}",
-                        visible: "{= !(${isGroup}) }",
-                    }).addStyleClass("sapUiSizeCompact")
+                        items: [
+                            new sap.m.Input({
+                                width: "100%",
+                                textAlign: "End",
+                                value: "{y" + iYear + "}",
+                                visible: "{= ${expandible} !== false && !${isGroup} }"
+                            }).addStyleClass("sapUiSizeCompact"),
+
+                            new sap.m.Text({
+                                width: "100%",
+                                textAlign: "Center",
+                                visible: "{= ${expandible} === false }",
+                                wrapping: false,
+                                text: {
+                                    path: "",
+                                    formatter: function (oRow) {
+                                        if (!oRow || oRow.expandible !== false) return "";
+                                        var aKeys = Object.keys(oRow);
+                                        var sTargetKey = aKeys[iStartFrom + index];
+                                        return sTargetKey ? oRow[sTargetKey] : "";
+                                    }
+                                }
+                            })
+                        ]
+                    })
                 });
 
                 oTable.addColumn(oColumn);
@@ -361,7 +387,7 @@ sap.ui.define([
                         width: "100%",
                         textAlign: "End",
                         value: "{" + sPrefix + "monthsData/" + sYear + "/" + i + "}",
-                        visible: "{= !(${isGroup} || ${Inmov>isGroup}) }"
+                        visible: "{= ${expandible} !== false && !${isGroup} }"
                     }),
                     width: "auto",
                     minWidth: 100,
@@ -486,6 +512,31 @@ sap.ui.define([
             if (oViewModel) {
                 oViewModel.setProperty("/dynamicRowCount", iRows);
             }
-        }
+        },
+                _filterCategories: function (aCategories, sKey) {
+            return aCategories
+                .map(function (cat) {
+                    var newCat = Object.assign({}, cat);
+
+                    if (cat.categories) {
+                        // Filtramos hijos recursivamente
+                        newCat.categories = this._filterCategories(cat.categories, sKey);
+                    }
+
+                    // Si el nodo coincide con el key, mantenemos todos sus hijos originales
+                    if (cat.name === sKey) {
+                        newCat.categories = cat.categories || [];
+                        return newCat;
+                    }
+
+                    // Mantener nodo si tiene hijos filtrados
+                    if (newCat.categories && newCat.categories.length > 0) {
+                        return newCat;
+                    }
+
+                    return null;
+                }.bind(this))
+                .filter(Boolean);
+        },
     });
 });

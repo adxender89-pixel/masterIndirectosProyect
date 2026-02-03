@@ -167,31 +167,7 @@ sap.ui.define([
 
 
 
-        _filterCategories: function (aCategories, sKey) {
-            return aCategories
-                .map(function (cat) {
-                    var newCat = Object.assign({}, cat);
 
-                    if (cat.categories) {
-                        // Filtramos hijos recursivamente
-                        newCat.categories = this._filterCategories(cat.categories, sKey);
-                    }
-
-                    // Si el nodo coincide con el key, mantenemos todos sus hijos originales
-                    if (cat.name === sKey) {
-                        newCat.categories = cat.categories || [];
-                        return newCat;
-                    }
-
-                    // Mantener nodo si tiene hijos filtrados
-                    if (newCat.categories && newCat.categories.length > 0) {
-                        return newCat;
-                    }
-
-                    return null;
-                }.bind(this))
-                .filter(Boolean);
-        },
 
 
 
