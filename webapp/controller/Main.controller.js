@@ -187,6 +187,7 @@ sap.ui.define(
               last: "",
               months: "",
             },
+            operacionesCombo: []
           }),
           "ui",
         );

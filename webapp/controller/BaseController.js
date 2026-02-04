@@ -302,8 +302,10 @@ sap.ui.define([
 
                             var total = parseFloat(oInput.getValue().replace(',', '.')) || 0;
 
-                            if (!oRow.months) oRow.months = {};
-                            if (!oRow.months[iYear]) {
+                            if (!oModel.getProperty(oCtx.getPath() + "/monthsData")) {
+    oModel.setProperty(oCtx.getPath() + "/monthsData", {});
+}
+                            if (!oModel.getProperty(oCtx.getPath() + "/monthsData/" + iYear)) {
                                 var aMonth = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
                                 var currentMonth = new Date().getMonth();
                                 var currentYear = new Date().getFullYear();
@@ -448,7 +450,7 @@ sap.ui.define([
                         width: "100%",
                         textAlign: "End",
                         value: {
-                            path: "months/" + sYear + "/" + i
+                            path: "monthsData/" + sYear + "/" + i
                         },
                         visible: "{= ${expandible} !== false && !${isGroup} }",
                         liveChange: function (oEvt) {
