@@ -923,6 +923,122 @@ sap.ui.define([
             }
             return null;
         },
+        /**
+          * Función que filtra las operaciones 
+          */
+         _buildOperacionesCombo: function (aCategories) {
+    var aResult = [];
+
+    function recurse(aNodes) {
+        if (!Array.isArray(aNodes)) return;
+
+        aNodes.forEach(function (oNode) {
+            if (oNode.expandible || (Array.isArray(oNode.categories) && oNode.categories.length > 0)) {
+                aResult.push({
+                    key: oNode.name,
+                    text: oNode.name + " - " + (oNode.currency || "")
+                });
+            }
+
+            if (Array.isArray(oNode.categories)) {
+                recurse(oNode.categories);
+            }
+        });
+    }
+
+    recurse(aCategories);
+    return aResult;
+}, /**
+        * Filtra la TreeTable según la operación seleccionada en el Select
+        */
+      onOperacionChange: function (oEvent) {
+    var oSelectedItem = oEvent.getParameter("selectedItem");
+    var oTable = this.byId("TreeTableBasic");
+    var oCatalogModel = this.getView().getModel("catalog");
+    var oUiModel = this.getView().getModel("ui");
+    var aCategories = oCatalogModel.getProperty("/catalog/models/categories");
+
+    if (!Array.isArray(aCategories)) return;
+
+    if (!oSelectedItem) {
+        oTable.setModel(new JSONModel({ categories: aCategories }));
+        oTable.bindRows("/categories");
+
+        // Nascondi colonne per default
+        if (this.byId("colMonths")) this.byId("colMonths").setVisible(false);
+        if (this.byId("colNew")) this.byId("colNew").setVisible(false);
+
+        oUiModel?.setProperty("/showStickyParent", false);
+        oUiModel?.setProperty("/showStickyChild", false);
+
+        setTimeout(function () {
+            oTable.collapseAll();
+            oTable.invalidate();
+            this._refreshAfterToggle(oTable.getId());
+        }.bind(this), 0);
+
+        return;
+    }
+
+    var sKey = oSelectedItem.getKey();
+    var aFilteredRoot = [];
+
+    aCategories.forEach(function (rootCat) {
+        if (!Array.isArray(rootCat.categories)) rootCat.categories = [];
+
+        var aFilteredChildren = this._filterCategories(rootCat.categories, sKey);
+        var includeParent = rootCat.name === sKey;
+
+        if (aFilteredChildren.length === 0 && !includeParent) return;
+
+        var oParentClone = Object.assign({}, rootCat);
+        oParentClone.categories = aFilteredChildren.length > 0 ? aFilteredChildren : rootCat.categories;
+        aFilteredRoot.push(oParentClone);
+    }.bind(this));
+
+    oTable.setModel(new JSONModel({ categories: aFilteredRoot }));
+    oTable.bindRows("/categories");
+
+    var aNoAutoExpand = aFilteredRoot
+        .filter(c => c.noAutoExpand || !c.expandible)  
+        .map(c => c.name);
+
+    setTimeout(function () {
+        var oBinding = oTable.getBinding("rows");
+        if (!oBinding) return;
+
+        var bHasData = false;
+
+        for (var i = 0; i < oBinding.getLength(); i++) {
+            var oCtx = oTable.getContextByIndex(i);
+            var oObj = oCtx && oCtx.getObject();
+
+            if (oObj && oObj.expandible && !aNoAutoExpand.includes(oObj.name)) {
+                oTable.expand(i);
+            }
+
+            if (oObj && Array.isArray(oObj.categories)) {
+                var bHasGroup = oObj.categories.some(child => child.isGroup === true);
+                if (bHasGroup) bHasData = true;
+            }
+        }
+
+        if (this.byId("colMonths")) this.byId("colMonths").setVisible(bHasData);
+        if (this.byId("colNew")) this.byId("colNew").setVisible(bHasData);
+
+        var oFirstCtx = oTable.getContextByIndex(0);
+        if (oFirstCtx) {
+            this._sLastExpandedPath = oFirstCtx.getPath();
+            if (oUiModel) {
+                oUiModel.setProperty("/showStickyParent", true);
+                oUiModel.setProperty("/showStickyChild", true);
+            }
+
+            this._refreshAfterToggle(oTable.getId());
+        }
+
+    }.bind(this), 100);
+},
 
     });
 });
