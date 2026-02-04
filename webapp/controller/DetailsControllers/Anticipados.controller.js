@@ -49,21 +49,22 @@ sap.ui.define([
             // --- Cargar JSON de Catalog ---
             var oCatalogModel = new JSONModel();
             this.getView().setModel(oCatalogModel, "catalog");
-            oCatalogModel.loadData("model/Catalog.json"); // ruta a tu JSON
 
-            // Cuando termine de cargar, llenar el Select
+            oCatalogModel.loadData("model/Catalog.json");
+
             oCatalogModel.attachRequestCompleted(function () {
-                var oData = oCatalogModel.getData();
-
-                if (!oData || !oData.catalog || !oData.catalog.models || !oData.catalog.models.categories) {
-                    console.error("Catalog.json sin categorías");
+                var aCategories = oCatalogModel.getProperty("/catalog/models/categories");
+                if (!Array.isArray(aCategories)) {
+                    console.error("Categorie non trovate");
                     return;
                 }
 
-                // Crear modelo para el Select
-                var aOperaciones = this._getOperacionesI003(oData.catalog.models.categories);
-                var oOperacionesModel = new JSONModel({ items: aOperaciones });
-                this.getView().setModel(oOperacionesModel, "operacionesModel");
+                var aComboItems = this._buildOperacionesCombo(aCategories);
+
+                this.getView().setModel(
+                    new JSONModel({ items: aComboItems }),
+                    "operacionesModel"
+                );
             }.bind(this));
             // 1. Definiamo l'anno di partenza
             var iActualYear = new Date().getFullYear();
@@ -96,18 +97,43 @@ sap.ui.define([
         /**
           * Función que filtra las operaciones I.003.xxx
           */
-        _getOperacionesI003: function (aCategories) {
+        _buildOperacionesCombo: function (aCategories) {
             var aResult = [];
 
-            function recurse(categories) {
-                if (!Array.isArray(categories)) return;
-                categories.forEach(function (oCat) {
-                    if (oCat.name && oCat.name.replace(/\s/g, '').startsWith("I.003.")) {
-                        aResult.push({ key: oCat.name, text: oCat.name });
+            function recurse(aNodes) {
+                if (!Array.isArray(aNodes)) {
+                    return;
+                }
+
+                aNodes.forEach(function (oNode) {
+
+                    // prendiamo SOLO i nodi "finali"
+                    if (
+                        oNode.name &&
+                        oNode.expandible === true &&
+                        (!Array.isArray(oNode.categories) || oNode.categories.length > 0)
+                    ) {
+                        // escludiamo i macro-padri tipo "I. 003"
+                        if (!oNode.categories || oNode.categories.length === 0) {
+                            return;
+                        }
+
+                        // se ha figli "Agrupador", è un padre reale (I.003.xxx)
+                        var hasAgrupador = oNode.categories.some(function (c) {
+                            return c.isGroup === true;
+                        });
+
+                        if (hasAgrupador) {
+                            aResult.push({
+                                key: oNode.name,
+                                text: oNode.name + " - " + (oNode.currency || "")
+                            });
+                        }
                     }
-                    // Recurse into child categories
-                    if (oCat.categories) {
-                        recurse(oCat.categories);
+
+                    // 🔁 continua a scendere
+                    if (Array.isArray(oNode.categories)) {
+                        recurse(oNode.categories);
                     }
                 });
             }
@@ -115,8 +141,6 @@ sap.ui.define([
             recurse(aCategories);
             return aResult;
         },
-
-
         /**
         * Filtra la TreeTable según la operación seleccionada en el Select
         */
@@ -124,91 +148,91 @@ sap.ui.define([
             var oSelectedItem = oEvent.getParameter("selectedItem");
             var oTable = this.byId("TreeTableBasic");
             var oCatalogModel = this.getView().getModel("catalog");
+            var oUiModel = this.getView().getModel("ui");
             var aCategories = oCatalogModel.getProperty("/catalog/models/categories");
 
-            if (!aCategories) return;
+            if (!Array.isArray(aCategories)) {
+                return;
+            }
+
+            // ==========================================
+            // CLEAR ComboBox → ripristino totale
+            // ==========================================
             if (!oSelectedItem) {
                 oTable.setModel(new JSONModel({ categories: aCategories }));
                 oTable.bindRows("/categories");
 
-                // Expandir solo I.003
+                oUiModel?.setProperty("/showStickyParent", false);
+                oUiModel?.setProperty("/showStickyChild", false);
+
                 setTimeout(function () {
-                    var oBinding = oTable.getBinding("rows");
-                    if (!oBinding) return;
-
-                    for (var i = 0; i < oBinding.getLength(); i++) {
-                        var oCtx = oTable.getContextByIndex(i);
-                        var oObj = oCtx && oCtx.getObject();
-
-                        if (oObj?.name?.replace(/\s/g, '') === "I.003") {
-                            oTable.expand(i);
-                            oTable.invalidate(); // pinta el gris correctamente
-
-                            // 🔹 Activar flechita sticky
-                            this._sLastExpandedPath = oCtx.getPath();
-                            var oUiModel = this.getView().getModel("ui");
-                            if (oUiModel) {
-                                oUiModel.setProperty("/showStickyParent", true);
-                                oUiModel.setProperty("/showStickyChild", true);
-                            }
-
-                            // Llamar refreshAfterToggle para dibujar flechita
-                            this._refreshAfterToggle(oTable.getId());
-                            break;
-                        }
-                    }
+                    oTable.collapseAll();
+                    oTable.invalidate();
+                    this._refreshAfterToggle(oTable.getId());
                 }.bind(this), 0);
 
                 return;
             }
 
             // ==========================================
-            //  Selección normal
+            // SELEZIONE
             // ==========================================
             var sKey = oSelectedItem.getKey();
 
-            var aFilteredRoot = aCategories.map(function (rootCat) {
-                var newCat = Object.assign({}, rootCat);
+            // 🔹 filtro dinamico (mantiene anche il padre)
+            var aFilteredRoot = [];
 
-                if (rootCat.name && rootCat.name.replace(/\s/g, '').startsWith("I.003")) {
-                    newCat.categories = rootCat.categories
-                        ? this._filterCategories(rootCat.categories, sKey)
-                        : [];
+            aCategories.forEach(function (rootCat) {
+
+                if (!Array.isArray(rootCat.categories)) {
+                    return;
                 }
 
-                return newCat;
+                var aFilteredChildren = this._filterCategories(
+                    rootCat.categories,
+                    sKey
+                );
+
+                // 🔹 se non matcha nulla → skip
+                if (aFilteredChildren.length === 0) {
+                    return;
+                }
+
+                // 🔹 RICREO IL PADRE (I.003)
+                var oParentClone = Object.assign({}, rootCat);
+                oParentClone.categories = aFilteredChildren;
+
+                aFilteredRoot.push(oParentClone);
+
             }.bind(this));
 
             oTable.setModel(new JSONModel({ categories: aFilteredRoot }));
             oTable.bindRows("/categories");
 
-            // Expandir todo bajo I.003 y fijar flechita sticky
+            // ==========================================
+            // EXPAND + STICKY automatico
+            // ==========================================
             setTimeout(function () {
                 oTable.expandToLevel(99);
                 oTable.invalidate();
 
-                // 🔹 Buscar fila padre I.003 y fijar flechita sticky
                 var oBinding = oTable.getBinding("rows");
-                if (oBinding) {
-                    for (var i = 0; i < oBinding.getLength(); i++) {
-                        var oCtx = oTable.getContextByIndex(i);
-                        var oObj = oCtx && oCtx.getObject();
-                        if (oObj && oObj.name && oObj.name.replace(/\s/g, '').startsWith("I.003")) {
-                            this._sLastExpandedPath = oCtx.getPath(); // path padre
-                            oTable.setFirstVisibleRow(i); // asegura que quede arriba
+                if (!oBinding) return;
 
-                            // Activar sticky manualmente usando tu modelo UI
-                            var oUiModel = this.getView().getModel("ui");
-                            if (oUiModel) {
-                                oUiModel.setProperty("/showStickyParent", true);
-                                oUiModel.setProperty("/showStickyChild", true);
-                            }
+                for (var i = 0; i < oBinding.getLength(); i++) {
+                    var oCtx = oTable.getContextByIndex(i);
+                    var oObj = oCtx && oCtx.getObject();
 
-                            // 🔹 Llamar refreshAfterToggle para que la flechita se pinte
-                            this._refreshAfterToggle(oTable.getId());
+                    // primo padre valido (dinamico)
+                    if (oObj && oObj.categories && oObj.categories.length) {
+                        this._sLastExpandedPath = oCtx.getPath();
+                        oTable.setFirstVisibleRow(i);
 
-                            break;
-                        }
+                        oUiModel?.setProperty("/showStickyParent", true);
+                        oUiModel?.setProperty("/showStickyChild", true);
+
+                        this._refreshAfterToggle(oTable.getId());
+                        break;
                     }
                 }
             }.bind(this), 50);

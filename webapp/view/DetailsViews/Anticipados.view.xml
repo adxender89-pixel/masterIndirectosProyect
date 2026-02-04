@@ -86,7 +86,8 @@
                     <OverflowToolbar height="100%">
                         <Button width="8%" text="{i18n>TBorigen}" press="onOriginPress" />
                         <ComboBox width="180px" class="sapUiSizeCompact" selectionChange="onOperacionChange" showClearIcon="true" items="{operacionesModel>/items}">
-                            <core:Item key="{operacionesModel>key}" text="{operacionesModel>text}" />
+                            <core:Item key="{operacionesModel>key}"
+        text="{operacionesModel>text}" />
                         </ComboBox>
 
 

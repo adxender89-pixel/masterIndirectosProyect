@@ -318,14 +318,16 @@ sap.ui.define([
 
                                     var total = parseFloat(oInput.getValue().replace(',', '.')) || 0;
 
-                                    if (!oRow.months) oRow.months = {};
-                                    if (!oRow.months[iYear]) {
-                                        var aMonth = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                                        var currentMonth = new Date().getMonth();
-                                        var currentYear = new Date().getFullYear();
-                                        var startMonth = (iYear === currentYear) ? currentMonth + 1 : 0;
-                                        oRow.months[iYear] = Array(aMonth.slice(startMonth).length).fill(0);
-                                    }
+                            if (!oModel.getProperty(oCtx.getPath() + "/monthsData")) {
+    oModel.setProperty(oCtx.getPath() + "/monthsData", {});
+}
+                            if (!oModel.getProperty(oCtx.getPath() + "/monthsData/" + iYear)) {
+                                var aMonth = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                                var currentMonth = new Date().getMonth();
+                                var currentYear = new Date().getFullYear();
+                                var startMonth = (iYear === currentYear) ? currentMonth + 1 : 0;
+                                oRow.months[iYear] = Array(aMonth.slice(startMonth).length).fill(0);
+                            }
 
                                     var n = oRow.months[iYear].length;
                                     var perMonth = Math.round((total / n) * 100) / 100;
@@ -517,7 +519,7 @@ sap.ui.define([
                         textAlign: "End",
                         visible: "{= ${expandible} !== false && !${isGroup} }",
                         value: {
-                            path: "months/" + sYear + "/" + i
+                            path: "monthsData/" + sYear + "/" + i
                         },
 
                         liveChange: function (oEvt) {
