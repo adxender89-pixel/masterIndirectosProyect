@@ -318,16 +318,16 @@ sap.ui.define([
 
                                     var total = parseFloat(oInput.getValue().replace(',', '.')) || 0;
 
-                            if (!oModel.getProperty(oCtx.getPath() + "/monthsData")) {
-    oModel.setProperty(oCtx.getPath() + "/monthsData", {});
-}
-                            if (!oModel.getProperty(oCtx.getPath() + "/monthsData/" + iYear)) {
-                                var aMonth = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                                var currentMonth = new Date().getMonth();
-                                var currentYear = new Date().getFullYear();
-                                var startMonth = (iYear === currentYear) ? currentMonth + 1 : 0;
-                                oRow.months[iYear] = Array(aMonth.slice(startMonth).length).fill(0);
-                            }
+                                    if (!oModel.getProperty(oCtx.getPath() + "/monthsData")) {
+                                        oModel.setProperty(oCtx.getPath() + "/monthsData", {});
+                                    }
+                                    if (!oModel.getProperty(oCtx.getPath() + "/monthsData/" + iYear)) {
+                                        var aMonth = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                                        var currentMonth = new Date().getMonth();
+                                        var currentYear = new Date().getFullYear();
+                                        var startMonth = (iYear === currentYear) ? currentMonth + 1 : 0;
+                                        oRow.months[iYear] = Array(aMonth.slice(startMonth).length).fill(0);
+                                    }
 
                                     var n = oRow.months[iYear].length;
                                     var perMonth = Math.round((total / n) * 100) / 100;
@@ -423,153 +423,136 @@ sap.ui.define([
         /**
          * Genera las columnas mensuales correspondientes al año seleccionado en la cabecera.
          */
-        onCreateMonthsTable: function (oEvent, sTableId, sModelName) {
-            var oSource = oEvent.getSource();
-            var oTable = sTableId ? this.byId(sTableId) : this.byId("TreeTableBasic");
-            var sPrefix = sModelName ? sModelName + ">" : "";
+onCreateMonthsTable: function (oEvent, sTableId, sModelName) {
+    var oSource = oEvent.getSource();
+    var oTable = this.byId(sTableId || "TreeTableBasic");
+    
+    var bShowEjecutado = this.byId("idEjecutadoCheckBox") ? this.byId("idEjecutadoCheckBox").getSelected() : false;
+    
+    var sYearText = "";
+    var sSourceName = oSource.getMetadata().getName();
+    if (sSourceName === "sap.m.Button") {
+        sYearText = oSource.getText();
+        if (isNaN(parseInt(sYearText, 10))) sYearText = oSource.getParent().getItems()[0].getText();
+    } else {
+        sYearText = String(this._openedYear);
+    }
 
-            // 1. Identificazione Anno
-            var sText = oSource.getText();
-            var isYearClick = (sText.length === 4 && !isNaN(parseInt(sText, 10)));
-            var sYear = isYearClick ? parseInt(sText, 10) : this._openedYear;
+    var sYear = parseInt(sYearText, 10);
+    if (!sYear) return;
 
-            // 2. Reset Icone (Anni e Mesi)
-            oTable.getColumns().forEach(function (oCol) {
-                var oLabel = oCol.getLabel();
-                if (!oLabel) return;
-                // Pulisce bottoni semplici
-                if (oLabel.setIcon) oLabel.setIcon("");
-                // Pulisce bottoni dentro VBox
-                if (oLabel.getItems) {
-                    var oBtn = oLabel.getItems()[1];
-                    if (oBtn && oBtn.setIcon) oBtn.setIcon("");
+    // Toggle chiusura
+    if (this._openedYear === sYear && sSourceName === "sap.m.Button") {
+        this._openedYear = null;
+        oTable.getColumns().filter(c => c.data("dynamicMonth")).forEach(c => oTable.removeColumn(c));
+        return;
+    }
+
+    oTable.getColumns().filter(c => c.data("dynamicMonth")).forEach(c => oTable.removeColumn(c));
+    this._openedYear = sYear;
+
+    var aMonthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    var currentYear = new Date().getFullYear();
+    var currentMonth = new Date().getMonth();
+
+    // Se checkbox è ON partiamo da Gennaio (0), altrimenti dal mese prossimo
+    var iStartIdx = (sYear === currentYear && !bShowEjecutado) ? currentMonth + 1 : 0;
+
+    var oYearCol = oTable.getColumns().find(c => {
+        var lab = c.getLabel();
+        var txt = lab.getText ? lab.getText() : (lab.getItems ? lab.getItems()[0].getText() : "");
+        return txt === String(sYear);
+    });
+    var colIndex = oTable.indexOfColumn(oYearCol);
+    var iOffset = 0;
+
+    // 1. Colonna riassuntiva "Ejecutados"
+    if (bShowEjecutado) {
+        var oColEjec = new sap.ui.table.Column({
+            width: "8rem",
+            label: new sap.m.VBox({
+                alignItems: "Center", renderType: "Bare", width: "100%",
+                items: [
+                    new sap.m.Text({ text: String(sYear) }).addStyleClass("sapUiTinyFontSize textoaño"),
+                    new sap.m.Label({ text: "Ejecutados", design: "Bold" }).addStyleClass("testBold")
+                ]
+            }),
+            template: new sap.m.Text({ text: "{ejecutado}", textAlign: "End", width: "100%" })
+        }).data("dynamicMonth", true);
+        oTable.insertColumn(oColEjec, colIndex + iOffset);
+        iOffset++;
+    }
+
+    // 2. Colonne dei mesi (Testo per il passato, Input per il futuro)
+    for (var i = iStartIdx; i < 12; i++) {
+        var sMonthLabel = aMonthNames[i];
+        var iRealIdx = i;
+        var bIsPassedMonth = (sYear < currentYear) || (sYear === currentYear && i <= currentMonth);
+        
+        // --- LOGICA TEMPLATE DINAMICO ---
+        // Se il mese è passato E la checkbox è attiva, mostriamo un sap.m.Text
+        var oControlTemplate;
+        
+        if (bShowEjecutado && bIsPassedMonth) {
+            oControlTemplate = new sap.m.Text({
+                text: "{monthsData/" + sYear + "/" + iRealIdx + "}",
+                textAlign: "End",
+                width: "100%"
+            }).addStyleClass("sapUiTinyMarginEnd"); // Un po' di padding per estetica
+        } else {
+            oControlTemplate = new sap.m.Input({
+                value: "{monthsData/" + sYear + "/" + iRealIdx + "}",
+                textAlign: "End",
+                visible: "{= ${expandible} !== false && !${isGroup} }",
+                liveChange: function (oEvt) {
+                    var oInput = oEvt.getSource();
+                    var oCtx = oInput.getBindingContext();
+                    var oModel = oCtx.getModel();
+                    var sPath = oCtx.getPath();
+                    
+                    if (!oModel.getProperty(sPath + "/monthsData/" + sYear)) {
+                        oModel.setProperty(sPath + "/monthsData/" + sYear, Array(12).fill(""));
+                    }
+                    // var val = parseFloat(oInput.getValue().replace(',', '.')) || 0;
+                    // var aMonths = oModel.getProperty(sPath + "/monthsData/" + sYear).slice();
+                    // // aMonths[iRealIdx] = Math.round(val * 100) / 100;
+                    // oModel.setProperty(sPath + "/monthsData/" + sYear, aMonths);
+                    
+                    // var total = aMonths.reduce((a, b) => a + (parseFloat(b) || 0), 0);
+                    // // oModel.setProperty(sPath + "/y" + sYear, Math.round(total * 100) / 100);
                 }
             });
+        }
 
-            // 3. Rimozione mesi precedenti
-            var existingMonthCols = oTable.getColumns().filter(col => col.data("dynamicMonth") === true);
-            existingMonthCols.forEach(col => oTable.removeColumn(col));
+        var oColumn = new sap.ui.table.Column({
+            width: "8rem",
+            label: new sap.m.VBox({
+                alignItems: "Center", renderType: "Bare", width: "100%",
+                items: [
+                    new sap.m.Text({ text: String(sYear) }).addStyleClass("sapUiTinyFontSize textoaño"),
+                    (i === iStartIdx) ? new sap.m.Button({
+                        text: sMonthLabel, type: "Transparent", width: "100%",
+                        icon: "sap-icon://slim-arrow-right", iconFirst: false,
+                        press: function (oEv) { this.onCreateMonthsTable(oEv, sTableId); }.bind(this)
+                    }).addStyleClass("testBold") : new sap.m.Label({ text: sMonthLabel, textAlign: "Center", width: "100%" }).addStyleClass("testBold")
+                ]
+            }),
+            template: oControlTemplate
+        }).data("dynamicMonth", true);
+        
+        oTable.insertColumn(oColumn, colIndex + iOffset + (i - iStartIdx));
+    }
+},
 
-            if (this._openedYear === sYear) {
-                this._openedYear = null;
-                return;
-            }
-
-            this._openedYear = sYear;
-
-            // 4. Icona sull'Anno (Punta a sinistra verso i mesi)
-            if (isYearClick) {
-                oSource.setIcon("sap-icon://slim-arrow-left");
-                oSource.setIconFirst(true);
-            }
-
-            var aMonth = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            var currentYear = new Date().getFullYear();
-            var startMonth = (sYear === currentYear) ? new Date().getMonth() + 1 : 0;
-            var aRemainingMonths = aMonth.slice(startMonth);
-
-            var oYearColumn = oTable.getColumns().find(function (oCol) {
-                var oLabel = oCol.getLabel();
-                return (oLabel === oSource) || (oLabel.getText && oLabel.getText() === String(sYear));
-            });
-            var colIndex = oTable.indexOfColumn(oYearColumn);
-
-            // 5. Creazione Colonne Mesi (CON l'anno in alto)
-            aRemainingMonths.forEach((sMonth, i) => {
-                var oHeaderControl;
-
-                if (i === 0) {
-                    // IL BOTTONE DEL PRIMO MESE (Testo centrato, icona a destra)
-                    oHeaderControl = new sap.m.Button({
-                        text: sMonth,
-                        type: "Transparent",
-                        width: "100%",
-                        icon: "sap-icon://slim-arrow-right",
-                        iconFirst: false, // Icona dopo il testo
-                        press: function (oEv) {
-                            this.onCreateMonthsTable(oEv, sTableId, sModelName);
-                        }.bind(this)
-                    }).addStyleClass("testBold");
-                } else {
-                    oHeaderControl = new sap.m.Label({
-                        textAlign: "Center",
-                        text: sMonth,
-                        width: "100%"
-                    }).addStyleClass("testBold");
-                }
-
-                var oCol = new sap.ui.table.Column({
-                    label: new sap.m.VBox({
-                        width: "100%",
-                        alignItems: "Center", // Centra l'anno
-                        justifyContent: "Center",
-                        renderType: "Bare", // Rende il VBox più "leggero"
-                        items: [
-                            // L'anno corrispondente in alto
-                            new sap.m.Text({
-                                textAlign: "Center",
-                                text: String(sYear)
-                            }).addStyleClass("sapUiTinyMarginTop sapUiTinyFontSize textoaño"),
-                            // Il bottone o la label sotto
-                            oHeaderControl
-                        ]
-                    }),
-                    template: new sap.m.Input({
-                        width: "100%",
-                        textAlign: "End",
-                        visible: "{= ${expandible} !== false && !${isGroup} }",
-                        value: {
-                            path: "monthsData/" + sYear + "/" + i
-                        },
-
-                        liveChange: function (oEvt) {
-                            var oInput = oEvt.getSource();
-                            var oCtx = oInput.getBindingContext();
-                            var oRow = oCtx.getObject();
-                            var oModel = oCtx.getModel();
-                            var sPath = oCtx.getPath();
-
-                            if (!oRow.months || !Array.isArray(oRow.months[sYear])) {
-                                return;
-                            }
-
-                            var rawValue = oInput.getValue().replace(',', '.');
-
-                            var value = parseFloat(rawValue);
-                            if (isNaN(value)) {
-                                value = 0;
-                            }
-
-                            value = Math.round(value * 100) / 100;
-
-                            var iMonthIndex = i;
-                            var aMonths = oRow.months[sYear].slice();
-
-                            // actualiza SOLO el mes actual
-                            aMonths[iMonthIndex] = value;
-
-                            // recalcula el total
-                            var total = aMonths.reduce(function (sum, v) {
-                                return sum + (parseFloat(v) || 0);
-                            }, 0);
-
-                            total = Math.round(total * 100) / 100;
-
-                            // actualiza el modelo (UNA VEZ)
-                            oModel.setProperty(sPath + "/monthsData/" + sYear, aMonths);
-                            oModel.setProperty(sPath + "/y" + sYear, total);
-                        }
-                    }),
-                    width: "8rem"
-                });
-
-                oCol.data("dynamicMonth", true);
-                oTable.insertColumn(oCol, colIndex + i);
-            });
-            oTable.setFirstVisibleColumn(colIndex);
-            var oTreeTable = this.byId("TreeTableBasic");
-            oTable.setFixedColumnCount(2);
-        },
+onEjecutadoCheckBoxSelect: function (oEvent) {
+    // Verifichiamo se c'è un anno attualmente aperto (espanso)
+    // Se c'è, richiamiamo la creazione dei mesi per aggiornare la visualizzazione
+    if (this._openedYear) {
+        // Passiamo l'evento oEvent così la funzione onCreateMonthsTable 
+        // sa che la chiamata arriva dalla Checkbox
+        this.onCreateMonthsTable(oEvent);
+    }
+},
 
         /**
          * Lógica de gestión de cabeceras sticky durante el desplazamiento de la tabla.
