@@ -270,13 +270,24 @@ sap.ui.define([
         createYearColumns: function (sTableId, iStartYear, iHowMany, sModelName, iSkipFields) {
             var oTable = this.byId(sTableId);
             if (!oTable) return;
+            var aColumns = oTable.getColumns();
+            for (var i = aColumns.length - 1; i >= 0; i--) {
+                var oCol = aColumns[i];
+                if (oCol.data("dynamicYear") === true || oCol.data("dynamicMonth") === true) {
+                    oTable.removeColumn(oCol);
+                }
+            }
+            this._openedYear = null; // Chiude eventuali mesi aperti
+
+            // Recuperiamo iSkipFields o usiamo il default 10
+            var iStartFrom = (iSkipFields !== undefined) ? iSkipFields : 10;
 
             var aYears = [];
             for (var i = 0; i < iHowMany; i++) {
                 aYears.push(iStartYear + i);
             }
 
-            aYears.forEach(function (iYear) {
+            aYears.forEach(function (iYear, index) { // Aggiunto 'index' per il formatter
                 var oColumn = new sap.ui.table.Column({
                     width: "8rem",
                     minWidth: 60,
@@ -289,18 +300,23 @@ sap.ui.define([
                             this.onCreateMonthsTable(oEvent, sTableId, sModelName);
                         }.bind(this)
                     }),
-                    template: new sap.m.Input({
+                    template: new sap.m.FlexBox({
+                        renderType: "Bare",
                         width: "100%",
-                        textAlign: "End",
-                        value: "{y" + iYear + "}",
-                        visible: "{= ${expandible} !== false && !${isGroup} }",
-                        liveChange: function (oEvt) {
-                            var oInput = oEvt.getSource();
-                            var oCtx = oInput.getBindingContext();
-                            var oRow = oCtx.getObject();
-                            var oModel = oCtx.getModel();
+                        items: [
+                            // --- INPUT (Mantenuta la tua logica liveChange) ---
+                            new sap.m.Input({
+                                width: "100%",
+                                textAlign: "End",
+                                value: "{y" + iYear + "}",
+                                visible: "{= ${expandible} !== false && !${isGroup} }",
+                                liveChange: function (oEvt) {
+                                    var oInput = oEvt.getSource();
+                                    var oCtx = oInput.getBindingContext();
+                                    var oRow = oCtx.getObject();
+                                    var oModel = oCtx.getModel();
 
-                            var total = parseFloat(oInput.getValue().replace(',', '.')) || 0;
+                                    var total = parseFloat(oInput.getValue().replace(',', '.')) || 0;
 
                             if (!oModel.getProperty(oCtx.getPath() + "/monthsData")) {
     oModel.setProperty(oCtx.getPath() + "/monthsData", {});
@@ -313,24 +329,51 @@ sap.ui.define([
                                 oRow.months[iYear] = Array(aMonth.slice(startMonth).length).fill(0);
                             }
 
-                            var n = oRow.months[iYear].length;
-                            var perMonth = Math.round((total / n) * 100) / 100;
-                            oRow.months[iYear] = Array(n).fill(perMonth);
+                                    var n = oRow.months[iYear].length;
+                                    var perMonth = Math.round((total / n) * 100) / 100;
+                                    oRow.months[iYear] = Array(n).fill(perMonth);
 
-                            oModel.setProperty(oCtx.getPath() + "/months/" + iYear, oRow.months[iYear]);
-                            oModel.setProperty(oCtx.getPath() + "/y" + iYear, total);
-                            oModel.refresh(true);
-                        }
-                    }).addStyleClass("sapUiSizeCompact")
+                                    oModel.setProperty(oCtx.getPath() + "/months/" + iYear, oRow.months[iYear]);
+                                    oModel.setProperty(oCtx.getPath() + "/y" + iYear, total);
+                                    oModel.refresh(true);
+                                }
+                            }).addStyleClass("sapUiSizeCompact"),
+
+                            // --- TEXT (Ripristinato dalla prima versione) ---
+                            new sap.m.Text({
+                                width: "100%",
+                                textAlign: "Center",
+                                visible: "{= ${expandible} === false }",
+                                wrapping: false,
+                                text: {
+                                    path: "",
+                                    formatter: function (oRow) {
+                                        if (!oRow || oRow.expandible !== false) return "";
+                                        var aKeys = Object.keys(oRow);
+                                        var sTargetKey = aKeys[iStartFrom + index];
+                                        return sTargetKey ? oRow[sTargetKey] : "";
+                                    }
+                                }
+                            })
+                        ]
+                    })
                 });
 
                 oColumn.data("dynamicYear", true);
                 oColumn.data("year", iYear);
                 oTable.addColumn(oColumn);
             }.bind(this));
+
             setTimeout(function () {
                 this.setupDynamicTreeTable(sTableId);
             }.bind(this), 0);
+        },
+        onYearChange: function (oEvent) {
+            var sSelectedYear = parseInt(oEvent.getParameter("selectedItem").getKey(), 10);
+
+            // Chiamiamo la tua funzione per ridisegnare le colonne
+            // Passiamo "TreeTableBasic" come ID e 3 come numero di anni da mostrare
+            this.createYearColumns("TreeTableBasic", sSelectedYear, 3);
         },
 
         /**
@@ -384,7 +427,7 @@ sap.ui.define([
             var oSource = oEvent.getSource();
             var oTable = sTableId ? this.byId(sTableId) : this.byId("TreeTableBasic");
             var sPrefix = sModelName ? sModelName + ">" : "";
- 
+
             // 1. Identificazione Anno
             var sText = oSource.getText();
             var isYearClick = (sText.length === 4 && !isNaN(parseInt(sText, 10)));
@@ -474,10 +517,11 @@ sap.ui.define([
                     template: new sap.m.Input({
                         width: "100%",
                         textAlign: "End",
+                        visible: "{= ${expandible} !== false && !${isGroup} }",
                         value: {
                             path: "monthsData/" + sYear + "/" + i
                         },
-                        visible: "{= ${expandible} !== false && !${isGroup} }",
+
                         liveChange: function (oEvt) {
                             var oInput = oEvt.getSource();
                             var oCtx = oInput.getBindingContext();
@@ -498,8 +542,8 @@ sap.ui.define([
 
                             value = Math.round(value * 100) / 100;
 
-                            var iMonthIndex = i; 
-                            var aMonths = oRow.months[sYear].slice(); 
+                            var iMonthIndex = i;
+                            var aMonths = oRow.months[sYear].slice();
 
                             // actualiza SOLO el mes actual
                             aMonths[iMonthIndex] = value;

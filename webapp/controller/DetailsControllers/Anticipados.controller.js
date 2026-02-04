@@ -43,8 +43,7 @@ sap.ui.define([
             this.getView().attachEventOnce("afterRendering", function () {
                 this.createYearColumns(
                     "TreeTableBasic",
-                    new Date().getFullYear(),
-                    3
+                    new Date().getFullYear(), 3
                 );
             }.bind(this));
             // --- Cargar JSON de Catalog ---
@@ -67,6 +66,26 @@ sap.ui.define([
                     "operacionesModel"
                 );
             }.bind(this));
+            // 1. Definiamo l'anno di partenza
+            var iActualYear = new Date().getFullYear();
+            var aSelectYears = [];
+
+            // 2. QUESTO È IL TUO "TELECOMANDO":
+            var iRangeSelect = 10; // <--- SE SCRIVI 10, AVRAI 10 ANNI NEL MENU.
+
+            // 3. Il ciclo genera fisicamente la lista basandosi su iRangeSelect
+            for (var i = 0; i < iRangeSelect; i++) {
+                aSelectYears.push({
+                    year: iActualYear + i
+                });
+            }
+
+            // 4. Carichiamo la lista nel modello usato dal Select nell'XML
+            var oYearModel = new sap.ui.model.json.JSONModel({
+                years: aSelectYears,
+                selectedYear: iActualYear
+            });
+            this.getView().setModel(oYearModel, "yearsModel");
         },
 
         /**
@@ -78,147 +97,129 @@ sap.ui.define([
         /**
           * Función que filtra las operaciones I.003.xxx
           */
-        _buildOperacionesCombo: function (aCategories) {
-            var aResult = [];
+         _buildOperacionesCombo: function (aCategories) {
+    var aResult = [];
 
-            function recurse(aNodes) {
-                if (!Array.isArray(aNodes)) {
-                    return;
-                }
+    function recurse(aNodes) {
+        if (!Array.isArray(aNodes)) return;
 
-                aNodes.forEach(function (oNode) {
-
-                    // prendiamo SOLO i nodi "finali"
-                    if (
-                        oNode.name &&
-                        oNode.expandible === true &&
-                        (!Array.isArray(oNode.categories) || oNode.categories.length > 0)
-                    ) {
-                        // escludiamo i macro-padri tipo "I. 003"
-                        if (!oNode.categories || oNode.categories.length === 0) {
-                            return;
-                        }
-
-                        // se ha figli "Agrupador", è un padre reale (I.003.xxx)
-                        var hasAgrupador = oNode.categories.some(function (c) {
-                            return c.isGroup === true;
-                        });
-
-                        if (hasAgrupador) {
-                            aResult.push({
-                                key: oNode.name,
-                                text: oNode.name + " - " + (oNode.currency || "")
-                            });
-                        }
-                    }
-
-                    // 🔁 continua a scendere
-                    if (Array.isArray(oNode.categories)) {
-                        recurse(oNode.categories);
-                    }
+        aNodes.forEach(function (oNode) {
+            // prendiamo tutti i padri (che hanno categories o sono expandible)
+            if (oNode.expandible || (Array.isArray(oNode.categories) && oNode.categories.length > 0)) {
+                aResult.push({
+                    key: oNode.name,
+                    text: oNode.name + " - " + (oNode.currency || "")
                 });
             }
 
-            recurse(aCategories);
-            return aResult;
-        },
-        /**
+            // continua ricorsione per figli
+            if (Array.isArray(oNode.categories)) {
+                recurse(oNode.categories);
+            }
+        });
+    }
+
+    recurse(aCategories);
+    return aResult;
+}, /**
         * Filtra la TreeTable según la operación seleccionada en el Select
         */
-        onOperacionChange: function (oEvent) {
-            var oSelectedItem = oEvent.getParameter("selectedItem");
-            var oTable = this.byId("TreeTableBasic");
-            var oCatalogModel = this.getView().getModel("catalog");
-            var oUiModel = this.getView().getModel("ui");
-            var aCategories = oCatalogModel.getProperty("/catalog/models/categories");
+      onOperacionChange: function (oEvent) {
+    var oSelectedItem = oEvent.getParameter("selectedItem");
+    var oTable = this.byId("TreeTableBasic");
+    var oCatalogModel = this.getView().getModel("catalog");
+    var oUiModel = this.getView().getModel("ui");
+    var aCategories = oCatalogModel.getProperty("/catalog/models/categories");
 
-            if (!Array.isArray(aCategories)) {
-                return;
+    if (!Array.isArray(aCategories)) return;
+
+    // ====== CLEAR ComboBox → ripristino totale ======
+    if (!oSelectedItem) {
+        oTable.setModel(new JSONModel({ categories: aCategories }));
+        oTable.bindRows("/categories");
+
+        // Nascondi colonne per default
+        if (this.byId("colMonths")) this.byId("colMonths").setVisible(false);
+        if (this.byId("colNew")) this.byId("colNew").setVisible(false);
+
+        oUiModel?.setProperty("/showStickyParent", false);
+        oUiModel?.setProperty("/showStickyChild", false);
+
+        setTimeout(function () {
+            oTable.collapseAll();
+            oTable.invalidate();
+            this._refreshAfterToggle(oTable.getId());
+        }.bind(this), 0);
+
+        return;
+    }
+
+    // ====== SELEZIONE ======
+    var sKey = oSelectedItem.getKey();
+    var aFilteredRoot = [];
+
+    aCategories.forEach(function (rootCat) {
+        if (!Array.isArray(rootCat.categories)) rootCat.categories = [];
+
+        var aFilteredChildren = this._filterCategories(rootCat.categories, sKey);
+        var includeParent = rootCat.name === sKey;
+
+        if (aFilteredChildren.length === 0 && !includeParent) return;
+
+        var oParentClone = Object.assign({}, rootCat);
+        oParentClone.categories = aFilteredChildren.length > 0 ? aFilteredChildren : rootCat.categories;
+        aFilteredRoot.push(oParentClone);
+    }.bind(this));
+
+    oTable.setModel(new JSONModel({ categories: aFilteredRoot }));
+    oTable.bindRows("/categories");
+
+    // ====== COSTRUISCE LISTA DINAMICA NODI NON AUTO-EXPAND ======
+    var aNoAutoExpand = aFilteredRoot
+        .filter(c => c.noAutoExpand || !c.expandible)  // oppure aggiungi il flag noAutoExpand nei JSON
+        .map(c => c.name);
+
+    // ====== VISIBILITÀ COLONNE ======
+    setTimeout(function () {
+        var oBinding = oTable.getBinding("rows");
+        if (!oBinding) return;
+
+        var bHasData = false;
+
+        for (var i = 0; i < oBinding.getLength(); i++) {
+            var oCtx = oTable.getContextByIndex(i);
+            var oObj = oCtx && oCtx.getObject();
+
+            // 🔹 Non espandere figli se sono nella lista dinamica
+            if (oObj && oObj.expandible && !aNoAutoExpand.includes(oObj.name)) {
+                oTable.expand(i);
             }
 
-            // ==========================================
-            // CLEAR ComboBox → ripristino totale
-            // ==========================================
-            if (!oSelectedItem) {
-                oTable.setModel(new JSONModel({ categories: aCategories }));
-                oTable.bindRows("/categories");
+            // 🔹 Controllo se ci sono dati reali (isGroup = true)
+            if (oObj && Array.isArray(oObj.categories)) {
+                var bHasGroup = oObj.categories.some(child => child.isGroup === true);
+                if (bHasGroup) bHasData = true;
+            }
+        }
 
-                oUiModel?.setProperty("/showStickyParent", false);
-                oUiModel?.setProperty("/showStickyChild", false);
+        // Imposta visibilità delle colonne solo se ci sono dati
+        if (this.byId("colMonths")) this.byId("colMonths").setVisible(bHasData);
+        if (this.byId("colNew")) this.byId("colNew").setVisible(bHasData);
 
-                setTimeout(function () {
-                    oTable.collapseAll();
-                    oTable.invalidate();
-                    this._refreshAfterToggle(oTable.getId());
-                }.bind(this), 0);
-
-                return;
+        // Salva il path dell’ultima espansione per sticky UI
+        var oFirstCtx = oTable.getContextByIndex(0);
+        if (oFirstCtx) {
+            this._sLastExpandedPath = oFirstCtx.getPath();
+            if (oUiModel) {
+                oUiModel.setProperty("/showStickyParent", true);
+                oUiModel.setProperty("/showStickyChild", true);
             }
 
-            // ==========================================
-            // SELEZIONE
-            // ==========================================
-            var sKey = oSelectedItem.getKey();
+            this._refreshAfterToggle(oTable.getId());
+        }
 
-            // 🔹 filtro dinamico (mantiene anche il padre)
-            var aFilteredRoot = [];
-
-            aCategories.forEach(function (rootCat) {
-
-                if (!Array.isArray(rootCat.categories)) {
-                    return;
-                }
-
-                var aFilteredChildren = this._filterCategories(
-                    rootCat.categories,
-                    sKey
-                );
-
-                // 🔹 se non matcha nulla → skip
-                if (aFilteredChildren.length === 0) {
-                    return;
-                }
-
-                // 🔹 RICREO IL PADRE (I.003)
-                var oParentClone = Object.assign({}, rootCat);
-                oParentClone.categories = aFilteredChildren;
-
-                aFilteredRoot.push(oParentClone);
-
-            }.bind(this));
-
-            oTable.setModel(new JSONModel({ categories: aFilteredRoot }));
-            oTable.bindRows("/categories");
-
-            // ==========================================
-            // EXPAND + STICKY automatico
-            // ==========================================
-            setTimeout(function () {
-                oTable.expandToLevel(99);
-                oTable.invalidate();
-
-                var oBinding = oTable.getBinding("rows");
-                if (!oBinding) return;
-
-                for (var i = 0; i < oBinding.getLength(); i++) {
-                    var oCtx = oTable.getContextByIndex(i);
-                    var oObj = oCtx && oCtx.getObject();
-
-                    // primo padre valido (dinamico)
-                    if (oObj && oObj.categories && oObj.categories.length) {
-                        this._sLastExpandedPath = oCtx.getPath();
-                        oTable.setFirstVisibleRow(i);
-
-                        oUiModel?.setProperty("/showStickyParent", true);
-                        oUiModel?.setProperty("/showStickyChild", true);
-
-                        this._refreshAfterToggle(oTable.getId());
-                        break;
-                    }
-                }
-            }.bind(this), 50);
-        },
-
+    }.bind(this), 100);
+},
         /**
          * Gestiona la visibilidad de columnas extendidas al expandir nodos en la TreeTable.
          */
