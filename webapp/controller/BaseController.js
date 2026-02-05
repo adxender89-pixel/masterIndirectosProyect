@@ -672,31 +672,31 @@ onEjecutadoCheckBoxSelect: function (oEvent) {
             // Actualiza el modelo (asumiendo que el modelo se llama 'view')
             this.getView().getModel("viewModel").setProperty("/dynamicRowCount", iRows);
         },
-        _filterCategories: function (aCategories, sKey) {
-            return aCategories
-                .map(function (cat) {
-                    var newCat = Object.assign({}, cat);
+_filterCategories: function (aCategories, sKey) {
+    if (!Array.isArray(aCategories)) return [];
 
-                    if (cat.categories) {
-                        // Filtramos hijos recursivamente
-                        newCat.categories = this._filterCategories(cat.categories, sKey);
-                    }
+    return aCategories
+        .map(function (cat) {
+            var oClone = Object.assign({}, cat);
 
-                    // Si el nodo coincide con el key, mantenemos todos sus hijos originales
-                    if (cat.name === sKey) {
-                        newCat.categories = cat.categories || [];
-                        return newCat;
-                    }
+            var aFilteredChildren = this._filterCategories(cat.categories || [], sKey);
 
-                    // Mantener nodo si tiene hijos filtrados
-                    if (newCat.categories && newCat.categories.length > 0) {
-                        return newCat;
-                    }
+            // MATCH directo
+            if (cat.name === sKey) {
+                oClone.categories = cat.categories || [];
+                return oClone;
+            }
 
-                    return null;
-                }.bind(this))
-                .filter(Boolean);
-        },
+            // MATCH indirecto 
+            if (aFilteredChildren.length > 0) {
+                oClone.categories = aFilteredChildren;
+                return oClone;
+            }
+
+            return null;
+        }.bind(this))
+        .filter(Boolean);
+},
         onCollapseFromHeader: function () {
             var oTable = this.byId("TreeTableBasic");
             var oUiModel = this.getView().getModel("ui");
@@ -934,7 +934,7 @@ onEjecutadoCheckBoxSelect: function (oEvent) {
 }, /**
         * Filtra la TreeTable según la operación seleccionada en el Select
         */
-      onOperacionChange: function (oEvent) {
+   onOperacionChange: function (oEvent) {
     var oSelectedItem = oEvent.getParameter("selectedItem");
     var oTable = this.byId("TreeTableBasic");
     var oCatalogModel = this.getView().getModel("catalog");
@@ -943,20 +943,19 @@ onEjecutadoCheckBoxSelect: function (oEvent) {
 
     if (!Array.isArray(aCategories)) return;
 
+    // 🔄 reset vista
     if (!oSelectedItem) {
-        oTable.setModel(new JSONModel({ categories: aCategories }));
+        oTable.setModel(new sap.ui.model.json.JSONModel({ categories: aCategories }));
         oTable.bindRows("/categories");
 
-        // Nascondi colonne per default
-        if (this.byId("colMonths")) this.byId("colMonths").setVisible(false);
-        if (this.byId("colNew")) this.byId("colNew").setVisible(false);
+        this.byId("colMonths")?.setVisible(false);
+        this.byId("colNew")?.setVisible(false);
 
         oUiModel?.setProperty("/showStickyParent", false);
         oUiModel?.setProperty("/showStickyChild", false);
 
         setTimeout(function () {
             oTable.collapseAll();
-            oTable.invalidate();
             this._refreshAfterToggle(oTable.getId());
         }.bind(this), 0);
 
@@ -964,64 +963,87 @@ onEjecutadoCheckBoxSelect: function (oEvent) {
     }
 
     var sKey = oSelectedItem.getKey();
+
+    var sParentKey = sKey.includes(".")
+        ? sKey.substring(0, sKey.lastIndexOf("."))
+        : null;
+
     var aFilteredRoot = [];
 
     aCategories.forEach(function (rootCat) {
-        if (!Array.isArray(rootCat.categories)) rootCat.categories = [];
+        if (!Array.isArray(rootCat.categories)) {
+            rootCat.categories = [];
+        }
 
-        var aFilteredChildren = this._filterCategories(rootCat.categories, sKey);
-        var includeParent = rootCat.name === sKey;
+     var aFilteredChildren = this._filterCategories(rootCat.categories, sKey);
 
-        if (aFilteredChildren.length === 0 && !includeParent) return;
+var bIncludeParent =
+    rootCat.name === sKey ||
+    (sParentKey && rootCat.name === sParentKey);
 
-        var oParentClone = Object.assign({}, rootCat);
-        oParentClone.categories = aFilteredChildren.length > 0 ? aFilteredChildren : rootCat.categories;
-        aFilteredRoot.push(oParentClone);
+        if (aFilteredChildren.length === 0 && !bIncludeParent) {
+            return;
+        }
+
+        var oClone = Object.assign({}, rootCat);
+
+        if (aFilteredChildren.length > 0) {
+    oClone.categories = aFilteredChildren;
+} else if (rootCat.name === sParentKey) {
+    oClone.categories = this._filterCategories(rootCat.categories, sKey);
+} else {
+    // default
+    oClone.categories = rootCat.categories;
+}
+
+        aFilteredRoot.push(oClone);
     }.bind(this));
 
-    oTable.setModel(new JSONModel({ categories: aFilteredRoot }));
+    oTable.setModel(new sap.ui.model.json.JSONModel({ categories: aFilteredRoot }));
     oTable.bindRows("/categories");
 
-    var aNoAutoExpand = aFilteredRoot
-        .filter(c => c.noAutoExpand || !c.expandible)  
-        .map(c => c.name);
+   setTimeout(function () {
+    var oBinding = oTable.getBinding("rows");
+    if (!oBinding) return;
 
-    setTimeout(function () {
-        var oBinding = oTable.getBinding("rows");
-        if (!oBinding) return;
+    var bHasData = false;
 
-        var bHasData = false;
+    for (var i = 0; i < oBinding.getLength(); i++) {
+        var oCtx = oTable.getContextByIndex(i);
+        var oObj = oCtx && oCtx.getObject();
+        if (!oObj) continue;
 
-        for (var i = 0; i < oBinding.getLength(); i++) {
-            var oCtx = oTable.getContextByIndex(i);
-            var oObj = oCtx && oCtx.getObject();
-
-            if (oObj && oObj.expandible && !aNoAutoExpand.includes(oObj.name)) {
+        if (oObj.name === sParentKey || oObj.name === sKey) {
+            if (oObj.expandible) {
                 oTable.expand(i);
             }
-
-            if (oObj && Array.isArray(oObj.categories)) {
-                var bHasGroup = oObj.categories.some(child => child.isGroup === true);
-                if (bHasGroup) bHasData = true;
-            }
         }
 
-        if (this.byId("colMonths")) this.byId("colMonths").setVisible(bHasData);
-        if (this.byId("colNew")) this.byId("colNew").setVisible(bHasData);
-
-        var oFirstCtx = oTable.getContextByIndex(0);
-        if (oFirstCtx) {
-            this._sLastExpandedPath = oFirstCtx.getPath();
-            if (oUiModel) {
-                oUiModel.setProperty("/showStickyParent", true);
-                oUiModel.setProperty("/showStickyChild", true);
-            }
-
-            this._refreshAfterToggle(oTable.getId());
+        if (
+            sParentKey &&
+            oObj.name === sKey &&
+            oObj.expandible
+        ) {
+            oTable.expand(i);
         }
 
-    }.bind(this), 100);
-},
+        if (Array.isArray(oObj.categories)) {
+            if (oObj.categories.some(c => c.isGroup === true)) {
+                bHasData = true;
+            }
+        }
+    }
+
+    this.byId("colMonths")?.setVisible(bHasData);
+    this.byId("colNew")?.setVisible(bHasData);
+
+    oUiModel?.setProperty("/showStickyParent", true);
+    oUiModel?.setProperty("/showStickyChild", true);
+
+    this._refreshAfterToggle(oTable.getId());
+}.bind(this), 100);
+}
+,
 
     });
 });
