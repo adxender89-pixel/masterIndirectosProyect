@@ -277,9 +277,8 @@ sap.ui.define([
                     oTable.removeColumn(oCol);
                 }
             }
-            this._openedYear = null; // Chiude eventuali mesi aperti
+            this._openedYear = null; // Cerrar meses abiertos
 
-            // Recuperiamo iSkipFields o usiamo il default 10
             var iStartFrom = (iSkipFields !== undefined) ? iSkipFields : 10;
 
             var aYears = [];
@@ -287,7 +286,7 @@ sap.ui.define([
                 aYears.push(iStartYear + i);
             }
 
-            aYears.forEach(function (iYear, index) { // Aggiunto 'index' per il formatter
+            aYears.forEach(function (iYear, index) {
                 var oColumn = new sap.ui.table.Column({
                     width: "8rem",
                     minWidth: 60,
@@ -304,7 +303,6 @@ sap.ui.define([
                         renderType: "Bare",
                         width: "100%",
                         items: [
-                            // --- INPUT (Mantenuta la tua logica liveChange) ---
                             new sap.m.Input({
                                 width: "100%",
                                 textAlign: "End",
@@ -333,13 +331,11 @@ sap.ui.define([
                                     var perMonth = Math.round((total / n) * 100) / 100;
                                     oRow.months[iYear] = Array(n).fill(perMonth);
 
-                                    oModel.setProperty(oCtx.getPath() + "/months/" + iYear, oRow.months[iYear]);
+                                    oModel.setProperty(oCtx.getPath() + "/monthsData/" + iYear, oRow.months[iYear]);
                                     oModel.setProperty(oCtx.getPath() + "/y" + iYear, total);
-                                    oModel.refresh(true);
+
                                 }
                             }).addStyleClass("sapUiSizeCompact"),
-
-                            // --- TEXT (Ripristinato dalla prima versione) ---
                             new sap.m.Text({
                                 width: "100%",
                                 textAlign: "Center",
@@ -370,9 +366,6 @@ sap.ui.define([
         },
         onYearChange: function (oEvent) {
             var sSelectedYear = parseInt(oEvent.getParameter("selectedItem").getKey(), 10);
-
-            // Chiamiamo la tua funzione per ridisegnare le colonne
-            // Passiamo "TreeTableBasic" come ID e 3 come numero di anni da mostrare
             this.createYearColumns("TreeTableBasic", sSelectedYear, 3);
         },
 
@@ -423,136 +416,122 @@ sap.ui.define([
         /**
          * Genera las columnas mensuales correspondientes al año seleccionado en la cabecera.
          */
-onCreateMonthsTable: function (oEvent, sTableId, sModelName) {
-    var oSource = oEvent.getSource();
-    var oTable = this.byId(sTableId || "TreeTableBasic");
-    
-    var bShowEjecutado = this.byId("idEjecutadoCheckBox") ? this.byId("idEjecutadoCheckBox").getSelected() : false;
-    
-    var sYearText = "";
-    var sSourceName = oSource.getMetadata().getName();
-    if (sSourceName === "sap.m.Button") {
-        sYearText = oSource.getText();
-        if (isNaN(parseInt(sYearText, 10))) sYearText = oSource.getParent().getItems()[0].getText();
-    } else {
-        sYearText = String(this._openedYear);
-    }
+        onCreateMonthsTable: function (oEvent, sTableId, sModelName) {
+            var oSource = oEvent.getSource();
+            var oTable = this.byId(sTableId || "TreeTableBasic");
 
-    var sYear = parseInt(sYearText, 10);
-    if (!sYear) return;
+            var bShowEjecutado = this.byId("idEjecutadoCheckBox") ? this.byId("idEjecutadoCheckBox").getSelected() : false;
 
-    // Toggle chiusura
-    if (this._openedYear === sYear && sSourceName === "sap.m.Button") {
-        this._openedYear = null;
-        oTable.getColumns().filter(c => c.data("dynamicMonth")).forEach(c => oTable.removeColumn(c));
-        return;
-    }
+            var sYearText = "";
+            var sSourceName = oSource.getMetadata().getName();
+            if (sSourceName === "sap.m.Button") {
+                sYearText = oSource.getText();
+                if (isNaN(parseInt(sYearText, 10))) sYearText = oSource.getParent().getItems()[0].getText();
+            } else {
+                sYearText = String(this._openedYear);
+            }
 
-    oTable.getColumns().filter(c => c.data("dynamicMonth")).forEach(c => oTable.removeColumn(c));
-    this._openedYear = sYear;
+            var sYear = parseInt(sYearText, 10);
+            if (!sYear) return;
 
-    var aMonthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    var currentYear = new Date().getFullYear();
-    var currentMonth = new Date().getMonth();
+            if (this._openedYear === sYear && sSourceName === "sap.m.Button") {
+                this._openedYear = null;
+                oTable.getColumns().filter(c => c.data("dynamicMonth")).forEach(c => oTable.removeColumn(c));
+                return;
+            }
 
-    // Se checkbox è ON partiamo da Gennaio (0), altrimenti dal mese prossimo
-    var iStartIdx = (sYear === currentYear && !bShowEjecutado) ? currentMonth + 1 : 0;
+            oTable.getColumns().filter(c => c.data("dynamicMonth")).forEach(c => oTable.removeColumn(c));
+            this._openedYear = sYear;
 
-    var oYearCol = oTable.getColumns().find(c => {
-        var lab = c.getLabel();
-        var txt = lab.getText ? lab.getText() : (lab.getItems ? lab.getItems()[0].getText() : "");
-        return txt === String(sYear);
-    });
-    var colIndex = oTable.indexOfColumn(oYearCol);
-    var iOffset = 0;
+            var aMonthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            var currentYear = new Date().getFullYear();
+            var currentMonth = new Date().getMonth();
 
-    // 1. Colonna riassuntiva "Ejecutados"
-    if (bShowEjecutado) {
-        var oColEjec = new sap.ui.table.Column({
-            width: "8rem",
-            label: new sap.m.VBox({
-                alignItems: "Center", renderType: "Bare", width: "100%",
-                items: [
-                    new sap.m.Text({ text: String(sYear) }).addStyleClass("sapUiTinyFontSize textoaño"),
-                    new sap.m.Label({ text: "Ejecutados", design: "Bold" }).addStyleClass("testBold")
-                ]
-            }),
-            template: new sap.m.Text({ text: "{ejecutado}", textAlign: "End", width: "100%" })
-        }).data("dynamicMonth", true);
-        oTable.insertColumn(oColEjec, colIndex + iOffset);
-        iOffset++;
-    }
+            var iStartIdx = (sYear === currentYear && !bShowEjecutado) ? currentMonth + 1 : 0;
 
-    // 2. Colonne dei mesi (Testo per il passato, Input per il futuro)
-    for (var i = iStartIdx; i < 12; i++) {
-        var sMonthLabel = aMonthNames[i];
-        var iRealIdx = i;
-        var bIsPassedMonth = (sYear < currentYear) || (sYear === currentYear && i <= currentMonth);
-        
-        // --- LOGICA TEMPLATE DINAMICO ---
-        // Se il mese è passato E la checkbox è attiva, mostriamo un sap.m.Text
-        var oControlTemplate;
-        
-        if (bShowEjecutado && bIsPassedMonth) {
-            oControlTemplate = new sap.m.Text({
-                text: "{monthsData/" + sYear + "/" + iRealIdx + "}",
-                textAlign: "End",
-                width: "100%"
-            }).addStyleClass("sapUiTinyMarginEnd"); // Un po' di padding per estetica
-        } else {
-            oControlTemplate = new sap.m.Input({
-                value: "{monthsData/" + sYear + "/" + iRealIdx + "}",
-                textAlign: "End",
-                visible: "{= ${expandible} !== false && !${isGroup} }",
-                liveChange: function (oEvt) {
-                    var oInput = oEvt.getSource();
-                    var oCtx = oInput.getBindingContext();
-                    var oModel = oCtx.getModel();
-                    var sPath = oCtx.getPath();
-                    
-                    if (!oModel.getProperty(sPath + "/monthsData/" + sYear)) {
-                        oModel.setProperty(sPath + "/monthsData/" + sYear, Array(12).fill(""));
-                    }
-                    // var val = parseFloat(oInput.getValue().replace(',', '.')) || 0;
-                    // var aMonths = oModel.getProperty(sPath + "/monthsData/" + sYear).slice();
-                    // // aMonths[iRealIdx] = Math.round(val * 100) / 100;
-                    // oModel.setProperty(sPath + "/monthsData/" + sYear, aMonths);
-                    
-                    // var total = aMonths.reduce((a, b) => a + (parseFloat(b) || 0), 0);
-                    // // oModel.setProperty(sPath + "/y" + sYear, Math.round(total * 100) / 100);
-                }
+            var oYearCol = oTable.getColumns().find(c => {
+                var lab = c.getLabel();
+                var txt = lab.getText ? lab.getText() : (lab.getItems ? lab.getItems()[0].getText() : "");
+                return txt === String(sYear);
             });
-        }
+            var colIndex = oTable.indexOfColumn(oYearCol);
+            var iOffset = 0;
 
-        var oColumn = new sap.ui.table.Column({
-            width: "8rem",
-            label: new sap.m.VBox({
-                alignItems: "Center", renderType: "Bare", width: "100%",
-                items: [
-                    new sap.m.Text({ text: String(sYear) }).addStyleClass("sapUiTinyFontSize textoaño"),
-                    (i === iStartIdx) ? new sap.m.Button({
-                        text: sMonthLabel, type: "Transparent", width: "100%",
-                        icon: "sap-icon://slim-arrow-right", iconFirst: false,
-                        press: function (oEv) { this.onCreateMonthsTable(oEv, sTableId); }.bind(this)
-                    }).addStyleClass("testBold") : new sap.m.Label({ text: sMonthLabel, textAlign: "Center", width: "100%" }).addStyleClass("testBold")
-                ]
-            }),
-            template: oControlTemplate
-        }).data("dynamicMonth", true);
-        
-        oTable.insertColumn(oColumn, colIndex + iOffset + (i - iStartIdx));
-    }
-},
+            //Columna "Ejecutados"
+            if (bShowEjecutado) {
+                var oColEjec = new sap.ui.table.Column({
+                    width: "8rem",
+                    label: new sap.m.VBox({
+                        alignItems: "Center", renderType: "Bare", width: "100%",
+                        items: [
+                            new sap.m.Text({ text: String(sYear) }).addStyleClass("sapUiTinyFontSize textoaño"),
+                            new sap.m.Label({ text: "Ejecutados", design: "Bold" }).addStyleClass("testBold")
+                        ]
+                    }),
+                    template: new sap.m.Text({ text: "{ejecutado}", textAlign: "End", width: "100%" })
+                }).data("dynamicMonth", true);
+                oTable.insertColumn(oColEjec, colIndex + iOffset);
+                iOffset++;
+            }
 
-onEjecutadoCheckBoxSelect: function (oEvent) {
-    // Verifichiamo se c'è un anno attualmente aperto (espanso)
-    // Se c'è, richiamiamo la creazione dei mesi per aggiornare la visualizzazione
-    if (this._openedYear) {
-        // Passiamo l'evento oEvent così la funzione onCreateMonthsTable 
-        // sa che la chiamata arriva dalla Checkbox
-        this.onCreateMonthsTable(oEvent);
-    }
-},
+            // Columna mese de "Ejecutado"
+            for (var i = iStartIdx; i < 12; i++) {
+                var sMonthLabel = aMonthNames[i];
+                var iRealIdx = i;
+                var bIsPassedMonth = (sYear < currentYear) || (sYear === currentYear && i <= currentMonth);
+
+                var oControlTemplate;
+
+                if (bShowEjecutado && bIsPassedMonth) {
+                    oControlTemplate = new sap.m.Text({
+                        text: "{monthsData/" + sYear + "/" + iRealIdx + "}",
+                        textAlign: "End",
+                        width: "100%"
+                    }).addStyleClass("sapUiTinyMarginEnd"); 
+                } else {
+                    oControlTemplate = new sap.m.Input({
+                        value: "{m" + sYear + "_" + iRealIdx + "}",
+                        textAlign: "End",
+                        visible: "{= ${expandible} !== false && !${isGroup} }",
+                        change: function (oEvt) {
+                            var oInput = oEvt.getSource();
+                            var oCtx = oInput.getBindingContext();
+                            var oModel = oCtx.getModel();
+                            var sPath = oCtx.getPath();
+
+                            oModel.setProperty(
+                                sPath + "/m" + sYear + "_" + iRealIdx,
+                                oInput.getValue()
+                            );
+                        }
+                    });
+                }
+
+                var oColumn = new sap.ui.table.Column({
+                    width: "8rem",
+                    label: new sap.m.VBox({
+                        alignItems: "Center", renderType: "Bare", width: "100%",
+                        items: [
+                            new sap.m.Text({ text: String(sYear) }).addStyleClass("sapUiTinyFontSize textoaño"),
+                            (i === iStartIdx) ? new sap.m.Button({
+                                text: sMonthLabel, type: "Transparent", width: "100%",
+                                icon: "sap-icon://slim-arrow-right", iconFirst: false,
+                                press: function (oEv) { this.onCreateMonthsTable(oEv, sTableId); }.bind(this)
+                            }).addStyleClass("testBold") : new sap.m.Label({ text: sMonthLabel, textAlign: "Center", width: "100%" }).addStyleClass("testBold")
+                        ]
+                    }),
+                    template: oControlTemplate
+                }).data("dynamicMonth", true);
+
+                oTable.insertColumn(oColumn, colIndex + iOffset + (i - iStartIdx));
+            }
+        },
+
+        onEjecutadoCheckBoxSelect: function (oEvent) {
+            if (this._openedYear) {
+                this.onCreateMonthsTable(oEvent);
+            }
+        },
 
         /**
          * Lógica de gestión de cabeceras sticky durante el desplazamiento de la tabla.
@@ -672,31 +651,31 @@ onEjecutadoCheckBoxSelect: function (oEvent) {
             // Actualiza el modelo (asumiendo que el modelo se llama 'view')
             this.getView().getModel("viewModel").setProperty("/dynamicRowCount", iRows);
         },
-_filterCategories: function (aCategories, sKey) {
-    if (!Array.isArray(aCategories)) return [];
+        _filterCategories: function (aCategories, sKey) {
+            if (!Array.isArray(aCategories)) return [];
 
-    return aCategories
-        .map(function (cat) {
-            var oClone = Object.assign({}, cat);
+            return aCategories
+                .map(function (cat) {
+                    var oClone = Object.assign({}, cat);
 
-            var aFilteredChildren = this._filterCategories(cat.categories || [], sKey);
+                    var aFilteredChildren = this._filterCategories(cat.categories || [], sKey);
 
-            // MATCH directo
-            if (cat.name === sKey) {
-                oClone.categories = cat.categories || [];
-                return oClone;
-            }
+                    // MATCH directo
+                    if (cat.name === sKey) {
+                        oClone.categories = cat.categories || [];
+                        return oClone;
+                    }
 
-            // MATCH indirecto 
-            if (aFilteredChildren.length > 0) {
-                oClone.categories = aFilteredChildren;
-                return oClone;
-            }
+                    // MATCH indirecto 
+                    if (aFilteredChildren.length > 0) {
+                        oClone.categories = aFilteredChildren;
+                        return oClone;
+                    }
 
-            return null;
-        }.bind(this))
-        .filter(Boolean);
-},
+                    return null;
+                }.bind(this))
+                .filter(Boolean);
+        },
         onCollapseFromHeader: function () {
             var oTable = this.byId("TreeTableBasic");
             var oUiModel = this.getView().getModel("ui");
@@ -909,141 +888,139 @@ _filterCategories: function (aCategories, sKey) {
         /**
           * Función que filtra las operaciones 
           */
-         _buildOperacionesCombo: function (aCategories) {
-    var aResult = [];
+        _buildOperacionesCombo: function (aCategories) {
+            var aResult = [];
 
-    function recurse(aNodes) {
-        if (!Array.isArray(aNodes)) return;
+            function recurse(aNodes) {
+                if (!Array.isArray(aNodes)) return;
 
-        aNodes.forEach(function (oNode) {
-            if (oNode.expandible || (Array.isArray(oNode.categories) && oNode.categories.length > 0)) {
-                aResult.push({
-                    key: oNode.name,
-                    text: oNode.name + " - " + (oNode.currency || "")
+                aNodes.forEach(function (oNode) {
+                    if (oNode.expandible || (Array.isArray(oNode.categories) && oNode.categories.length > 0)) {
+                        aResult.push({
+                            key: oNode.name,
+                            text: oNode.name + " - " + (oNode.currency || "")
+                        });
+                    }
+
+                    if (Array.isArray(oNode.categories)) {
+                        recurse(oNode.categories);
+                    }
                 });
             }
 
-            if (Array.isArray(oNode.categories)) {
-                recurse(oNode.categories);
-            }
-        });
-    }
-
-    recurse(aCategories);
-    return aResult;
-}, /**
+            recurse(aCategories);
+            return aResult;
+        }, /**
         * Filtra la TreeTable según la operación seleccionada en el Select
         */
-   onOperacionChange: function (oEvent) {
-    var oSelectedItem = oEvent.getParameter("selectedItem");
-    var oTable = this.byId("TreeTableBasic");
-    var oCatalogModel = this.getView().getModel("catalog");
-    var oUiModel = this.getView().getModel("ui");
-    var aCategories = oCatalogModel.getProperty("/catalog/models/categories");
+        onOperacionChange: function (oEvent) {
+            var oSelectedItem = oEvent.getParameter("selectedItem");
+            var oTable = this.byId("TreeTableBasic");
+            var oCatalogModel = this.getView().getModel("catalog");
+            var oUiModel = this.getView().getModel("ui");
+            var aCategories = oCatalogModel.getProperty("/catalog/models/categories");
 
-    if (!Array.isArray(aCategories)) return;
+            if (!Array.isArray(aCategories)) return;
 
-    // 🔄 reset vista
-    if (!oSelectedItem) {
-        oTable.setModel(new sap.ui.model.json.JSONModel({ categories: aCategories }));
-        oTable.bindRows("/categories");
+            // 🔄 reset vista
+            if (!oSelectedItem) {
+                oTable.setModel(new sap.ui.model.json.JSONModel({ categories: aCategories }));
+                oTable.bindRows("/categories");
 
-        this.byId("colMonths")?.setVisible(false);
-        this.byId("colNew")?.setVisible(false);
+                this.byId("colMonths")?.setVisible(false);
+                this.byId("colNew")?.setVisible(false);
 
-        oUiModel?.setProperty("/showStickyParent", false);
-        oUiModel?.setProperty("/showStickyChild", false);
+                oUiModel?.setProperty("/showStickyParent", false);
+                oUiModel?.setProperty("/showStickyChild", false);
 
-        setTimeout(function () {
-            oTable.collapseAll();
-            this._refreshAfterToggle(oTable.getId());
-        }.bind(this), 0);
+                setTimeout(function () {
+                    oTable.collapseAll();
+                    this._refreshAfterToggle(oTable.getId());
+                }.bind(this), 0);
 
-        return;
-    }
-
-    var sKey = oSelectedItem.getKey();
-
-    var sParentKey = sKey.includes(".")
-        ? sKey.substring(0, sKey.lastIndexOf("."))
-        : null;
-
-    var aFilteredRoot = [];
-
-    aCategories.forEach(function (rootCat) {
-        if (!Array.isArray(rootCat.categories)) {
-            rootCat.categories = [];
-        }
-
-     var aFilteredChildren = this._filterCategories(rootCat.categories, sKey);
-
-var bIncludeParent =
-    rootCat.name === sKey ||
-    (sParentKey && rootCat.name === sParentKey);
-
-        if (aFilteredChildren.length === 0 && !bIncludeParent) {
-            return;
-        }
-
-        var oClone = Object.assign({}, rootCat);
-
-        if (aFilteredChildren.length > 0) {
-    oClone.categories = aFilteredChildren;
-} else if (rootCat.name === sParentKey) {
-    oClone.categories = this._filterCategories(rootCat.categories, sKey);
-} else {
-    // default
-    oClone.categories = rootCat.categories;
-}
-
-        aFilteredRoot.push(oClone);
-    }.bind(this));
-
-    oTable.setModel(new sap.ui.model.json.JSONModel({ categories: aFilteredRoot }));
-    oTable.bindRows("/categories");
-
-   setTimeout(function () {
-    var oBinding = oTable.getBinding("rows");
-    if (!oBinding) return;
-
-    var bHasData = false;
-
-    for (var i = 0; i < oBinding.getLength(); i++) {
-        var oCtx = oTable.getContextByIndex(i);
-        var oObj = oCtx && oCtx.getObject();
-        if (!oObj) continue;
-
-        if (oObj.name === sParentKey || oObj.name === sKey) {
-            if (oObj.expandible) {
-                oTable.expand(i);
+                return;
             }
-        }
 
-        if (
-            sParentKey &&
-            oObj.name === sKey &&
-            oObj.expandible
-        ) {
-            oTable.expand(i);
-        }
+            var sKey = oSelectedItem.getKey();
 
-        if (Array.isArray(oObj.categories)) {
-            if (oObj.categories.some(c => c.isGroup === true)) {
-                bHasData = true;
-            }
-        }
-    }
+            var sParentKey = sKey.includes(".")
+                ? sKey.substring(0, sKey.lastIndexOf("."))
+                : null;
 
-    this.byId("colMonths")?.setVisible(bHasData);
-    this.byId("colNew")?.setVisible(bHasData);
+            var aFilteredRoot = [];
 
-    oUiModel?.setProperty("/showStickyParent", true);
-    oUiModel?.setProperty("/showStickyChild", true);
+            aCategories.forEach(function (rootCat) {
+                if (!Array.isArray(rootCat.categories)) {
+                    rootCat.categories = [];
+                }
 
-    this._refreshAfterToggle(oTable.getId());
-}.bind(this), 100);
-}
-,
+                var aFilteredChildren = this._filterCategories(rootCat.categories, sKey);
 
+                var bIncludeParent =
+                    rootCat.name === sKey ||
+                    (sParentKey && rootCat.name === sParentKey);
+
+                if (aFilteredChildren.length === 0 && !bIncludeParent) {
+                    return;
+                }
+
+                var oClone = Object.assign({}, rootCat);
+
+                if (aFilteredChildren.length > 0) {
+                    oClone.categories = aFilteredChildren;
+                } else if (rootCat.name === sParentKey) {
+                    oClone.categories = this._filterCategories(rootCat.categories, sKey);
+                } else {
+                    // default
+                    oClone.categories = rootCat.categories;
+                }
+
+                aFilteredRoot.push(oClone);
+            }.bind(this));
+
+            oTable.setModel(new sap.ui.model.json.JSONModel({ categories: aFilteredRoot }));
+            oTable.bindRows("/categories");
+
+            setTimeout(function () {
+                var oBinding = oTable.getBinding("rows");
+                if (!oBinding) return;
+
+                var bHasData = false;
+
+                for (var i = 0; i < oBinding.getLength(); i++) {
+                    var oCtx = oTable.getContextByIndex(i);
+                    var oObj = oCtx && oCtx.getObject();
+                    if (!oObj) continue;
+
+                    if (oObj.name === sParentKey || oObj.name === sKey) {
+                        if (oObj.expandible) {
+                            oTable.expand(i);
+                        }
+                    }
+
+                    if (
+                        sParentKey &&
+                        oObj.name === sKey &&
+                        oObj.expandible
+                    ) {
+                        oTable.expand(i);
+                    }
+
+                    if (Array.isArray(oObj.categories)) {
+                        if (oObj.categories.some(c => c.isGroup === true)) {
+                            bHasData = true;
+                        }
+                    }
+                }
+
+                this.byId("colMonths")?.setVisible(bHasData);
+                this.byId("colNew")?.setVisible(bHasData);
+
+                oUiModel?.setProperty("/showStickyParent", true);
+                oUiModel?.setProperty("/showStickyChild", true);
+
+                this._refreshAfterToggle(oTable.getId());
+            }.bind(this), 100);
+        },
     });
 });
