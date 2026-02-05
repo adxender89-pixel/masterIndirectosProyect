@@ -112,7 +112,7 @@ sap.ui.define([
             var oObject = oContext && oContext.getObject();
 
 
-            // EXPAND
+            // expand
 
             if (bExpanded) {
 
@@ -130,7 +130,7 @@ sap.ui.define([
                 }
             }
 
-            // COLLAPSE
+            // collapse
 
             else {
 
@@ -173,10 +173,6 @@ sap.ui.define([
                     oUiModel.setProperty("/showStickyChild", false);
                 }
             }
-
-
-            // REFRESH POST-TOGGLE
-
             setTimeout(function () {
                 this._refreshAfterToggle(sTableId);
             }.bind(this));
