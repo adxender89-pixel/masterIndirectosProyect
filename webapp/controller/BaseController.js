@@ -714,9 +714,6 @@ sap.ui.define([
             console.log("=== FINE onCreateMonthsTable (apertura) ===");
         },
 
-
-
-
         /**
          * Se ejecuta cuando se selecciona el checkbox de Ejecutado, recargando las columnas mensuales.
          */
@@ -727,14 +724,14 @@ sap.ui.define([
             var bShowEjecutado = this.byId("idEjecutadoCheckBox").getSelected();
             var currentYear = new Date().getFullYear();
 
-            // Se ci sono mesi aperti, ricaricali per aggiornare la vista
+
             if (this._openedYear) {
                 var sYear = this._openedYear;
 
-                // Rimuovi tutte le colonne dinamiche dei mesi
+
                 oTable.getColumns().filter(c => c.data("dynamicMonth")).forEach(c => oTable.removeColumn(c));
 
-                // Ricrea i mesi con il nuovo stato del checkbox
+
                 var oYearCol = oTable.getColumns().find(c => {
                     var lab = c.getLabel();
                     var txt = lab.getText ? lab.getText() : (lab.getItems ? lab.getItems()[0].getText() : "");
@@ -754,12 +751,11 @@ sap.ui.define([
                     }, "TreeTableBasic");
                 }
             } else {
-                // Se non ci sono mesi aperti, gestisci solo la colonna Ejecutados degli anni
-                // Rimuovi colonne Ejecutados esistenti
+
                 oTable.getColumns().filter(c => c.data("ejecutadosColumn")).forEach(c => oTable.removeColumn(c));
 
                 if (bShowEjecutado) {
-                    // 👇 COLONNA EJECUTADOS ANNUALE CON VBOX COME I MESI
+
                     var iInsertIndex = oTable.getColumns().findIndex(c => c.data("dynamicYear") === true);
                     if (iInsertIndex === -1) iInsertIndex = oTable.getColumns().length;
 
@@ -795,9 +791,6 @@ sap.ui.define([
                 }
             }
         },
-
-
-
         /**
          * Lógica de gestión de cabeceras sticky durante el desplazamiento de la tabla.
          */
@@ -1043,291 +1036,269 @@ sap.ui.define([
 
             }.bind(this), 0);
         },
-/**
- * Maneja la navegación con teclas de flecha entre celdas de la tabla.
- * VERSIONE CORRETTA - FIX per blocco sulla prima riga visibile
- */
-_onInputKeyDown: function (oEvent) {
-    var oInput = oEvent.srcControl;
-    var iKeyCode = oEvent.keyCode;
-    var bDown = iKeyCode === 40;
-    var bUp = iKeyCode === 38;
-    var bRight = iKeyCode === 39;
-    var bLeft = iKeyCode === 37;
+        /**
+         * Maneja la navegación con teclas de flecha entre celdas de la tabla.
+         */
+        _onInputKeyDown: function (oEvent) {
+            var oInput = oEvent.srcControl;
+            var iKeyCode = oEvent.keyCode;
+            var bDown = iKeyCode === 40;
+            var bUp = iKeyCode === 38;
+            var bRight = iKeyCode === 39;
+            var bLeft = iKeyCode === 37;
 
-    if (!bDown && !bUp && !bRight && !bLeft) return;
+            if (!bDown && !bUp && !bRight && !bLeft) return;
 
-    console.log("🎯 KEY PRESSED:", bUp ? "UP" : bDown ? "DOWN" : bLeft ? "LEFT" : "RIGHT");
+            var sCurrentDomValue = oInput.getFocusDomRef().value;
+            oInput.setValue(sCurrentDomValue);
+            oInput.updateModelProperty(sCurrentDomValue);
 
-    // Sincronización rápida de valores
-    var sCurrentDomValue = oInput.getFocusDomRef().value;
-    oInput.setValue(sCurrentDomValue);
-    oInput.updateModelProperty(sCurrentDomValue);
+            oEvent.preventDefault();
+            oEvent.stopImmediatePropagation();
 
-    oEvent.preventDefault();
-    oEvent.stopImmediatePropagation();
+            var oTable = this.byId("TreeTableBasic");
+            var oBinding = oTable.getBinding("rows");
+            var oParent = oInput.getParent();
 
-    var oTable = this.byId("TreeTableBasic");
-    var oBinding = oTable.getBinding("rows");
-    var oParent = oInput.getParent();
-    
-    // Risali fino alla Row
-    while (oParent && !oParent.isA("sap.ui.table.Row")) {
-        oParent = oParent.getParent();
-    }
 
-    if (!oParent) {
-        console.error("❌ Non ho trovato la Row!");
-        return;
-    }
-
-    var iCurrentRowIndex = oParent.getIndex();
-    
-    // SALVA IL CONTEXT PATH CORRENTE
-    var oCurrentContext = oParent.getBindingContext();
-    if (!oCurrentContext) {
-        console.error("❌ Context corrente non trovato!");
-        return;
-    }
-
-    // Trova l'indice della cella
-    var aCells = oParent.getCells();
-    var iTargetColIndex = -1;
-
-    for (var i = 0; i < aCells.length; i++) {
-        var oCell = aCells[i];
-        if (this._cellContainsInput(oCell, oInput)) {
-            iTargetColIndex = i;
-            break;
-        }
-    }
-
-    if (iTargetColIndex === -1) {
-        console.error("❌ Non ho trovato la colonna!");
-        return;
-    }
-
-    console.log("✅ Current - Row:", iCurrentRowIndex, "Col:", iTargetColIndex, "Path:", oCurrentContext.getPath());
-    
-    // ==========================================
-    // NAVEGACIÓN HORIZONTAL (LEFT/RIGHT)
-    // ==========================================
-    if (bLeft || bRight) {
-        console.log("➡️ Navigazione ORIZZONTALE");
-        
-        var iNewColIndex = bRight ? iTargetColIndex + 1 : iTargetColIndex - 1;
-        
-        if (iNewColIndex < 0 || iNewColIndex >= oTable.getColumns().length) {
-            console.log("⛔ Limite colonne raggiunto");
-            return;
-        }
-
-        var iFirstVisible = oTable.getFirstVisibleRow();
-        var iVisibleRowIndex = iCurrentRowIndex - iFirstVisible;
-        
-        if (iVisibleRowIndex < 0 || iVisibleRowIndex >= oTable.getRows().length) {
-            console.error("❌ Riga non visibile!");
-            return;
-        }
-
-        var oRow = oTable.getRows()[iVisibleRowIndex];
-        if (!oRow) {
-            console.error("❌ Row non trovata!");
-            return;
-        }
-
-        var oCell = oRow.getCells()[iNewColIndex];
-        var oTargetInput = this._recursiveGetInput(oCell);
-
-        if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
-            console.log("✅ Focus su colonna", iNewColIndex);
-            oTargetInput.focus();
-            if (oTargetInput.select) oTargetInput.select();
-        } else {
-            console.log("⚠️ Nessun input trovato in colonna", iNewColIndex);
-        }
-        return;
-    }
-
-    // ==========================================
-    // NAVEGACIÓN VERTICAL (UP/DOWN)
-    // ==========================================
-    console.log("⬆️⬇️ Navigazione VERTICALE");
-    
-    var iTargetRowIndex = null;
-    var sTargetPath = null;
-    var iSearchIndex = iCurrentRowIndex;
-    
-    // Cerca la prossima riga valida
-    while (true) {
-        iSearchIndex = bDown ? iSearchIndex + 1 : iSearchIndex - 1;
-        
-        if (iSearchIndex < 0 || iSearchIndex >= oBinding.getLength()) {
-            console.log("⛔ Limite tabella raggiunto (index:", iSearchIndex, ")");
-            return;
-        }
-
-        var oCtx = oTable.getContextByIndex(iSearchIndex);
-        if (!oCtx) {
-            console.log("⚠️ Context NULL a index", iSearchIndex);
-            continue;
-        }
-        
-        var oData = oCtx.getObject();
-
-        // Salta righe "Agrupador" o vuote
-        if (oData && oData.name !== "Agrupador" && oData.name !== "" && oData.name !== undefined) {
-            iTargetRowIndex = iSearchIndex;
-            sTargetPath = oCtx.getPath();
-            console.log("✅ Target trovato - Index:", iTargetRowIndex, "Path:", sTargetPath);
-            break;
-        } else {
-            console.log("⏭️ Skip riga", iSearchIndex, "- name:", oData ? oData.name : "null");
-        }
-    }
-
-    // ==========================================
-    // GESTIONE SCROLL
-    // ==========================================
-    var iFirstVisible = oTable.getFirstVisibleRow();
-    var iVisibleCount = oTable.getVisibleRowCount();
-    var iLastVisible = iFirstVisible + iVisibleCount - 1;
-
-    console.log("📊 Viewport - First:", iFirstVisible, "Last:", iLastVisible, "Target:", iTargetRowIndex);
-
-    var bNeedsScroll = false;
-    var iNewFirstVisible = iFirstVisible;
-    
-    // Target è SOTTO il viewport
-    if (iTargetRowIndex > iLastVisible) {
-        iNewFirstVisible = iTargetRowIndex - iVisibleCount + 1;
-        console.log("⬇️ Scroll DOWN - New first:", iNewFirstVisible);
-        bNeedsScroll = true;
-    } 
-    // Target è SOPRA il viewport
-    else if (iTargetRowIndex < iFirstVisible) {
-        iNewFirstVisible = iTargetRowIndex;
-        console.log("⬆️ Scroll UP - New first:", iNewFirstVisible);
-        bNeedsScroll = true;
-    } else {
-        console.log("✅ Target già visibile, nessuno scroll necessario");
-    }
-
-    // ==========================================
-    // APPLICA SCROLL SE NECESSARIO
-    // ==========================================
-    if (bNeedsScroll) {
-        console.log("🔄 Eseguo scroll a posizione:", iNewFirstVisible);
-        oTable.setFirstVisibleRow(iNewFirstVisible);
-    }
-
-    // ==========================================
-    // FOCUS SULL'INPUT TARGET
-    // ==========================================
-    var iTimeout = bNeedsScroll ? 200 : 50;
-    
-    setTimeout(function () {
-        console.log("⏱️ Timeout - Cerco path:", sTargetPath);
-        
-        var oTargetRow = null;
-        var aRows = oTable.getRows();
-        
-        // Cerca la riga usando il PATH del context
-        for (var i = 0; i < aRows.length; i++) {
-            var oRowContext = aRows[i].getBindingContext();
-            if (oRowContext && oRowContext.getPath() === sTargetPath) {
-                oTargetRow = aRows[i];
-                console.log("✅ Riga trovata con path matching alla posizione", i);
-                break;
+            while (oParent && !oParent.isA("sap.ui.table.Row")) {
+                oParent = oParent.getParent();
             }
-        }
-        
-        if (!oTargetRow) {
-            console.error("❌ Riga con path", sTargetPath, "non trovata!");
-            console.log("📋 Paths disponibili:");
-            aRows.forEach(function(row, idx) {
-                var ctx = row.getBindingContext();
-                console.log("  [" + idx + "]:", ctx ? ctx.getPath() : "NULL");
-            });
-            return;
-        }
 
-        var oCell = oTargetRow.getCells()[iTargetColIndex];
-        var oTargetInput = this._recursiveGetInput(oCell);
-        
-        if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
-            oTargetInput.focus();
-            if (oTargetInput.select) oTargetInput.select();
-            console.log("✅✅✅ FOCUS OK su", sTargetPath);
-        } else {
-            console.error("❌ Input non trovato, non visibile o non editabile");
-            console.log("   - Input exists:", !!oTargetInput);
-            if (oTargetInput) {
-                console.log("   - Visible:", oTargetInput.getVisible());
-                console.log("   - Editable:", oTargetInput.getEditable());
+            if (!oParent) {
+                console.error("❌ Non ho trovato la Row!");
+                return;
             }
-        }
-    }.bind(this), iTimeout);
-},
 
-/**
- * Verifica se una cella contiene un determinato Input
- */
-_cellContainsInput: function (oCell, oTargetInput) {
-    if (oCell === oTargetInput) return true;
+            var iCurrentRowIndex = oParent.getIndex();
 
-    if (oCell.getItems) {
-        var aItems = oCell.getItems();
-        for (var i = 0; i < aItems.length; i++) {
-            if (aItems[i] === oTargetInput) return true;
-            if (this._cellContainsInput(aItems[i], oTargetInput)) return true;
-        }
-    }
 
-    if (oCell.getContent) {
-        var aContent = oCell.getContent();
-        for (var j = 0; j < aContent.length; j++) {
-            if (aContent[j] === oTargetInput) return true;
-            if (this._cellContainsInput(aContent[j], oTargetInput)) return true;
-        }
-    }
+            var oCurrentContext = oParent.getBindingContext();
+            if (!oCurrentContext) {
+                console.error("❌ Context corrente non trovato!");
+                return;
+            }
 
-    return false;
-},
 
-/**
- * Busca recursivamente un control Input editable dentro de una celda.
- */
-_recursiveGetInput: function (oControl) {
-    if (!oControl) return null;
-    
-    // Verifica se è un Input visibile ed editabile
-    if (oControl.isA && oControl.isA("sap.m.Input")) {
-        if (oControl.getVisible() && oControl.getEditable()) {
-            return oControl;
-        }
-    }
+            var aCells = oParent.getCells();
+            var iTargetColIndex = -1;
 
-    // Cerca nei contenuti
-    if (oControl.getContent) {
-        var aContent = oControl.getContent();
-        for (var i = 0; i < aContent.length; i++) {
-            var res = this._recursiveGetInput(aContent[i]);
-            if (res) return res;
-        }
-    }
-    
-    // Cerca negli items
-    if (oControl.getItems) {
-        var aItems = oControl.getItems();
-        for (var j = 0; j < aItems.length; j++) {
-            var resIt = this._recursiveGetInput(aItems[j]);
-            if (resIt) return resIt;
-        }
-    }
-    
-    return null;
-},
+            for (var i = 0; i < aCells.length; i++) {
+                var oCell = aCells[i];
+                if (this._cellContainsInput(oCell, oInput)) {
+                    iTargetColIndex = i;
+                    break;
+                }
+            }
+
+            if (iTargetColIndex === -1) {
+                console.error("❌ Non ho trovato la colonna!");
+                return;
+            }
+
+            console.log("✅ Current - Row:", iCurrentRowIndex, "Col:", iTargetColIndex, "Path:", oCurrentContext.getPath());
+
+            if (bLeft || bRight) {
+                console.log("➡️ Navigazione ORIZZONTALE");
+
+                var iNewColIndex = bRight ? iTargetColIndex + 1 : iTargetColIndex - 1;
+
+                if (iNewColIndex < 0 || iNewColIndex >= oTable.getColumns().length) {
+                    console.log("⛔ Limite colonne raggiunto");
+                    return;
+                }
+
+                var iFirstVisible = oTable.getFirstVisibleRow();
+                var iVisibleRowIndex = iCurrentRowIndex - iFirstVisible;
+
+                if (iVisibleRowIndex < 0 || iVisibleRowIndex >= oTable.getRows().length) {
+                    console.error("❌ Riga non visibile!");
+                    return;
+                }
+
+                var oRow = oTable.getRows()[iVisibleRowIndex];
+                if (!oRow) {
+                    console.error("❌ Row non trovata!");
+                    return;
+                }
+
+                var oCell = oRow.getCells()[iNewColIndex];
+                var oTargetInput = this._recursiveGetInput(oCell);
+
+                if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
+                    console.log("✅ Focus su colonna", iNewColIndex);
+                    oTargetInput.focus();
+                    if (oTargetInput.select) oTargetInput.select();
+                } else {
+                    console.log("⚠️ Nessun input trovato in colonna", iNewColIndex);
+                }
+                return;
+            }
+
+
+            console.log("⬆️⬇️ Navigazione VERTICALE");
+
+            var iTargetRowIndex = null;
+            var sTargetPath = null;
+            var iSearchIndex = iCurrentRowIndex;
+
+
+            while (true) {
+                iSearchIndex = bDown ? iSearchIndex + 1 : iSearchIndex - 1;
+
+                if (iSearchIndex < 0 || iSearchIndex >= oBinding.getLength()) {
+                    console.log("Limite tabella raggiunto (index:", iSearchIndex, ")");
+                    return;
+                }
+
+                var oCtx = oTable.getContextByIndex(iSearchIndex);
+                if (!oCtx) {
+                    console.log("Context NULL a index", iSearchIndex);
+                    continue;
+                }
+
+                var oData = oCtx.getObject();
+
+
+                if (oData && oData.name !== "Agrupador" && oData.name !== "" && oData.name !== undefined) {
+                    iTargetRowIndex = iSearchIndex;
+                    sTargetPath = oCtx.getPath();
+                    console.log("Target trovato - Index:", iTargetRowIndex, "Path:", sTargetPath);
+                    break;
+                } else {
+                    console.log("Skip riga", iSearchIndex, "- name:", oData ? oData.name : "null");
+                }
+            }
+
+            var iFirstVisible = oTable.getFirstVisibleRow();
+            var iVisibleCount = oTable.getVisibleRowCount();
+            var iLastVisible = iFirstVisible + iVisibleCount - 1;
+
+            console.log("Viewport - First:", iFirstVisible, "Last:", iLastVisible, "Target:", iTargetRowIndex);
+
+            var bNeedsScroll = false;
+            var iNewFirstVisible = iFirstVisible;
+
+
+            if (iTargetRowIndex > iLastVisible) {
+                iNewFirstVisible = iTargetRowIndex - iVisibleCount + 1;
+                console.log("Scroll DOWN - New first:", iNewFirstVisible);
+                bNeedsScroll = true;
+            }
+
+            else if (iTargetRowIndex < iFirstVisible) {
+                iNewFirstVisible = iTargetRowIndex;
+                console.log(iNewFirstVisible);
+                bNeedsScroll = true;
+            } else {
+                console.log("Target già visibile, nessuno scroll necessario");
+            }
+
+
+            if (bNeedsScroll) {
+                console.log(iNewFirstVisible);
+                oTable.setFirstVisibleRow(iNewFirstVisible);
+            }
+
+            var iTimeout = bNeedsScroll ? 200 : 50;
+
+            setTimeout(function () {
+                console.log(sTargetPath);
+
+                var oTargetRow = null;
+                var aRows = oTable.getRows();
+
+                // Cerca la riga usando il PATH del context
+                for (var i = 0; i < aRows.length; i++) {
+                    var oRowContext = aRows[i].getBindingContext();
+                    if (oRowContext && oRowContext.getPath() === sTargetPath) {
+                        oTargetRow = aRows[i];
+                        console.log(i);
+                        break;
+                    }
+                }
+
+                if (!oTargetRow) {
+                    aRows.forEach(function (row, idx) {
+                        var ctx = row.getBindingContext();
+                    });
+                    return;
+                }
+
+                var oCell = oTargetRow.getCells()[iTargetColIndex];
+                var oTargetInput = this._recursiveGetInput(oCell);
+
+                if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
+                    oTargetInput.focus();
+                    if (oTargetInput.select) oTargetInput.select();
+
+                } else {
+                    if (oTargetInput) {
+                        console.log("   - Visible:", oTargetInput.getVisible());
+                        console.log("   - Editable:", oTargetInput.getEditable());
+                    }
+                }
+            }.bind(this), iTimeout);
+        },
+
+        /**
+         * Verifica se una cella contiene un determinato Input
+         */
+        _cellContainsInput: function (oCell, oTargetInput) {
+            if (oCell === oTargetInput) return true;
+
+            if (oCell.getItems) {
+                var aItems = oCell.getItems();
+                for (var i = 0; i < aItems.length; i++) {
+                    if (aItems[i] === oTargetInput) return true;
+                    if (this._cellContainsInput(aItems[i], oTargetInput)) return true;
+                }
+            }
+
+            if (oCell.getContent) {
+                var aContent = oCell.getContent();
+                for (var j = 0; j < aContent.length; j++) {
+                    if (aContent[j] === oTargetInput) return true;
+                    if (this._cellContainsInput(aContent[j], oTargetInput)) return true;
+                }
+            }
+
+            return false;
+        },
+
+        /**
+         * Busca recursivamente un control Input editable dentro de una celda.
+         */
+        _recursiveGetInput: function (oControl) {
+            if (!oControl) return null;
+
+
+            if (oControl.isA && oControl.isA("sap.m.Input")) {
+                if (oControl.getVisible() && oControl.getEditable()) {
+                    return oControl;
+                }
+            }
+
+
+            if (oControl.getContent) {
+                var aContent = oControl.getContent();
+                for (var i = 0; i < aContent.length; i++) {
+                    var res = this._recursiveGetInput(aContent[i]);
+                    if (res) return res;
+                }
+            }
+
+
+            if (oControl.getItems) {
+                var aItems = oControl.getItems();
+                for (var j = 0; j < aItems.length; j++) {
+                    var resIt = this._recursiveGetInput(aItems[j]);
+                    if (resIt) return resIt;
+                }
+            }
+
+            return null;
+        },
         /**
          * Construye un combo de operaciones a partir de las categorías expandibles.
          */
@@ -1369,7 +1340,6 @@ _recursiveGetInput: function (oControl) {
                 this._fullCategoriesBackup = JSON.parse(JSON.stringify(aOriginal));
             }
 
-            // ========== RESET ==========
             if (!oSelectedItem) {
                 var aCurrent = oDefaultModel.getProperty("/catalog/models/categories");
 
@@ -1394,21 +1364,21 @@ _recursiveGetInput: function (oControl) {
                 return;
             }
 
-            // ========== FILTRO ==========
-            var sKey = oSelectedItem.getKey();
-            console.log("🔍 Chiave selezionata:", sKey);
 
-            // FIX: Conta i punti per distinguere padre (I.003) da figlio (I.003.031)
+            var sKey = oSelectedItem.getKey();
+            console.log("Chiave selezionata:", sKey);
+
+
             var iPunti = (sKey.match(/\./g) || []).length;
             var sParentKey = null;
 
             if (iPunti >= 2) {
-                // Ha almeno 2 punti → è un figlio (es. I.003.031)
+
                 sParentKey = sKey.substring(0, sKey.lastIndexOf("."));
             }
-            // Se ha solo 1 punto (es. I.003) → sParentKey resta null (è un padre)
 
-            console.log("👨‍👦 ParentKey:", sParentKey, "| Punti:", iPunti);
+
+            console.log(sParentKey, iPunti);
 
             var aCurrent = oDefaultModel.getProperty("/catalog/models/categories");
             var aWorkingCopy = this._mergeModifications(
@@ -1416,14 +1386,14 @@ _recursiveGetInput: function (oControl) {
                 aCurrent
             );
 
-            console.log("📦 Total nodi da filtrare:", aWorkingCopy.length);
+            console.log(aWorkingCopy.length);
 
             var aFilteredRoot = [];
 
             for (var i = 0; i < aWorkingCopy.length; i++) {
                 var rootCat = aWorkingCopy[i];
 
-                console.log("➡️ Nodo " + i + ": name='" + rootCat.name + "', expandible=" + rootCat.expandible + ", children=" + (rootCat.categories ? rootCat.categories.length : 0));
+                console.log("Nodo " + i + ": name='" + rootCat.name + "', expandible=" + rootCat.expandible + ", children=" + (rootCat.categories ? rootCat.categories.length : 0));
 
                 if (!Array.isArray(rootCat.categories)) {
                     rootCat.categories = [];
@@ -1431,21 +1401,20 @@ _recursiveGetInput: function (oControl) {
 
                 // **CASO 1: Padre principal (ej. I.003)**
                 if (rootCat.name === sKey && !sParentKey) {
-                    console.log("✅ MATCH PADRE! Aggiungo nodo con expandible=" + rootCat.expandible);
+                    console.log("MATCH PADRE! Aggiungo nodo con expandible=" + rootCat.expandible);
                     aFilteredRoot.push(rootCat);
                     continue;
                 }
 
                 // **CASO 2: Hijo específico (ej. I.003.031)**
                 if (sParentKey) {
-                    console.log("🔎 Cerco figli per parentKey=" + sParentKey);
+                    console.log("Cerco figli per parentKey=" + sParentKey);
                     var aFilteredChildren = this._filterCategories(rootCat.categories, sKey);
                     var bIncludeParent = rootCat.name === sParentKey;
 
                     console.log("  - Figli trovati:", aFilteredChildren.length, "| Include parent:", bIncludeParent);
 
                     if (aFilteredChildren.length === 0 && !bIncludeParent) {
-                        console.log("  ❌ Skip questo nodo");
                         continue;
                     }
 
@@ -1455,12 +1424,11 @@ _recursiveGetInput: function (oControl) {
                         rootCat.categories = this._filterCategories(rootCat.categories, sKey);
                     }
 
-                    console.log("  ✅ Aggiungo nodo parent");
                     aFilteredRoot.push(rootCat);
                 }
             }
 
-            console.log("📊 Nodi filtrati totali:", aFilteredRoot.length);
+            console.log("Nodi filtrati totali:", aFilteredRoot.length);
             for (var j = 0; j < aFilteredRoot.length; j++) {
                 console.log("  " + j + ": " + aFilteredRoot[j].name + ", expandible=" + aFilteredRoot[j].expandible + ", children=" + (aFilteredRoot[j].categories ? aFilteredRoot[j].categories.length : 0));
             }
@@ -1472,7 +1440,7 @@ _recursiveGetInput: function (oControl) {
                 if (!oBinding) return;
 
                 var bHasData = false;
-                var bAnyDetailExpanded = false; // 👈 NUOVA VARIABILE
+                var bAnyDetailExpanded = false;
 
                 // **COLAPSA TODO primero**
                 oTable.collapseAll();
@@ -1488,7 +1456,6 @@ _recursiveGetInput: function (oControl) {
                         if ((oObj.name === sParentKey || oObj.name === sKey) && oObj.expandible) {
                             oTable.expand(i);
 
-                            // 👇 VERIFICA SE IL NODO ESPANSO HA NIPOTI (isGroup)
                             if (oObj.name === sKey &&
                                 Array.isArray(oObj.categories) &&
                                 oObj.categories.length > 0 &&
@@ -1499,10 +1466,10 @@ _recursiveGetInput: function (oControl) {
                     } else if (sKey) {
                         // CASO 1: Padre principal → expande SOLO el nodo con hijos
                         if (oObj.name === sKey && oObj.expandible === true) {
-                            console.log("🔓 Espando nodo padre:", oObj.name, "at index", i);
+                            console.log("Espando nodo padre:", oObj.name, "at index", i);
                             oTable.expand(i);
 
-                            // 👇 VERIFICA SE IL PADRE HA NIPOTI (isGroup)
+
                             if (Array.isArray(oObj.categories) &&
                                 oObj.categories.length > 0 &&
                                 oObj.categories[0].isGroup === true) {
@@ -1511,7 +1478,7 @@ _recursiveGetInput: function (oControl) {
                         }
                     }
 
-                    // Mantieni la logica originale per bHasData (opzionale, se serve)
+
                     if (Array.isArray(oObj.categories)) {
                         if (oObj.categories.some(c => c.isGroup === true)) {
                             bHasData = true;
@@ -1519,7 +1486,7 @@ _recursiveGetInput: function (oControl) {
                     }
                 }
 
-                // 👇 USA bAnyDetailExpanded INVECE DI bHasData
+
                 this.byId("colMonths")?.setVisible(bAnyDetailExpanded);
                 this.byId("colNew")?.setVisible(bAnyDetailExpanded);
 

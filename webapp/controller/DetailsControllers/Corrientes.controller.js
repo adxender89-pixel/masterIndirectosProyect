@@ -96,109 +96,104 @@ sap.ui.define([
             if (oDefaultModel) {
                 var oData = oDefaultModel.getData();
                 this._originalData = JSON.parse(JSON.stringify(oData));
-
-                console.log("=== SNAPSHOT CREADO ===");
-                console.log("Categoría [1] en el snapshot:", this._originalData.catalog.models.categories[1]);
-                console.log("¿Tiene y2026?", this._originalData.catalog.models.categories[1].y2026);
-                console.log("=======================");
             }
         },
 
         /**
          * Verifica si hay cambios no guardados comparando el modelo actual con el snapshot
          */
-hasUnsavedChanges: function () {
-    console.log("=== DEBUG START: hasUnsavedChanges ===");
+        hasUnsavedChanges: function () {
+            console.log("=== DEBUG START: hasUnsavedChanges ===");
 
-    if (!this._originalData) return false;
+            if (!this._originalData) return false;
 
-    var oDefaultModel = this.getView().getModel();
-    if (!oDefaultModel) return false;
+            var oDefaultModel = this.getView().getModel();
+            if (!oDefaultModel) return false;
 
-    var aCurrentCat = oDefaultModel.getProperty("/catalog/models/categories");
-    var aOriginalCat = this._originalData.catalog.models.categories;
+            var aCurrentCat = oDefaultModel.getProperty("/catalog/models/categories");
+            var aOriginalCat = this._originalData.catalog.models.categories;
 
-    /**
-     * Helper de Normalización Avanzado
-     * Convierte en cadena vacía todo lo que sea "zero-like"
-     */
-    var normalize = function(val) {
-        // Si es null, undefined o una cadena vacía
-        if (val === undefined || val === null || val === "") return "";
-        
-        // Si es un array (ej. el caso 0,0,0,0...), se une y se comprueba si contiene solo ceros o está vacío
-        if (Array.isArray(val)) {
-            var sJoined = val.join("").replace(/,/g, "").trim();
-            return (sJoined === "" || /^0+$/.test(sJoined)) ? "" : sJoined;
-        }
+            /**
+             * Helper de Normalización Avanzado
+             * Convierte en cadena vacía todo lo que sea "zero-like"
+             */
+            var normalize = function (val) {
+                // Si es null, undefined o una cadena vacía
+                if (val === undefined || val === null || val === "") return "";
 
-        var sVal = val.toString().trim();
-
-        // Si la cadena resultante es "0", "0,0,0..." o "0.00", se considera vacía
-        if (sVal === "0" || sVal === "0.0" || sVal === "0,0" || /^0+(?:[.,]0+)*$/.test(sVal) || /^0+(?:,0+)*$/.test(sVal)) {
-            return "";
-        }
-
-        return sVal;
-    };
-
-    var checkRecursive = function(aCurrent, aOriginal, sPath) {
-        if (!aCurrent) return false;
-
-        for (var i = 0; i < aCurrent.length; i++) {
-            var oCur = aCurrent[i];
-            var oOri = (aOriginal && aOriginal[i]) ? aOriginal[i] : {};
-            var currentPath = sPath + " -> " + (oCur.name || i);
-
-            for (var key in oCur) {
-                // 1. Control de Años y Meses (y2026, m2026_01)
-                if (/^y\d{4}$/.test(key) || /^m\d{4}_\d+$/.test(key)) {
-                    if (normalize(oCur[key]) !== normalize(oOri[key])) {
-                        console.log("DEBUG: Modificación en " + key + ". Actual:", oCur[key], "Original:", oOri[key]);
-                        return true;
-                    }
+                // Si es un array (ej. el caso 0,0,0,0...), se une y se comprueba si contiene solo ceros o está vacío
+                if (Array.isArray(val)) {
+                    var sJoined = val.join("").replace(/,/g, "").trim();
+                    return (sJoined === "" || /^0+$/.test(sJoined)) ? "" : sJoined;
                 }
 
-                // 2. Control del objeto 'months' (el caso crítico)
-                if (key === "months" && oCur[key] && typeof oCur[key] === "object") {
-                    for (var mKey in oCur[key]) {
-                        var vCurM = normalize(oCur[key][mKey]);
-                        var vOriM = (oOri.months) ? normalize(oOri.months[mKey]) : "";
-                        
-                        if (vCurM !== vOriM) {
-                            console.log("DEBUG: Modificación en months[" + mKey + "]. Actual:", oCur[key][mKey], "Original:", (oOri.months ? oOri.months[mKey] : "undefined"));
+                var sVal = val.toString().trim();
+
+                // Si la cadena resultante es "0", "0,0,0..." o "0.00", se considera vacía
+                if (sVal === "0" || sVal === "0.0" || sVal === "0,0" || /^0+(?:[.,]0+)*$/.test(sVal) || /^0+(?:,0+)*$/.test(sVal)) {
+                    return "";
+                }
+
+                return sVal;
+            };
+
+            var checkRecursive = function (aCurrent, aOriginal, sPath) {
+                if (!aCurrent) return false;
+
+                for (var i = 0; i < aCurrent.length; i++) {
+                    var oCur = aCurrent[i];
+                    var oOri = (aOriginal && aOriginal[i]) ? aOriginal[i] : {};
+                    var currentPath = sPath + " -> " + (oCur.name || i);
+
+                    for (var key in oCur) {
+                        // 1. Control de Años y Meses (y2026, m2026_01)
+                        if (/^y\d{4}$/.test(key) || /^m\d{4}_\d+$/.test(key)) {
+                            if (normalize(oCur[key]) !== normalize(oOri[key])) {
+                                console.log("DEBUG: Modificación en " + key + ". Actual:", oCur[key], "Original:", oOri[key]);
+                                return true;
+                            }
+                        }
+
+                        // 2. Control del objeto 'months' (el caso crítico)
+                        if (key === "months" && oCur[key] && typeof oCur[key] === "object") {
+                            for (var mKey in oCur[key]) {
+                                var vCurM = normalize(oCur[key][mKey]);
+                                var vOriM = (oOri.months) ? normalize(oOri.months[mKey]) : "";
+
+                                if (vCurM !== vOriM) {
+                                    console.log("DEBUG: Modificación en months[" + mKey + "]. Actual:", oCur[key][mKey], "Original:", (oOri.months ? oOri.months[mKey] : "undefined"));
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+
+                    // 3. Recursión sobre los hijos
+                    if (oCur.categories && Array.isArray(oCur.categories) && oCur.categories.length > 0) {
+                        if (checkRecursive(oCur.categories, oOri.categories, currentPath)) {
                             return true;
                         }
                     }
                 }
-            }
+                return false;
+            };
 
-            // 3. Recursión sobre los hijos
-            if (oCur.categories && Array.isArray(oCur.categories) && oCur.categories.length > 0) {
-                if (checkRecursive(oCur.categories, oOri.categories, currentPath)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    };
+            var bResult = checkRecursive(aCurrentCat, aOriginalCat, "Root");
+            console.log("=== DEBUG END: Resultado =", bResult, "===");
+            return bResult;
+        },
 
-    var bResult = checkRecursive(aCurrentCat, aOriginalCat, "Root");
-    console.log("=== DEBUG END: Resultado =", bResult, "===");
-    return bResult;
-},
-
-/**
- * Resetea todos los inputs dinámicos (años y meses) y recrea el snapshot
- */
-resetInputs: function () {
-    if (!this._originalData) return;
-    var oDefaultModel = this.getView().getModel();
-    // Copia profunda para evitar referencias al objeto original
-    var oResetCopy = jQuery.extend(true, {}, this._originalData);
-    oDefaultModel.setData(oResetCopy);
-    oDefaultModel.refresh(true);
-},
+        /**
+         * Resetea todos los inputs dinámicos (años y meses) y recrea el snapshot
+         */
+        resetInputs: function () {
+            if (!this._originalData) return;
+            var oDefaultModel = this.getView().getModel();
+            // Copia profunda para evitar referencias al objeto original
+            var oResetCopy = jQuery.extend(true, {}, this._originalData);
+            oDefaultModel.setData(oResetCopy);
+            oDefaultModel.refresh(true);
+        },
 
         /**
          * Fuerza el renderizado de la tabla una vez que la vista está disponible en el DOM.
