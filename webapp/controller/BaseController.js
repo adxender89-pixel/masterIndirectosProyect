@@ -1044,8 +1044,97 @@ sap.ui.define([
             }.bind(this), 0);
         },
 /**
+ * SOLUZIONE COMPLETA - Con ri-attacco delegato e gestione cursore
+ */
+
+/**
+ * Configura le propiedades y eventos necesarios para el funcionamiento de una TreeTable.
+ */
+setupDynamicTreeTable: function (sTableId) {
+    var oTable = this.byId(sTableId);
+    if (!oTable) {
+        console.error("TreeTable no encontrada:", sTableId);
+        return;
+    }
+
+    oTable.attachFirstVisibleRowChanged(function (oEvent) {
+        this._onScrollLike(oEvent, sTableId);
+        // 🔧 FIX: Ri-attacca i delegati dopo lo scroll
+        this._attachArrowDelegates(oTable);
+    }.bind(this));
+
+    oTable.setFixedColumnCount(2);
+
+    if (this.byId("colMonths")) this.byId("colMonths").setVisible(false);
+    if (this.byId("colNew")) this.byId("colNew").setVisible(false);
+
+    // Inizializza il delegato
+    if (!this._arrowDelegate) {
+        this._arrowDelegate = {
+            onkeydown: function (oEvent) {
+                this._onInputKeyDown(oEvent);
+            }.bind(this)
+        };
+    }
+
+    // Attacca delegati alla prima renderizzazione
+    oTable.addEventDelegate({
+        onAfterRendering: function () {
+            this._attachArrowDelegates(oTable);
+            this._applyCabeceraStyle();
+        }.bind(this)
+    });
+
+    // Attacca delegati quando le righe vengono aggiornate
+    if (!oTable._rowsDelegateAttached) {
+        oTable.attachEvent("rowsUpdated", function () {
+            this._attachArrowDelegates(oTable);
+        }.bind(this));
+        oTable._rowsDelegateAttached = true;
+    }
+
+    var oViewModel = new sap.ui.model.json.JSONModel({
+        dynamicRowCount: 10
+    });
+    this.getView().setModel(oViewModel, "viewModel");
+
+    $(window).resize(function () {
+        this._calculateDynamicRows();
+    }.bind(this));
+
+    this._calculateDynamicRows();
+},
+
+/**
+ * 🔧 NUOVA FUNZIONE: Attacca i delegati delle frecce a tutti gli input visibili
+ */
+_attachArrowDelegates: function(oTable) {
+    if (!this._arrowDelegate) {
+        this._arrowDelegate = {
+            onkeydown: function (oEvent) {
+                this._onInputKeyDown(oEvent);
+            }.bind(this)
+        };
+    }
+
+    var aRows = oTable.getRows();
+    
+    aRows.forEach(function (oRow) {
+        oRow.getCells().forEach(function (oCell) {
+            var oInput = this._recursiveGetInput(oCell);
+            if (oInput) {
+                // Rimuovi prima per evitare duplicati
+                oInput.removeEventDelegate(this._arrowDelegate);
+                // Attacca il delegato
+                oInput.addEventDelegate(this._arrowDelegate);
+            }
+        }.bind(this));
+    }.bind(this));
+},
+
+/**
  * Maneja la navegación con teclas de flecha entre celdas de la tabla.
- * VERSIONE CORRETTA - FIX per blocco sulla prima riga visibile
+ * VERSIONE FINALE con fix per limiti tabella
  */
 _onInputKeyDown: function (oEvent) {
     var oInput = oEvent.srcControl;
@@ -1057,68 +1146,83 @@ _onInputKeyDown: function (oEvent) {
 
     if (!bDown && !bUp && !bRight && !bLeft) return;
 
-    console.log("🎯 KEY PRESSED:", bUp ? "UP" : bDown ? "DOWN" : bLeft ? "LEFT" : "RIGHT");
+    // ============================================
+    // GESTIONE CURSORE NEL CAMPO DI TESTO
+    // ============================================
+    var oDomRef = oInput.getFocusDomRef();
+    if (!oDomRef) return;
 
-    // Sincronización rápida de valores
-    var sCurrentDomValue = oInput.getFocusDomRef().value;
+    var iCursorPos = oDomRef.selectionStart;
+    var iTextLength = oDomRef.value.length;
+
+    // Se LEFT e il cursore NON è all'inizio → lascia che il cursore si muova
+    if (bLeft && iCursorPos > 0) {
+        return;
+    }
+
+    // Se RIGHT e il cursore NON è alla fine → lascia che il cursore si muova
+    if (bRight && iCursorPos < iTextLength) {
+        return;
+    }
+
+    // ============================================
+    // NAVIGAZIONE TRA CELLE
+    // ============================================
+
+    // Sincronizza valore
+    var sCurrentDomValue = oDomRef.value;
     oInput.setValue(sCurrentDomValue);
-    oInput.updateModelProperty(sCurrentDomValue);
+    if (oInput.updateModelProperty) {
+        oInput.updateModelProperty(sCurrentDomValue);
+    }
 
     oEvent.preventDefault();
     oEvent.stopImmediatePropagation();
 
     var oTable = this.byId("TreeTableBasic");
+    if (!oTable) return;
+
     var oBinding = oTable.getBinding("rows");
+    if (!oBinding) return;
+
     var oParent = oInput.getParent();
     
-    // Risali fino alla Row
+    // Trova la Row
     while (oParent && !oParent.isA("sap.ui.table.Row")) {
         oParent = oParent.getParent();
     }
 
-    if (!oParent) {
-        console.error("❌ Non ho trovato la Row!");
-        return;
-    }
+    if (!oParent) return;
 
     var iCurrentRowIndex = oParent.getIndex();
-    
-    // SALVA IL CONTEXT PATH CORRENTE
     var oCurrentContext = oParent.getBindingContext();
-    if (!oCurrentContext) {
-        console.error("❌ Context corrente non trovato!");
-        return;
-    }
+    if (!oCurrentContext) return;
 
-    // Trova l'indice della cella
+    // Trova colonna
     var aCells = oParent.getCells();
     var iTargetColIndex = -1;
 
     for (var i = 0; i < aCells.length; i++) {
-        var oCell = aCells[i];
-        if (this._cellContainsInput(oCell, oInput)) {
+        if (this._cellContainsInput(aCells[i], oInput)) {
             iTargetColIndex = i;
             break;
         }
     }
 
-    if (iTargetColIndex === -1) {
-        console.error("❌ Non ho trovato la colonna!");
-        return;
-    }
+    if (iTargetColIndex === -1) return;
 
-    console.log("✅ Current - Row:", iCurrentRowIndex, "Col:", iTargetColIndex, "Path:", oCurrentContext.getPath());
-    
     // ==========================================
-    // NAVEGACIÓN HORIZONTAL (LEFT/RIGHT)
+    // NAVIGAZIONE ORIZZONTALE
     // ==========================================
     if (bLeft || bRight) {
-        console.log("➡️ Navigazione ORIZZONTALE");
-        
         var iNewColIndex = bRight ? iTargetColIndex + 1 : iTargetColIndex - 1;
         
         if (iNewColIndex < 0 || iNewColIndex >= oTable.getColumns().length) {
-            console.log("⛔ Limite colonne raggiunto");
+            // 🔧 FIX: Mantieni il focus sull'input corrente
+            setTimeout(function() {
+                oInput.focus();
+                if (oInput.select) oInput.select();
+            }, 10);
             return;
         }
 
@@ -1126,13 +1230,20 @@ _onInputKeyDown: function (oEvent) {
         var iVisibleRowIndex = iCurrentRowIndex - iFirstVisible;
         
         if (iVisibleRowIndex < 0 || iVisibleRowIndex >= oTable.getRows().length) {
-            console.error("❌ Riga non visibile!");
+            // 🔧 FIX: Mantieni il focus sull'input corrente
+            setTimeout(function() {
+                oInput.focus();
+                if (oInput.select) oInput.select();
+            }, 10);
             return;
         }
 
         var oRow = oTable.getRows()[iVisibleRowIndex];
         if (!oRow) {
-            console.error("❌ Row non trovata!");
+            setTimeout(function() {
+                oInput.focus();
+                if (oInput.select) oInput.select();
+            }, 10);
             return;
         }
 
@@ -1140,50 +1251,67 @@ _onInputKeyDown: function (oEvent) {
         var oTargetInput = this._recursiveGetInput(oCell);
 
         if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
-            console.log("✅ Focus su colonna", iNewColIndex);
-            oTargetInput.focus();
-            if (oTargetInput.select) oTargetInput.select();
+            setTimeout(function() {
+                oTargetInput.focus();
+                if (oTargetInput.select) {
+                    oTargetInput.select();
+                }
+            }, 10);
         } else {
-            console.log("⚠️ Nessun input trovato in colonna", iNewColIndex);
+            // Nessun input trovato, mantieni il focus corrente
+            setTimeout(function() {
+                oInput.focus();
+                if (oInput.select) oInput.select();
+            }, 10);
         }
         return;
     }
 
     // ==========================================
-    // NAVEGACIÓN VERTICAL (UP/DOWN)
+    // NAVIGAZIONE VERTICALE
     // ==========================================
-    console.log("⬆️⬇️ Navigazione VERTICALE");
-    
     var iTargetRowIndex = null;
     var sTargetPath = null;
     var iSearchIndex = iCurrentRowIndex;
     
     // Cerca la prossima riga valida
+    var iSearchSteps = 0;
     while (true) {
         iSearchIndex = bDown ? iSearchIndex + 1 : iSearchIndex - 1;
+        iSearchSteps++;
         
+        // 🔧 FIX: Se raggiungi i limiti, mantieni il focus sull'input corrente
         if (iSearchIndex < 0 || iSearchIndex >= oBinding.getLength()) {
-            console.log("⛔ Limite tabella raggiunto (index:", iSearchIndex, ")");
+            setTimeout(function() {
+                oInput.focus();
+                if (oInput.select) oInput.select();
+            }, 10);
+            return;
+        }
+
+        // 🔧 FIX: Evita loop infinito
+        if (iSearchSteps > 100) {
+            setTimeout(function() {
+                oInput.focus();
+                if (oInput.select) oInput.select();
+            }, 10);
             return;
         }
 
         var oCtx = oTable.getContextByIndex(iSearchIndex);
-        if (!oCtx) {
-            console.log("⚠️ Context NULL a index", iSearchIndex);
-            continue;
-        }
+        if (!oCtx) continue;
         
         var oData = oCtx.getObject();
+        if (!oData) continue;
 
         // Salta righe "Agrupador" o vuote
-        if (oData && oData.name !== "Agrupador" && oData.name !== "" && oData.name !== undefined) {
-            iTargetRowIndex = iSearchIndex;
-            sTargetPath = oCtx.getPath();
-            console.log("✅ Target trovato - Index:", iTargetRowIndex, "Path:", sTargetPath);
-            break;
-        } else {
-            console.log("⏭️ Skip riga", iSearchIndex, "- name:", oData ? oData.name : "null");
+        if (oData.name === "Agrupador" || oData.name === "" || oData.name === undefined) {
+            continue;
         }
+
+        iTargetRowIndex = iSearchIndex;
+        sTargetPath = oCtx.getPath();
+        break;
     }
 
     // ==========================================
@@ -1193,81 +1321,112 @@ _onInputKeyDown: function (oEvent) {
     var iVisibleCount = oTable.getVisibleRowCount();
     var iLastVisible = iFirstVisible + iVisibleCount - 1;
 
-    console.log("📊 Viewport - First:", iFirstVisible, "Last:", iLastVisible, "Target:", iTargetRowIndex);
-
     var bNeedsScroll = false;
     var iNewFirstVisible = iFirstVisible;
     
-    // Target è SOTTO il viewport
     if (iTargetRowIndex > iLastVisible) {
+        // Target sotto il viewport
         iNewFirstVisible = iTargetRowIndex - iVisibleCount + 1;
-        console.log("⬇️ Scroll DOWN - New first:", iNewFirstVisible);
         bNeedsScroll = true;
     } 
-    // Target è SOPRA il viewport
     else if (iTargetRowIndex < iFirstVisible) {
+        // Target sopra il viewport
         iNewFirstVisible = iTargetRowIndex;
-        console.log("⬆️ Scroll UP - New first:", iNewFirstVisible);
         bNeedsScroll = true;
-    } else {
-        console.log("✅ Target già visibile, nessuno scroll necessario");
     }
 
     // ==========================================
-    // APPLICA SCROLL SE NECESSARIO
+    // FOCUS CON/SENZA SCROLL
     // ==========================================
     if (bNeedsScroll) {
-        console.log("🔄 Eseguo scroll a posizione:", iNewFirstVisible);
+        // Con scroll: aspetta che le righe siano aggiornate
+        var that = this;
+        var bFocused = false;
+        
+        var fnFocus = function() {
+            if (bFocused) return;
+            bFocused = true;
+            
+            var aRows = oTable.getRows();
+            var oTargetRow = null;
+            
+            for (var i = 0; i < aRows.length; i++) {
+                var oRowContext = aRows[i].getBindingContext();
+                if (oRowContext && oRowContext.getPath() === sTargetPath) {
+                    oTargetRow = aRows[i];
+                    break;
+                }
+            }
+            
+            if (!oTargetRow) {
+                // 🔧 FIX: Se non trovi la riga target, mantieni il focus corrente
+                oInput.focus();
+                if (oInput.select) oInput.select();
+                return;
+            }
+
+            var oCell = oTargetRow.getCells()[iTargetColIndex];
+            var oTargetInput = that._recursiveGetInput(oCell);
+            
+            if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
+                oTargetInput.focus();
+                if (oTargetInput.select) {
+                    oTargetInput.select();
+                }
+            } else {
+                // 🔧 FIX: Se non trovi l'input, mantieni il focus corrente
+                oInput.focus();
+                if (oInput.select) oInput.select();
+            }
+        };
+        
+        // Attacca listener per rowsUpdated
+        oTable.attachEventOnce("rowsUpdated", function() {
+            setTimeout(fnFocus, 50);
+        });
+        
+        // Esegui lo scroll
         oTable.setFirstVisibleRow(iNewFirstVisible);
+        
+        // Timeout di sicurezza
+        setTimeout(fnFocus, 300);
+        
+    } else {
+        // Senza scroll: focus immediato
+        setTimeout(function() {
+            var aRows = oTable.getRows();
+            var oTargetRow = null;
+            
+            for (var i = 0; i < aRows.length; i++) {
+                var oRowContext = aRows[i].getBindingContext();
+                if (oRowContext && oRowContext.getPath() === sTargetPath) {
+                    oTargetRow = aRows[i];
+                    break;
+                }
+            }
+            
+            if (!oTargetRow) {
+                // 🔧 FIX: Se non trovi la riga, mantieni il focus corrente
+                oInput.focus();
+                if (oInput.select) oInput.select();
+                return;
+            }
+
+            var oCell = oTargetRow.getCells()[iTargetColIndex];
+            var oTargetInput = this._recursiveGetInput(oCell);
+            
+            if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
+                oTargetInput.focus();
+                if (oTargetInput.select) {
+                    oTargetInput.select();
+                }
+            } else {
+                // 🔧 FIX: Se non trovi l'input, mantieni il focus corrente
+                oInput.focus();
+                if (oInput.select) oInput.select();
+            }
+        }.bind(this), 10);
     }
-
-    // ==========================================
-    // FOCUS SULL'INPUT TARGET
-    // ==========================================
-    var iTimeout = bNeedsScroll ? 200 : 50;
-    
-    setTimeout(function () {
-        console.log("⏱️ Timeout - Cerco path:", sTargetPath);
-        
-        var oTargetRow = null;
-        var aRows = oTable.getRows();
-        
-        // Cerca la riga usando il PATH del context
-        for (var i = 0; i < aRows.length; i++) {
-            var oRowContext = aRows[i].getBindingContext();
-            if (oRowContext && oRowContext.getPath() === sTargetPath) {
-                oTargetRow = aRows[i];
-                console.log("✅ Riga trovata con path matching alla posizione", i);
-                break;
-            }
-        }
-        
-        if (!oTargetRow) {
-            console.error("❌ Riga con path", sTargetPath, "non trovata!");
-            console.log("📋 Paths disponibili:");
-            aRows.forEach(function(row, idx) {
-                var ctx = row.getBindingContext();
-                console.log("  [" + idx + "]:", ctx ? ctx.getPath() : "NULL");
-            });
-            return;
-        }
-
-        var oCell = oTargetRow.getCells()[iTargetColIndex];
-        var oTargetInput = this._recursiveGetInput(oCell);
-        
-        if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
-            oTargetInput.focus();
-            if (oTargetInput.select) oTargetInput.select();
-            console.log("✅✅✅ FOCUS OK su", sTargetPath);
-        } else {
-            console.error("❌ Input non trovato, non visibile o non editabile");
-            console.log("   - Input exists:", !!oTargetInput);
-            if (oTargetInput) {
-                console.log("   - Visible:", oTargetInput.getVisible());
-                console.log("   - Editable:", oTargetInput.getEditable());
-            }
-        }
-    }.bind(this), iTimeout);
 },
 
 /**
@@ -1301,14 +1460,12 @@ _cellContainsInput: function (oCell, oTargetInput) {
 _recursiveGetInput: function (oControl) {
     if (!oControl) return null;
     
-    // Verifica se è un Input visibile ed editabile
     if (oControl.isA && oControl.isA("sap.m.Input")) {
         if (oControl.getVisible() && oControl.getEditable()) {
             return oControl;
         }
     }
 
-    // Cerca nei contenuti
     if (oControl.getContent) {
         var aContent = oControl.getContent();
         for (var i = 0; i < aContent.length; i++) {
@@ -1317,7 +1474,6 @@ _recursiveGetInput: function (oControl) {
         }
     }
     
-    // Cerca negli items
     if (oControl.getItems) {
         var aItems = oControl.getItems();
         for (var j = 0; j < aItems.length; j++) {
@@ -1328,6 +1484,7 @@ _recursiveGetInput: function (oControl) {
     
     return null;
 },
+
         /**
          * Construye un combo de operaciones a partir de las categorías expandibles.
          */
