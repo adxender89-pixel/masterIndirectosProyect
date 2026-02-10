@@ -1612,12 +1612,12 @@ _recursiveGetInput: function (oControl) {
                         rootCat.categories = this._filterCategories(rootCat.categories, sKey);
                     }
 
-                    console.log("  ✅ Aggiungo nodo parent");
+                    console.log(" Aggiungo nodo parent");
                     aFilteredRoot.push(rootCat);
                 }
             }
 
-            console.log("📊 Nodi filtrati totali:", aFilteredRoot.length);
+            console.log("Nodi filtrati totali:", aFilteredRoot.length);
             for (var j = 0; j < aFilteredRoot.length; j++) {
                 console.log("  " + j + ": " + aFilteredRoot[j].name + ", expandible=" + aFilteredRoot[j].expandible + ", children=" + (aFilteredRoot[j].categories ? aFilteredRoot[j].categories.length : 0));
             }
