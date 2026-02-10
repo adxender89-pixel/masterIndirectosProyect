@@ -1,4 +1,4 @@
-<mvc:View controllerName="masterindirectos.controller.DetailsControllers.Anticipados"
+<mvc:View controllerName="masterindirectos.controller.DetailsControllers.Corrientes"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns:core="sap.ui.core" displayBlock="true" height="100%"
     xmlns="sap.m"
@@ -95,6 +95,7 @@
                         <CheckBox
                         id="idEjecutadoCheckBox"
                         text="{i18n>cbEjecutado}"
+                        class="alignTextCheckBox"
                         select="onEjecutadoCheckBoxSelect"
 
                         >

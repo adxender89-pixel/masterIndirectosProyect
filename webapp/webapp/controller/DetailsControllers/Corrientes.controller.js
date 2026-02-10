@@ -20,10 +20,10 @@ sap.ui.define([
 ) {
     "use strict";
 
-    return BaseController.extend("masterindirectos.controller.DetailsControllers.Anticipados", {
+    return BaseController.extend("masterindirectos.controller.DetailsControllers.Corrientes", {
 
         /**
-         * Inicializa la vista de Anticipados definiendo el estado de navegación y visibilidad.
+         * Inicializa la vista de Corrientes definiendo el estado de navegación y visibilidad.
          * Configura la tabla principal y prepara las columnas anuales iniciales.
          */
         onInit: function () {
@@ -46,25 +46,20 @@ sap.ui.define([
                     new Date().getFullYear(), 3
                 );
             }.bind(this));
-            // --- Cargar JSON de Catalog ---
             var oCatalogModel = new JSONModel();
+            // 1. Settiamo il modello SUBITO, anche se è vuoto (così la View lo conosce già)
             this.getView().setModel(oCatalogModel, "catalog");
 
+            var oCatalogModel = new JSONModel();
             oCatalogModel.loadData("model/Catalog.json");
 
             oCatalogModel.attachRequestCompleted(function () {
-                var aCategories = oCatalogModel.getProperty("/catalog/models/categories");
-                if (!Array.isArray(aCategories)) {
-                    console.error("Categorie non trovate");
-                    return;
-                }
+                var oData = oCatalogModel.getData();
+                var oOriginalModel = new JSONModel(jQuery.extend(true, {}, oData));
 
-                var aComboItems = this._buildOperacionesCombo(aCategories);
-
-                this.getView().setModel(
-                    new JSONModel({ items: aComboItems }),
-                    "operacionesModel"
-                );
+                // Li settiamo globali sul Component
+                this.getOwnerComponent().setModel(oCatalogModel, "data");
+                this.getOwnerComponent().setModel(oOriginalModel, "dataOriginal");
             }.bind(this));
             // 1. Definiamo l'anno di partenza
             var iActualYear = new Date().getFullYear();

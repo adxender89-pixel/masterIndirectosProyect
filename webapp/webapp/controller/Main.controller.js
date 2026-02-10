@@ -3,9 +3,8 @@ sap.ui.define(
     "masterindirectos/controller/BaseController",
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageToast",
-    "sap/m/MessageBox"
   ],
-  function (BaseController, JSONModel, MessageToast, MessageBox ) {
+  function (BaseController, JSONModel, MessageToast) {
     "use strict";
 
     return BaseController.extend("masterindirectos.controller.Main", {
@@ -225,66 +224,9 @@ sap.ui.define(
       /**
        * Maneja el evento de selección en las pestañas para cargar la vista correspondiente.
        */
-onTabSelect: function (oEvent) {
-    var sNewKey = oEvent.getParameter("key");
-    var oIconTabBar = this.byId("itb");
-    
-    var sCurrentKey = this._lastSelectedKey || oIconTabBar.getSelectedKey();
-    
-    // 👇 RESET COLONNE QUANDO ESCI DA "corrientes"
-    if (sCurrentKey === "corrientes" && sNewKey !== "corrientes") {
-        this._resetCorrientesColumns();
-    }
-    
-    // Comprueba si se está abandonando la vista "corrientes"
-    if (sCurrentKey === "corrientes" && this._mViews["corrientes"]) {
-        var oCorrientesController = this._mViews["corrientes"].getController();
-        
-        if (oCorrientesController.hasUnsavedChanges && oCorrientesController.hasUnsavedChanges()) {
-            
-            MessageBox.confirm("Hay cambios sin guardar. ¿Está seguro de que desea descartarlos?", {
-                actions: [MessageBox.Action.OK, MessageBox.Action.CANCEL],
-                onClose: function(oAction) {
-                    if (oAction === MessageBox.Action.OK) {
-                        if (oCorrientesController.resetInputs) {
-                             oCorrientesController.resetInputs();
-                        }
-                        
-                        this._lastSelectedKey = sNewKey;
-                        this._showView(sNewKey);
-                    } else {
-                        oIconTabBar.setSelectedKey(sCurrentKey);
-                    }
-                }.bind(this)
-            });
-            return; 
-        }
-    }
-
-    this._lastSelectedKey = sNewKey;
-    this._showView(sNewKey);
-},
-
-// 👇 NUOVA FUNZIONE DA AGGIUNGERE
-_resetCorrientesColumns: function() {
-    if (this._mViews["corrientes"]) {
-        var oCorrientesController = this._mViews["corrientes"].getController();
-        
-        // Nascondi le colonne
-        var oColMonths = oCorrientesController.byId("colMonths");
-        var oColNew = oCorrientesController.byId("colNew");
-        
-        if (oColMonths) oColMonths.setVisible(false);
-        if (oColNew) oColNew.setVisible(false);
-        
-        // Reset anche il modello UI se necessario
-        var oUiModel = oCorrientesController.getView().getModel("ui");
-        if (oUiModel) {
-            oUiModel.setProperty("/showStickyParent", false);
-            oUiModel.setProperty("/showStickyChild", false);
-        }
-    }
-},
+      onTabSelect: function (oEvent) {
+        this._showView(oEvent.getParameter("key"));
+      },
 
       /**
        * Inyecta dinámicamente la vista seleccionada en el contenedor de contenido.

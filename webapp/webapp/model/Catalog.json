@@ -2,7 +2,7 @@
   "catalog": {
     "models": {
       "categories": [
-{"name": "I.003", "currency": "Corrientes", "expandible": false, "amount": "1.491.495,14", "pricepending": "630.462,90", "pricetotal": "1.732.958,04", "size": "Manual/Lineal/OEO/", "last": "01 enero 2028", "year2": null, "monthsData": [], "ejecutado": "12.500,00", "ej2026_0": "6.000,00", "ej2026_1": "6.500,00", "firstYearBudget": "firstYearBudget", "secondYearBudget": "secondYearBudget", "thirdYearBudget": "thirdYearBudget", "categories": []},
+{"name": "I.003", "currency": "Corrientes", "expandible": false, "amount": "1.491.495,14", "pricepending": "630.462,90", "pricetotal": "1.732.958,04", "size": "Manual/Lineal/OEO/", "last": "01 enero 2028", "year2": null, "monthsData": [], "ejecutado": "12.500,00", "ej2026_0": "6.000,00", "ej2026_1": "6.500,00", "consuntivoData": {"2026": ["6.000,00", "6.500,00"]}, "firstYearBudget": "firstYearBudget", "secondYearBudget": "secondYearBudget", "thirdYearBudget": "thirdYearBudget", "categories": []},
         {"name": "I.003","currency": "Corrientes", "expandible": true, "amount": "1.491.495,14", "pricepending": "630.462,90", "pricetotal": "1.732.958,04", "size": "Manual/Lineal/OEO/","last": "01 enero 2028", "year2":null,"monthsData": [], "ejecutado": "12.500,00", "ej2026_0": "6.000,00", "ej2026_1": "6.500,00","categories": [
          {"name": "I.003.031", "currency": "Personal mensual", "expandible": true, "amount": "1.491.495,14", "pricepending": "630.462,90", "pricetotal": "630.462,90", "size": "Manual/Lineal/OEO/","last": "01 enero 2028", "year2": null,"monthsData": [], "ejecutado": "12.500,00", "ej2026_0": "6.000,00", "ej2026_1": "6.500,00", "categories": [
          {"name":"Agrupador", "isGroup": true,"cabecera":true, "currency": "Descripción", "amount": "Proveedor", "pricepending": "Coste pend", "pricetotal": "Tarifa", "size": "Fecha de Inicio","last": "Fecha de fin","months": "Nºmonths","pend": "Otros"},
@@ -1428,9 +1428,9 @@
         ]}
          ]}
         ]}
-    },  
+    },
     "rowsTable": {
-      "rows": [ 
+      "rows": [
          {"name":"Anticipados", "currency": "62.668,51", "amount": "27.237,13", "pricepending": "89.905,64", "pricetotal": "0,39%", "size": "0,41%","last": "0,36%"},
           {"name":"Inmovilizados", "currency": "115.984,24", "amount": "35.991,29", "pricepending": "151.975,53", "pricetotal": "0,66%", "size": "0,69%","last": "0,60%"},
            {"name":"Corrientes", "currency": "315.984,24", "amount": "56.247,62", "pricepending": "372.231.86", "pricetotal": "1,62%", "size": "1,69%","last": "1,48%"},

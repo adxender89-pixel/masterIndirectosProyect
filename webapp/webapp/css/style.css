@@ -16,16 +16,6 @@
   font-size : 12px;
   color: #1f1f1f;
 }
-/* Questo punta direttamente al testo interno del bottone SAP UI5 */
-.testBold .sapMBtnContent, 
-.testBold .sapMBtnInnerText {
-    font-weight: bold !important;
-}
-
-/* Per sicurezza, lo applichiamo anche alla label se la proprietà design="Bold" non bastasse */
-.testBold {
-    font-weight: bold !important;
-}
 .fullWidthHeader {
     width: 100%;
 }

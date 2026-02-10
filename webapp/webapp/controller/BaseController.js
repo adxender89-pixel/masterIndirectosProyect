@@ -1,6 +1,5 @@
 sap.ui.define([
     "sap/ui/core/mvc/Controller",
-    "sap/ui/core/Fragment",
     "sap/ui/core/routing/History",
     "sap/ui/model/json/JSONModel",
     'sap/m/MessageItem',
@@ -20,7 +19,6 @@ sap.ui.define([
     "sap/m/VBox"
 ], function (
     Controller,
-    Fragment,
     History,
     JSONModel,
     MessageItem,
@@ -33,10 +31,7 @@ sap.ui.define([
     Bar,
     Message,
     Filter,
-    FilterOperator,
-    Label,
-    Text,
-    VBox
+    FilterOperator
 ) {
     "use strict";
 
@@ -284,7 +279,7 @@ sap.ui.define([
             }
             this._openedYear = null; // Cerrar meses abiertos
 
-            var iStartFrom = (iSkipFields !== undefined) ? iSkipFields : 10;
+            var iStartFrom = (iSkipFields !== undefined) ? iSkipFields : 14;
 
             var aYears = [];
             for (var i = 0; i < iHowMany; i++) {
@@ -304,51 +299,60 @@ sap.ui.define([
                             this.onCreateMonthsTable(oEvent, sTableId, sModelName);
                         }.bind(this)
                     }),
-                    template: new sap.m.Input({
+                    template: new sap.m.FlexBox({
+                        renderType: "Bare",
                         width: "100%",
-                        textAlign: "End",
-                        editable: "{= ${expandible} !== false }",
-                        value: {
-                            parts: [{ path: "" }],
-                            formatter: function (oRow) {
-                                if (!oRow || !oRow.hasOwnProperty("expandible")) return "";
+                        items: [
+                            new sap.m.Input({
+                                width: "100%",
+                                textAlign: "End",
+                                value: "{y" + iYear + "}",
+                                visible: "{= ${expandible} !== false && !${isGroup} }",
+                                liveChange: function (oEvt) {
+                                    var oInput = oEvt.getSource();
+                                    var oCtx = oInput.getBindingContext();
+                                    var oRow = oCtx.getObject();
+                                    var oModel = oCtx.getModel();
 
-                                if (oRow.expandible === false) {
-                                    var aKeys = Object.keys(oRow);
-                                    var sTargetKey = aKeys[iStartFrom + index];
-                                    return sTargetKey ? oRow[sTargetKey] : "";
+                                    var total = parseFloat(oInput.getValue().replace(',', '.')) || 0;
+
+                                    if (!oModel.getProperty(oCtx.getPath() + "/monthsData")) {
+                                        oModel.setProperty(oCtx.getPath() + "/monthsData", {});
+                                    }
+                                    if (!oModel.getProperty(oCtx.getPath() + "/monthsData/" + iYear)) {
+                                        var aMonth = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                                        var currentMonth = new Date().getMonth();
+                                        var currentYear = new Date().getFullYear();
+                                        var startMonth = (iYear === currentYear) ? currentMonth + 1 : 0;
+                                        oRow.months[iYear] = Array(aMonth.slice(startMonth).length).fill(0);
+                                    }
+
+                                    var n = oRow.months[iYear].length;
+                                    var perMonth = Math.round((total / n) * 100) / 100;
+                                    oRow.months[iYear] = Array(n).fill(perMonth);
+
+                                    oModel.setProperty(oCtx.getPath() + "/monthsData/" + iYear, oRow.months[iYear]);
+                                    oModel.setProperty(oCtx.getPath() + "/y" + iYear, total);
+
                                 }
-
-                                return oRow["y" + iYear] || "";
-                            }
-                        },
-                        visible: "{= ${expandible} !== false && !${isGroup} }",
-                        liveChange: function (oEvt) {
-                            var oInput = oEvt.getSource();
-                            var oCtx = oInput.getBindingContext();
-                            var oRow = oCtx.getObject();
-                            var oModel = oCtx.getModel();
-
-                            var total = parseFloat(oInput.getValue().replace(',', '.')) || 0;
-
-                            if (!oRow.months) oRow.months = {};
-                            if (!oRow.months[iYear]) {
-                                var aMonth = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                                var currentMonth = new Date().getMonth();
-                                var currentYear = new Date().getFullYear();
-                                var startMonth = (iYear === currentYear) ? currentMonth + 1 : 0;
-                                oRow.months[iYear] = Array(aMonth.slice(startMonth).length).fill(0);
-                            }
-
-                            var n = oRow.months[iYear].length;
-                            var perMonth = Math.round((total / n) * 100) / 100;
-                            oRow.months[iYear] = Array(n).fill(perMonth);
-
-                            oModel.setProperty(oCtx.getPath() + "/months/" + iYear, oRow.months[iYear]);
-                            oModel.setProperty(oCtx.getPath() + "/y" + iYear, total);
-                            oModel.refresh(true);
-                        }
-                    }).addStyleClass("sapUiSizeCompact")
+                            }).addStyleClass("sapUiSizeCompact"),
+                            new sap.m.Text({
+                                width: "100%",
+                                textAlign: "Center",
+                                visible: "{= ${expandible} === false }",
+                                wrapping: false,
+                                text: {
+                                    path: "",
+                                    formatter: function (oRow) {
+                                        if (!oRow || oRow.expandible !== false) return "";
+                                        var aKeys = Object.keys(oRow);
+                                        var sTargetKey = aKeys[iStartFrom + index];
+                                        return sTargetKey ? oRow[sTargetKey] : "";
+                                    }
+                                }
+                            })
+                        ]
+                    })
                 });
 
                 oColumn.data("dynamicYear", true);
@@ -361,8 +365,25 @@ sap.ui.define([
             }.bind(this), 0);
         },
         onYearChange: function (oEvent) {
+            var oSelect = oEvent.getSource(); // La tua Select
+            var aItems = oSelect.getItems();  // Tutte le opzioni (le 10 annate)
+
+            // 1. Prendiamo l'anno selezionato
             var sSelectedYear = parseInt(oEvent.getParameter("selectedItem").getKey(), 10);
-            this.createYearColumns("TreeTableBasic", sSelectedYear, 3);
+
+            // 2. Troviamo dinamicamente l'ultimo anno della lista (es. 2025 o 2035)
+            var iMaxYearInSelect = parseInt(aItems[aItems.length - 1].getKey(), 10);
+
+            // 3. Definiamo quante colonne vogliamo mostrare (nel tuo caso 3)
+            var iNumColumns = 3;
+
+            // 4. CALCOLO DINAMICO:
+            // Se (AnnoSelezionato + 2) supera l'anno massimo, dobbiamo "tornare indietro"
+            // In pratica: partiamo al massimo da (UltimoAnno - 2)
+            var iYearToPass = Math.min(sSelectedYear, iMaxYearInSelect - (iNumColumns - 1));
+
+            // 5. Creiamo le colonne
+            this.createYearColumns("TreeTableBasic", iYearToPass, iNumColumns);
         },
 
         /**
@@ -387,26 +408,27 @@ sap.ui.define([
          * Aplica estilos CSS específicos a las filas de tipo cabecera para diferenciarlas visualmente.
          */
         _applyCabeceraStyle: function (sTableId) {
-            var oTable = this.byId(sTableId);
-            if (!oTable) return;
-
+            var oTable = sTableId ? this.byId(sTableId) : this.byId("TreeTableBasic");
             var iFirst = oTable.getFirstVisibleRow();
             var aRows = oTable.getRows();
 
-            aRows.forEach((oRow, i) => {
+            for (var i = 0; i < aRows.length; i++) {
+                var oRow = aRows[i];
+                oRow.removeStyleClass("cabeceracolor");
+                oRow.removeStyleClass("cabeceracolor-Group");
+
                 var oCtx = oTable.getContextByIndex(iFirst + i);
-                if (!oCtx) return;
+                if (!oCtx) continue;
+
                 var oObj = oCtx.getObject();
-
-                // reset solo se necessario
-                if (oObj && oObj.cabecera) oRow.addStyleClass("cabeceracolor");
-                else oRow.removeStyleClass("cabeceracolor");
-
-                if (oObj && oObj.expandible) oRow.addStyleClass("cabeceracolor-Group");
-                else oRow.removeStyleClass("cabeceracolor-Group");
-            });
-        }
-        ,
+                if (oObj && oObj.cabecera === true) {
+                    oRow.addStyleClass("cabeceracolor");
+                }
+                if (oObj && oObj.expandible === true) {
+                    oRow.addStyleClass("cabeceracolor-Group");
+                }
+            }
+        },
 
         /**
          * Genera las columnas mensuales correspondientes al año seleccionado en la cabecera.
@@ -479,11 +501,14 @@ sap.ui.define([
 
                 if (bShowEjecutado && bIsPassedMonth) {
                     oControlTemplate = new sap.m.Text({
-                        text: "{monthsData/" + sYear + "/" + iRealIdx + "}",
+                        // Componiamo il nome della proprietà: ej + anno + _ + indiceMese
+                        // Risultato finale sarà: {ej2026_0}, {ej2026_1}, ecc.
+                        text: "{ej" + sYear + "_" + iRealIdx + "}",
                         textAlign: "End",
                         width: "100%"
                     }).addStyleClass("sapUiTinyMarginEnd");
                 } else {
+                    // Questa parte rimane uguale perché usava già una logica piatta (m2026_0)
                     oControlTemplate = new sap.m.Input({
                         value: "{m" + sYear + "_" + iRealIdx + "}",
                         textAlign: "End",
@@ -583,7 +608,12 @@ sap.ui.define([
                 path: oActiveGroup.path
             });
             this._applyCabeceraStyle(sTableId);
-        },_buildGroupRanges: function (sTableId) {
+        },
+
+        /**
+         * Analiza el modelo de la tabla para definir los rangos de índices de cada grupo de datos.
+         */
+        _buildGroupRanges: function (sTableId) {
             var oTable = this.byId("TreeTableBasic");
             var oBinding = oTable.getBinding("rows");
 
@@ -601,7 +631,7 @@ sap.ui.define([
                 if (!oCtx) continue;
 
                 var oObj = oCtx.getObject();
-                // Determina el inicio de un nuevo grupo basándose en la existencia de subcategorías
+                // Determina el inicio de un nuevo grupo basándose en la existencia de subcategorías.
                 if (oObj && oObj.categories && Array.isArray(oObj.categories)) {
                     if (oCurrentGroup) {
                         oCurrentGroup.end = i - 1;
@@ -618,9 +648,6 @@ sap.ui.define([
 
             this._aGroupRanges = aRanges;
         },
-        /**
-         * Analiza el modelo de la tabla para definir los rangos de índices de cada grupo de datos.
-         */
 
         /**
          * Calcula dinámicamente la cantidad de filas que caben en pantalla según el tamaño de la ventana.
@@ -915,6 +942,7 @@ sap.ui.define([
 
             if (!Array.isArray(aCategories)) return;
 
+            // 🔄 reset vista
             if (!oSelectedItem) {
                 oTable.setModel(new sap.ui.model.json.JSONModel({ categories: aCategories }));
                 oTable.bindRows("/categories");
@@ -1014,161 +1042,5 @@ sap.ui.define([
                 this._refreshAfterToggle(oTable.getId());
             }.bind(this), 100);
         },
-        openPopover: function (sFragmentName, oSource, sBindPath) {
-            var oView = this.getView();
-            this._mFragments = this._mFragments || {};
-
-            if (!this._mFragments[sFragmentName]) {
-                this._mFragments[sFragmentName] = Fragment.load({
-                    id: oView.getId(),
-                    name: sFragmentName,
-                    controller: this
-                }).then(function (oPopover) {
-                    oView.addDependent(oPopover);
-                    return oPopover;
-                });
-            }
-
-            this._mFragments[sFragmentName].then(function (oPopover) {
-                if (sBindPath) {
-                    oPopover.bindElement(sBindPath);
-                }
-                oPopover.openBy(oSource);
-            });
-        },
-        handlePopoverPress: function (oEvent) {
-            var oTable = this.byId("TreeTableBasic");
-            var aSelected = oTable.getSelectedIndices();
-
-            if (!aSelected.length) {
-                sap.m.MessageToast.show("Seleziona un nodo");
-                return;
-            }
-
-            var iIndex = aSelected[0];
-            var oContext = oTable.getContextByIndex(iIndex);
-            var sPath = oContext.getPath(); // es: /categories/0/categories/2/categories/1
-
-            var oVM = this.getView().getModel("viewModel");
-            oVM.setProperty("/selectedNodePath", sPath);
-
-            // Calcolo se il nodo selezionato è un nipote (>= 3 livelli di categories)
-            var iLevel = (sPath.match(/categories/g) || []).length;
-
-            if (iLevel >= 3) {
-                // Nodo nipote: aggiunge subito un fratello e ritorna
-                this.onAddRow();
-                return;
-            }
-
-            // Nodo non nipote: apri il popover
-            if (!this._oPopover) {
-                this._oPopover = sap.ui.xmlfragment(
-                    "masterindirectos.fragment.Anticipados",
-                    this
-                );
-                this.getView().addDependent(this._oPopover);
-            }
-
-            this._oPopover.setModel(oVM, "viewModel");
-            this._oPopover.openBy(oEvent.getSource());
-        },
-
-        onAddRow: function () {
-            var oView = this.getView();
-            var oModel = oView.getModel();
-            var oVM = oView.getModel("viewModel");
-
-            var sTipo = oVM.getProperty("/selectedTipo") || "OPERACIONES";
-            var sPath = oVM.getProperty("/selectedNodePath");
-
-            if (!sPath) {
-                sap.m.MessageToast.show("Seleziona un nodo prima di aggiungere una riga");
-                return;
-            }
-
-            var oNode = oModel.getProperty(sPath);
-            if (!oNode) {
-                sap.m.MessageToast.show("Nodo selezionato non trovato");
-                return;
-            }
-
-            var oNewRow = {
-                name: "",
-                currency: "",
-                amount: "",
-                pricepending: "",
-                pricetotal: "",
-                size: "",
-                last: "",
-                months: "",
-                pend: "",
-                isInputRow: true,
-                isGroup: false,
-                cabecera: false,
-                categories: []
-            };
-
-            // Determina se il nodo selezionato è un nipote o più profondo
-            var iLevel = (sPath.match(/categories/g) || []).length;
-            if (sTipo === "AGREGACIONES" && iLevel < 3) {
-
-                if (!oNode.categories) oNode.categories = [];
-
-                var aChildren = oNode.categories;
-
-                // 🔴 se il primo elemento è Agrupador, saltiamolo
-                var iInsertIndex = 0;
-                if (aChildren.length && aChildren[0].cabecera === true) {
-                    iInsertIndex = 1;
-                }
-
-                // 🔹 inserisce subito DOPO Agrupador
-                aChildren.splice(iInsertIndex, 0, oNewRow);
-
-                oModel.setProperty(sPath + "/categories", aChildren);
-            } else {
-                // CREA FRATELLO per nipoti o OPERACIONES
-                var sParentArrayPath;
-                if (sPath.lastIndexOf("/categories") !== -1) {
-                    sParentArrayPath = sPath.substring(0, sPath.lastIndexOf("/categories")) + "/categories";
-                } else {
-                    sParentArrayPath = "/catalog/models/categories"; // array principale
-                }
-
-
-                var aSiblings = oModel.getProperty(sParentArrayPath) || [];
-
-                // Trova l'indice del nodo selezionato nell'array dei fratelli
-                var iIndex = aSiblings.findIndex(function (item) {
-                    return item === oNode; // confrontiamo direttamente l'oggetto
-                });
-
-                // Se non lo trova, fallback alla fine
-                if (iIndex === -1) iIndex = aSiblings.length - 1;
-
-                // Inserisci subito **dopo** la riga selezionata
-                aSiblings.splice(iIndex + 1, 0, oNewRow);
-
-                // Aggiorna il modello
-                oModel.setProperty(sParentArrayPath, aSiblings);
-            }
-
-            oModel.refresh(true);
-
-            if (this._oPopover) this._oPopover.close();
-
-            setTimeout(function () {
-                this._applyCabeceraStyle("TreeTableBasic");
-            }.bind(this), 50);
-        }
-        , onTipoChange: function (oEvent) {
-            var sKey = oEvent.getSource().getSelectedKey();
-
-            this.getView()
-                .getModel("viewModel")
-                .setProperty("/selectedTipo", sKey);
-        }
-
     });
 });
