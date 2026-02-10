@@ -958,17 +958,27 @@ sap.ui.define([
 
                 var oClone = Object.assign({}, rootCat);
 
-                if (aFilteredChildren.length > 0) {
-                    oClone.categories = aFilteredChildren;
-                } else if (rootCat.name === sParentKey) {
-                    oClone.categories = this._filterCategories(rootCat.categories, sKey);
-                } else {
-                    // default
-                    oClone.categories = rootCat.categories;
-                }
+                    console.log("  - Figli trovati:", aFilteredChildren.length, "| Include parent:", bIncludeParent);
 
-                aFilteredRoot.push(oClone);
-            }.bind(this));
+                    if (aFilteredChildren.length === 0 && !bIncludeParent) {
+                        console.log("  ❌ Skip questo nodo");
+                        continue;
+                    }
+
+                    if (aFilteredChildren.length > 0) {
+                        rootCat.categories = aFilteredChildren;
+                    } else if (bIncludeParent) {
+                        rootCat.categories = this._filterCategories(rootCat.categories, sKey);
+                    }
+
+                    console.log(" Aggiungo nodo parent");
+                    aFilteredRoot.push(rootCat);
+                })
+
+          
+            for (var j = 0; j < aFilteredRoot.length; j++) {
+                console.log("  " + j + ": " + aFilteredRoot[j].name + ", expandible=" + aFilteredRoot[j].expandible + ", children=" + (aFilteredRoot[j].categories ? aFilteredRoot[j].categories.length : 0));
+            }
 
             oTable.setModel(new sap.ui.model.json.JSONModel({ categories: aFilteredRoot }));
             oTable.bindRows("/categories");

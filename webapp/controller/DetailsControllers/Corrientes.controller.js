@@ -25,9 +25,10 @@ sap.ui.define([
         /**
          * Inicializa la vista de Corrientes definiendo el estado de navegación y visibilidad.
          * Configura la tabla principal y prepara las columnas anuales iniciales.
+         * resubida
          */
         onInit: function () {
-            this.getView().setModel(new JSONModel({
+            this.getView().setModel(new JSONModel({ 
                 selectedKey: "Home"
             }), "state");
 
