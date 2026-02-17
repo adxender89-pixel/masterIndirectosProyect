@@ -23,6 +23,14 @@ sap.ui.define([
     return BaseController.extend("masterindirectos.controller.DetailsControllers.Corrientes", {
 
         /**
+         * Esta función le dice al BaseController qué ID de tabla buscar 
+         * en esta vista específica.
+         */
+        getCustomTableId: function () {
+            return "TreeTableBasic";
+        },
+
+        /**
          * Inicializa la vista de Corrientes definiendo el estado de navegación y visibilidad.
          * Configura la tabla principal y prepara las columnas anuales iniciales.
          * resubida
@@ -41,10 +49,11 @@ sap.ui.define([
 
             this.getView().attachEventOnce("afterRendering", function () {
                 this.createYearColumns(
-                    "TreeTableBasic",
-                    new Date().getFullYear(), 3
+                    new Date().getFullYear(), 3, "TreeTableBasic"
                 );
 
+                // Se adjunta el listener de cambios en el header
+                this._attachHeaderToggleListener();
             }.bind(this));
 
             var oCatalogModel = new JSONModel();
@@ -87,40 +96,52 @@ sap.ui.define([
 
             this._boundBrowserClose = this.onBrowserClose.bind(this);
             window.addEventListener("beforeunload", this._boundBrowserClose);
-
         },
         /**
          * Escucha cuando el header se expande o colapsa y recalcula las filas
          */
         _attachHeaderToggleListener: function () {
+
+
             var oObjectPageLayout = this.byId("objectPageLayout");
-            if (!oObjectPageLayout || !oObjectPageLayout.getDomRef()) {
-                setTimeout(this._attachHeaderToggleListener.bind(this), 100);
+
+            if (!oObjectPageLayout) {
+
                 return;
             }
 
-            var oDom = oObjectPageLayout.getDomRef();
+            // Delegación de eventos - Intercepta todos los clicks en los botones collapse/expand
+            setTimeout(function () {
+                var oDom = oObjectPageLayout.getDomRef();
 
-            if (this._headerClickListener) {
-                oDom.removeEventListener("click", this._headerClickListener, true);
-            }
+                if (!oDom) {
 
-            this._headerClickListener = function (e) {
-                var target = e.target;
-
-                if (target.closest(".sapFDynamicPageToggleHeaderIndicator") ||
-                    target.closest('[id$="-collapseBtn"]') ||
-                    target.closest('[id$="-expandBtn"]') ||
-                    target.closest(".sapUxAPObjectPageHeaderTitle") ||
-                    target.closest(".sapMTitle")) {
-
-                    setTimeout(function () {
-                        this._calculateDynamicRows();
-                    }.bind(this), 200);
+                    return;
                 }
-            }.bind(this);
 
-            oDom.addEventListener("click", this._headerClickListener, true);
+                // Event delegation: intercepta los clicks en cualquier botón de toggle
+                oDom.addEventListener("click", function (e) {
+                    var target = e.target;
+
+                    // Se verifica si el click es en un botón de collapse o expand
+                    if (target.closest(".sapFDynamicPageToggleHeaderIndicator") ||
+                        target.closest('[id$="-collapseBtn"]') ||
+                        target.closest('[id$="-expandBtn"]')) {
+
+
+
+                        setTimeout(function () {
+
+                            this._calculateDynamicRows();
+                        }.bind(this), 200);
+                    }
+                }.bind(this), true); // true = useCapture
+
+
+
+            }.bind(this), 1000); // Delay mayor para asegurar que el DOM esté listo
+
+
         },
 
         /** 
@@ -235,7 +256,6 @@ sap.ui.define([
          */
         onAfterRendering: function (oEvent) {
             this.byId("TreeTableBasic").rerender(true);
-            this._attachHeaderToggleListener();
         },
         /**
          * Gestiona la visibilidad de columnas extendidas al expandir nodos en la TreeTable.
@@ -341,5 +361,74 @@ sap.ui.define([
                 window.removeEventListener("beforeunload", this._boundBrowserClose);
             }
         },
+        onRowSelectionChange: function (oEvent) {
+
+            if (this._lock) return;
+            this._lock = true;
+
+            var oTable = oEvent.getSource();
+            var aIndices = oEvent.getParameter("rowIndices");
+
+            if (!aIndices || !aIndices.length) {
+                this._lock = false;
+                return;
+            }
+
+            var iRow = aIndices[0];
+            var oCtx = oTable.getContextByIndex(iRow);
+            if (!oCtx) {
+                this._lock = false;
+                return;
+            }
+
+            var bSelected = oTable.isIndexSelected(iRow);
+            var iLen = oTable.getBinding("rows").getLength();
+            var sPath = oCtx.getPath();
+            var iLevel = sPath.split("/categories").length - 1;
+            var oObj = oCtx.getObject();
+
+            if (iLevel >= 3) {
+
+                var sParentPath = sPath.substring(0, sPath.lastIndexOf("/categories"));
+
+                var firstChildIndex = null;
+                for (var j = 0; j < iLen; j++) {
+                    var oCtx2 = oTable.getContextByIndex(j);
+                    if (!oCtx2) continue;
+
+                    var sP = oCtx2.getPath();
+                    var iLvl = sP.split("/categories").length - 1;
+
+                    if (iLvl === iLevel && sP.startsWith(sParentPath + "/categories")) {
+                        firstChildIndex = j;
+                        break;
+                    }
+                }
+
+                if (firstChildIndex === iRow) {
+                    for (var k = 0; k < iLen; k++) {
+                        var oCtx3 = oTable.getContextByIndex(k);
+                        if (!oCtx3) continue;
+
+                        var sP3 = oCtx3.getPath();
+                        var iLvl3 = sP3.split("/categories").length - 1;
+
+                        if (iLvl3 === iLevel && sP3.startsWith(sParentPath + "/categories")) {
+                            if (bSelected) {
+                                oTable.addSelectionInterval(k, k);
+                            } else {
+                                oTable.removeSelectionInterval(k, k);
+                            }
+                        }
+                    }
+                }
+
+                this._lock = false;
+                return;
+            }
+
+            this._lock = false;
+        }
+
     });
 });

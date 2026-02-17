@@ -1,84 +1,194 @@
-<mvc:View controllerName="masterindirectos.controller.Main"
+<mvc:View
+    controllerName="masterindirectos.controller.Main"
     xmlns:mvc="sap.ui.core.mvc"
-    xmlns="sap.m" displayBlock="true"
-    xmlns:core="sap.ui.core">
+    xmlns="sap.m"
+    displayBlock="true"
+    xmlns:core="sap.ui.core"
+>
     <!-- Página principal sin scroll, usando modo compacto -->
-    <Page id="page" enableScrolling="false" class="sapUiNoContentPadding sapUiSizeCompact">
+    <Page
+        id="page"
+        enableScrolling="false"
+        class="sapUiNoContentPadding sapUiSizeCompact"
+    >
         <!-- Cabecera personalizada de la página -->
         <customHeader>
-             <Bar class="headerHeightCustom">
+            <Bar class="headerHeightCustom">
                 <!-- Título de la aplicación -->
                 <contentLeft>
-                    <Title text="{selectedScopeModel>/profitCenter} - {selectedScopeModel>/profitCenterDescription}" level="H2" />
-                    <core:Icon press="openScopeSelector" class="ambitoIcon" src="sap-icon://globe" color="blue"></core:Icon>
-                    <Title text="{tramoSelectedModel>/ProyectoExt}" level="H2" />
+                    <Title
+                        text="{selectedScopeModel>/profitCenter} - {selectedScopeModel>/profitCenterDescription}"
+                        level="H2"
+                    />
+                    <core:Icon
+                        press="openScopeSelector"
+                        class="ambitoIcon"
+                        src="sap-icon://globe"
+                        color="blue"
+                    />
+                    <Title
+                        text="{tramoSelectedModel>/ProyectoExt}"
+                        level="H2"
+                    />
                 </contentLeft>
                 <!-- Selector de escenario mediante botones segmentados -->
                 <contentMiddle>
-                    <HBox alignItems="Center" justifyContent="Center">
-                        <Label text="{i18n>Applicacion}:"></Label>
-                        <ComboBox class="sapUiTinyMarginBegin" selectedKey="presu">
+                    <HBox
+                        alignItems="Center"
+                        justifyContent="Center"
+                    >
+                        <Label text="{i18n>Applicacion}:"/>
+                        <ComboBox
+                            class="sapUiTinyMarginBegin"
+                            selectedKey="presu"
+                        >
                             <items>
-                                <core:Item text="{i18n>Presupuestación}" key="presu" />
-                                <core:Item text="{i18n>Planificacion}" key="cind" />
+                                <core:Item
+                                    text="{i18n>Presupuestación}"
+                                    key="presu"
+                                />
+                                <core:Item
+                                    text="{i18n>Planificacion}"
+                                    key="cind"
+                                />
                             </items>
                         </ComboBox>
-                        <Label class="sapUiTinyMarginBegin" text="{i18n>Escenario}:"></Label>
-                        <ComboBox class="sapUiTinyMarginBegin" selectedKey="all">
+                        <Label
+                            class="sapUiTinyMarginBegin"
+                            text="{i18n>Escenario}:"
+                        />
+                        <ComboBox
+                            class="sapUiTinyMarginBegin"
+                            selectedKey="all"
+                        >
                             <items>
-                                <core:Item text="{i18n>btnPossible1}" key="all" />
-                                <core:Item text="{i18n>btnPossible2}" key="ana" />
-                                <core:Item text="{i18n>btnPosible3}" key="ana" />
+                                <core:Item
+                                    text="{i18n>btnPossible1}"
+                                    key="all"
+                                />
+                                <core:Item
+                                    text="{i18n>btnPossible2}"
+                                    key="ana"
+                                />
+                                <core:Item
+                                    text="{i18n>btnPosible3}"
+                                    key="ana"
+                                />
                             </items>
                         </ComboBox>
                     </HBox>
                 </contentMiddle>
                 <!-- Acciones rápidas en la cabecera -->
                 <contentRight>
-                    <Button icon="sap-icon://search" type="Transparent" />
-                    <Button icon="sap-icon://settings" press="onToggleSideBar" type="Transparent" />
-                    <Button icon="sap-icon://log" type="Transparent" />
+                    <Button
+                        icon="sap-icon://search"
+                        type="Transparent"
+                    />
+                    <Button
+                        icon="sap-icon://settings"
+                        press="onToggleSideBar"
+                        type="Transparent"
+                    />
+                    <Button
+                        icon="sap-icon://log"
+                        type="Transparent"
+                    />
                 </contentRight>
             </Bar>
         </customHeader>
         <content>
-            <FlexBox width="100%" class="maxHeight" height="100%" direction="Row" fitContainer="true" alignItems="Stretch">
-
+            <FlexBox
+                width="100%"
+                class="maxHeight"
+                height="100%"
+                direction="Row"
+                fitContainer="true"
+                alignItems="Stretch"
+            >
                 <!-- AREA PRINCIPAL -->
-                <VBox width="100%" height="100%" fitContainer="true">
-
+                <VBox
+                    width="100%"
+                    height="100%"
+                    fitContainer="true"
+                >
                     <!-- TAB BAR -->
-                     <IconTabBar id="itb" expanded="true" select="onTabSelect" stretchContentHeight="false" class="customTabBar">
-
+                    <IconTabBar
+                        id="itb"
+                        expanded="true"
+                        select="onTabSelect"
+                        stretchContentHeight="false"
+                        class="customTabBar"
+                    >
                         <items>
-                           <IconTabFilter key="dashboard" text="{i18n>Home}"/>
-                            <IconTabFilter key="anticipados" text="{i18n>anticipados}"/>
-                            <IconTabFilter key="inmov" text="{i18n>inmovilizados}"/>
-                            <IconTabFilter key="corrientes" text="{i18n>corrientes}"/>
-                            <IconTabFilter key="diferidos" text="{i18n>diferidos}"/>
-                            <IconTabFilter key="externos" text="{i18n>externos}"/>
+                            <IconTabFilter
+                                key="dashboard"
+                                text="{i18n>Home}"
+                            />
+                            <IconTabFilter
+                                key="anticipados"
+                                text="{i18n>anticipados}"
+                            />
+                            <IconTabFilter
+                                key="inmov"
+                                text="{i18n>inmovilizados}"
+                            />
+                            <IconTabFilter
+                                key="corrientes"
+                                text="{i18n>corrientes}"
+                            />
+                            <IconTabFilter
+                                key="diferidos"
+                                text="{i18n>diferidos}"
+                            />
+                            <IconTabFilter
+                                key="externos"
+                                text="{i18n>externos}"
+                            />
                         </items>
                     </IconTabBar>
-
                     <!-- CONTENIDO DINAMICO -->
-                    <VBox id="tabContent" width="100%" height="100%" fitContainer="true">
+                    <VBox
+                        id="tabContent"
+                        width="100%"
+                        height="100%"
+                        fitContainer="true"
+                    >
                         <layoutData>
-                            <FlexItemData growFactor="1"/>
+                            <FlexItemData growFactor="1" />
                         </layoutData>
                     </VBox>
                 </VBox>
-
                 <!-- SIDEBAR -->
-                <VBox id="sideActionToolbar" visible="false" width="2.5rem" height="100%" class="sapUiNoContentPadding">
+                <VBox
+                    id="sideActionToolbar"
+                    visible="false"
+                    width="2.5rem"
+                    height="100%"
+                    class="sapUiNoContentPadding"
+                >
                     <items>
-                        <Button icon="sap-icon://comment" type="Transparent"/>
-                        <Button icon="sap-icon://attachment" type="Transparent"/>
-                        <Button icon="sap-icon://history" type="Transparent"/>
-                        <Button icon="sap-icon://edit" type="Transparent"/>
-                        <Button icon="sap-icon://settings" type="Transparent"/>
+                        <Button
+                            icon="sap-icon://comment"
+                            type="Transparent"
+                        />
+                        <Button
+                            icon="sap-icon://attachment"
+                            type="Transparent"
+                        />
+                        <Button
+                            icon="sap-icon://history"
+                            type="Transparent"
+                        />
+                        <Button
+                            icon="sap-icon://edit"
+                            type="Transparent"
+                        />
+                        <Button
+                            icon="sap-icon://settings"
+                            type="Transparent"
+                        />
                     </items>
                 </VBox>
-
             </FlexBox>
         </content>
         <!-- Footer con acciones de guardado -->
@@ -86,10 +196,17 @@
             <OverflowToolbar height="2.5rem">
                 <ToolbarSpacer />
                 <!--Button text="{i18n>btnGuardarTodo}" type="Emphasized" press="onSaveAll" /-->
-                <Button text="{i18n>btnGuardar}" type="Default" press="onSave" />
-                <Button text="{i18n>btnCancelar}" type="Transparent" press="onCancel" />
+                <Button
+                    text="{= ${ui>/isEditMode} ? ${i18n>btnGuardar} : ${i18n>btnEditar} }"
+                    type="{= ${ui>/isEditMode} ? 'Emphasized' : 'Default' }"
+                    press="onSave"
+                />
+                <Button
+                    text="{i18n>btnCancelar}"
+                    type="Transparent"
+                    press="onCancel"
+                />
             </OverflowToolbar>
         </footer>
-
     </Page>
 </mvc:View>

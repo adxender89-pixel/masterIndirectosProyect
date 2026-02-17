@@ -894,14 +894,14 @@
     margin: 0 !important;
     padding: 0 !important;
 }
-
-
-/* Nasconde lo scrollbar verticale dell'ObjectPageLayout */
-#__xmlview1--objectPageLayout-vertSB {
-    display: none !important;
+/* Rimuove padding della cella */
+.sapUiTableCell .fullCellInput {
+    height: 100%;
 }
 
-/* Oppure più generico per tutti gli ObjectPageLayout */
-[id$="-vertSB"] {
-    display: none !important;
+/* Fa riempire tutto */
+.fullCellInput .sapMInputBaseInner {
+    height: 100%;
+    width: 100%;
+    box-sizing: border-box;
 }

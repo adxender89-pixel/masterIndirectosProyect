@@ -157,12 +157,13 @@ sap.ui.define([
             });
 
             // Inicialización de tablas dinámicas tras mostrar el retorno
-            this.setupDynamicTreeTable("TreeTableBasic");
-            this.setupDynamicTreeTable("TreeTableInmov");
+            this.setupDynamicTreeTable();
 
             this.getView().attachEventOnce("afterRendering", function () {
-                this.createYearColumns("TreeTableBasic", new Date().getFullYear(), 3, "");
-                this.createYearColumns("TreeTableInmov", new Date().getFullYear(), 3, "Inmov");
+                this.createYearColumns(new Date().getFullYear(), 3, "");
+
+
+
             }.bind(this));
         },
 
@@ -170,8 +171,8 @@ sap.ui.define([
         /**
          * Crea dinámicamente columnas de años con un botón en la cabecera para ver los meses.
          */
-        createYearColumns: function (sTableId, iStartYear, iHowMany, sModelName, iSkipFields) {
-            var oTable = this.byId(sTableId);
+        createYearColumns: function (iStartYear, iHowMany, _pTable) {
+            var oTable = this.getControlTable();
             if (!oTable) return;
 
             var aColumns = oTable.getColumns();
@@ -184,8 +185,8 @@ sap.ui.define([
             // No se cierran los meses cuando se recargan los años
             // this._openedYear = null;
 
-            var iStartFrom = (iSkipFields !== undefined) ? iSkipFields : 13;
-
+            //var iStartFrom = (iSkipFields !== undefined) ? iSkipFields : 13;
+var iStartFrom = 13;
             // Nueva sección: Columna Ejecutados para los años con formato correcto
             var bShowEjecutado = this.byId("idEjecutadoCheckBox") ? this.byId("idEjecutadoCheckBox").getSelected() : false;
 
@@ -238,7 +239,7 @@ sap.ui.define([
                         type: "Transparent",
                         width: "100%",
                         press: function (oEvent) {
-                            this.onCreateMonthsTable(oEvent, sTableId, sModelName);
+                            this.onCreateMonthsTable(oEvent);
                         }.bind(this)
                     }),
                     template: new sap.m.HBox({
@@ -279,7 +280,7 @@ sap.ui.define([
             }.bind(this));
 
             setTimeout(function () {
-                this.setupDynamicTreeTable(sTableId);
+                this.setupDynamicTreeTable();
             }.bind(this), 0);
         },
 
@@ -288,85 +289,27 @@ sap.ui.define([
         /**
          * Maneja el cambio de año en el selector, ajustando las columnas mostradas dinámicamente.
          */
-onYearChange: function (oEvent) {
-    var oSelect = oEvent.getSource();
-    var aItems = oSelect.getItems();
-    var sSelectedYear = parseInt(oEvent.getParameter("selectedItem").getKey(), 10);
-    var iMaxYearInSelect = parseInt(aItems[aItems.length - 1].getKey(), 10);
-    var iNumColumns = 3;
-    var iYearToPass = Math.min(sSelectedYear, iMaxYearInSelect - (iNumColumns - 1));
+        onYearChange: function (oEvent) {
+            var oSelect = oEvent.getSource(); // El Select
+            var aItems = oSelect.getItems();  // Todas las opciones (las 10 anualidades)
 
-    var oTable = this.byId("TreeTableBasic");
-    
-    // ✅ SALVA se c'era un anno aperto PRIMA
-    var bWasYearOpen = !!this._openedYear;
+            // 1. Se toma el año seleccionado
+            var sSelectedYear = parseInt(oEvent.getParameter("selectedItem").getKey(), 10);
 
-    if (this._openedYear && oTable) {
-        // Elimina tutte le colonne di mesi
-        var monthColsToRemove = oTable.getColumns().filter(c => c.data("dynamicMonth") || c.data("ejecutadosColumn"));
-        monthColsToRemove.forEach(c => oTable.removeColumn(c));
-        
-        // Recrea la columna Ejecutados si el checkbox está activo
-        var bShowEjecutado = this.byId("idEjecutadoCheckBox") ? this.byId("idEjecutadoCheckBox").getSelected() : false;
-        if (bShowEjecutado) {
-            var iInsertIndex = oTable.getColumns().findIndex(c => c.data("dynamicYear") === true);
-            if (iInsertIndex !== -1) {
-                var currentYear = new Date().getFullYear();
-                var oColEjecAnual = new sap.ui.table.Column({
-                    width: "8rem",
-                    minWidth: 60,
-                    autoResizable: true,
-                    label: new sap.m.VBox({
-                        alignItems: "Center",
-                        renderType: "Bare",
-                        width: "100%",
-                        items: [
-                            new sap.m.Text({
-                                text: "2024-" + currentYear
-                            }).addStyleClass("sapUiTinyFontSize textoaño"),
-                            new sap.m.Label({
-                                text: "Ejecutados",
-                                design: "Bold",
-                                textAlign: "Center",
-                                width: "100%"
-                            }).addStyleClass("testBold")
-                        ]
-                    }),
-                    template: new sap.m.Text({
-                        text: "{ejecutado}",
-                        textAlign: "Center",
-                        width: "100%"
-                    })
-                });
-                oColEjecAnual.data("dynamicYear", true);
-                oColEjecAnual.data("ejecutadosColumn", true);
-                oTable.insertColumn(oColEjecAnual, iInsertIndex);
-            }
-        }
-        
-        this._openedYear = null;
-    }
+            // 2. Se encuentra dinámicamente el último año de la lista (ej. 2025 o 2035)
+            var iMaxYearInSelect = parseInt(aItems[aItems.length - 1].getKey(), 10);
 
-    this.createYearColumns("TreeTableBasic", iYearToPass, iNumColumns);
-    
-    // ✅ APRI il nuovo anno SOLO se ce n'era uno aperto prima
-    if (bWasYearOpen) {
-        setTimeout(function() {
-            var oYearCol = oTable.getColumns().find(c => {
-                var lab = c.getLabel();
-                var txt = lab.getText ? lab.getText() : (lab.getItems ? lab.getItems()[0].getText() : "");
-                return txt === String(sSelectedYear);
-            });
-            
-            if (oYearCol) {
-                var oButton = oYearCol.getLabel();
-                this.onCreateMonthsTable({
-                    getSource: function() { return oButton; }
-                }, "TreeTableBasic");
-            }
-        }.bind(this), 100);
-    }
-},
+            // 3. Se define cuántas columnas se quieren mostrar (en este caso 3)
+            var iNumColumns = 3;
+
+            // 4. CÁLCULO DINÁMICO:
+            // Si (AñoSeleccionado + 2) supera el año máximo, se debe "retroceder"
+            // En la práctica: se empieza como máximo desde (ÚltimoAño - 2)
+            var iYearToPass = Math.min(sSelectedYear, iMaxYearInSelect - (iNumColumns - 1));
+
+            // 5. Se crean las columnas
+            this.createYearColumns(iYearToPass, iNumColumns);
+        },
 
         /**
          * Actualiza el estado de la tabla tras la expansión o contracción de nodos.
@@ -375,22 +318,22 @@ onYearChange: function (oEvent) {
             var oTable = this.byId(sTableId);
             if (!oTable) return;
 
-            this._buildGroupRanges(sTableId);
+            this._buildGroupRanges();
 
             this._onScrollLike({
                 getParameter: function () {
                     return oTable.getFirstVisibleRow();
                 }
-            }, sTableId);
+            });
 
-            this._applyCabeceraStyle(sTableId);
+            this._applyCabeceraStyle();
         },
 
         /**
          * Aplica estilos CSS específicos a las filas de tipo cabecera para diferenciarlas visualmente.
          */
-        _applyCabeceraStyle: function (sTableId) {
-            var oTable = sTableId ? this.byId(sTableId) : this.byId("TreeTableBasic");
+        _applyCabeceraStyle: function (oTable) {
+            var oTable = this.getControlTable();
             var iFirst = oTable.getFirstVisibleRow();
             var aRows = oTable.getRows();
 
@@ -415,73 +358,161 @@ onYearChange: function (oEvent) {
         /**
          * Genera las columnas mensuales correspondientes al año seleccionado en la cabecera.
          */
-onCreateMonthsTable: function (oEvent, sTableId, sModelName) {
-    
-    var oSource = oEvent.getSource();
-    var oTable = this.byId(sTableId || "TreeTableBasic");
-
-    var bShowEjecutado = this.byId("idEjecutadoCheckBox") ? this.byId("idEjecutadoCheckBox").getSelected() : false;
-
-    // Guarda la posición actual del scroll horizontal
-    var iCurrentScrollLeft = 0;
-    try {
-        var oScrollExt = oTable._getScrollExtension();
-        if (oScrollExt && oScrollExt.getHorizontalScrollbar()) {
-            iCurrentScrollLeft = oScrollExt.getHorizontalScrollbar().scrollLeft;
-        }
-    } catch (e) {
-    }
-
-    var sYearText = "";
-    var sSourceName = oSource.getMetadata().getName();
-
-    if (sSourceName === "sap.m.Button") {
-        sYearText = oSource.getText();
-        if (isNaN(parseInt(sYearText, 10))) sYearText = oSource.getParent().getItems()[0].getText();
-    } else {
-        sYearText = String(this._openedYear);
-    }
-
-    var sYear = parseInt(sYearText, 10);
-    
-    if (!sYear) return;
-
-    // Si se hace clic en el mismo año, cierra los meses
-    if (this._openedYear === sYear && sSourceName === "sap.m.Button") {
-        
-        this._openedYear = null;
-
-        // Bloquea la tabla durante los cambios
-        oTable.setBusy(true);
-
-        var monthColsToRemove = oTable.getColumns().filter(c => c.data("dynamicMonth"));
-        
-        monthColsToRemove.forEach(c => oTable.removeColumn(c));
-
-        // Cuando cierra los meses, recrea la columna Ejecutados para los años si el checkbox está activo
-        if (bShowEjecutado) {
+        onCreateMonthsTable: function (oEvent) {
             
-            // Elimina eventuales columnas Ejecutados
-            var ejecutadosColsToRemove = oTable.getColumns().filter(c => c.data("ejecutadosColumn"));
+
+            var oSource = oEvent.getSource();
+            var oTable = this.getControlTable();
+
+            var bShowEjecutado = this.byId("idEjecutadoCheckBox") ? this.byId("idEjecutadoCheckBox").getSelected() : false;
             
-            ejecutadosColsToRemove.forEach(c => oTable.removeColumn(c));
 
-            // Recrea la columna Ejecutados para los años
-            var iInsertIndex = oTable.getColumns().findIndex(c => c.data("dynamicYear") === true);
+            // Guarda la posición actual del scroll horizontal
+            var iCurrentScrollLeft = 0;
+            try {
+                var oScrollExt = oTable._getScrollExtension();
+                if (oScrollExt && oScrollExt.getHorizontalScrollbar()) {
+                    iCurrentScrollLeft = oScrollExt.getHorizontalScrollbar().scrollLeft;
+                    
+                }
+            } catch (e) {
+                
+            }
 
-            if (iInsertIndex !== -1) {
-                var currentYear = new Date().getFullYear();
-                var oColEjecAnual = new sap.ui.table.Column({
+            var sYearText = "";
+            var sSourceName = oSource.getMetadata().getName();
+            
+
+            if (sSourceName === "sap.m.Button") {
+                sYearText = oSource.getText();
+                if (isNaN(parseInt(sYearText, 10))) sYearText = oSource.getParent().getItems()[0].getText();
+            } else {
+                sYearText = String(this._openedYear);
+            }
+
+            var sYear = parseInt(sYearText, 10);
+            
+            if (!sYear) return;
+
+            // Si se hace clic en el mismo año, cierra los meses
+            if (this._openedYear === sYear && sSourceName === "sap.m.Button") {
+                
+                this._openedYear = null;
+
+                // Bloquea la tabla durante los cambios
+                oTable.setBusy(true);
+
+                var monthColsToRemove = oTable.getColumns().filter(c => c.data("dynamicMonth"));
+                
+                monthColsToRemove.forEach(c => oTable.removeColumn(c));
+
+                // Cuando cierra los meses, recrea la columna Ejecutados para los años si el checkbox está activo
+                if (bShowEjecutado) {
+                    
+                    // Elimina eventuales columnas Ejecutados
+                    var ejecutadosColsToRemove = oTable.getColumns().filter(c => c.data("ejecutadosColumn"));
+                    
+                    ejecutadosColsToRemove.forEach(c => oTable.removeColumn(c));
+
+                    // Recrea la columna Ejecutados para los años
+                    var iInsertIndex = oTable.getColumns().findIndex(c => c.data("dynamicYear") === true);
+                    
+
+                    if (iInsertIndex !== -1) {
+                        var currentYear = new Date().getFullYear();
+                        var oColEjecAnual = new sap.ui.table.Column({
+                            width: "8rem",
+                            minWidth: 60,
+                            autoResizable: true,
+                            label: new sap.m.VBox({
+                                alignItems: "Center",
+                                renderType: "Bare",
+                                width: "100%",
+                                items: [
+                                    new sap.m.Text({
+                                        text: "2024-" + currentYear
+                                    }).addStyleClass("sapUiTinyFontSize textoaño"),
+                                    new sap.m.Label({
+                                        text: "Ejecutados",
+                                        design: "Bold",
+                                        textAlign: "Center",
+                                        width: "100%"
+                                    }).addStyleClass("testBold")
+                                ]
+                            }),
+                            template: new sap.m.Text({
+                                text: "{ejecutado}",
+                                textAlign: "Center",
+                                width: "100%"
+                            })
+                        });
+                        oColEjecAnual.data("dynamicYear", true);
+                        oColEjecAnual.data("ejecutadosColumn", true);
+                        oTable.insertColumn(oColEjecAnual, iInsertIndex);
+                        
+                    }
+                }
+
+                // Desbloquea la tabla y restaura el scroll
+                setTimeout(function () {
+                    try {
+                        var oScrollExt = oTable._getScrollExtension();
+                        if (oScrollExt && oScrollExt.getHorizontalScrollbar()) {
+                            oScrollExt.getHorizontalScrollbar().scrollLeft = iCurrentScrollLeft;
+                            
+                        }
+                    } catch (e) {
+                        
+                    }
+                    oTable.setBusy(false);
+                    
+                }.bind(this), 50);
+
+                
+                return;
+            }
+
+            // Bloquea la tabla ANTES de hacer cualquier cambio
+            oTable.setBusy(true);
+            
+
+            // Elimina las columnas de meses existentes Y la columna Ejecutados de los años
+            
+            var colsToRemove = oTable.getColumns().filter(c => c.data("dynamicMonth") || c.data("ejecutadosColumn"));
+            
+            colsToRemove.forEach(c => oTable.removeColumn(c));
+
+            this._openedYear = sYear;
+
+            var aMonthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            var currentYear = new Date().getFullYear();
+            var currentMonth = new Date().getMonth();
+
+            var iStartIdx = (sYear === currentYear && !bShowEjecutado) ? currentMonth + 1 : 0;
+            
+
+            var oYearCol = oTable.getColumns().find(c => {
+                var lab = c.getLabel();
+                var txt = lab.getText ? lab.getText() : (lab.getItems ? lab.getItems()[0].getText() : "");
+                return txt === String(sYear);
+            });
+            var colIndex = oTable.indexOfColumn(oYearCol);
+            
+
+            var iOffset = 0;
+
+            // Columna "Ejecutados" - SOLO si el checkbox está activo
+            if (bShowEjecutado) {
+                
+                var oColEjec = new sap.ui.table.Column({
                     width: "8rem",
-                    minWidth: 60,
-                    autoResizable: true,
                     label: new sap.m.VBox({
                         alignItems: "Center",
                         renderType: "Bare",
                         width: "100%",
                         items: [
                             new sap.m.Text({
-                                text: "2024-" + currentYear
+                                text: "2024-" + sYear
                             }).addStyleClass("sapUiTinyFontSize textoaño"),
                             new sap.m.Label({
                                 text: "Ejecutados",
@@ -497,163 +528,108 @@ onCreateMonthsTable: function (oEvent, sTableId, sModelName) {
                         width: "100%"
                     })
                 });
-                oColEjecAnual.data("dynamicYear", true);
-                oColEjecAnual.data("ejecutadosColumn", true);
-                oTable.insertColumn(oColEjecAnual, iInsertIndex);
+                oColEjec.data("dynamicMonth", true);
+                oColEjec.data("ejecutadosColumn", true);
+
+                var insertPos = colIndex + iOffset;
+                
+                oTable.insertColumn(oColEjec, insertPos);
+                iOffset++;
             }
-        }
 
-        // Desbloquea la tabla y restaura el scroll
-        setTimeout(function () {
-            try {
-                var oScrollExt = oTable._getScrollExtension();
-                if (oScrollExt && oScrollExt.getHorizontalScrollbar()) {
-                    oScrollExt.getHorizontalScrollbar().scrollLeft = iCurrentScrollLeft;
-                }
-            } catch (e) {
-            }
-            oTable.setBusy(false);
-        }.bind(this), 50);
+            // Columnas de los meses
+            
+            for (var i = iStartIdx; i < 12; i++) {
+                var sMonthLabel = aMonthNames[i];
+                var iRealIdx = i;
+                var bIsPassedMonth = (sYear < currentYear) || (sYear === currentYear && i <= currentMonth);
 
-        return;
-    }
+                var oControlTemplate;
 
-    // Bloquea la tabla ANTES de hacer cualquier cambio
-    oTable.setBusy(true);
-
-    // Elimina las columnas de meses existentes Y la columna Ejecutados de los años
-    var colsToRemove = oTable.getColumns().filter(c => c.data("dynamicMonth") || c.data("ejecutadosColumn"));
-    
-    colsToRemove.forEach(c => oTable.removeColumn(c));
-
-    this._openedYear = sYear;
-
-    var aMonthNames = [];
-for (var i = 0; i < 12; i++) {
-    var date = new Date(2024, i, 1);
-    aMonthNames.push(date.toLocaleString('en-US', { month: 'short' }));
-}
-    var currentYear = new Date().getFullYear();
-    var currentMonth = new Date().getMonth();
-
-    var iStartIdx = (sYear === currentYear && !bShowEjecutado) ? currentMonth + 1 : 0;
-
-    var oYearCol = oTable.getColumns().find(c => {
-        var lab = c.getLabel();
-        var txt = lab.getText ? lab.getText() : (lab.getItems ? lab.getItems()[0].getText() : "");
-        return txt === String(sYear);
-    });
-    var colIndex = oTable.indexOfColumn(oYearCol);
-
-    var iOffset = 0;
-
-    // Columna "Ejecutados" - SOLO si el checkbox está activo
-    if (bShowEjecutado) {
-        
-        var oColEjec = new sap.ui.table.Column({
-            width: "8rem",
-            label: new sap.m.VBox({
-                alignItems: "Center",
-                renderType: "Bare",
-                width: "100%",
-                items: [
-                    new sap.m.Text({
-                        text: "2024-" + sYear
-                    }).addStyleClass("sapUiTinyFontSize textoaño"),
-                    new sap.m.Label({
-                        text: "Ejecutados",
-                        design: "Bold",
+                // Si es un mes pasado y el checkbox está activo, muestra Text con datos ejecutados
+                if (bShowEjecutado && bIsPassedMonth) {
+                    oControlTemplate = new sap.m.Text({
+                        text: "{ej" + sYear + "_" + iRealIdx + "}",
                         textAlign: "Center",
                         width: "100%"
-                    }).addStyleClass("testBold")
-                ]
-            }),
-            template: new sap.m.Text({
-                text: "{ejecutado}",
-                textAlign: "Center",
-                width: "100%"
-            })
-        });
-        oColEjec.data("dynamicMonth", true);
-        oColEjec.data("ejecutadosColumn", true);
+                    }).addStyleClass("sapUiTinyMarginEnd");
+                } else {
+                    // De lo contrario muestra Input para los meses futuros
+                    oControlTemplate = new sap.m.Input({
+                        value: "{m" + sYear + "_" + iRealIdx + "}",
+                        textAlign: "Center",
+                        visible: "{= ${expandible} !== false && !${isGroup} }",
+                        change: function (oEvt) {
+                            var oInput = oEvt.getSource();
+                            var oCtx = oInput.getBindingContext();
+                            var oModel = oCtx.getModel();
+                            var sPath = oCtx.getPath();
 
-        var insertPos = colIndex + iOffset;
-        
-        oTable.insertColumn(oColEjec, insertPos);
-        iOffset++;
-    }
+                            oModel.setProperty(
+                                sPath + "/m" + sYear + "_" + iRealIdx,
+                                oInput.getValue()
+                            );
+                        }
+                    });
+                }
 
-    // Columnas de los meses
-    for (var i = iStartIdx; i < 12; i++) {
-        var sMonthLabel = aMonthNames[i];
-        var iRealIdx = i;
-        var bIsPassedMonth = (sYear < currentYear) || (sYear === currentYear && i <= currentMonth);
+                var oColumn = new sap.ui.table.Column({
+                    width: "8rem",
+                    label: new sap.m.VBox({
+                        alignItems: "Center",
+                        renderType: "Bare",
+                        width: "100%",
+                        items: [
+                            new sap.m.Text({
+                                text: String(sYear)
+                            }).addStyleClass("sapUiTinyFontSize textoaño"),
 
-        var oControlTemplate;
+                            (i === iStartIdx) ?
+                                new sap.m.Button({
+                                    text: sMonthLabel,
+                                    type: "Transparent",
+                                    width: "100%",
+                                    icon: "sap-icon://slim-arrow-right",
+                                    iconFirst: false,
+                                    press: function (oEv) { this.onCreateMonthsTable(oEv); }.bind(this)
+                                }).addStyleClass("testBold") :
+                                new sap.m.Label({
+                                    text: sMonthLabel,
+                                    design: "Bold",
+                                    textAlign: "Center",
+                                    width: "100%"
+                                }).addStyleClass("testBold")
+                        ]
+                    }),
+                    template: oControlTemplate
+                }).data("dynamicMonth", true);
 
-        // Si es un mes pasado y el checkbox está activo, muestra Text con datos ejecutados
-        if (bShowEjecutado && bIsPassedMonth) {
-            oControlTemplate = new sap.m.Text({
-                text: "{ej" + sYear + "_" + iRealIdx + "}",
-                textAlign: "Center",
-                width: "100%"
-            }).addStyleClass("sapUiTinyMarginEnd");
-        } else {
-            // ✅ FIX: Rimosso il change handler - il binding bidirezionale lo gestisce automaticamente
-            oControlTemplate = new sap.m.Input({
-                value: "{m" + sYear + "_" + iRealIdx + "}",
-                textAlign: "Center",
-                visible: "{= ${expandible} !== false && !${isGroup} }"
-            });
-        }
-
-        var oColumn = new sap.ui.table.Column({
-            width: "8rem",
-            label: new sap.m.VBox({
-                alignItems: "Center",
-                renderType: "Bare",
-                width: "100%",
-                items: [
-                    new sap.m.Text({
-                        text: String(sYear)
-                    }).addStyleClass("sapUiTinyFontSize textoaño"),
-
-                    (i === iStartIdx) ?
-                        new sap.m.Button({
-                            text: sMonthLabel,
-                            type: "Transparent",
-                            width: "100%",
-                            icon: "sap-icon://slim-arrow-right",
-                            iconFirst: false,
-                            press: function (oEv) { this.onCreateMonthsTable(oEv, sTableId); }.bind(this)
-                        }).addStyleClass("testBold") :
-                        new sap.m.Label({
-                            text: sMonthLabel,
-                            design: "Bold",
-                            textAlign: "Center",
-                            width: "100%"
-                        }).addStyleClass("testBold")
-                ]
-            }),
-            template: oControlTemplate
-        }).data("dynamicMonth", true);
-
-        var monthInsertPos = colIndex + iOffset + (i - iStartIdx);
-        oTable.insertColumn(oColumn, monthInsertPos);
-    }
-
-    // Desbloquea la tabla y restaura el scroll después de insertar todas las columnas
-    setTimeout(function () {
-        try {
-            var oScrollExt = oTable._getScrollExtension();
-            if (oScrollExt && oScrollExt.getHorizontalScrollbar()) {
-                oScrollExt.getHorizontalScrollbar().scrollLeft = iCurrentScrollLeft;
+                var monthInsertPos = colIndex + iOffset + (i - iStartIdx);
+                if (i === iStartIdx) {
+                    
+                }
+                oTable.insertColumn(oColumn, monthInsertPos);
             }
-        } catch (e) {
-        }
-        oTable.setBusy(false);
-    }.bind(this), 50);
-},
+
+            
+
+            // Desbloquea la tabla y restaura el scroll después de insertar todas las columnas
+            setTimeout(function () {
+                try {
+                    var oScrollExt = oTable._getScrollExtension();
+                    if (oScrollExt && oScrollExt.getHorizontalScrollbar()) {
+                        oScrollExt.getHorizontalScrollbar().scrollLeft = iCurrentScrollLeft;
+                        
+                    }
+                } catch (e) {
+                    
+                }
+                oTable.setBusy(false);
+                
+            }.bind(this), 50);
+
+            
+        },
 
 
 
@@ -662,7 +638,7 @@ for (var i = 0; i < 12; i++) {
          * Se ejecuta cuando se selecciona el checkbox de Ejecutado, recargando las columnas mensuales.
          */
         onEjecutadoCheckBoxSelect: function (oEvent) {
-            var oTable = this.byId("TreeTableBasic");
+            var oTable = this.getControlTable();
             if (!oTable) return;
 
             var bShowEjecutado = this.byId("idEjecutadoCheckBox").getSelected();
@@ -692,7 +668,7 @@ for (var i = 0; i < 12; i++) {
                                 getText: function () { return String(sYear); }
                             };
                         }
-                    }, "TreeTableBasic");
+                    });
                 }
             } else {
                 // Si no hay meses abiertos, se gestiona solo la columna Ejecutados de los años
@@ -742,13 +718,13 @@ for (var i = 0; i < 12; i++) {
         /**
          * Lógica de gestión de cabeceras sticky durante el desplazamiento de la tabla.
          */
-        _onScrollLike: function (oEvent, sTableId) {
+        _onScrollLike: function (oEvent) {
             if (this._ignoreNextScroll) {
                 this._ignoreNextScroll = false;
                 return;
             }
 
-            var oTable = sTableId ? this.byId(sTableId) : this.byId("TreeTableBasic");
+            var oTable = this.getControlTable();
             var oUiModel = this.getView().getModel("ui");
 
             if (!this._aGroupRanges || !this._aGroupRanges.length) {
@@ -793,14 +769,14 @@ for (var i = 0; i < 12; i++) {
                 child: oActiveGroup.data.categories[0],
                 path: oActiveGroup.path
             });
-            this._applyCabeceraStyle(sTableId);
+            this._applyCabeceraStyle();
         },
 
         /**
          * Analiza el modelo de la tabla para definir los rangos de índices de cada grupo de datos.
          */
         _buildGroupRanges: function (sTableId) {
-            var oTable = this.byId("TreeTableBasic");
+            var oTable = this.getControlTable();
             var oBinding = oTable.getBinding("rows");
 
             if (!oTable) {
@@ -839,26 +815,48 @@ for (var i = 0; i < 12; i++) {
          * Calcula dinámicamente la cantidad de filas que caben en pantalla según el tamaño de la ventana.
          */
         _calculateDynamicRows: function () {
-            var oTable = this.byId("TreeTableBasic");
+            
+
+            var oTable = this.getControlTable();
             if (!oTable || !oTable.getDomRef()) {
+                
                 return;
             }
 
             var iWindowHeight = window.innerHeight;
+            
+
             var oTableRect = oTable.getDomRef().getBoundingClientRect();
             var iTableTop = oTableRect.top;
-            var iBottomSpace = 148;
+            
+
+            // Se modifica únicamente este valor de 20 a 148
+            var iBottomSpace = 148; // Footer, scrollbar, márgenes (4 filas × 32px + 20px base)
+            
+
             var iAvailableHeight = iWindowHeight - iTableTop - iBottomSpace;
+            
+
             var iRowHeight = 32;
+            
+
             var iRows = Math.floor(iAvailableHeight / iRowHeight);
+            
 
             if (iRows < 5) {
+                
                 iRows = 5;
             }
 
+            var iCurrentColumns = oTable.getColumns().length;
+            var iVisibleColumns = oTable.getColumns().filter(function (col) {
+                return col.getVisible();
+            }).length;
+
+            
+
             this.getView().getModel("viewModel").setProperty("/dynamicRowCount", iRows);
         },
-
         /**
          * Filtra categorías recursivamente según una clave específica.
          */
@@ -891,7 +889,7 @@ for (var i = 0; i < 12; i++) {
          * Colapsa un grupo desde la cabecera sticky, actualizando la vista de la tabla.
          */
         onCollapseFromHeader: function () {
-            var oTable = this.byId("TreeTableBasic");
+            var oTable = this.getControlTable();
             var oUiModel = this.getView().getModel("ui");
 
             var sTargetPath = oUiModel.getProperty("/stickyHeaderData/path");
@@ -923,7 +921,7 @@ for (var i = 0; i < 12; i++) {
             }
             setTimeout(function () {
 
-                this._buildGroupRanges("TreeTableBasic");
+                this._buildGroupRanges();
 
                 var iFirstVisible = oTable.getFirstVisibleRow();
 
@@ -933,7 +931,7 @@ for (var i = 0; i < 12; i++) {
                             return iFirstVisible;
                         }
                     }
-                }, "TreeTableBasic");
+                });
 
                 var bAnyDetailExpanded = false;
                 var oBinding = oTable.getBinding("rows");
@@ -991,16 +989,25 @@ for (var i = 0; i < 12; i++) {
          */
 
         /**
+         * Retorna la tabla dinámica de la vista actual. 
+         * Si el hijo define 'getCustomTableId', lo usa; si no, usa 'TreeTableBasic'.
+         */
+        getControlTable: function () {
+            var sId = this.getCustomTableId();
+            return this.byId(sId);
+        },
+
+        /**
          * Configura las propiedades y eventos necesarios para el funcionamiento de una TreeTable.
          */
         setupDynamicTreeTable: function (sTableId) {
-            var oTable = this.byId(sTableId);
+var oTable = sTableId ? this.byId(sTableId) : this.getControlTable();
             if (!oTable) {
                 return;
             }
 
             oTable.attachFirstVisibleRowChanged(function (oEvent) {
-                this._onScrollLike(oEvent, sTableId);
+                this._onScrollLike(oEvent);
                 // Se vuelven a asignar los delegados tras el scroll
                 this._attachArrowDelegates(oTable);
             }.bind(this));
@@ -1023,7 +1030,7 @@ for (var i = 0; i < 12; i++) {
             oTable.addEventDelegate({
                 onAfterRendering: function () {
                     this._attachArrowDelegates(oTable);
-                    this._applyCabeceraStyle();
+                    this._applyCabeceraStyle(oTable);
                 }.bind(this)
             });
 
@@ -1117,7 +1124,7 @@ for (var i = 0; i < 12; i++) {
             oEvent.preventDefault();
             oEvent.stopImmediatePropagation();
 
-            var oTable = this.byId("TreeTableBasic");
+            var oTable = this.getControlTable();
             if (!oTable) return;
 
             var oBinding = oTable.getBinding("rows");
@@ -1446,7 +1453,7 @@ for (var i = 0; i < 12; i++) {
          */
         onOperacionChange: function (oEvent) {
             var oSelectedItem = oEvent.getParameter("selectedItem");
-            var oTable = this.byId("TreeTableBasic");
+            var oTable = this.getControlTable();
             var oDefaultModel = this.getView().getModel();
             var oUiModel = this.getView().getModel("ui");
 
@@ -1483,7 +1490,7 @@ for (var i = 0; i < 12; i++) {
 
             // Filtro
             var sKey = oSelectedItem.getKey();
-
+            
 
             // Se cuentan los puntos para distinguir padre (I.003) de hijo (I.003.031)
             var iPunti = (sKey.match(/\./g) || []).length;
@@ -1495,7 +1502,7 @@ for (var i = 0; i < 12; i++) {
             }
             // Si tiene solo 1 punto (ej. I.003), sParentKey se mantiene null (es un padre)
 
-
+            
 
             var aCurrent = oDefaultModel.getProperty("/catalog/models/categories");
             var aWorkingCopy = this._mergeModifications(
@@ -1503,14 +1510,14 @@ for (var i = 0; i < 12; i++) {
                 aCurrent
             );
 
-
+            
 
             var aFilteredRoot = [];
 
             for (var i = 0; i < aWorkingCopy.length; i++) {
                 var rootCat = aWorkingCopy[i];
 
-
+                
 
                 if (!Array.isArray(rootCat.categories)) {
                     rootCat.categories = [];
@@ -1518,21 +1525,21 @@ for (var i = 0; i < 12; i++) {
 
                 // Caso 1: Padre principal (ej. I.003)
                 if (rootCat.name === sKey && !sParentKey) {
-
+                    
                     aFilteredRoot.push(rootCat);
                     continue;
                 }
 
                 // Caso 2: Hijo específico (ej. I.003.031)
                 if (sParentKey) {
-
+                    
                     var aFilteredChildren = this._filterCategories(rootCat.categories, sKey);
                     var bIncludeParent = rootCat.name === sParentKey;
 
-
+                    
 
                     if (aFilteredChildren.length === 0 && !bIncludeParent) {
-
+                        
                         continue;
                     }
 
@@ -1542,14 +1549,14 @@ for (var i = 0; i < 12; i++) {
                         rootCat.categories = this._filterCategories(rootCat.categories, sKey);
                     }
 
-
+                    
                     aFilteredRoot.push(rootCat);
                 }
             }
 
-
+            
             for (var j = 0; j < aFilteredRoot.length; j++) {
-
+                
             }
 
             oDefaultModel.setProperty("/catalog/models/categories", aFilteredRoot);
@@ -1586,7 +1593,7 @@ for (var i = 0; i < 12; i++) {
                     } else if (sKey) {
                         // Caso 1: Padre principal, se expande solo el nodo con hijos
                         if (oObj.name === sKey && oObj.expandible === true) {
-
+                            
                             oTable.expand(i);
 
                             // Se verifica si el padre tiene nietos (isGroup)
@@ -1648,6 +1655,151 @@ for (var i = 0; i < 12; i++) {
             mergeRecursive(aBase, aModified);
             return aBase;
         },
+ onRowSelectionChange: function (oEvent) {
 
+            if (this._lock) return;
+            this._lock = true;
+
+            var oTable = oEvent.getSource();
+            var aIndices = oEvent.getParameter("rowIndices");
+
+            if (!aIndices || !aIndices.length) {
+                this._lock = false;
+                return;
+            }
+
+            var iRow = aIndices[0];
+            var oCtx = oTable.getContextByIndex(iRow);
+            if (!oCtx) {
+                this._lock = false;
+                return;
+            }
+
+            var bSelected = oTable.isIndexSelected(iRow);
+            var iLen = oTable.getBinding("rows").getLength();
+            var sPath = oCtx.getPath();
+            var iLevel = sPath.split("/categories").length - 1;
+            var oObj = oCtx.getObject();
+
+            if (iLevel >= 3) {
+
+                var sParentPath = sPath.substring(0, sPath.lastIndexOf("/categories"));
+
+                var firstChildIndex = null;
+                for (var j = 0; j < iLen; j++) {
+                    var oCtx2 = oTable.getContextByIndex(j);
+                    if (!oCtx2) continue;
+
+                    var sP = oCtx2.getPath();
+                    var iLvl = sP.split("/categories").length - 1;
+
+                    if (iLvl === iLevel && sP.startsWith(sParentPath + "/categories")) {
+                        firstChildIndex = j;
+                        break;
+                    }
+                }
+
+                if (firstChildIndex === iRow) {
+                    for (var k = 0; k < iLen; k++) {
+                        var oCtx3 = oTable.getContextByIndex(k);
+                        if (!oCtx3) continue;
+
+                        var sP3 = oCtx3.getPath();
+                        var iLvl3 = sP3.split("/categories").length - 1;
+
+                        if (iLvl3 === iLevel && sP3.startsWith(sParentPath + "/categories")) {
+                            if (bSelected) {
+                                oTable.addSelectionInterval(k, k);
+                            } else {
+                                oTable.removeSelectionInterval(k, k);
+                            }
+                        }
+                    }
+                }
+
+                this._lock = false;
+                return;
+            }
+
+            this._lock = false;
+        },
+        onSave: function () {
+
+    var oUiModel = this.getView().getModel("ui");
+    var oDataModel = this.getView().getModel();
+    var bEditMode = oUiModel.getProperty("/isEditMode");
+    var that = this;
+
+    // 🔹 Se NON è in edit → entra in edit mode
+    if (!bEditMode) {
+
+        // Backup dati originali
+        this._originalData = JSON.parse(JSON.stringify(oDataModel.getData()));
+
+        oUiModel.setProperty("/isEditMode", true);
+        return;
+    }
+
+    // 🔹 Se è in edit → chiedi conferma salvataggio
+    sap.m.MessageBox.confirm(
+        "¿Salvar cambios?",
+        {
+            title: "Confirmación",
+            actions: [sap.m.MessageBox.Action.OK, sap.m.MessageBox.Action.CANCEL],
+            emphasizedAction: sap.m.MessageBox.Action.OK,
+
+            onClose: function (oAction) {
+
+                if (oAction === sap.m.MessageBox.Action.OK) {
+
+                    // 👉 QUI puoi mettere la logica di salvataggio backend
+
+                    // Esce da edit mode
+                    oUiModel.setProperty("/isEditMode", false);
+
+                    // Elimina backup
+                    that._originalData = null;
+
+                }
+
+            }
+        }
+    );
+
+}
+
+        ,
+        onCancel: function () {
+
+            var oUiModel = this.getView().getModel("ui");
+            var oDataModel = this.getView().getModel();
+            var that = this;
+
+            sap.m.MessageBox.confirm(
+                "¿Seguro de borrar todo?",
+                {
+                    title: "Confirmación",
+                    actions: [sap.m.MessageBox.Action.OK, sap.m.MessageBox.Action.CANCEL],
+                    emphasizedAction: sap.m.MessageBox.Action.OK,
+
+                    onClose: function (oAction) {
+
+                        if (oAction === sap.m.MessageBox.Action.OK) {
+
+                            // 🔹 RIPRISTINA DATI ORIGINALI
+                            if (that._originalData) {
+                                oDataModel.setData(that._originalData);
+                            }
+
+                            // 🔹 Esci da edit mode
+                            oUiModel.setProperty("/isEditMode", false);
+
+                        }
+
+                    }
+                }
+            );
+
+        }
     });
 });
