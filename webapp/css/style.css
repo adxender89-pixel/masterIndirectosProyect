@@ -82,7 +82,7 @@
 }
 .secondStickyText {
     font-weight: 600 !important;   
-    font-size: 0.75rem;            
+    font-size: 0.85rem;            
     padding-top: 0.2rem;
     padding-bottom: 0.2rem;
     width: 100%;
@@ -139,7 +139,7 @@
 
 /* TODO: Texto pequeño */
 .sapUiTable .sapMText, 
-.sapUiTable .sapMLabel,
+.sapUiTable .sapMLabel:not(.titleGrande),
 .sapUiTable .sapMInputBaseInner {
     font-size: 10px !important; /* Aproximadamente 12px */
 }
@@ -583,4 +583,37 @@
 .alignTextCheckBox .sapMCbLabel {
     margin-bottom: 0.10rem !important;
     vertical-align: middle;
+}
+/* Selector de máxima prioridad para el título Operación */
+.fullWidthHeader .sapMLabel.titleGrande {
+    font-size: 12px !important;
+    font-weight: bold !important;
+    padding: 2px 0 !important;
+    margin: 0 !important;
+    line-height: 1.1 !important;
+    display: block !important;
+    width: 100% !important;
+    text-align: center !important; /* El centrado se queda aquí */
+}
+/* Ajuste del contenedor */
+.fullWidthHeader {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    display: block !important; /* Cambiado de flex a block para ocupar todo el ancho natural */
+    width: 100% !important;
+}
+/* 1. Quitamos la negrita a los textos normales de la tabla */
+.sapUiTable .sapMText {
+    font-weight: normal !important;
+}
+
+/* 2. Nos aseguramos de que el Input de la nueva fila también sea normal */
+.sapUiTable .sapMInputBaseInner {
+    font-weight: normal !important;
+}
+
+/* 3. Si quieres que los IMPORTES (amount) resalten un poco pero sin ser negrita bruta */
+.alignEndColumn {
+    text-align: right;
+    font-weight: 400 !important; /* 400 es peso normal */
 }

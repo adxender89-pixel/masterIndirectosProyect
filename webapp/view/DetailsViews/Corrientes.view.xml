@@ -115,7 +115,7 @@
                     <t:Column width="160px" hAlign="Center" >
                         <t:label>
                             <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>operacion}" design="Bold" />
+                                <Label text="{i18n>operacion}" design="Bold" class="titleGrande" />
                                 <HBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
                                     <Text text="{ui>/stickyHeaderData/parent/name}" wrapping="false" width="100%" textAlign="Center" />
                                 </HBox>
@@ -127,15 +127,24 @@
                                 </VBox>
                             </VBox> 
                         </t:label>
-                        <t:template>
-                            <Text text="{name}" wrapping="false" />
-                        </t:template>
+                       <t:template>
+    <VBox>
+        <Text 
+            text="{name}" 
+            wrapping="false" 
+            visible="{= ${isGroup} !== false }" />
+
+        <Input 
+            value="{name}" 
+            visible="{= ${isGroup} === false }" />
+    </VBox>
+</t:template>
                     </t:Column>
 
                     <t:Column width="100px" hAlign="Center">
                         <t:label>
                             <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>descripcionOperacion}" design="Bold" />
+                                <Label text="{i18n>descripcionOperacion}" design="Bold" class="titleGrande"/>
                                 <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
                                     <Text text="{ui>/stickyHeaderData/parent/currency}" wrapping="false" width="100%" textAlign="Center" />
                                 </VBox>
@@ -144,15 +153,25 @@
                                 </VBox>
                             </VBox>
                         </t:label>
-                        <t:template>
-                            <Text text="{currency}" wrapping="false" />
-                        </t:template>
+                      <t:template>
+    <VBox>
+        <Text 
+            text="{currency}" 
+            visible="{= ${isGroup} !== false }" 
+            wrapping="false" />
+
+        <Input 
+            value="{currency}" 
+            visible="{= ${isGroup} === false }" 
+            />
+    </VBox>
+</t:template>
                     </t:Column>
 
                     <t:Column width="80px" hAlign="Center">
                         <t:label>
                             <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>coste}" design="Bold" />
+                                <Label text="{i18n>coste}" design="Bold" class="titleGrande"/>
                                 <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
                                     <Text text="{ui>/stickyHeaderData/parent/amount}" width="100%" textAlign="Center" wrapping="false" />
                                 </VBox>
@@ -161,15 +180,23 @@
                                 </VBox>
                             </VBox>
                         </t:label>
-                        <t:template>
-                            <Text text="{amount}" wrapping="false" />
-                        </t:template>
+                     <t:template>
+    <VBox>
+        <Text 
+            text="{amount}" 
+            visible="{= ${isGroup} !== false }" />
+        <Input 
+            value="{amount}" 
+            visible="{= ${isGroup} === false }" 
+            textAlign="End" />
+    </VBox>
+</t:template>
                     </t:Column>
 
                     <t:Column width="80px" hAlign="Center">
                         <t:label>
                             <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>costepend}" design="Bold" />
+                                <Label text="{i18n>costepend}" design="Bold" class="titleGrande"/>
                                 <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
                                     <Text text="{ui>/stickyHeaderData/parent/pricepending}" width="100%" textAlign="Center" wrapping="false" />
                                 </VBox>
@@ -178,15 +205,18 @@
                                 </VBox>
                             </VBox>
                         </t:label>
-                        <t:template>
-                            <Text text="{pricepending}" wrapping="false" />
-                        </t:template>
+                      <t:template>
+    <VBox>
+        <Text text="{pricepending}" visible="{= ${isGroup} !== false }" />
+        <Input value="{pricepending}" visible="{= ${isGroup} === false }" textAlign="End" />
+    </VBox>
+</t:template>
                     </t:Column>
 
                     <t:Column width="80px" hAlign="Center">
                         <t:label>
                             <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>costetotal}" design="Bold" />
+                                <Label text="{i18n>costetotal}" design="Bold" class="titleGrande"/>
                                 <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
                                     <Text text="{ui>/stickyHeaderData/parent/pricetotal}" width="100%" textAlign="Center" wrapping="false" />
                                 </VBox>
@@ -195,15 +225,18 @@
                                 </VBox>
                             </VBox>
                         </t:label>
-                        <t:template>
-                            <Text text="{pricetotal}" wrapping="false" />
-                        </t:template>
+                       <t:template>
+    <VBox>
+        <Text text="{pricetotal}" visible="{= ${isGroup} !== false }" />
+        <Input value="{pricetotal}" visible="{= ${isGroup} === false }" textAlign="End" />
+    </VBox>
+</t:template>
                     </t:Column>
 
                     <t:Column id="colStart" width="85px" hAlign="Center">
                         <t:label>
                             <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>dbReparto}" design="Bold" textAlign="Center" />
+                                <Label text="{i18n>dbReparto}" design="Bold" textAlign="Center" class="titleGrande"/>
                                 <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
                                     <Text text="{ui>/stickyHeaderData/parent/size}" width="100%" textAlign="Center" wrapping="false" />
                                 </VBox>
@@ -212,15 +245,18 @@
                                 </VBox>
                             </VBox>
                         </t:label>
-                        <t:template>
-                            <Text text="{size}" visible="{= !!${size} }" />
-                        </t:template>
+                       <t:template>
+    <VBox>
+        <Text text="{size}" visible="{= ${isGroup} !== false }" />
+        <Input value="{size}" visible="{= ${isGroup} === false }" />
+    </VBox>
+</t:template>
                     </t:Column>
 
-                    <t:Column id="colEnd" width="85px" hAlign="Center">
+                    <t:Column id="colEnd" width="100px" hAlign="Center">
                         <t:label>
                             <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>dbPendPlanificar}" design="Bold" textAlign="Center" />
+                                <Label text="{i18n>dbPendPlanificar}" design="Bold" textAlign="Center" class="titleGrande"/>
                                 <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
                                     <Text text="{ui>/stickyHeaderData/parent/last}" width="100%" textAlign="Center" wrapping="false" />
                                 </VBox>
@@ -229,9 +265,12 @@
                                 </VBox>
                             </VBox>
                         </t:label>
-                        <t:template>
-                            <Text text="{last}" visible="{= !!${last} }" />
-                        </t:template>
+                       <t:template>
+    <VBox>
+        <Text text="{last}" visible="{= ${isGroup} !== false }" />
+        <Input value="{last}" visible="{= ${isGroup} === false }" textAlign="Center" />
+    </VBox>
+</t:template>
                     </t:Column>
 
                     <t:Column id="colMonths" width="80px" hAlign="Center">
