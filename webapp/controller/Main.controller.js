@@ -192,6 +192,8 @@ sap.ui.define(
           }),
           "ui",
         );
+        this.getView().getModel("ui").setProperty("/isEditMode", false);
+
 
         // Modelo para los indicadores numéricos superiores.
         var oModel = new sap.ui.model.json.JSONModel({
@@ -231,7 +233,7 @@ onTabSelect: function (oEvent) {
     
     var sCurrentKey = this._lastSelectedKey || oIconTabBar.getSelectedKey();
     
-    // 👇 RESET COLONNE QUANDO ESCI DA "corrientes"
+    // Reinicia le columnas al salir de "corrientes"
     if (sCurrentKey === "corrientes" && sNewKey !== "corrientes") {
         this._resetCorrientesColumns();
     }
@@ -265,19 +267,19 @@ onTabSelect: function (oEvent) {
     this._showView(sNewKey);
 },
 
-// 👇 NUOVA FUNZIONE DA AGGIUNGERE
+// NUEVA FUNCIÓN POR AÑADIR
 _resetCorrientesColumns: function() {
     if (this._mViews["corrientes"]) {
         var oCorrientesController = this._mViews["corrientes"].getController();
         
-        // Nascondi le colonne
+        // Oculta las columnas
         var oColMonths = oCorrientesController.byId("colMonths");
         var oColNew = oCorrientesController.byId("colNew");
         
         if (oColMonths) oColMonths.setVisible(false);
         if (oColNew) oColNew.setVisible(false);
         
-        // Reset anche il modello UI se necessario
+        // Restablece el modelo de IU si es necesario
         var oUiModel = oCorrientesController.getView().getModel("ui");
         if (oUiModel) {
             oUiModel.setProperty("/showStickyParent", false);
