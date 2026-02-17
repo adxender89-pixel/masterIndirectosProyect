@@ -155,65 +155,75 @@ sap.ui.define([
                 that.oMessageView.navigateBack();
                 that.oDialogReturn.open();
             });
-            
+
             // Inicialización de tablas dinámicas tras mostrar el retorno
-            this.setupDynamicTreeTable("TreeTableBasic");
-            this.setupDynamicTreeTable("TreeTableInmov");
+            this.setupDynamicTreeTable();
 
             this.getView().attachEventOnce("afterRendering", function () {
-                this.createYearColumns("TreeTableBasic", new Date().getFullYear(), 3, "");
-                this.createYearColumns("TreeTableInmov", new Date().getFullYear(), 3, "Inmov");
+                this.createYearColumns(new Date().getFullYear(), 3, "");
+
+
+
             }.bind(this));
         },
 
-        /**
-         * Configura las propiedades y eventos necesarios para el funcionamiento de una TreeTable.
-         */
-        setupDynamicTreeTable: function (sTableId) {
-            var oTable = this.byId(sTableId);
-            if (!oTable) {
-                console.error("TreeTable no encontrada:", sTableId);
-                return;
-            }
-
-            // Captura el evento de scroll para aplicar lógica de cabeceras
-            oTable.attachFirstVisibleRowChanged(function (oEvent) {
-                this._onScrollLike(oEvent, sTableId);
-            }.bind(this));
-
-            oTable.setFixedColumnCount(2);
-
-            if (this.byId("colMonths")) this.byId("colMonths").setVisible(false);
-            if (this.byId("colNew")) this.byId("colNew").setVisible(false);
-
-            oTable.addEventDelegate({
-                onAfterRendering: function () {
-                    var aRows = oTable.getRows();
-                    aRows.forEach(function (oRow) {
-                        oRow.getCells().forEach(function (oCell) {
-                            if (oCell.isA("sap.m.Input")) {
-                                oCell.removeEventDelegate(this._arrowDelegate);
-                                oCell.addEventDelegate(this._arrowDelegate);
-                            }
-                        }.bind(this));
-                    }.bind(this));
-
-                    this._applyCabeceraStyle(sTableId);
-                }.bind(this)
-            });
-
-            this._calculateDynamicRows();
-            window.addEventListener("resize", this._calculateDynamicRows.bind(this));
-        },
 
         /**
          * Crea dinámicamente columnas de años con un botón en la cabecera para ver los meses.
          */
-        createYearColumns: function (sTableId, iStartYear, iHowMany, sModelName, iSkipFields) {
-            var oTable = this.byId(sTableId);
+        createYearColumns: function (iStartYear, iHowMany, _pTable) {
+            var oTable = this.getControlTable();
             if (!oTable) return;
 
-            var iStartFrom = (iSkipFields !== undefined) ? iSkipFields : 10;
+            var aColumns = oTable.getColumns();
+            for (var i = aColumns.length - 1; i >= 0; i--) {
+                var oCol = aColumns[i];
+                if (oCol.data("dynamicYear") === true) {
+                    oTable.removeColumn(oCol);
+                }
+            }
+            // No se cierran los meses cuando se recargan los años
+            // this._openedYear = null;
+
+            //var iStartFrom = (iSkipFields !== undefined) ? iSkipFields : 13;
+var iStartFrom = 13;
+            // Nueva sección: Columna Ejecutados para los años con formato correcto
+            var bShowEjecutado = this.byId("idEjecutadoCheckBox") ? this.byId("idEjecutadoCheckBox").getSelected() : false;
+
+            if (bShowEjecutado) {
+                var currentYear = new Date().getFullYear();
+                var oColEjecAnual = new sap.ui.table.Column({
+                    width: "8rem",
+                    minWidth: 60,
+                    autoResizable: true,
+                    label: new sap.m.VBox({
+                        alignItems: "Center",
+                        renderType: "Bare",
+                        width: "100%",
+                        items: [
+                            new sap.m.Text({
+                                text: "2024-" + currentYear
+                            }).addStyleClass("sapUiTinyFontSize textoaño"),
+                            new sap.m.Label({
+                                text: "Ejecutados",
+                                design: "Bold",
+                                textAlign: "Center",
+                                width: "100%"
+                            }).addStyleClass("testBold")
+                        ]
+                    }),
+                    template: new sap.m.Text({
+                        text: "{ejecutado}",
+                        textAlign: "Center",
+                        width: "100%"
+                    })
+                });
+                oColEjecAnual.data("dynamicYear", true);
+                oColEjecAnual.data("ejecutadosColumn", true);
+                oTable.addColumn(oColEjecAnual);
+            }
+            // Fin de la nueva sección
+
             var aYears = [];
             for (var i = 0; i < iHowMany; i++) {
                 aYears.push(iStartYear + i);
@@ -221,7 +231,7 @@ sap.ui.define([
 
             aYears.forEach(function (iYear, index) {
                 var oColumn = new sap.ui.table.Column({
-                     width: "8rem",
+                    width: "8rem",
                     minWidth: 60,
                     autoResizable: true,
                     label: new sap.m.Button({
@@ -229,32 +239,31 @@ sap.ui.define([
                         type: "Transparent",
                         width: "100%",
                         press: function (oEvent) {
-                            this.onCreateMonthsTable(oEvent, sTableId, sModelName);
+                            this.onCreateMonthsTable(oEvent);
                         }.bind(this)
                     }),
-                    // Se utiliza un contenedor mínimo o se gestiona la visibilidad
-                    // directamente si la tecnología lo permite.
-                    // En SAPUI5 table, FlexBox es la forma estándar, pero se puede renderizar "Bare" (desnudo).
-                    template: new sap.m.FlexBox({
-                        renderType: "Bare", // Elimina el wrapper HTML adicional del FlexBox
+                    template: new sap.m.HBox({
+                        renderType: "Bare",
                         width: "100%",
                         items: [
                             new sap.m.Input({
                                 width: "100%",
-                                textAlign: "End",
+                                textAlign: "Center",
                                 value: "{y" + iYear + "}",
-                                visible: "{= ${expandible} !== false && !${isGroup} }"
+                                visible: "{= ${expandible} !== false && !${isGroup} }",
+                                liveChange: function (oEvt) {
+                                    // Se mantiene todo el código del liveChange
+                                }
                             }).addStyleClass("sapUiSizeCompact"),
-
                             new sap.m.Text({
                                 width: "100%",
                                 textAlign: "Center",
-                                visible: "{= ${expandible} === false }",
+                                visible: "{= ${expandible} === false || ${isGroup} === true }",
                                 wrapping: false,
                                 text: {
                                     path: "",
                                     formatter: function (oRow) {
-                                        if (!oRow || oRow.expandible !== false) return "";
+                                        if (!oRow || (oRow.expandible !== false && !oRow.isGroup)) return "";
                                         var aKeys = Object.keys(oRow);
                                         var sTargetKey = aKeys[iStartFrom + index];
                                         return sTargetKey ? oRow[sTargetKey] : "";
@@ -265,8 +274,41 @@ sap.ui.define([
                     })
                 });
 
+                oColumn.data("dynamicYear", true);
+                oColumn.data("year", iYear);
                 oTable.addColumn(oColumn);
             }.bind(this));
+
+            setTimeout(function () {
+                this.setupDynamicTreeTable();
+            }.bind(this), 0);
+        },
+
+
+
+        /**
+         * Maneja el cambio de año en el selector, ajustando las columnas mostradas dinámicamente.
+         */
+        onYearChange: function (oEvent) {
+            var oSelect = oEvent.getSource(); // El Select
+            var aItems = oSelect.getItems();  // Todas las opciones (las 10 anualidades)
+
+            // 1. Se toma el año seleccionado
+            var sSelectedYear = parseInt(oEvent.getParameter("selectedItem").getKey(), 10);
+
+            // 2. Se encuentra dinámicamente el último año de la lista (ej. 2025 o 2035)
+            var iMaxYearInSelect = parseInt(aItems[aItems.length - 1].getKey(), 10);
+
+            // 3. Se define cuántas columnas se quieren mostrar (en este caso 3)
+            var iNumColumns = 3;
+
+            // 4. CÁLCULO DINÁMICO:
+            // Si (AñoSeleccionado + 2) supera el año máximo, se debe "retroceder"
+            // En la práctica: se empieza como máximo desde (ÚltimoAño - 2)
+            var iYearToPass = Math.min(sSelectedYear, iMaxYearInSelect - (iNumColumns - 1));
+
+            // 5. Se crean las columnas
+            this.createYearColumns(iYearToPass, iNumColumns);
         },
 
         /**
@@ -276,22 +318,22 @@ sap.ui.define([
             var oTable = this.byId(sTableId);
             if (!oTable) return;
 
-            this._buildGroupRanges(sTableId);
+            this._buildGroupRanges();
 
             this._onScrollLike({
                 getParameter: function () {
                     return oTable.getFirstVisibleRow();
                 }
-            }, sTableId);
+            });
 
-            this._applyCabeceraStyle(sTableId);
+            this._applyCabeceraStyle();
         },
 
         /**
          * Aplica estilos CSS específicos a las filas de tipo cabecera para diferenciarlas visualmente.
          */
-        _applyCabeceraStyle: function (sTableId) {
-            var oTable = sTableId ? this.byId(sTableId) : this.byId("TreeTableBasic");
+        _applyCabeceraStyle: function (oTable) {
+            var oTable = this.getControlTable();
             var iFirst = oTable.getFirstVisibleRow();
             var aRows = oTable.getRows();
 
@@ -316,102 +358,373 @@ sap.ui.define([
         /**
          * Genera las columnas mensuales correspondientes al año seleccionado en la cabecera.
          */
-        onCreateMonthsTable: function (oEvent, sTableId, sModelName) {
-            var oButton = oEvent.getSource();
-            var oTable = sTableId ? this.byId(sTableId) : this.byId("TreeTableBasic");
-            var sPrefix = sModelName ? sModelName + ">" : "";
-            var sYear = parseInt(oButton.getText(), 10);
+        onCreateMonthsTable: function (oEvent) {
+            
 
-            // Elimina iconos previos de expansión en las columnas.
-            oTable.getColumns().forEach(function (oCol) {
-                var oLabel = oCol.getLabel();
-                if (oLabel && oLabel.setIcon) {
-                    oLabel.setIcon("");
+            var oSource = oEvent.getSource();
+            var oTable = this.getControlTable();
+
+            var bShowEjecutado = this.byId("idEjecutadoCheckBox") ? this.byId("idEjecutadoCheckBox").getSelected() : false;
+            
+
+            // Guarda la posición actual del scroll horizontal
+            var iCurrentScrollLeft = 0;
+            try {
+                var oScrollExt = oTable._getScrollExtension();
+                if (oScrollExt && oScrollExt.getHorizontalScrollbar()) {
+                    iCurrentScrollLeft = oScrollExt.getHorizontalScrollbar().scrollLeft;
+                    
                 }
-            });
+            } catch (e) {
+                
+            }
 
-            // Identifica y elimina columnas mensuales existentes para evitar duplicados.
-            var existingMonthCols = oTable.getColumns().filter(col => col.data("dynamicMonth") === true);
-            existingMonthCols.forEach(col => oTable.removeColumn(col));
+            var sYearText = "";
+            var sSourceName = oSource.getMetadata().getName();
+            
 
-            // Si el año ya estaba abierto, se cierra la vista mensual.
-            if (this._openedYear === sYear) {
+            if (sSourceName === "sap.m.Button") {
+                sYearText = oSource.getText();
+                if (isNaN(parseInt(sYearText, 10))) sYearText = oSource.getParent().getItems()[0].getText();
+            } else {
+                sYearText = String(this._openedYear);
+            }
+
+            var sYear = parseInt(sYearText, 10);
+            
+            if (!sYear) return;
+
+            // Si se hace clic en el mismo año, cierra los meses
+            if (this._openedYear === sYear && sSourceName === "sap.m.Button") {
+                
                 this._openedYear = null;
+
+                // Bloquea la tabla durante los cambios
+                oTable.setBusy(true);
+
+                var monthColsToRemove = oTable.getColumns().filter(c => c.data("dynamicMonth"));
+                
+                monthColsToRemove.forEach(c => oTable.removeColumn(c));
+
+                // Cuando cierra los meses, recrea la columna Ejecutados para los años si el checkbox está activo
+                if (bShowEjecutado) {
+                    
+                    // Elimina eventuales columnas Ejecutados
+                    var ejecutadosColsToRemove = oTable.getColumns().filter(c => c.data("ejecutadosColumn"));
+                    
+                    ejecutadosColsToRemove.forEach(c => oTable.removeColumn(c));
+
+                    // Recrea la columna Ejecutados para los años
+                    var iInsertIndex = oTable.getColumns().findIndex(c => c.data("dynamicYear") === true);
+                    
+
+                    if (iInsertIndex !== -1) {
+                        var currentYear = new Date().getFullYear();
+                        var oColEjecAnual = new sap.ui.table.Column({
+                            width: "8rem",
+                            minWidth: 60,
+                            autoResizable: true,
+                            label: new sap.m.VBox({
+                                alignItems: "Center",
+                                renderType: "Bare",
+                                width: "100%",
+                                items: [
+                                    new sap.m.Text({
+                                        text: "2024-" + currentYear
+                                    }).addStyleClass("sapUiTinyFontSize textoaño"),
+                                    new sap.m.Label({
+                                        text: "Ejecutados",
+                                        design: "Bold",
+                                        textAlign: "Center",
+                                        width: "100%"
+                                    }).addStyleClass("testBold")
+                                ]
+                            }),
+                            template: new sap.m.Text({
+                                text: "{ejecutado}",
+                                textAlign: "Center",
+                                width: "100%"
+                            })
+                        });
+                        oColEjecAnual.data("dynamicYear", true);
+                        oColEjecAnual.data("ejecutadosColumn", true);
+                        oTable.insertColumn(oColEjecAnual, iInsertIndex);
+                        
+                    }
+                }
+
+                // Desbloquea la tabla y restaura el scroll
+                setTimeout(function () {
+                    try {
+                        var oScrollExt = oTable._getScrollExtension();
+                        if (oScrollExt && oScrollExt.getHorizontalScrollbar()) {
+                            oScrollExt.getHorizontalScrollbar().scrollLeft = iCurrentScrollLeft;
+                            
+                        }
+                    } catch (e) {
+                        
+                    }
+                    oTable.setBusy(false);
+                    
+                }.bind(this), 50);
+
+                
                 return;
             }
 
-            this._openedYear = sYear;
-            oButton.setIcon("sap-icon://slim-arrow-left");
-            oButton.setIconFirst(true);
-
-            var aMonth = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            var currentMonth = new Date().getMonth();
-            var currentYear = new Date().getFullYear();
-
-            var startMonth = (sYear === currentYear) ? currentMonth + 1 : 0;
-            var aRemainingMonths = aMonth.slice(startMonth);
-            var nMonthYear = aRemainingMonths.length;
-
-            var oYearColumn = oTable.getColumns().find(function (oCol) {
-                return oCol.getLabel() === oButton;
-            });
-
-            var colIndex = oTable.indexOfColumn(oYearColumn);
-            var oModel = oTable.getModel();
+            // Bloquea la tabla ANTES de hacer cualquier cambio
+            oTable.setBusy(true);
             
-            // Garantiza que el modelo tenga la estructura necesaria para almacenar datos mensuales.
-            oTable.getRows().forEach(function (row) {
-                var oContext = row.getBindingContext();
-                if (!oContext) return;
 
-                var sBasePath = oContext.getPath() + "/monthsData";
-                if (!oModel.getProperty(sBasePath)) oModel.setProperty(sBasePath, {});
-                
-                if (!Array.isArray(oModel.getProperty(sBasePath + "/" + sYear))) {
-                    oModel.setProperty(sBasePath + "/" + sYear, new Array(nMonthYear).fill(""));
-                }
+            // Elimina las columnas de meses existentes Y la columna Ejecutados de los años
+            
+            var colsToRemove = oTable.getColumns().filter(c => c.data("dynamicMonth") || c.data("ejecutadosColumn"));
+            
+            colsToRemove.forEach(c => oTable.removeColumn(c));
+
+            this._openedYear = sYear;
+
+            var aMonthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            var currentYear = new Date().getFullYear();
+            var currentMonth = new Date().getMonth();
+
+            var iStartIdx = (sYear === currentYear && !bShowEjecutado) ? currentMonth + 1 : 0;
+            
+
+            var oYearCol = oTable.getColumns().find(c => {
+                var lab = c.getLabel();
+                var txt = lab.getText ? lab.getText() : (lab.getItems ? lab.getItems()[0].getText() : "");
+                return txt === String(sYear);
             });
+            var colIndex = oTable.indexOfColumn(oYearCol);
+            
 
-            // Inserta dinámicamente las nuevas columnas de meses.
-            aRemainingMonths.forEach((sMonth, i) => {
-                var oCol = new sap.ui.table.Column({
+            var iOffset = 0;
+
+            // Columna "Ejecutados" - SOLO si el checkbox está activo
+            if (bShowEjecutado) {
+                
+                var oColEjec = new sap.ui.table.Column({
+                    width: "8rem",
                     label: new sap.m.VBox({
-                        width: "100%",
                         alignItems: "Center",
+                        renderType: "Bare",
+                        width: "100%",
                         items: [
-                            new sap.m.Text({ textAlign: "Center", text: String(sYear) }).addStyleClass("sapUiTinyMarginBottom textoaño"),
-                            new sap.m.Label({ textAlign: "Center", text: sMonth }).addStyleClass("testBold")
+                            new sap.m.Text({
+                                text: "2024-" + sYear
+                            }).addStyleClass("sapUiTinyFontSize textoaño"),
+                            new sap.m.Label({
+                                text: "Ejecutados",
+                                design: "Bold",
+                                textAlign: "Center",
+                                width: "100%"
+                            }).addStyleClass("testBold")
                         ]
                     }),
-                    template: new sap.m.Input({
+                    template: new sap.m.Text({
+                        text: "{ejecutado}",
+                        textAlign: "Center",
+                        width: "100%"
+                    })
+                });
+                oColEjec.data("dynamicMonth", true);
+                oColEjec.data("ejecutadosColumn", true);
+
+                var insertPos = colIndex + iOffset;
+                
+                oTable.insertColumn(oColEjec, insertPos);
+                iOffset++;
+            }
+
+            // Columnas de los meses
+            
+            for (var i = iStartIdx; i < 12; i++) {
+                var sMonthLabel = aMonthNames[i];
+                var iRealIdx = i;
+                var bIsPassedMonth = (sYear < currentYear) || (sYear === currentYear && i <= currentMonth);
+
+                var oControlTemplate;
+
+                // Si es un mes pasado y el checkbox está activo, muestra Text con datos ejecutados
+                if (bShowEjecutado && bIsPassedMonth) {
+                    oControlTemplate = new sap.m.Text({
+                        text: "{ej" + sYear + "_" + iRealIdx + "}",
+                        textAlign: "Center",
+                        width: "100%"
+                    }).addStyleClass("sapUiTinyMarginEnd");
+                } else {
+                    // De lo contrario muestra Input para los meses futuros
+                    oControlTemplate = new sap.m.Input({
+                        value: "{m" + sYear + "_" + iRealIdx + "}",
+                        textAlign: "Center",
+                        visible: "{= ${expandible} !== false && !${isGroup} }",
+                        change: function (oEvt) {
+                            var oInput = oEvt.getSource();
+                            var oCtx = oInput.getBindingContext();
+                            var oModel = oCtx.getModel();
+                            var sPath = oCtx.getPath();
+
+                            oModel.setProperty(
+                                sPath + "/m" + sYear + "_" + iRealIdx,
+                                oInput.getValue()
+                            );
+                        }
+                    });
+                }
+
+                var oColumn = new sap.ui.table.Column({
+                    width: "8rem",
+                    label: new sap.m.VBox({
+                        alignItems: "Center",
+                        renderType: "Bare",
                         width: "100%",
-                        textAlign: "End",
-                        value: "{" + sPrefix + "monthsData/" + sYear + "/" + i + "}",
-                        visible: "{= ${expandible} !== false && !${isGroup} }"
+                        items: [
+                            new sap.m.Text({
+                                text: String(sYear)
+                            }).addStyleClass("sapUiTinyFontSize textoaño"),
+
+                            (i === iStartIdx) ?
+                                new sap.m.Button({
+                                    text: sMonthLabel,
+                                    type: "Transparent",
+                                    width: "100%",
+                                    icon: "sap-icon://slim-arrow-right",
+                                    iconFirst: false,
+                                    press: function (oEv) { this.onCreateMonthsTable(oEv); }.bind(this)
+                                }).addStyleClass("testBold") :
+                                new sap.m.Label({
+                                    text: sMonthLabel,
+                                    design: "Bold",
+                                    textAlign: "Center",
+                                    width: "100%"
+                                }).addStyleClass("testBold")
+                        ]
                     }),
-                    width: "auto",
-                    minWidth: 100,
-                    autoResizable: true
+                    template: oControlTemplate
+                }).data("dynamicMonth", true);
+
+                var monthInsertPos = colIndex + iOffset + (i - iStartIdx);
+                if (i === iStartIdx) {
+                    
+                }
+                oTable.insertColumn(oColumn, monthInsertPos);
+            }
+
+            
+
+            // Desbloquea la tabla y restaura el scroll después de insertar todas las columnas
+            setTimeout(function () {
+                try {
+                    var oScrollExt = oTable._getScrollExtension();
+                    if (oScrollExt && oScrollExt.getHorizontalScrollbar()) {
+                        oScrollExt.getHorizontalScrollbar().scrollLeft = iCurrentScrollLeft;
+                        
+                    }
+                } catch (e) {
+                    
+                }
+                oTable.setBusy(false);
+                
+            }.bind(this), 50);
+
+            
+        },
+
+
+
+
+        /**
+         * Se ejecuta cuando se selecciona el checkbox de Ejecutado, recargando las columnas mensuales.
+         */
+        onEjecutadoCheckBoxSelect: function (oEvent) {
+            var oTable = this.getControlTable();
+            if (!oTable) return;
+
+            var bShowEjecutado = this.byId("idEjecutadoCheckBox").getSelected();
+            var currentYear = new Date().getFullYear();
+
+            // Si hay meses abiertos, se recargan para actualizar la vista
+            if (this._openedYear) {
+                var sYear = this._openedYear;
+
+                // Se eliminan todas las columnas dinámicas de los meses
+                oTable.getColumns().filter(c => c.data("dynamicMonth")).forEach(c => oTable.removeColumn(c));
+
+                // Se recrean los meses con el nuevo estado del checkbox
+                var oYearCol = oTable.getColumns().find(c => {
+                    var lab = c.getLabel();
+                    var txt = lab.getText ? lab.getText() : (lab.getItems ? lab.getItems()[0].getText() : "");
+                    return txt === String(sYear);
                 });
 
-                oCol.data("dynamicMonth", true);
-                oCol.data("year", sYear);
-                oTable.insertColumn(oCol, colIndex + i);
-            });
+                if (oYearCol && oYearCol.getLabel()) {
+                    this.onCreateMonthsTable({
+                        getSource: function () {
+                            return {
+                                getMetadata: function () {
+                                    return { getName: function () { return "sap.m.Label"; } };
+                                },
+                                getText: function () { return String(sYear); }
+                            };
+                        }
+                    });
+                }
+            } else {
+                // Si no hay meses abiertos, se gestiona solo la columna Ejecutados de los años
+                // Se eliminan las columnas Ejecutados existentes
+                oTable.getColumns().filter(c => c.data("ejecutadosColumn")).forEach(c => oTable.removeColumn(c));
 
-            oTable.setFixedColumnCount(2);
+                if (bShowEjecutado) {
+                    // Columna Ejecutados anual con VBox como los meses
+                    var iInsertIndex = oTable.getColumns().findIndex(c => c.data("dynamicYear") === true);
+                    if (iInsertIndex === -1) iInsertIndex = oTable.getColumns().length;
+
+                    var oColEjecAnual = new sap.ui.table.Column({
+                        width: "8rem",
+                        minWidth: 60,
+                        autoResizable: true,
+                        label: new sap.m.VBox({
+                            alignItems: "Center",
+                            renderType: "Bare",
+                            width: "100%",
+                            items: [
+                                new sap.m.Text({
+                                    text: "2024-" + currentYear
+                                }).addStyleClass("sapUiTinyFontSize textoaño"),
+                                new sap.m.Label({
+                                    text: "Ejecutados",
+                                    design: "Bold",
+                                    textAlign: "Center",
+                                    width: "100%"
+                                }).addStyleClass("testBold")
+                            ]
+                        }),
+                        template: new sap.m.Text({
+                            text: "{ejecutado}",
+                            textAlign: "Center",
+                            width: "100%"
+                        })
+                    });
+                    oColEjecAnual.data("dynamicYear", true);
+                    oColEjecAnual.data("ejecutadosColumn", true);
+                    oTable.insertColumn(oColEjecAnual, iInsertIndex);
+                }
+            }
         },
+
+
 
         /**
          * Lógica de gestión de cabeceras sticky durante el desplazamiento de la tabla.
          */
-        _onScrollLike: function (oEvent, sTableId) {
+        _onScrollLike: function (oEvent) {
             if (this._ignoreNextScroll) {
                 this._ignoreNextScroll = false;
                 return;
             }
 
-            var oTable = sTableId ? this.byId(sTableId) : this.byId("TreeTableBasic");
+            var oTable = this.getControlTable();
             var oUiModel = this.getView().getModel("ui");
 
             if (!this._aGroupRanges || !this._aGroupRanges.length) {
@@ -426,7 +739,7 @@ sap.ui.define([
 
             var oActiveGroup = null;
 
-            // Busca el grupo de datos correspondiente a la posición actual del scroll.
+            // Busca el grupo de datos correspondiente a la posición actual del scroll
             for (var i = 0; i < this._aGroupRanges.length; i++) {
                 var oGroup = this._aGroupRanges[i];
                 if (iFirstVisible >= oGroup.start && iFirstVisible <= oGroup.end) {
@@ -447,7 +760,7 @@ sap.ui.define([
             var bParentVisible = iParentRow >= iFirstVisible && iParentRow <= iLastVisible;
             var bChildVisible = iChildRow >= iFirstVisible && iChildRow <= iLastVisible;
 
-            // Muestra u oculta los elementos fijos si su contraparte original ya no está en pantalla.
+            // Muestra u oculta los elementos fijos si su contraparte original ya no está en pantalla
             oUiModel.setProperty("/showStickyParent", !bParentVisible);
             oUiModel.setProperty("/showStickyChild", !bChildVisible && !bParentVisible);
 
@@ -456,14 +769,14 @@ sap.ui.define([
                 child: oActiveGroup.data.categories[0],
                 path: oActiveGroup.path
             });
-            this._applyCabeceraStyle(sTableId);
+            this._applyCabeceraStyle();
         },
 
         /**
          * Analiza el modelo de la tabla para definir los rangos de índices de cada grupo de datos.
          */
         _buildGroupRanges: function (sTableId) {
-            var oTable = sTableId ? this.byId(sTableId) : this.byId("TreeTableBasic");
+            var oTable = this.getControlTable();
             var oBinding = oTable.getBinding("rows");
 
             if (!oTable) {
@@ -480,7 +793,7 @@ sap.ui.define([
                 if (!oCtx) continue;
 
                 var oObj = oCtx.getObject();
-                // Determina el inicio de un nuevo grupo basándose en la existencia de subcategorías.
+                // Determina el inicio de un nuevo grupo basándose en la existencia de subcategorías
                 if (oObj && oObj.categories && Array.isArray(oObj.categories)) {
                     if (oCurrentGroup) {
                         oCurrentGroup.end = i - 1;
@@ -502,98 +815,991 @@ sap.ui.define([
          * Calcula dinámicamente la cantidad de filas que caben en pantalla según el tamaño de la ventana.
          */
         _calculateDynamicRows: function () {
-            var iHeight = window.innerHeight;
-            var iOffset = 437;
-            var iRowHeight = 32;
+            
 
-            var iRows = Math.floor((iHeight - iOffset) / iRowHeight) + 2;
-            if (iRows < 2) iRows = 2;
-
-            var oViewModel = this.getView().getModel("viewModel");
-            if (oViewModel) {
-                oViewModel.setProperty("/dynamicRowCount", iRows);
+            var oTable = this.getControlTable();
+            if (!oTable || !oTable.getDomRef()) {
+                
+                return;
             }
+
+            var iWindowHeight = window.innerHeight;
+            
+
+            var oTableRect = oTable.getDomRef().getBoundingClientRect();
+            var iTableTop = oTableRect.top;
+            
+
+            // Se modifica únicamente este valor de 20 a 148
+            var iBottomSpace = 148; // Footer, scrollbar, márgenes (4 filas × 32px + 20px base)
+            
+
+            var iAvailableHeight = iWindowHeight - iTableTop - iBottomSpace;
+            
+
+            var iRowHeight = 32;
+            
+
+            var iRows = Math.floor(iAvailableHeight / iRowHeight);
+            
+
+            if (iRows < 5) {
+                
+                iRows = 5;
+            }
+
+            var iCurrentColumns = oTable.getColumns().length;
+            var iVisibleColumns = oTable.getColumns().filter(function (col) {
+                return col.getVisible();
+            }).length;
+
+            
+
+            this.getView().getModel("viewModel").setProperty("/dynamicRowCount", iRows);
         },
-                _filterCategories: function (aCategories, sKey) {
+        /**
+         * Filtra categorías recursivamente según una clave específica.
+         */
+        _filterCategories: function (aCategories, sKey) {
+            if (!Array.isArray(aCategories)) return [];
+
             return aCategories
                 .map(function (cat) {
-                    var newCat = Object.assign({}, cat);
+                    var oClone = Object.assign({}, cat);
 
-                    if (cat.categories) {
-                        // Filtramos hijos recursivamente
-                        newCat.categories = this._filterCategories(cat.categories, sKey);
-                    }
+                    var aFilteredChildren = this._filterCategories(cat.categories || [], sKey);
 
-                    // Si el nodo coincide con el key, mantenemos todos sus hijos originales
+                    // Coincidencia directa
                     if (cat.name === sKey) {
-                        newCat.categories = cat.categories || [];
-                        return newCat;
+                        oClone.categories = cat.categories || [];
+                        return oClone;
                     }
 
-                    // Mantener nodo si tiene hijos filtrados
-                    if (newCat.categories && newCat.categories.length > 0) {
-                        return newCat;
+                    // Coincidencia indirecta
+                    if (aFilteredChildren.length > 0) {
+                        oClone.categories = aFilteredChildren;
+                        return oClone;
                     }
 
                     return null;
                 }.bind(this))
                 .filter(Boolean);
         },
-        
- onCollapseFromHeader: function () {
-    var oTable = this.byId("TreeTableBasic");
-    var oUiModel = this.getView().getModel("ui");
+        /**
+         * Colapsa un grupo desde la cabecera sticky, actualizando la vista de la tabla.
+         */
+        onCollapseFromHeader: function () {
+            var oTable = this.getControlTable();
+            var oUiModel = this.getView().getModel("ui");
 
-    var sTargetPath = oUiModel.getProperty("/stickyHeaderData/path");
-    if (!sTargetPath) {
-        return;
-    }
-
-    var oBinding = oTable.getBinding("rows");
-    var iLength = oBinding.getLength();
-    var iCollapsedIndex = null;
-
-    // 1️⃣ collasso il gruppo corretto
-    for (var i = 0; i < iLength; i++) {
-        var oCtx = oTable.getContextByIndex(i);
-        if (oCtx && oCtx.getPath() === sTargetPath) {
-            if (oTable.isExpanded(i)) {
-                oTable.collapse(i);
-                iCollapsedIndex = i;
+            var sTargetPath = oUiModel.getProperty("/stickyHeaderData/path");
+            if (!sTargetPath) {
+                return;
             }
-            break;
-        }
-    }
 
-    if (iCollapsedIndex === null) {
-        return;
-    }
+            var oBinding = oTable.getBinding("rows");
+            var iLength = oBinding.getLength();
+            var iCollapsedIndex = null;
 
-    // 2️⃣ attendo che la TreeTable si riallinei (FONDAMENTALE)
-    setTimeout(function () {
+            // Colapsa grupo objetivo
+            for (var i = 0; i < iLength; i++) {
 
-        // ricostruisco i range con i dati aggiornati
-        this._buildGroupRanges("TreeTableBasic");
+                var oCtx = oTable.getContextByIndex(i);
 
-        var iFirstVisible = oTable.getFirstVisibleRow();
+                if (oCtx && oCtx.getPath() === sTargetPath) {
 
-        // 3️⃣ riapplico ESATTAMENTE la logica dello scroll
-        this._onScrollLike({
-            getParameter: function (sName) {
-                if (sName === "firstVisibleRow") {
-                    return iFirstVisible;
+                    if (oTable.isExpanded(i)) {
+                        oTable.collapse(i);
+                        iCollapsedIndex = i;
+                    }
+                    break;
                 }
             }
-        }, "TreeTableBasic");
 
-        // 4️⃣ se non serve sticky → lo spengo
-        if (!oUiModel.getProperty("/showStickyParent") &&
-            !oUiModel.getProperty("/showStickyChild")) {
+            if (iCollapsedIndex === null) {
+                return;
+            }
+            setTimeout(function () {
 
-            oUiModel.setProperty("/stickyHeaderData", null);
+                this._buildGroupRanges();
+
+                var iFirstVisible = oTable.getFirstVisibleRow();
+
+                this._onScrollLike({
+                    getParameter: function (sName) {
+                        if (sName === "firstVisibleRow") {
+                            return iFirstVisible;
+                        }
+                    }
+                });
+
+                var bAnyDetailExpanded = false;
+                var oBinding = oTable.getBinding("rows");
+
+                if (oBinding) {
+
+                    var iLength = oBinding.getLength();
+
+                    for (var i = 0; i < iLength; i++) {
+
+                        if (oTable.isExpanded(i)) {
+
+                            var oCtx = oTable.getContextByIndex(i);
+                            var oObj = oCtx && oCtx.getObject();
+
+                            if (
+                                oObj &&
+                                oObj.categories &&
+                                oObj.categories[0] &&
+                                oObj.categories[0].isGroup === true
+                            ) {
+                                bAnyDetailExpanded = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                var oColMonths = this.byId("colMonths");
+                var oColNew = this.byId("colNew");
+
+                if (oColMonths) oColMonths.setVisible(bAnyDetailExpanded);
+                if (oColNew) oColNew.setVisible(bAnyDetailExpanded);
+
+                // Se reinicia la interfaz si todo está cerrado
+                if (!bAnyDetailExpanded) {
+
+                    this._aGroupRanges = [];
+
+                    oUiModel.setProperty("/showStickyAgrupador", false);
+                    oUiModel.setProperty("/showStickyParent", false);
+                    oUiModel.setProperty("/showStickyChild", false);
+                }
+                // Se reinicia el sticky header
+                if (!oUiModel.getProperty("/showStickyParent") &&
+                    !oUiModel.getProperty("/showStickyChild")) {
+
+                    oUiModel.setProperty("/stickyHeaderData", null);
+                }
+
+            }.bind(this), 0);
+        },
+        /**
+         * Solución completa - Con reasignación de delegado y gestión del cursor
+         */
+
+        /**
+         * Retorna la tabla dinámica de la vista actual. 
+         * Si el hijo define 'getCustomTableId', lo usa; si no, usa 'TreeTableBasic'.
+         */
+        getControlTable: function () {
+            var sId = this.getCustomTableId();
+            return this.byId(sId);
+        },
+
+        /**
+         * Configura las propiedades y eventos necesarios para el funcionamiento de una TreeTable.
+         */
+        setupDynamicTreeTable: function (sTableId) {
+var oTable = sTableId ? this.byId(sTableId) : this.getControlTable();
+            if (!oTable) {
+                return;
+            }
+
+            oTable.attachFirstVisibleRowChanged(function (oEvent) {
+                this._onScrollLike(oEvent);
+                // Se vuelven a asignar los delegados tras el scroll
+                this._attachArrowDelegates(oTable);
+            }.bind(this));
+
+            oTable.setFixedColumnCount(2);
+
+            if (this.byId("colMonths")) this.byId("colMonths").setVisible(false);
+            if (this.byId("colNew")) this.byId("colNew").setVisible(false);
+
+            // Se inicializa el delegado
+            if (!this._arrowDelegate) {
+                this._arrowDelegate = {
+                    onkeydown: function (oEvent) {
+                        this._onInputKeyDown(oEvent);
+                    }.bind(this)
+                };
+            }
+
+            // Se asignan los delegados en la primera renderización
+            oTable.addEventDelegate({
+                onAfterRendering: function () {
+                    this._attachArrowDelegates(oTable);
+                    this._applyCabeceraStyle(oTable);
+                }.bind(this)
+            });
+
+            // Se asignan los delegados cuando las filas se actualizan
+            if (!oTable._rowsDelegateAttached) {
+                oTable.attachEvent("rowsUpdated", function () {
+                    this._attachArrowDelegates(oTable);
+                }.bind(this));
+                oTable._rowsDelegateAttached = true;
+            }
+
+            var oViewModel = new sap.ui.model.json.JSONModel({
+                dynamicRowCount: 10
+            });
+            this.getView().setModel(oViewModel, "viewModel");
+
+            $(window).resize(function () {
+                this._calculateDynamicRows();
+            }.bind(this));
+
+            this._calculateDynamicRows();
+        },
+
+        /**
+         * Nueva función: Asigna los delegados de las flechas a todos los inputs visibles
+         */
+        _attachArrowDelegates: function (oTable) {
+            if (!this._arrowDelegate) {
+                this._arrowDelegate = {
+                    onkeydown: function (oEvent) {
+                        this._onInputKeyDown(oEvent);
+                    }.bind(this)
+                };
+            }
+
+            var aRows = oTable.getRows();
+
+            aRows.forEach(function (oRow) {
+                oRow.getCells().forEach(function (oCell) {
+                    var oInput = this._recursiveGetInput(oCell);
+                    if (oInput) {
+                        // Se elimina primero para evitar duplicados
+                        oInput.removeEventDelegate(this._arrowDelegate);
+                        // Se asigna el delegado
+                        oInput.addEventDelegate(this._arrowDelegate);
+                    }
+                }.bind(this));
+            }.bind(this));
+        },
+
+        /**
+         * Maneja la navegación con teclas de flecha entre celdas de la tabla.
+         * Versión final con corrección para límites de tabla
+         */
+        _onInputKeyDown: function (oEvent) {
+            var oInput = oEvent.srcControl;
+            var iKeyCode = oEvent.keyCode;
+            var bDown = iKeyCode === 40;
+            var bUp = iKeyCode === 38;
+            var bRight = iKeyCode === 39;
+            var bLeft = iKeyCode === 37;
+
+            if (!bDown && !bUp && !bRight && !bLeft) return;
+
+            // Gestión del cursor en el campo de texto
+            var oDomRef = oInput.getFocusDomRef();
+            if (!oDomRef) return;
+
+            var iCursorPos = oDomRef.selectionStart;
+            var iTextLength = oDomRef.value.length;
+
+            // Si LEFT y el cursor NO está al principio, se permite que el cursor se mueva
+            if (bLeft && iCursorPos > 0) {
+                return;
+            }
+
+            // Si RIGHT y el cursor NO está al final, se permite que el cursor se mueva
+            if (bRight && iCursorPos < iTextLength) {
+                return;
+            }
+
+            // Navegación entre celdas
+
+            // Se sincroniza el valor
+            var sCurrentDomValue = oDomRef.value;
+            oInput.setValue(sCurrentDomValue);
+            if (oInput.updateModelProperty) {
+                oInput.updateModelProperty(sCurrentDomValue);
+            }
+
+            oEvent.preventDefault();
+            oEvent.stopImmediatePropagation();
+
+            var oTable = this.getControlTable();
+            if (!oTable) return;
+
+            var oBinding = oTable.getBinding("rows");
+            if (!oBinding) return;
+
+            var oParent = oInput.getParent();
+
+            // Se encuentra la Row
+            while (oParent && !oParent.isA("sap.ui.table.Row")) {
+                oParent = oParent.getParent();
+            }
+
+            if (!oParent) return;
+
+            var iCurrentRowIndex = oParent.getIndex();
+            var oCurrentContext = oParent.getBindingContext();
+            if (!oCurrentContext) return;
+
+            // Se encuentra la columna
+            var aCells = oParent.getCells();
+            var iTargetColIndex = -1;
+
+            for (var i = 0; i < aCells.length; i++) {
+                if (this._cellContainsInput(aCells[i], oInput)) {
+                    iTargetColIndex = i;
+                    break;
+                }
+            }
+
+            if (iTargetColIndex === -1) return;
+
+            // Navegación horizontal
+            if (bLeft || bRight) {
+                var iNewColIndex = bRight ? iTargetColIndex + 1 : iTargetColIndex - 1;
+
+                if (iNewColIndex < 0 || iNewColIndex >= oTable.getColumns().length) {
+                    // Se mantiene el foco en el input actual
+                    setTimeout(function () {
+                        oInput.focus();
+                        if (oInput.select) oInput.select();
+                    }, 10);
+                    return;
+                }
+
+                var iFirstVisible = oTable.getFirstVisibleRow();
+                var iVisibleRowIndex = iCurrentRowIndex - iFirstVisible;
+
+                if (iVisibleRowIndex < 0 || iVisibleRowIndex >= oTable.getRows().length) {
+                    // Se mantiene el foco en el input actual
+                    setTimeout(function () {
+                        oInput.focus();
+                        if (oInput.select) oInput.select();
+                    }, 10);
+                    return;
+                }
+
+                var oRow = oTable.getRows()[iVisibleRowIndex];
+                if (!oRow) {
+                    setTimeout(function () {
+                        oInput.focus();
+                        if (oInput.select) oInput.select();
+                    }, 10);
+                    return;
+                }
+
+                var oCell = oRow.getCells()[iNewColIndex];
+                var oTargetInput = this._recursiveGetInput(oCell);
+
+                if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
+                    setTimeout(function () {
+                        oTargetInput.focus();
+                        if (oTargetInput.select) {
+                            oTargetInput.select();
+                        }
+                    }, 10);
+                } else {
+                    // No se encuentra ningún input, se mantiene el foco actual
+                    setTimeout(function () {
+                        oInput.focus();
+                        if (oInput.select) oInput.select();
+                    }, 10);
+                }
+                return;
+            }
+
+            // Navegación vertical
+            var iTargetRowIndex = null;
+            var sTargetPath = null;
+            var iSearchIndex = iCurrentRowIndex;
+
+            // Se busca la próxima fila válida
+            var iSearchSteps = 0;
+            while (true) {
+                iSearchIndex = bDown ? iSearchIndex + 1 : iSearchIndex - 1;
+                iSearchSteps++;
+
+                // Si se alcanzan los límites, se mantiene el foco en el input actual
+                if (iSearchIndex < 0 || iSearchIndex >= oBinding.getLength()) {
+                    setTimeout(function () {
+                        oInput.focus();
+                        if (oInput.select) oInput.select();
+                    }, 10);
+                    return;
+                }
+
+                // Se evita el bucle infinito
+                if (iSearchSteps > 100) {
+                    setTimeout(function () {
+                        oInput.focus();
+                        if (oInput.select) oInput.select();
+                    }, 10);
+                    return;
+                }
+
+                var oCtx = oTable.getContextByIndex(iSearchIndex);
+                if (!oCtx) continue;
+
+                var oData = oCtx.getObject();
+                if (!oData) continue;
+
+                // Se saltan las filas "Agrupador" o vacías
+                if (oData.name === "Agrupador" || oData.name === "" || oData.name === undefined) {
+                    continue;
+                }
+
+                iTargetRowIndex = iSearchIndex;
+                sTargetPath = oCtx.getPath();
+                break;
+            }
+
+            // Gestión del scroll
+            var iFirstVisible = oTable.getFirstVisibleRow();
+            var iVisibleCount = oTable.getVisibleRowCount();
+            var iLastVisible = iFirstVisible + iVisibleCount - 1;
+
+            var bNeedsScroll = false;
+            var iNewFirstVisible = iFirstVisible;
+
+            if (iTargetRowIndex > iLastVisible) {
+                // Destino debajo del viewport
+                iNewFirstVisible = iTargetRowIndex - iVisibleCount + 1;
+                bNeedsScroll = true;
+            }
+            else if (iTargetRowIndex < iFirstVisible) {
+                // Destino encima del viewport
+                iNewFirstVisible = iTargetRowIndex;
+                bNeedsScroll = true;
+            }
+
+            // Foco con/sin scroll
+            if (bNeedsScroll) {
+                // Con scroll: se espera a que las filas se actualicen
+                var that = this;
+                var bFocused = false;
+
+                var fnFocus = function () {
+                    if (bFocused) return;
+                    bFocused = true;
+
+                    var aRows = oTable.getRows();
+                    var oTargetRow = null;
+
+                    for (var i = 0; i < aRows.length; i++) {
+                        var oRowContext = aRows[i].getBindingContext();
+                        if (oRowContext && oRowContext.getPath() === sTargetPath) {
+                            oTargetRow = aRows[i];
+                            break;
+                        }
+                    }
+
+                    if (!oTargetRow) {
+                        // Si no se encuentra la fila destino, se mantiene el foco actual
+                        oInput.focus();
+                        if (oInput.select) oInput.select();
+                        return;
+                    }
+
+                    var oCell = oTargetRow.getCells()[iTargetColIndex];
+                    var oTargetInput = that._recursiveGetInput(oCell);
+
+                    if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
+                        oTargetInput.focus();
+                        if (oTargetInput.select) {
+                            oTargetInput.select();
+                        }
+                    } else {
+                        // Si no se encuentra el input, se mantiene el foco actual
+                        oInput.focus();
+                        if (oInput.select) oInput.select();
+                    }
+                };
+
+                // Se asigna el listener para rowsUpdated
+                oTable.attachEventOnce("rowsUpdated", function () {
+                    setTimeout(fnFocus, 50);
+                });
+
+                // Se ejecuta el scroll
+                oTable.setFirstVisibleRow(iNewFirstVisible);
+
+                // Timeout de seguridad
+                setTimeout(fnFocus, 300);
+
+            } else {
+                // Sin scroll: foco inmediato
+                setTimeout(function () {
+                    var aRows = oTable.getRows();
+                    var oTargetRow = null;
+
+                    for (var i = 0; i < aRows.length; i++) {
+                        var oRowContext = aRows[i].getBindingContext();
+                        if (oRowContext && oRowContext.getPath() === sTargetPath) {
+                            oTargetRow = aRows[i];
+                            break;
+                        }
+                    }
+
+                    if (!oTargetRow) {
+                        // Si no se encuentra la fila, se mantiene el foco actual
+                        oInput.focus();
+                        if (oInput.select) oInput.select();
+                        return;
+                    }
+
+                    var oCell = oTargetRow.getCells()[iTargetColIndex];
+                    var oTargetInput = this._recursiveGetInput(oCell);
+
+                    if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
+                        oTargetInput.focus();
+                        if (oTargetInput.select) {
+                            oTargetInput.select();
+                        }
+                    } else {
+                        // Si no se encuentra el input, se mantiene el foco actual
+                        oInput.focus();
+                        if (oInput.select) oInput.select();
+                    }
+                }.bind(this), 10);
+            }
+        },
+
+        /**
+         * Verifica si una celda contiene un determinado Input
+         */
+        _cellContainsInput: function (oCell, oTargetInput) {
+            if (oCell === oTargetInput) return true;
+
+            if (oCell.getItems) {
+                var aItems = oCell.getItems();
+                for (var i = 0; i < aItems.length; i++) {
+                    if (aItems[i] === oTargetInput) return true;
+                    if (this._cellContainsInput(aItems[i], oTargetInput)) return true;
+                }
+            }
+
+            if (oCell.getContent) {
+                var aContent = oCell.getContent();
+                for (var j = 0; j < aContent.length; j++) {
+                    if (aContent[j] === oTargetInput) return true;
+                    if (this._cellContainsInput(aContent[j], oTargetInput)) return true;
+                }
+            }
+
+            return false;
+        },
+
+        /**
+         * Busca recursivamente un control Input editable dentro de una celda.
+         */
+        _recursiveGetInput: function (oControl) {
+            if (!oControl) return null;
+
+            if (oControl.isA && oControl.isA("sap.m.Input")) {
+                if (oControl.getVisible() && oControl.getEditable()) {
+                    return oControl;
+                }
+            }
+
+            if (oControl.getContent) {
+                var aContent = oControl.getContent();
+                for (var i = 0; i < aContent.length; i++) {
+                    var res = this._recursiveGetInput(aContent[i]);
+                    if (res) return res;
+                }
+            }
+
+            if (oControl.getItems) {
+                var aItems = oControl.getItems();
+                for (var j = 0; j < aItems.length; j++) {
+                    var resIt = this._recursiveGetInput(aItems[j]);
+                    if (resIt) return resIt;
+                }
+            }
+
+            return null;
+        },
+
+        /**
+         * Construye un combo de operaciones a partir de las categorías expandibles.
+         */
+        _buildOperacionesCombo: function (aCategories) {
+            var aResult = [];
+
+            function recurse(aNodes) {
+                if (!Array.isArray(aNodes)) return;
+
+                aNodes.forEach(function (oNode) {
+                    if (oNode.expandible || (Array.isArray(oNode.categories) && oNode.categories.length > 0)) {
+                        aResult.push({
+                            key: oNode.name,
+                            text: oNode.name + " - " + (oNode.currency || "")
+                        });
+                    }
+
+                    if (Array.isArray(oNode.categories)) {
+                        recurse(oNode.categories);
+                    }
+                });
+            }
+
+            recurse(aCategories);
+            return aResult;
+        },
+        /**
+         * Filtra la TreeTable según la operación seleccionada en el Select.
+         */
+        onOperacionChange: function (oEvent) {
+            var oSelectedItem = oEvent.getParameter("selectedItem");
+            var oTable = this.getControlTable();
+            var oDefaultModel = this.getView().getModel();
+            var oUiModel = this.getView().getModel("ui");
+
+            // Backup inicial solo una vez
+            if (!this._fullCategoriesBackup) {
+                var aOriginal = oDefaultModel.getProperty("/catalog/models/categories");
+                this._fullCategoriesBackup = JSON.parse(JSON.stringify(aOriginal));
+            }
+
+            // Reset
+            if (!oSelectedItem) {
+                var aCurrent = oDefaultModel.getProperty("/catalog/models/categories");
+
+                var aRestored = this._mergeModifications(
+                    JSON.parse(JSON.stringify(this._fullCategoriesBackup)),
+                    aCurrent
+                );
+
+                oDefaultModel.setProperty("/catalog/models/categories", aRestored);
+
+                this.byId("colMonths")?.setVisible(false);
+                this.byId("colNew")?.setVisible(false);
+
+                oUiModel?.setProperty("/showStickyParent", false);
+                oUiModel?.setProperty("/showStickyChild", false);
+
+                setTimeout(function () {
+                    oTable.collapseAll();
+                    this._refreshAfterToggle(oTable.getId());
+                }.bind(this), 0);
+
+                return;
+            }
+
+            // Filtro
+            var sKey = oSelectedItem.getKey();
+            
+
+            // Se cuentan los puntos para distinguir padre (I.003) de hijo (I.003.031)
+            var iPunti = (sKey.match(/\./g) || []).length;
+            var sParentKey = null;
+
+            if (iPunti >= 2) {
+                // Tiene al menos 2 puntos, es un hijo (ej. I.003.031)
+                sParentKey = sKey.substring(0, sKey.lastIndexOf("."));
+            }
+            // Si tiene solo 1 punto (ej. I.003), sParentKey se mantiene null (es un padre)
+
+            
+
+            var aCurrent = oDefaultModel.getProperty("/catalog/models/categories");
+            var aWorkingCopy = this._mergeModifications(
+                JSON.parse(JSON.stringify(this._fullCategoriesBackup)),
+                aCurrent
+            );
+
+            
+
+            var aFilteredRoot = [];
+
+            for (var i = 0; i < aWorkingCopy.length; i++) {
+                var rootCat = aWorkingCopy[i];
+
+                
+
+                if (!Array.isArray(rootCat.categories)) {
+                    rootCat.categories = [];
+                }
+
+                // Caso 1: Padre principal (ej. I.003)
+                if (rootCat.name === sKey && !sParentKey) {
+                    
+                    aFilteredRoot.push(rootCat);
+                    continue;
+                }
+
+                // Caso 2: Hijo específico (ej. I.003.031)
+                if (sParentKey) {
+                    
+                    var aFilteredChildren = this._filterCategories(rootCat.categories, sKey);
+                    var bIncludeParent = rootCat.name === sParentKey;
+
+                    
+
+                    if (aFilteredChildren.length === 0 && !bIncludeParent) {
+                        
+                        continue;
+                    }
+
+                    if (aFilteredChildren.length > 0) {
+                        rootCat.categories = aFilteredChildren;
+                    } else if (bIncludeParent) {
+                        rootCat.categories = this._filterCategories(rootCat.categories, sKey);
+                    }
+
+                    
+                    aFilteredRoot.push(rootCat);
+                }
+            }
+
+            
+            for (var j = 0; j < aFilteredRoot.length; j++) {
+                
+            }
+
+            oDefaultModel.setProperty("/catalog/models/categories", aFilteredRoot);
+
+            setTimeout(function () {
+                var oBinding = oTable.getBinding("rows");
+                if (!oBinding) return;
+
+                var bHasData = false;
+                var bAnyDetailExpanded = false; // Nueva variable
+
+                // Se colapsa todo primero
+                oTable.collapseAll();
+
+                for (var i = 0; i < oBinding.getLength(); i++) {
+                    var oCtx = oTable.getContextByIndex(i);
+                    var oObj = oCtx && oCtx.getObject();
+                    if (!oObj) continue;
+
+                    // Se expande según el caso
+                    if (sParentKey) {
+                        // Caso 2: Hijo específico, se expande padre e hijo
+                        if ((oObj.name === sParentKey || oObj.name === sKey) && oObj.expandible) {
+                            oTable.expand(i);
+
+                            // Se verifica si el nodo expandido tiene nietos (isGroup)
+                            if (oObj.name === sKey &&
+                                Array.isArray(oObj.categories) &&
+                                oObj.categories.length > 0 &&
+                                oObj.categories[0].isGroup === true) {
+                                bAnyDetailExpanded = true;
+                            }
+                        }
+                    } else if (sKey) {
+                        // Caso 1: Padre principal, se expande solo el nodo con hijos
+                        if (oObj.name === sKey && oObj.expandible === true) {
+                            
+                            oTable.expand(i);
+
+                            // Se verifica si el padre tiene nietos (isGroup)
+                            if (Array.isArray(oObj.categories) &&
+                                oObj.categories.length > 0 &&
+                                oObj.categories[0].isGroup === true) {
+                                bAnyDetailExpanded = true;
+                            }
+                        }
+                    }
+
+                    // Se mantiene la lógica original para bHasData (opcional, si sirve)
+                    if (Array.isArray(oObj.categories)) {
+                        if (oObj.categories.some(c => c.isGroup === true)) {
+                            bHasData = true;
+                        }
+                    }
+                }
+
+                // Se utiliza bAnyDetailExpanded en lugar de bHasData
+                this.byId("colMonths")?.setVisible(bAnyDetailExpanded);
+                this.byId("colNew")?.setVisible(bAnyDetailExpanded);
+
+                oUiModel?.setProperty("/showStickyParent", false);
+                oUiModel?.setProperty("/showStickyChild", false);
+
+                this._refreshAfterToggle(oTable.getId());
+            }.bind(this), 100);
+        },
+
+        /**
+         * Mezcla modificaciones del usuario en la estructura base
+         */
+        _mergeModifications: function (aBase, aModified) {
+            if (!Array.isArray(aModified)) return aBase;
+
+            var mergeRecursive = function (baseArray, modArray) {
+                modArray.forEach(function (modItem) {
+                    var baseItem = baseArray.find(function (b) {
+                        return b.name === modItem.name;
+                    });
+
+                    if (baseItem) {
+                        // Se copian valores de años y meses
+                        for (var key in modItem) {
+                            if (/^y\d{4}$/.test(key) || /^m\d{4}_\d+$/.test(key) || key === "months" || key === "monthsData") {
+                                baseItem[key] = modItem[key];
+                            }
+                        }
+
+                        // Recursión en hijos
+                        if (baseItem.categories && modItem.categories) {
+                            mergeRecursive(baseItem.categories, modItem.categories);
+                        }
+                    }
+                });
+            };
+
+            mergeRecursive(aBase, aModified);
+            return aBase;
+        },
+ onRowSelectionChange: function (oEvent) {
+
+            if (this._lock) return;
+            this._lock = true;
+
+            var oTable = oEvent.getSource();
+            var aIndices = oEvent.getParameter("rowIndices");
+
+            if (!aIndices || !aIndices.length) {
+                this._lock = false;
+                return;
+            }
+
+            var iRow = aIndices[0];
+            var oCtx = oTable.getContextByIndex(iRow);
+            if (!oCtx) {
+                this._lock = false;
+                return;
+            }
+
+            var bSelected = oTable.isIndexSelected(iRow);
+            var iLen = oTable.getBinding("rows").getLength();
+            var sPath = oCtx.getPath();
+            var iLevel = sPath.split("/categories").length - 1;
+            var oObj = oCtx.getObject();
+
+            if (iLevel >= 3) {
+
+                var sParentPath = sPath.substring(0, sPath.lastIndexOf("/categories"));
+
+                var firstChildIndex = null;
+                for (var j = 0; j < iLen; j++) {
+                    var oCtx2 = oTable.getContextByIndex(j);
+                    if (!oCtx2) continue;
+
+                    var sP = oCtx2.getPath();
+                    var iLvl = sP.split("/categories").length - 1;
+
+                    if (iLvl === iLevel && sP.startsWith(sParentPath + "/categories")) {
+                        firstChildIndex = j;
+                        break;
+                    }
+                }
+
+                if (firstChildIndex === iRow) {
+                    for (var k = 0; k < iLen; k++) {
+                        var oCtx3 = oTable.getContextByIndex(k);
+                        if (!oCtx3) continue;
+
+                        var sP3 = oCtx3.getPath();
+                        var iLvl3 = sP3.split("/categories").length - 1;
+
+                        if (iLvl3 === iLevel && sP3.startsWith(sParentPath + "/categories")) {
+                            if (bSelected) {
+                                oTable.addSelectionInterval(k, k);
+                            } else {
+                                oTable.removeSelectionInterval(k, k);
+                            }
+                        }
+                    }
+                }
+
+                this._lock = false;
+                return;
+            }
+
+            this._lock = false;
+        },
+        onSave: function () {
+
+    var oUiModel = this.getView().getModel("ui");
+    var oDataModel = this.getView().getModel();
+    var bEditMode = oUiModel.getProperty("/isEditMode");
+    var that = this;
+
+    // 🔹 Se NON è in edit → entra in edit mode
+    if (!bEditMode) {
+
+        // Backup dati originali
+        this._originalData = JSON.parse(JSON.stringify(oDataModel.getData()));
+
+        oUiModel.setProperty("/isEditMode", true);
+        return;
+    }
+
+    // 🔹 Se è in edit → chiedi conferma salvataggio
+    sap.m.MessageBox.confirm(
+        "¿Salvar cambios?",
+        {
+            title: "Confirmación",
+            actions: [sap.m.MessageBox.Action.OK, sap.m.MessageBox.Action.CANCEL],
+            emphasizedAction: sap.m.MessageBox.Action.OK,
+
+            onClose: function (oAction) {
+
+                if (oAction === sap.m.MessageBox.Action.OK) {
+
+                    // 👉 QUI puoi mettere la logica di salvataggio backend
+
+                    // Esce da edit mode
+                    oUiModel.setProperty("/isEditMode", false);
+
+                    // Elimina backup
+                    that._originalData = null;
+
+                }
+
+            }
         }
+    );
 
-    }.bind(this), 0);
-},
+}
+
+        ,
+        onCancel: function () {
+
+            var oUiModel = this.getView().getModel("ui");
+            var oDataModel = this.getView().getModel();
+            var that = this;
+
+            sap.m.MessageBox.confirm(
+                "¿Seguro de borrar todo?",
+                {
+                    title: "Confirmación",
+                    actions: [sap.m.MessageBox.Action.OK, sap.m.MessageBox.Action.CANCEL],
+                    emphasizedAction: sap.m.MessageBox.Action.OK,
+
+                    onClose: function (oAction) {
+
+                        if (oAction === sap.m.MessageBox.Action.OK) {
+
+                            // 🔹 RIPRISTINA DATI ORIGINALI
+                            if (that._originalData) {
+                                oDataModel.setData(that._originalData);
+                            }
+
+                            // 🔹 Esci da edit mode
+                            oUiModel.setProperty("/isEditMode", false);
+
+                        }
+
+                    }
+                }
+            );
+
+        }
     });
 });

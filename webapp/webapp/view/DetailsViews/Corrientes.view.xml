@@ -1,4 +1,4 @@
-<mvc:View controllerName="masterindirectos.controller.DetailsControllers.Anticipados"
+<mvc:View controllerName="masterindirectos.controller.DetailsControllers.Corrientes"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns:core="sap.ui.core" displayBlock="true" height="100%"
     xmlns="sap.m"
@@ -81,16 +81,26 @@
             <layoutData>
                 <FlexItemData growFactor="15" />
             </layoutData>
-            <t:TreeTable id="TreeTableBasic" rows="{ path: '/catalog/models', parameters: { arrayNames: ['categories'] } }" toggleOpenState="onToggleOpenState" class="sapUiSizeCompact" visibleRowCount="{viewModel>/dynamicRowCount}" width="100%">
+            <t:TreeTable id="TreeTableBasic" rows="{path: '/catalog/models/categories',parameters: { arrayNames: ['categories'] }}" toggleOpenState="onToggleOpenState" class="sapUiSizeCompact" visibleRowCount="{viewModel>/dynamicRowCount}" width="100%">
                 <t:extension>
                     <OverflowToolbar height="100%">
                         <Button width="8%" text="{i18n>TBorigen}" press="onOriginPress" />
-                        <ComboBox width="180px" class="sapUiSizeCompact" selectionChange="onOperacionChange" showClearIcon="true" items="{operacionesModel>/items}">
-                            <core:Item key="{operacionesModel>key}" text="{operacionesModel>text}" />
+                        <ComboBox width="180px"  class="sapUiSizeCompact" selectionChange="onOperacionChange" showClearIcon="true" items="{operacionesModel>/items}">
+                            <core:Item key="{operacionesModel>key}"
+        text="{operacionesModel>text}" />
                         </ComboBox>
 
-
+                        
                         <ToolbarSpacer />
+                        <CheckBox
+                        id="idEjecutadoCheckBox"
+                        text="{i18n>cbEjecutado}"
+                        class="alignTextCheckBox"
+                        select="onEjecutadoCheckBoxSelect"
+
+                        >
+                            
+                        </CheckBox>
                         <Select items="{yearsModel>/years}" selectedKey="{yearsModel>/selectedYear}" forceSelection="true" width="100px" change="onYearChange" class="sapUiSizeCompact yearSelect">
                             <core:Item key="{yearsModel>year}" text="{yearsModel>year}" />
                         </Select>
@@ -115,7 +125,7 @@
                                     <Text text="{ui>/stickyHeaderData/child/name}" textAlign="Initial" class="agrupaLeftText secondStickyText" wrapping="false" visible="{ui>/showStickyChild}" />
                                 </HBox>
                                 </VBox>
-                            </VBox>
+                            </VBox> 
                         </t:label>
                         <t:template>
                             <Text text="{name}" wrapping="false" />
