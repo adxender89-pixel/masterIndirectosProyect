@@ -23,6 +23,14 @@ sap.ui.define([
     return BaseController.extend("masterindirectos.controller.DetailsControllers.Corrientes", {
 
         /**
+         * Esta función le dice al BaseController qué ID de tabla buscar 
+         * en esta vista específica.
+         */
+        getCustomTableId: function () {
+            return "TreeTableBasic";
+        },
+
+        /**
          * Inicializa la vista de Corrientes definiendo el estado de navegación y visibilidad.
          * Configura la tabla principal y prepara las columnas anuales iniciales.
          * resubida
@@ -74,9 +82,11 @@ sap.ui.define([
 
             this.getView().attachEventOnce("afterRendering", function () {
                 this.createYearColumns(
-                    "TreeTableBasic",
-                    new Date().getFullYear(), 3
+                    new Date().getFullYear(), 3, "TreeTableBasic"
                 );
+
+                // Se adjunta el listener de cambios en el header
+                this._attachHeaderToggleListener();
             }.bind(this));
 
             var oCatalogModel = new JSONModel();
@@ -86,7 +96,7 @@ sap.ui.define([
             oCatalogModel.attachRequestCompleted(function () {
                 var aCategories = oCatalogModel.getProperty("/catalog/models/categories");
                 if (!Array.isArray(aCategories)) {
-                    console.error("Categorías no encontradas");
+
                     return;
                 }
                 var aComboItems = this._buildOperacionesCombo(aCategories);
@@ -109,14 +119,62 @@ sap.ui.define([
                 selectedYear: iActualYear
             });
             this.getView().setModel(oYearModel, "yearsModel");
-            window.addEventListener("beforeunload", this.onBrowserClose.bind(this));
+
+            this._boundBrowserClose = this.onBrowserClose.bind(this);
+            window.addEventListener("beforeunload", this._boundBrowserClose);
+        },
+        /**
+         * Escucha cuando el header se expande o colapsa y recalcula las filas
+         */
+        _attachHeaderToggleListener: function () {
+
+
+            var oObjectPageLayout = this.byId("objectPageLayout");
+
+            if (!oObjectPageLayout) {
+
+                return;
+            }
+
+            // Delegación de eventos - Intercepta todos los clicks en los botones collapse/expand
+            setTimeout(function () {
+                var oDom = oObjectPageLayout.getDomRef();
+
+                if (!oDom) {
+
+                    return;
+                }
+
+                // Event delegation: intercepta los clicks en cualquier botón de toggle
+                oDom.addEventListener("click", function (e) {
+                    var target = e.target;
+
+                    // Se verifica si el click es en un botón de collapse o expand
+                    if (target.closest(".sapFDynamicPageToggleHeaderIndicator") ||
+                        target.closest('[id$="-collapseBtn"]') ||
+                        target.closest('[id$="-expandBtn"]')) {
+
+
+
+                        setTimeout(function () {
+
+                            this._calculateDynamicRows();
+                        }.bind(this), 200);
+                    }
+                }.bind(this), true); // true = useCapture
+
+
+
+            }.bind(this), 1000); // Delay mayor para asegurar que el DOM esté listo
+
+
         },
 
-        /**
+        /** 
          * Crea una copia profunda del modelo "catalog" para comparaciones futuras
          */
         _createSnapshot: function () {
-            var oDefaultModel = this.getView().getModel();  // <-- SIN "catalog"
+            var oDefaultModel = this.getView().getModel();  // SIN "catalog"
             if (oDefaultModel) {
                 var oData = oDefaultModel.getData();
                 this._originalData = JSON.parse(JSON.stringify(oData));
@@ -127,7 +185,7 @@ sap.ui.define([
          * Verifica si hay cambios no guardados comparando el modelo actual con el snapshot
          */
         hasUnsavedChanges: function () {
-            console.log("=== DEBUG START: hasUnsavedChanges ===");
+
 
             if (!this._originalData) return false;
 
@@ -173,7 +231,7 @@ sap.ui.define([
                         // 1. Control de Años y Meses (y2026, m2026_01)
                         if (/^y\d{4}$/.test(key) || /^m\d{4}_\d+$/.test(key)) {
                             if (normalize(oCur[key]) !== normalize(oOri[key])) {
-                                console.log("DEBUG: Modificación en " + key + ". Actual:", oCur[key], "Original:", oOri[key]);
+
                                 return true;
                             }
                         }
@@ -185,7 +243,7 @@ sap.ui.define([
                                 var vOriM = (oOri.months) ? normalize(oOri.months[mKey]) : "";
 
                                 if (vCurM !== vOriM) {
-                                    console.log("DEBUG: Modificación en months[" + mKey + "]. Actual:", oCur[key][mKey], "Original:", (oOri.months ? oOri.months[mKey] : "undefined"));
+
                                     return true;
                                 }
                             }
@@ -203,7 +261,7 @@ sap.ui.define([
             };
 
             var bResult = checkRecursive(aCurrentCat, aOriginalCat, "Root");
-            console.log("=== DEBUG END: Resultado =", bResult, "===");
+
             return bResult;
         },
         /**
@@ -384,12 +442,84 @@ sap.ui.define([
                 return ''; // Para otros navegadores
             }
         },
+
         /**
          * Limpia los event listeners al destruir el controlador
          */
         onExit: function () {
-            // Elimina el control para evitar memory leak
-            window.removeEventListener("beforeunload", this.onBrowserClose.bind(this));
+            // Se utiliza la misma referencia para eliminar
+            if (this._boundBrowserClose) {
+                window.removeEventListener("beforeunload", this._boundBrowserClose);
+            }
         },
+        onRowSelectionChange: function (oEvent) {
+
+            if (this._lock) return;
+            this._lock = true;
+
+            var oTable = oEvent.getSource();
+            var aIndices = oEvent.getParameter("rowIndices");
+
+            if (!aIndices || !aIndices.length) {
+                this._lock = false;
+                return;
+            }
+
+            var iRow = aIndices[0];
+            var oCtx = oTable.getContextByIndex(iRow);
+            if (!oCtx) {
+                this._lock = false;
+                return;
+            }
+
+            var bSelected = oTable.isIndexSelected(iRow);
+            var iLen = oTable.getBinding("rows").getLength();
+            var sPath = oCtx.getPath();
+            var iLevel = sPath.split("/categories").length - 1;
+            var oObj = oCtx.getObject();
+
+            if (iLevel >= 3) {
+
+                var sParentPath = sPath.substring(0, sPath.lastIndexOf("/categories"));
+
+                var firstChildIndex = null;
+                for (var j = 0; j < iLen; j++) {
+                    var oCtx2 = oTable.getContextByIndex(j);
+                    if (!oCtx2) continue;
+
+                    var sP = oCtx2.getPath();
+                    var iLvl = sP.split("/categories").length - 1;
+
+                    if (iLvl === iLevel && sP.startsWith(sParentPath + "/categories")) {
+                        firstChildIndex = j;
+                        break;
+                    }
+                }
+
+                if (firstChildIndex === iRow) {
+                    for (var k = 0; k < iLen; k++) {
+                        var oCtx3 = oTable.getContextByIndex(k);
+                        if (!oCtx3) continue;
+
+                        var sP3 = oCtx3.getPath();
+                        var iLvl3 = sP3.split("/categories").length - 1;
+
+                        if (iLvl3 === iLevel && sP3.startsWith(sParentPath + "/categories")) {
+                            if (bSelected) {
+                                oTable.addSelectionInterval(k, k);
+                            } else {
+                                oTable.removeSelectionInterval(k, k);
+                            }
+                        }
+                    }
+                }
+
+                this._lock = false;
+                return;
+            }
+
+            this._lock = false;
+        }
+
     });
 });
