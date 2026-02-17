@@ -192,6 +192,8 @@ sap.ui.define(
           }),
           "ui",
         );
+        this.getView().getModel("ui").setProperty("/isEditMode", false);
+
 
         // Modelo para los indicadores numéricos superiores.
         var oModel = new sap.ui.model.json.JSONModel({
