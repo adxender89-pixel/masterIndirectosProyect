@@ -4,728 +4,325 @@
     xmlns="sap.m"
     xmlns:t="sap.ui.table"
     xmlns:uxap="sap.uxap">
-    
-<uxap:ObjectPageLayout 
-    id="objectPageLayout" 
-    showHeaderContent="true"
-    toggleHeaderOnTitleClick="true"
-    alwaysShowContentHeader="false"
-    headerContentPinnable="true"
-    preserveHeaderStateOnScroll="true"
-    height="100%">
-    
-    <!-- Encabezado con solo el título -->
-    <uxap:headerTitle>
-        <uxap:ObjectPageDynamicHeaderTitle>
-            <uxap:expandedHeading>
-                <Text text="{i18n>ObjPpageTitle}" wrapping="true" class="compactTitle"/>
-            </uxap:expandedHeading>
-            <uxap:snappedHeading>
-                <Text text="{i18n>ObjPpageTitle}" wrapping="true" class="compactTitle"/>
-            </uxap:snappedHeading>
-        </uxap:ObjectPageDynamicHeaderTitle>
-    </uxap:headerTitle>
-    
-    <!-- Contenido del encabezado con las tablas -->
-    <uxap:headerContent>
-        <VBox width="100%" id="tablesContainer">
-            <!-- Tablas de Inversión y Amortización -->
-            <HBox 
-                width="100%" 
-                alignItems="Stretch" 
-                justifyContent="SpaceBetween"
-                >
-                
-                <!-- Tabla de INVERSIÓN -->
-                <VBox width="49%" fitContainer="true">
-                    <t:Table 
-                        class="sapUiSizeCompact smallHeaderTable" 
-                        rows="{dataTitle>/data}" 
-                        visibleRowCount="1" 
-                        width="100%" 
-                        selectionMode="None">
-                        <t:columns>
-                            <t:Column hAlign="Center" class="operacionColumn">
-                                <VBox width="100%" class="fullWidthHeader" alignContent="Center">
-                                    <Label text="{i18n>inversion} {i18n>ejecutado}" design="Bold" />
-                                </VBox>
-                                <t:template>
-                                    <Text text="{dataTitle>title}" />
-                                </t:template>
-                            </t:Column>
-                            <t:Column hAlign="Center">
-                                <VBox width="100%" class="fullWidthHeader">
-                                    <Label text="{i18n>inversion} {i18n>pendiente}" design="Bold" />
-                                </VBox>
-                                <t:template>
-                                    <Text text="{dataTitle>title2}" />
-                                </t:template>
-                            </t:Column>
-                            <t:Column hAlign="Center">
-                                <VBox width="100%" class="fullWidthHeader">
-                                    <Label text="{i18n>inversion} {i18n>total}" design="Bold" />
-                                </VBox>
-                                <t:template>
-                                    <Text text="{dataTitle>title}" />
-                                </t:template>
-                            </t:Column>
-                        </t:columns>
-                    </t:Table>
-                </VBox>
 
-            <VBox width="49%" fitContainer="true" class="sapUiSmallMarginTop">
-                <t:Table class="sapUiSizeCompact smallHeaderTable" rows="{dataTitle>/data}" visibleRowCount="1" width="100%" selectionMode="None">
-                    <!-- <t:extension>
+    <uxap:ObjectPageLayout id="objectPageLayout" showHeaderContent="true" toggleHeaderOnTitleClick="true" alwaysShowContentHeader="false" headerContentPinnable="true" preserveHeaderStateOnScroll="true" height="100%">
+
+        <!-- Encabezado con solo el título -->
+        <uxap:headerTitle>
+            <uxap:ObjectPageDynamicHeaderTitle>
+                <uxap:expandedHeading>
+                    <Text text="{i18n>ObjPpageTitle}" wrapping="true" class="compactTitle"/>
+                </uxap:expandedHeading>
+                <uxap:snappedHeading>
+                    <Text text="{i18n>ObjPpageTitle}" wrapping="true" class="compactTitle"/>
+                </uxap:snappedHeading>
+            </uxap:ObjectPageDynamicHeaderTitle>
+        </uxap:headerTitle>
+
+        <!-- Contenido del encabezado con las tablas -->
+        <uxap:headerContent>
+            <VBox width="100%" id="tablesContainer">
+                <!-- Tablas de Inversión y Amortización -->
+                <HBox width="100%" alignItems="Stretch" justifyContent="SpaceBetween">
+
+                  
+
+                    <VBox width="49%" fitContainer="true" class="sapUiSmallMarginTop">
+                        <t:Table class="sapUiSizeCompact smallHeaderTable" rows="{dataTitle>/data}" visibleRowCount="1" width="100%" selectionMode="None">
+                            <!-- <t:extension>
                         <OverflowToolbar class="yellowToolbar" height="90%">
                             <ToolbarSpacer />
                             <Title text="{i18n>inversion}" class="testBold" />
                             <ToolbarSpacer />
                         </OverflowToolbar>
                     </t:extension> -->
-                    <t:columns>
-                        <t:Column hAlign="Center" class="operacionColumn">
-                            <VBox width="100%" class="fullWidthHeader" alignContent="Center">
-                                <Label text="{i18n>inversion} {i18n>ejecutado}" design="Bold" />
-                            </VBox>
-                            <t:template>
-                                <Text text="{dataTitle>title}" />
-                            </t:template>
-                        </t:Column>
-                        <t:Column hAlign="Center">
-                            <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>inversion} {i18n>pendiente}" design="Bold" />
-                            </VBox>
-                            <t:template>
-                                <Text text="{dataTitle>title2}" />
-                            </t:template>
-                        </t:Column>
-                        <t:Column hAlign="Center">
-                            <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>inversion} {i18n>total}" design="Bold" />
-                            </VBox>
-                            <t:template>
-                                <Text text="{dataTitle>title}" />
-                            </t:template>
-                        </t:Column>
-                    </t:columns>
-                </t:Table>
-            </VBox>
+                            <t:columns>
+                                <t:Column hAlign="Center" class="operacionColumn">
+                                    <VBox width="100%" class="fullWidthHeader" alignContent="Center">
+                                        <Label text="{i18n>inversion} {i18n>ejecutado}" design="Bold" />
+                                    </VBox>
+                                    <t:template>
+                                        <Text text="{dataTitle>title}" />
+                                    </t:template>
+                                </t:Column>
+                                <t:Column hAlign="Center">
+                                    <VBox width="100%" class="fullWidthHeader">
+                                        <Label text="{i18n>inversion} {i18n>pendiente}" design="Bold" />
+                                    </VBox>
+                                    <t:template>
+                                        <Text text="{dataTitle>title2}" />
+                                    </t:template>
+                                </t:Column>
+                                <t:Column hAlign="Center">
+                                    <VBox width="100%" class="fullWidthHeader">
+                                        <Label text="{i18n>inversion} {i18n>total}" design="Bold" />
+                                    </VBox>
+                                    <t:template>
+                                        <Text text="{dataTitle>title}" />
+                                    </t:template>
+                                </t:Column>
+                            </t:columns>
+                        </t:Table>
+                    </VBox>
 
-            <VBox width="49%" height="100%" class="sapUiSmallMarginTop">
-                <t:Table class="sapUiSizeCompact smallHeaderTable" rows="{dataTitle>/data}" visibleRowCount="1" columnHeaderHeight="10" width="100%" selectionMode="None">
-                    <!-- <t:extension>
+                    <VBox width="49%" height="100%" class="sapUiSmallMarginTop">
+                        <t:Table class="sapUiSizeCompact smallHeaderTable" rows="{dataTitle>/data}" visibleRowCount="1" columnHeaderHeight="10" width="100%" selectionMode="None">
+                            <!-- <t:extension>
                         <OverflowToolbar class="yellowToolbar" height="90%">
                             <ToolbarSpacer />
                             <Title text="{i18n>amortizacion}" class="testBold" />
                             <ToolbarSpacer />
                         </OverflowToolbar>
                     </t:extension> -->
-                    <t:columns>
-                        <t:Column hAlign="Center">
-                            <Label text="{i18n>amortizacion} {i18n>ejecutado}" design="Bold" />
-                            <t:template>
-                                <Text text="{dataTitle>title3}" />
-                            </t:template>
-                        </t:Column>
-                        <t:Column hAlign="Center">
-                            <Label text="{i18n>amortizacion} {i18n>pendiente}" design="Bold" />
-                            <t:template>
-                                <Text text="{dataTitle>title4}" />
-                            </t:template>
-                        </t:Column>
-                        <t:Column hAlign="Center">
-                            <Label text="{i18n>amortizacion} {i18n>total}" design="Bold" />
-                            <t:template>
-                                <Text text="{dataTitle>title}" />
-                            </t:template>
-                        </t:Column>
-                    </t:columns>
-                </t:Table>
+                            <t:columns>
+                                <t:Column hAlign="Center">
+                                    <Label text="{i18n>amortizacion} {i18n>ejecutado}" design="Bold" />
+                                    <t:template>
+                                        <Text text="{dataTitle>title3}" />
+                                    </t:template>
+                                </t:Column>
+                                <t:Column hAlign="Center">
+                                    <Label text="{i18n>amortizacion} {i18n>pendiente}" design="Bold" />
+                                    <t:template>
+                                        <Text text="{dataTitle>title4}" />
+                                    </t:template>
+                                </t:Column>
+                                <t:Column hAlign="Center">
+                                    <Label text="{i18n>amortizacion} {i18n>total}" design="Bold" />
+                                    <t:template>
+                                        <Text text="{dataTitle>title}" />
+                                    </t:template>
+                                </t:Column>
+                            </t:columns>
+                        </t:Table>
+                    </VBox>
+                </HBox>
+
+        
             </VBox>
-        </HBox>
+        </uxap:headerContent>
 
-        <VBox width="100%" height="100%" class="sapUiSmallMarginTop">
-            <layoutData>
-                <FlexItemData growFactor="15" />
-            </layoutData>
-            <t:TreeTable id="TreeTableBasic" rows="{path: '/catalog/models/categories',parameters: { arrayNames: ['categories'] }}" toggleOpenState="onToggleOpenState" class="sapUiSizeCompact" visibleRowCount="{viewModel>/dynamicRowCount}" width="100%">
-                <t:extension>
-                    <OverflowToolbar height="100%">
-                        <Button width="8%" text="{i18n>TBorigen}" press="onOriginPress" />
-                        <ComboBox width="180px"  class="sapUiSizeCompact" selectionChange="onOperacionChange" showClearIcon="true" items="{operacionesModel>/items}">
-                            <core:Item key="{operacionesModel>key}"
-        text="{operacionesModel>text}" />
-                        </ComboBox>
-
-                        
-                        <ToolbarSpacer />
-                        <CheckBox
-                        id="idEjecutadoCheckBox"
-                        text="{i18n>cbEjecutado}"
-                        class="alignTextCheckBox"
-                        select="onEjecutadoCheckBoxSelect"
-
-                        >
-                            
-                        </CheckBox>
-                        <Select items="{yearsModel>/years}" selectedKey="{yearsModel>/selectedYear}" forceSelection="true" width="100px" change="onYearChange" class="sapUiSizeCompact yearSelect">
-                            <core:Item key="{yearsModel>year}" text="{yearsModel>year}" />
-                        </Select>
-                        <Button icon="sap-icon://add" press="onAddPress" class="sapUiSizeCompact" />
-                        <Button icon="sap-icon://delete" press="onDeletePress" class="sapUiSizeCompact" />
-                        <Button icon="sap-icon://process" press="onProcessPress" class="sapUiSizeCompact" />
-                        <Button icon="sap-icon://shortcut" press="onShortcutPress" class="sapUiSizeCompact" />
-                    </OverflowToolbar>
-                </t:extension>
-
-                <t:columns>
-                    <t:Column width="160px" hAlign="Center" >
-                        <t:label>
-                            <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>operacion}" design="Bold" class="titleGrande" />
-                                <HBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
-                                    <Text text="{ui>/stickyHeaderData/parent/name}" wrapping="false" width="100%" textAlign="Center" />
-                                </HBox>
-                                <VBox >
-                                <HBox class="parentHeader" renderType="Bare" alignContent="Start">
-                                     <Button visible="{ui>/showStickyChild}" class="childHeaderBtn sapUiTinyMarginEnd" icon="sap-icon://navigation-up-arrow" press="onCollapseFromHeader"/> 
-                                    <Text text="{ui>/stickyHeaderData/child/name}" textAlign="Initial" class="agrupaLeftText secondStickyText" wrapping="false" visible="{ui>/showStickyChild}" />
-                                </HBox>
-                                </VBox>
-                            </VBox> 
-                        </t:label>
-                       <t:template>
-    <VBox>
-        <Text 
-            text="{name}" 
-            wrapping="false" 
-            visible="{= ${isGroup} !== false }" />
-
-        <Input 
-            value="{name}" 
-            visible="{= ${isGroup} === false }" />
-    </VBox>
-</t:template>
-                    </t:Column>
-
-                    <t:Column width="100px" hAlign="Center">
-                        <t:label>
-                            <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>descripcionOperacion}" design="Bold" class="titleGrande"/>
-                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
-                                    <Text text="{ui>/stickyHeaderData/parent/currency}" wrapping="false" width="100%" textAlign="Center" />
-                                </VBox>
-                                <VBox class="parentHeader">
-                                    <Text text="{ui>/stickyHeaderData/child/currency}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
-                                </VBox>
-                            </VBox>
-                        </t:label>
-                      <t:template>
-    <VBox>
-        <Text 
-            text="{currency}" 
-            visible="{= ${isGroup} !== false }" 
-            wrapping="false" />
-
-        <Input 
-            value="{currency}" 
-            visible="{= ${isGroup} === false }" 
-            />
-    </VBox>
-</t:template>
-                    </t:Column>
-
-                    <t:Column width="80px" hAlign="Center">
-                        <t:label>
-                            <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>coste}" design="Bold" class="titleGrande"/>
-                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
-                                    <Text text="{ui>/stickyHeaderData/parent/amount}" width="100%" textAlign="Center" wrapping="false" />
-                                </VBox>
-                                <VBox class="parentHeader">
-                                    <Text text="{ui>/stickyHeaderData/child/amount}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
-                                </VBox>
-                            </VBox>
-                        </t:label>
-                     <t:template>
-    <VBox>
-        <Text 
-            text="{amount}" 
-            visible="{= ${isGroup} !== false }" />
-        <Input 
-            value="{amount}" 
-            visible="{= ${isGroup} === false }" 
-            textAlign="End" />
-    </VBox>
-</t:template>
-                    </t:Column>
-
-                    <t:Column width="80px" hAlign="Center">
-                        <t:label>
-                            <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>costepend}" design="Bold" class="titleGrande"/>
-                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
-                                    <Text text="{ui>/stickyHeaderData/parent/pricepending}" width="100%" textAlign="Center" wrapping="false" />
-                                </VBox>
-                                <VBox class="parentHeader">
-                                    <Text text="{ui>/stickyHeaderData/child/pricepending}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
-                                </VBox>
-                            </VBox>
-                        </t:label>
-                      <t:template>
-    <VBox>
-        <Text text="{pricepending}" visible="{= ${isGroup} !== false }" />
-        <Input value="{pricepending}" visible="{= ${isGroup} === false }" textAlign="End" />
-    </VBox>
-</t:template>
-                    </t:Column>
-
-                    <t:Column width="80px" hAlign="Center">
-                        <t:label>
-                            <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>costetotal}" design="Bold" class="titleGrande"/>
-                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
-                                    <Text text="{ui>/stickyHeaderData/parent/pricetotal}" width="100%" textAlign="Center" wrapping="false" />
-                                </VBox>
-                                <VBox class="parentHeader">
-                                    <Text text="{ui>/stickyHeaderData/child/pricetotal}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
-                                </VBox>
-                            </VBox>
-                        </t:label>
-                       <t:template>
-    <VBox>
-        <Text text="{pricetotal}" visible="{= ${isGroup} !== false }" />
-        <Input value="{pricetotal}" visible="{= ${isGroup} === false }" textAlign="End" />
-    </VBox>
-</t:template>
-                    </t:Column>
-
-                    <t:Column id="colStart" width="85px" hAlign="Center">
-                        <t:label>
-                            <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>dbReparto}" design="Bold" textAlign="Center" class="titleGrande"/>
-                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
-                                    <Text text="{ui>/stickyHeaderData/parent/size}" width="100%" textAlign="Center" wrapping="false" />
-                                </VBox>
-                                <VBox class="parentHeader">
-                                    <Text text="{ui>/stickyHeaderData/child/size}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
-                                </VBox>
-                            </VBox>
-                        </t:label>
-                       <t:template>
-    <VBox>
-        <Text text="{size}" visible="{= ${isGroup} !== false }" />
-        <Input value="{size}" visible="{= ${isGroup} === false }" />
-    </VBox>
-</t:template>
-                    </t:Column>
-
-                    <t:Column id="colEnd" width="100px" hAlign="Center">
-                        <t:label>
-                            <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>dbPendPlanificar}" design="Bold" textAlign="Center" class="titleGrande"/>
-                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
-                                    <Text text="{ui>/stickyHeaderData/parent/last}" width="100%" textAlign="Center" wrapping="false" />
-                                </VBox>
-                                <VBox class="parentHeader">
-                                    <Text text="{ui>/stickyHeaderData/child/last}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
-                                </VBox>
-                            </VBox>
-                        </t:label>
-                       <t:template>
-    <VBox>
-        <Text text="{last}" visible="{= ${isGroup} !== false }" />
-        <Input value="{last}" visible="{= ${isGroup} === false }" textAlign="Center" />
-    </VBox>
-</t:template>
-                    </t:Column>
-
-                    <t:Column id="colMonths" width="80px" hAlign="Center">
-                        <t:label>
-                            <VBox width="100%" class="fullWidthHeader">
-                                <Label text="&#160;" />
-                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
-                                    <Text text="&#160;" />
-                                </VBox>
-                                <VBox class="parentHeader">
-                                    <Text text="{ui>/stickyHeaderData/child/months}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
-                                </VBox>
-                            </VBox>
-                        </t:label>
-                        <t:template>
-                            <Text text="{months}" visible="{= !!${months} }" />
-                        </t:template>
-                    </t:Column>
-
-                    <t:Column id="colNew" width="80px" hAlign="Center">
-                        <t:label>
-                            <VBox width="100%" class="fullWidthHeader">
-                                <Label text="&#160;"/>
-                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
-                                    <Text text="&#160;" />
-                                </VBox>
-                                <VBox class="parentHeader">
-                                    <Text text="{ui>/stickyHeaderData/child/pend}" visible="{ui>/showStickyChild}" width="100%" textAlign="Center" wrapping="false" class="secondStickyText" />
-                                </VBox>
-                            </VBox>
-                        </t:label>
-                        <t:template>
-                            <Text text="{pend}" visible="{= !!${pend} }" />
-                        </t:template>
-                    </t:Column>
-                </t:columns>
-            </t:TreeTable>
-             </HBox>
-        </VBox>
-    </uxap:headerContent>
+        <!-- Secciones con la TreeTable integrada -->
     
-    <!-- Secciones con la TreeTable integrada -->
-    <uxap:sections>
-        <uxap:ObjectPageSection 
-            titleUppercase="false" 
-            id="inversionAmortizacion">
+ <uxap:sections>
+        <uxap:ObjectPageSection titleUppercase="false" id="inversionAmortizacion">
             <uxap:subSections>
-                <uxap:ObjectPageSubSection 
-                    id="inversionAmortizacionSS1" 
-                    titleUppercase="false">
+                <uxap:ObjectPageSubSection id="inversionAmortizacionSS1" titleUppercase="false">
                     <uxap:blocks>
-                        <!-- TreeTable dentro de la sección -->
+                    
                         <VBox width="100%" height="100%" class="noMarginTop">
-                                            <t:TreeTable id="TreeTableBasic"
-                                rows="{path: '/catalog/models/categories',parameters: { arrayNames: ['categories'] }}"
-                                toggleOpenState="onToggleOpenState"
-                                rowSelectionChange="onRowSelectionChange"
-                                class="sapUiSizeCompact"
-                                visibleRowCount="{viewModel>/dynamicRowCount}" width="100%">
-                                <t:extension>
-                                    <OverflowToolbar height="100%">
-                                        <Button width="8%" text="{i18n>TBorigen}" press="onOriginPress" />
-                                        <ComboBox width="180px" class="sapUiSizeCompact"
-                                            selectionChange="onOperacionChange" showClearIcon="true"
-                                            items="{operacionesModel>/items}">
-                                            <core:Item key="{operacionesModel>key}"
-                                                text="{operacionesModel>text}" />
-                                        </ComboBox>
+                            <t:TreeTable id="TreeTableBasic" rows="{path: '/catalog/models/categories',parameters: { arrayNames: ['categories'] }}" toggleOpenState="onToggleOpenState" class="sapUiSizeCompact" visibleRowCount="{viewModel>/dynamicRowCount}" width="100%">
+                        <t:extension>
+                            <OverflowToolbar height="100%">
+                                <Button width="8%" text="{i18n>TBorigen}" press="onOriginPress" />
+                                <ComboBox width="180px" class="sapUiSizeCompact" selectionChange="onOperacionChange" showClearIcon="true" items="{operacionesModel>/items}">
+                                    <core:Item key="{operacionesModel>key}" text="{operacionesModel>text}" />
+                                </ComboBox>
 
 
-                                        <ToolbarSpacer />
-                                        <CheckBox
-                                            id="idEjecutadoCheckBox"
-                                            text="{i18n>cbEjecutado}"
-                                            class="alignTextCheckBox"
-                                            select="onEjecutadoCheckBoxSelect"
-                                        >
+                                <ToolbarSpacer />
+                                <CheckBox id="idEjecutadoCheckBox" text="{i18n>cbEjecutado}" class="alignTextCheckBox" select="onEjecutadoCheckBoxSelect">
 
-                                        </CheckBox>
-                                        <Select items="{yearsModel>/years}" selectedKey="{yearsModel>/selectedYear}"
-                                            forceSelection="true" width="100px" change="onYearChange"
-                                            class="sapUiSizeCompact yearSelect">
-                                            <core:Item key="{yearsModel>year}" text="{yearsModel>year}" />
-                                        </Select>
-                                        <Button icon="sap-icon://add" press="onAddPress" class="sapUiSizeCompact" />
-                                        <Button icon="sap-icon://delete" press="onDeletePress"
-                                            class="sapUiSizeCompact" />
-                                        <Button icon="sap-icon://process" press="onProcessPress"
-                                            class="sapUiSizeCompact" />
-                                        <Button icon="sap-icon://shortcut" press="onShortcutPress"
-                                            class="sapUiSizeCompact" />
-                                    </OverflowToolbar>
-                                </t:extension>
+                                </CheckBox>
+                                <Select items="{yearsModel>/years}" selectedKey="{yearsModel>/selectedYear}" forceSelection="true" width="100px" change="onYearChange" class="sapUiSizeCompact yearSelect">
+                                    <core:Item key="{yearsModel>year}" text="{yearsModel>year}" />
+                                </Select>
+                                <Button icon="sap-icon://add" press="onAddPress" class="sapUiSizeCompact" />
+                                <Button icon="sap-icon://delete" press="onDeletePress" class="sapUiSizeCompact" />
+                                <Button icon="sap-icon://process" press="onProcessPress" class="sapUiSizeCompact" />
+                                <Button icon="sap-icon://shortcut" press="onShortcutPress" class="sapUiSizeCompact" />
+                            </OverflowToolbar>
+                        </t:extension>
 
-                                <t:columns>
-                                    <t:Column width="160px" hAlign="Center">
-                                        <t:label>
-                                            <VBox width="100%" class="fullWidthHeader">
-                                                <Label text="{i18n>operacion}" design="Bold" />
-                                                <HBox renderType="Bare" visible="{ui>/showStickyParent}"
-                                                    class="parentHeaderBox">
-                                                    <Text text="{ui>/stickyHeaderData/parent/name}" wrapping="false"
-                                                        width="100%" textAlign="Center" />
-                                                </HBox>
-                                                <VBox>
-                                                    <HBox class="parentHeader" renderType="Bare"
-                                                        alignContent="Start">
-                                                        <Button visible="{ui>/showStickyChild}"
-                                                            class="childHeaderBtn sapUiTinyMarginEnd"
-                                                            icon="sap-icon://navigation-up-arrow"
-                                                            press="onCollapseFromHeader" />
-                                                        <Text text="{ui>/stickyHeaderData/child/name}"
-                                                            textAlign="Initial"
-                                                            class="agrupaLeftText secondStickyText" wrapping="false"
-                                                            visible="{ui>/showStickyChild}" />
-                                                    </HBox>
-                                                </VBox>
-                                            </VBox>
-                                        </t:label>
-                                        <t:template>
-                                            <VBox renderType="Bare">
-                                            <Text text="{name}"
-                                                wrapping="false"
-                                                visible="{= !${ui>/isEditMode} || ${isGroup} === true }"
-                                            />
-                                            <Input
-                                                value="{name}"
-                                                class="fullCellInput"
-                                                visible="{= ${ui>/isEditMode} &amp;&amp; ${isGroup} !== true }"
-                                            />
-                                                </VBox>
-                                        </t:template>
-                                    </t:Column>
-
-                                    <t:Column width="100px" hAlign="Center">
-                                        <t:label>
-                                            <VBox width="100%" class="fullWidthHeader">
-                                                <Label text="{i18n>descripcionOperacion}" design="Bold" />
-                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}"
-                                                    class="parentHeaderBox">
-                                                    <Text text="{ui>/stickyHeaderData/parent/currency}"
-                                                        wrapping="false" width="100%" textAlign="Center" />
-                                                </VBox>
-                                                <VBox class="parentHeader">
-                                                    <Text text="{ui>/stickyHeaderData/child/currency}"
-                                                        textAlign="Center" wrapping="false" class="secondStickyText"
-                                                        visible="{ui>/showStickyChild}" />
-                                                </VBox>
-                                            </VBox>
-                                        </t:label>
-                                        <t:template>
-                                            <VBox renderType="Bare">
-                                            <Text text="{currency}" wrapping="false"  visible="{= !${ui>/isEditMode} || ${isGroup} === true }"/>
-                                            <Input
-                                                value="{currency}"
-                                                 class="fullCellInput"
-                                                visible="{= ${ui>/isEditMode} &amp;&amp; ${isGroup} !== true }"/>
-                                                </VBox>
-                                        </t:template>
-                                    </t:Column>
-
-                                    <t:Column width="80px" hAlign="Center">
-                                        <t:label>
-                                            <VBox width="100%" class="fullWidthHeader">
-                                                <Label text="{i18n>coste}" design="Bold" />
-                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}"
-                                                    class="parentHeaderBox">
-                                                    <Text text="{ui>/stickyHeaderData/parent/amount}" width="100%"
-                                                        textAlign="Center" wrapping="false" />
-                                                </VBox>
-                                                <VBox class="parentHeader">
-                                                    <Text text="{ui>/stickyHeaderData/child/amount}"
-                                                        textAlign="Center" wrapping="false" class="secondStickyText"
-                                                        visible="{ui>/showStickyChild}" />
-                                                </VBox>
-                                            </VBox>
-                                        </t:label>
-                                        <t:template>
-                                            <VBox renderType="Bare">
-                                            <Text text="{amount}" wrapping="false" visible="{= !${ui>/isEditMode} || ${isGroup} === true }"/>
-                                            <Input
-                                                value="{amount}"
-                                                 class="fullCellInput"
-                                                visible="{= ${ui>/isEditMode} &amp;&amp; ${isGroup} !== true }"/>
-                                                </VBox>
-                                        </t:template>
-                                    </t:Column>
-
-                                    <t:Column width="80px" hAlign="Center">
-                                        <t:label>
-                                            <VBox width="100%" class="fullWidthHeader">
-                                                <Label text="{i18n>costepend}" design="Bold" />
-                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}"
-                                                    class="parentHeaderBox">
-                                                    <Text text="{ui>/stickyHeaderData/parent/pricepending}"
-                                                        width="100%" textAlign="Center" wrapping="false" />
-                                                </VBox>
-                                                <VBox class="parentHeader">
-                                                    <Text text="{ui>/stickyHeaderData/child/pricepending}"
-                                                        textAlign="Center" wrapping="false" class="secondStickyText"
-                                                        visible="{ui>/showStickyChild}" />
-                                                </VBox>
-                                            </VBox>
-                                        </t:label>
-                                        <t:template>
-                                            <VBox renderType="Bare">
-                                            <Text text="{pricepending}" wrapping="false" visible="{= !${ui>/isEditMode} || ${isGroup} === true }"/>
-                                            <Input
-                                                value="{pricepending}"
-                                                 class="fullCellInput"
-                                                visible="{= ${ui>/isEditMode} &amp;&amp; ${isGroup} !== true }"/>
-                                                </VBox>
-                                        </t:template>
-                                    </t:Column>
-
-                                    <t:Column width="80px" hAlign="Center">
-                                        <t:label>
-                                            <VBox width="100%" class="fullWidthHeader">
-                                                <Label text="{i18n>costetotal}" design="Bold" />
-                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}"
-                                                    class="parentHeaderBox">
-                                                    <Text text="{ui>/stickyHeaderData/parent/pricetotal}"
-                                                        width="100%" textAlign="Center" wrapping="false" />
-                                                </VBox>
-                                                <VBox class="parentHeader">
-                                                    <Text text="{ui>/stickyHeaderData/child/pricetotal}"
-                                                        textAlign="Center" wrapping="false" class="secondStickyText"
-                                                        visible="{ui>/showStickyChild}" />
-                                                </VBox>
-                                            </VBox>
-                                        </t:label>
-                                        <t:template>
-                                            <VBox renderType="Bare">
-                                            <Text text="{pricetotal}" wrapping="false" visible="{= !${ui>/isEditMode} || ${isGroup} === true }"/>
-                                            <Input
-                                                value="{pricetotal}"
-                                                class="fullCellInput"
-                                                visible="{= ${ui>/isEditMode} &amp;&amp; ${isGroup} !== true }"/>
-                                                </VBox>
-                                        </t:template>
-                                    </t:Column>
-
-                                    <t:Column id="colStart" width="85px" hAlign="Center">
-                                        <t:label>
-                                            <VBox width="100%" class="fullWidthHeader">
-                                                <Label text="{i18n>dbReparto}" design="Bold" textAlign="Center" />
-                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}"
-                                                    class="parentHeaderBox">
-                                                    <Text text="{ui>/stickyHeaderData/parent/size}" width="100%"
-                                                        textAlign="Center" wrapping="false" />
-                                                </VBox>
-                                                <VBox class="parentHeader">
-                                                    <Text text="{ui>/stickyHeaderData/child/size}"
-                                                        textAlign="Center" wrapping="false" class="secondStickyText"
-                                                        visible="{ui>/showStickyChild}" />
-                                                </VBox>
-                                            </VBox>
-                                        </t:label>
-                                        <t:template>
-                                            <VBox width="100%" renderType="Bare">
-                                            <Text
-                                                text="{size}"
-                                                visible="{= !!${size} &amp;&amp; ( ${ui>/isEditMode} === false || ${isGroup} === true ) }"
-                                                textAlign="Center"
-                                                wrapping="false"
-                                            />
-                                            <Input
-                                                value="{size}"
-                                                class="fullCellInput"
-                                                visible="{= !!${size} &amp;&amp; ${ui>/isEditMode} === true &amp;&amp; ${isGroup} !== true }"
-                                                width="100%"
-                                                textAlign="Center"
-                                            />
+                        <t:columns>
+                            <t:Column width="160px" hAlign="Center">
+                                <t:label>
+                                    <VBox width="100%" class="fullWidthHeader">
+                                        <Label text="{i18n>operacion}" design="Bold" class="titleGrande" />
+                                        <HBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                            <Text text="{ui>/stickyHeaderData/parent/name}" wrapping="false" width="100%" textAlign="Center" />
+                                        </HBox>
+                                        <VBox >
+                                            <HBox class="parentHeader" renderType="Bare" alignContent="Start">
+                                                <Button visible="{ui>/showStickyChild}" class="childHeaderBtn sapUiTinyMarginEnd" icon="sap-icon://navigation-up-arrow" press="onCollapseFromHeader"/>
+                                                <Text text="{ui>/stickyHeaderData/child/name}" textAlign="Initial" class="agrupaLeftText secondStickyText" wrapping="false" visible="{ui>/showStickyChild}" />
+                                            </HBox>
                                         </VBox>
-                                        </t:template>
-                                    </t:Column>
+                                    </VBox>
+                                </t:label>
+                                <t:template>
+                                    <VBox>
+                                        <Text text="{name}" wrapping="false" visible="{= ${isGroup} !== false }" />
 
-                                    <t:Column id="colEnd" width="85px" hAlign="Center">
-                                        <t:label>
-                                            <VBox width="100%" class="fullWidthHeader">
-                                                <Label text="{i18n>dbPendPlanificar}" design="Bold"
-                                                    textAlign="Center" />
-                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}"
-                                                    class="parentHeaderBox">
-                                                    <Text text="{ui>/stickyHeaderData/parent/last}" width="100%"
-                                                        textAlign="Center" wrapping="false" />
-                                                </VBox>
-                                                <VBox class="parentHeader">
-                                                    <Text text="{ui>/stickyHeaderData/child/last}"
-                                                        textAlign="Center" wrapping="false" class="secondStickyText"
-                                                        visible="{ui>/showStickyChild}" />
-                                                </VBox>
-                                            </VBox>
-                                        </t:label>
-                                        <t:template>
-                                            <VBox width="100%" renderType="Bare">
-                                            <Text
-                                                text="{last}"
-                                                visible="{= !!${last} &amp;&amp; ( ${ui>/isEditMode} === false || ${isGroup} === true ) }"
-                                                textAlign="Center"
-                                                wrapping="false"
-                                            />
-                                            <Input
-                                                value="{last}"
-                                                class="fullCellInput"
-                                                visible="{= !!${last} &amp;&amp; ${ui>/isEditMode} === true &amp;&amp; ${isGroup} !== true }"
-                                                width="100%"
-                                                textAlign="Center"
-                                            />
-                                        </VBox>
-                                        </t:template>
-                                    </t:Column>
+                                        <Input value="{name}" visible="{= ${isGroup} === false }" />
+                                    </VBox>
+                                </t:template>
+                            </t:Column>
 
-                                    <t:Column id="colMonths" width="80px" hAlign="Center">
-                                        <t:label>
-                                            <VBox width="100%" class="fullWidthHeader">
-                                                <Label text="&#160;" />
-                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}"
-                                                    class="parentHeaderBox">
-                                                    <Text text="&#160;" />
-                                                </VBox>
-                                                <VBox class="parentHeader">
-                                                    <Text text="{ui>/stickyHeaderData/child/months}"
-                                                        textAlign="Center" wrapping="false" class="secondStickyText"
-                                                        visible="{ui>/showStickyChild}" />
-                                                </VBox>
-                                            </VBox>
-                                        </t:label>
-                                        <t:template>
-                                            <VBox width="100%" renderType="Bare">
-                                            <Text
-                                                text="{months}"
-                                                visible="{= !!${months} &amp;&amp; ( ${ui>/isEditMode} === false || ${isGroup} === true ) }"
-                                                textAlign="Center"
-                                                wrapping="false"
-                                            />
-                                            <Input
-                                                value="{months}"
-                                                class="fullCellInput"
-                                                visible="{= !!${months} &amp;&amp; ${ui>/isEditMode} === true &amp;&amp; ${isGroup} !== true }"
-                                                width="100%"
-                                                textAlign="Center"
-                                            />
+                            <t:Column width="100px" hAlign="Center">
+                                <t:label>
+                                    <VBox width="100%" class="fullWidthHeader">
+                                        <Label text="{i18n>descripcionOperacion}" design="Bold" class="titleGrande"/>
+                                        <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                            <Text text="{ui>/stickyHeaderData/parent/currency}" wrapping="false" width="100%" textAlign="Center" />
                                         </VBox>
-                                        </t:template>
-                                    </t:Column>
+                                        <VBox class="parentHeader">
+                                            <Text text="{ui>/stickyHeaderData/child/currency}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                        </VBox>
+                                    </VBox>
+                                </t:label>
+                                <t:template>
+                                    <VBox>
+                                        <Text text="{currency}" visible="{= ${isGroup} !== false }" wrapping="false" />
 
-                                    <t:Column id="colNew" width="80px" hAlign="Center">
-                                        <t:label>
-                                            <VBox width="100%" class="fullWidthHeader">
-                                                <Label text="&#160;" />
-                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}"
-                                                    class="parentHeaderBox">
-                                                    <Text text="&#160;" />
-                                                </VBox>
-                                                <VBox class="parentHeader">
-                                                    <Text text="{ui>/stickyHeaderData/child/pend}"
-                                                        visible="{ui>/showStickyChild}" width="100%"
-                                                        textAlign="Center" wrapping="false" class="secondStickyText" />
-                                                </VBox>
-                                            </VBox>
-                                        </t:label>
-                                        <t:template>
-                                            <VBox width="100%" renderType="Bare">
-                                            <Text
-                                                text="{pend}"
-                                                visible="{= !!${pend} &amp;&amp; ( ${ui>/isEditMode} === false || ${isGroup} === true ) }"
-                                                textAlign="Center"
-                                                wrapping="false"
-                                            />
-                                            <Input
-                                                value="{pend}"
-                                                class="fullCellInput"
-                                                visible="{= !!${pend} &amp;&amp; ${ui>/isEditMode} === true &amp;&amp; ${isGroup} !== true }"
-                                                width="100%"
-                                                textAlign="Center"
-                                            />
+                                        <Input value="{currency}" visible="{= ${isGroup} === false }" />
+                                    </VBox>
+                                </t:template>
+                            </t:Column>
+
+                            <t:Column width="80px" hAlign="Center">
+                                <t:label>
+                                    <VBox width="100%" class="fullWidthHeader">
+                                        <Label text="{i18n>coste}" design="Bold" class="titleGrande"/>
+                                        <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                            <Text text="{ui>/stickyHeaderData/parent/amount}" width="100%" textAlign="Center" wrapping="false" />
                                         </VBox>
-                                        </t:template>
-                                    </t:Column>
-                                </t:columns>
-                            </t:TreeTable>
+                                        <VBox class="parentHeader">
+                                            <Text text="{ui>/stickyHeaderData/child/amount}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                        </VBox>
+                                    </VBox>
+                                </t:label>
+                                <t:template>
+                                    <VBox>
+                                        <Text text="{amount}" visible="{= ${isGroup} !== false }" />
+                                        <Input value="{amount}" visible="{= ${isGroup} === false }" textAlign="End" />
+                                    </VBox>
+                                </t:template>
+                            </t:Column>
+
+                            <t:Column width="80px" hAlign="Center">
+                                <t:label>
+                                    <VBox width="100%" class="fullWidthHeader">
+                                        <Label text="{i18n>costepend}" design="Bold" class="titleGrande"/>
+                                        <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                            <Text text="{ui>/stickyHeaderData/parent/pricepending}" width="100%" textAlign="Center" wrapping="false" />
+                                        </VBox>
+                                        <VBox class="parentHeader">
+                                            <Text text="{ui>/stickyHeaderData/child/pricepending}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                        </VBox>
+                                    </VBox>
+                                </t:label>
+                                <t:template>
+                                    <VBox>
+                                        <Text text="{pricepending}" visible="{= ${isGroup} !== false }" />
+                                        <Input value="{pricepending}" visible="{= ${isGroup} === false }" textAlign="End" />
+                                    </VBox>
+                                </t:template>
+                            </t:Column>
+
+                            <t:Column width="80px" hAlign="Center">
+                                <t:label>
+                                    <VBox width="100%" class="fullWidthHeader">
+                                        <Label text="{i18n>costetotal}" design="Bold" class="titleGrande"/>
+                                        <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                            <Text text="{ui>/stickyHeaderData/parent/pricetotal}" width="100%" textAlign="Center" wrapping="false" />
+                                        </VBox>
+                                        <VBox class="parentHeader">
+                                            <Text text="{ui>/stickyHeaderData/child/pricetotal}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                        </VBox>
+                                    </VBox>
+                                </t:label>
+                                <t:template>
+                                    <VBox>
+                                        <Text text="{pricetotal}" visible="{= ${isGroup} !== false }" />
+                                        <Input value="{pricetotal}" visible="{= ${isGroup} === false }" textAlign="End" />
+                                    </VBox>
+                                </t:template>
+                            </t:Column>
+
+                            <t:Column id="colStart" width="85px" hAlign="Center">
+                                <t:label>
+                                    <VBox width="100%" class="fullWidthHeader">
+                                        <Label text="{i18n>dbReparto}" design="Bold" textAlign="Center" class="titleGrande"/>
+                                        <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                            <Text text="{ui>/stickyHeaderData/parent/size}" width="100%" textAlign="Center" wrapping="false" />
+                                        </VBox>
+                                        <VBox class="parentHeader">
+                                            <Text text="{ui>/stickyHeaderData/child/size}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                        </VBox>
+                                    </VBox>
+                                </t:label>
+                                <t:template>
+                                    <VBox>
+                                        <Text text="{size}" visible="{= ${isGroup} !== false }" />
+                                        <Input value="{size}" visible="{= ${isGroup} === false }" />
+                                    </VBox>
+                                </t:template>
+                            </t:Column>
+
+                            <t:Column id="colEnd" width="100px" hAlign="Center">
+                                <t:label>
+                                    <VBox width="100%" class="fullWidthHeader">
+                                        <Label text="{i18n>dbPendPlanificar}" design="Bold" textAlign="Center" class="titleGrande"/>
+                                        <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                            <Text text="{ui>/stickyHeaderData/parent/last}" width="100%" textAlign="Center" wrapping="false" />
+                                        </VBox>
+                                        <VBox class="parentHeader">
+                                            <Text text="{ui>/stickyHeaderData/child/last}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                        </VBox>
+                                    </VBox>
+                                </t:label>
+                                <t:template>
+                                    <VBox>
+                                        <Text text="{last}" visible="{= ${isGroup} !== false }" />
+                                        <Input value="{last}" visible="{= ${isGroup} === false }" textAlign="Center" />
+                                    </VBox>
+                                </t:template>
+                            </t:Column>
+
+                            <t:Column id="colMonths" width="80px" hAlign="Center">
+                                <t:label>
+                                    <VBox width="100%" class="fullWidthHeader">
+                                        <Label text="&#160;" />
+                                        <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                            <Text text="&#160;" />
+                                        </VBox>
+                                        <VBox class="parentHeader">
+                                            <Text text="{ui>/stickyHeaderData/child/months}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                        </VBox>
+                                    </VBox>
+                                </t:label>
+                                <t:template>
+                                    <Text text="{months}" visible="{= !!${months} }" />
+                                </t:template>
+                            </t:Column>
+
+                            <t:Column id="colNew" width="80px" hAlign="Center">
+                                <t:label>
+                                    <VBox width="100%" class="fullWidthHeader">
+                                        <Label text="&#160;"/>
+                                        <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                            <Text text="&#160;" />
+                                        </VBox>
+                                        <VBox class="parentHeader">
+                                            <Text text="{ui>/stickyHeaderData/child/pend}" visible="{ui>/showStickyChild}" width="100%" textAlign="Center" wrapping="false" class="secondStickyText" />
+                                        </VBox>
+                                    </VBox>
+                                </t:label>
+                                <t:template>
+                                    <Text text="{pend}" visible="{= !!${pend} }" />
+                                </t:template>
+                            </t:Column>
+                        </t:columns>
+                    </t:TreeTable>
                         </VBox>
                     </uxap:blocks>
                 </uxap:ObjectPageSubSection>
             </uxap:subSections>
         </uxap:ObjectPageSection>
     </uxap:sections>
-</uxap:ObjectPageLayout>
-    
+
+
+    </uxap:ObjectPageLayout>
+
 </mvc:View>
