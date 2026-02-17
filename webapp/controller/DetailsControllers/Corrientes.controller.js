@@ -28,7 +28,7 @@ sap.ui.define([
          * resubida
          */
         onInit: function () {
-            this.getView().setModel(new JSONModel({ 
+            this.getView().setModel(new JSONModel({
                 selectedKey: "Home"
             }), "state");
 
@@ -44,6 +44,7 @@ sap.ui.define([
                     "TreeTableBasic",
                     new Date().getFullYear(), 3
                 );
+
             }.bind(this));
 
             var oCatalogModel = new JSONModel();
@@ -54,7 +55,7 @@ sap.ui.define([
             oCatalogModel.attachRequestCompleted(function () {
                 var aCategories = oCatalogModel.getProperty("/catalog/models/categories");
                 if (!Array.isArray(aCategories)) {
-                    console.error("Categorías no encontradas");
+
                     return;
                 }
 
@@ -65,7 +66,6 @@ sap.ui.define([
                     "operacionesModel"
                 );
 
-                // ========== CREA EL SNAPSHOT DESPUÉS DE LA CARGA ==========
                 this._createSnapshot();
             }.bind(this));
 
@@ -84,16 +84,50 @@ sap.ui.define([
                 selectedYear: iActualYear
             });
             this.getView().setModel(oYearModel, "yearsModel");
-            // Registra el evento de cierre del navegador
-            window.addEventListener("beforeunload", this.onBrowserClose.bind(this));
+
+            this._boundBrowserClose = this.onBrowserClose.bind(this);
+            window.addEventListener("beforeunload", this._boundBrowserClose);
 
         },
-
         /**
+         * Escucha cuando el header se expande o colapsa y recalcula las filas
+         */
+        _attachHeaderToggleListener: function () {
+            var oObjectPageLayout = this.byId("objectPageLayout");
+            if (!oObjectPageLayout || !oObjectPageLayout.getDomRef()) {
+                setTimeout(this._attachHeaderToggleListener.bind(this), 100);
+                return;
+            }
+
+            var oDom = oObjectPageLayout.getDomRef();
+
+            if (this._headerClickListener) {
+                oDom.removeEventListener("click", this._headerClickListener, true);
+            }
+
+            this._headerClickListener = function (e) {
+                var target = e.target;
+
+                if (target.closest(".sapFDynamicPageToggleHeaderIndicator") ||
+                    target.closest('[id$="-collapseBtn"]') ||
+                    target.closest('[id$="-expandBtn"]') ||
+                    target.closest(".sapUxAPObjectPageHeaderTitle") ||
+                    target.closest(".sapMTitle")) {
+
+                    setTimeout(function () {
+                        this._calculateDynamicRows();
+                    }.bind(this), 200);
+                }
+            }.bind(this);
+
+            oDom.addEventListener("click", this._headerClickListener, true);
+        },
+
+        /** 
          * Crea una copia profunda del modelo "catalog" para comparaciones futuras
          */
         _createSnapshot: function () {
-            var oDefaultModel = this.getView().getModel();  // <-- SIN "catalog"
+            var oDefaultModel = this.getView().getModel();  // SIN "catalog"
             if (oDefaultModel) {
                 var oData = oDefaultModel.getData();
                 this._originalData = JSON.parse(JSON.stringify(oData));
@@ -104,7 +138,7 @@ sap.ui.define([
          * Verifica si hay cambios no guardados comparando el modelo actual con el snapshot
          */
         hasUnsavedChanges: function () {
-            console.log("=== DEBUG START: hasUnsavedChanges ===");
+
 
             if (!this._originalData) return false;
 
@@ -150,7 +184,7 @@ sap.ui.define([
                         // 1. Control de Años y Meses (y2026, m2026_01)
                         if (/^y\d{4}$/.test(key) || /^m\d{4}_\d+$/.test(key)) {
                             if (normalize(oCur[key]) !== normalize(oOri[key])) {
-                                console.log("DEBUG: Modificación en " + key + ". Actual:", oCur[key], "Original:", oOri[key]);
+
                                 return true;
                             }
                         }
@@ -162,7 +196,7 @@ sap.ui.define([
                                 var vOriM = (oOri.months) ? normalize(oOri.months[mKey]) : "";
 
                                 if (vCurM !== vOriM) {
-                                    console.log("DEBUG: Modificación en months[" + mKey + "]. Actual:", oCur[key][mKey], "Original:", (oOri.months ? oOri.months[mKey] : "undefined"));
+
                                     return true;
                                 }
                             }
@@ -180,7 +214,7 @@ sap.ui.define([
             };
 
             var bResult = checkRecursive(aCurrentCat, aOriginalCat, "Root");
-            console.log("=== DEBUG END: Resultado =", bResult, "===");
+
             return bResult;
         },
 
@@ -201,6 +235,7 @@ sap.ui.define([
          */
         onAfterRendering: function (oEvent) {
             this.byId("TreeTableBasic").rerender(true);
+            this._attachHeaderToggleListener();
         },
         /**
          * Gestiona la visibilidad de columnas extendidas al expandir nodos en la TreeTable.
@@ -296,12 +331,15 @@ sap.ui.define([
                 return ''; // Para otros navegadores
             }
         },
+
         /**
          * Limpia los event listeners al destruir el controlador
          */
         onExit: function () {
-            // Elimina el control para evitar memory leak
-            window.removeEventListener("beforeunload", this.onBrowserClose.bind(this));
+            // Se utiliza la misma referencia para eliminar
+            if (this._boundBrowserClose) {
+                window.removeEventListener("beforeunload", this._boundBrowserClose);
+            }
         },
     });
 });
