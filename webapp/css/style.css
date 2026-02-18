@@ -78,6 +78,7 @@
 /* Compacta los campos de entrada dentro de las tablas */
 .sapUiSizeCompact .sapUiTable .sapMInputBaseInner {
     height: 1rem;
+    margin-left: 0.1rem;
 }
 
 
@@ -97,10 +98,9 @@
 .sapMFlexItemAlignAuto {
     font-weight: bold !important;
 }
-         
-.secondStickyText {
-    font-weight: 600 !important;   
-    font-size: 0.75rem;            
+
+.secondStickyText {  
+    font-size: 0.85rem;            
     padding-top: 0.2rem;
     padding-bottom: 0.2rem;
     width: 100%;
@@ -1036,4 +1036,15 @@
     margin: 0 !important;
     padding: 1px 0 !important;
     display: inline-block !important;
+}
+.sapMInputBase:not(.sapMInputBaseHasEndIcons):not(.sapMInputBaseHasBeginIcons) .sapMInputBaseInner, .sapMInputBaseNoWidth .sapMInputBaseInner
+
+ {
+    width: 100%;
+    margin-left: 1rem;
+}
+
+.inflacionNoMargin .sapMInputBaseInner {
+    margin-left: 0 !important;
+    padding-right: 6px !important; /* puoi cambiare il valore */
 }
