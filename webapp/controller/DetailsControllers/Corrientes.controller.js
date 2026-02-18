@@ -47,101 +47,84 @@ sap.ui.define([
 
             this.setupDynamicTreeTable("TreeTableBasic");
 
-            this.getView().attachEventOnce("afterRendering", function () {
-                this.createYearColumns(
-                    new Date().getFullYear(), 3, "TreeTableBasic"
-                );
+            var oTable = this.byId("TreeTableBasic");
+            oTable.addEventDelegate({
+                onAfterRendering: function () {
+                    var oTableDom = oTable.getDomRef();
+                    if (!oTableDom) return;
+                    $(oTableDom).off("keydown", "input").on("keydown", "input", function (oNativeEvent) {
+                        var iKeyCode = oNativeEvent.keyCode;
+                        if (iKeyCode < 37 || iKeyCode > 40) return;
+                        var sId = oNativeEvent.target.id;
+                        var sControlId = sId.replace("-inner", "");
+                        var oInput = sap.ui.getCore().byId(sControlId);
+                        if (oInput && oInput.isA("sap.m.Input")) {
+                            this._onInputKeyDown({
+                                srcControl: oInput,
+                                keyCode: iKeyCode,
+                                preventDefault: function () { oNativeEvent.preventDefault(); },
+                                stopImmediatePropagation: function () { oNativeEvent.stopImmediatePropagation(); }
+                            });
+                        }
+                    }.bind(this));
+                }.bind(this)
+            });
 
-                // Se adjunta el listener de cambios en el header
+            this.getView().attachEventOnce("afterRendering", function () {
+                this.createYearColumns(new Date().getFullYear(), 3, "TreeTableBasic");
                 this._attachHeaderToggleListener();
             }.bind(this));
 
             var oCatalogModel = new JSONModel();
             this.getView().setModel(oCatalogModel, "catalog");
-
             oCatalogModel.loadData("model/Catalog.json");
 
             oCatalogModel.attachRequestCompleted(function () {
                 var aCategories = oCatalogModel.getProperty("/catalog/models/categories");
-                if (!Array.isArray(aCategories)) {
-
-                    return;
-                }
-
+                if (!Array.isArray(aCategories)) return;
                 var aComboItems = this._buildOperacionesCombo(aCategories);
-
-                this.getView().setModel(
-                    new JSONModel({ items: aComboItems }),
-                    "operacionesModel"
-                );
-
+                this.getView().setModel(new JSONModel({ items: aComboItems }), "operacionesModel");
                 this._createSnapshot();
             }.bind(this));
 
             var iActualYear = new Date().getFullYear();
             var aSelectYears = [];
-            var iRangeSelect = 10;
-
-            for (var i = 0; i < iRangeSelect; i++) {
-                aSelectYears.push({
-                    year: iActualYear + i
-                });
+            for (var i = 0; i < 10; i++) {
+                aSelectYears.push({ year: iActualYear + i });
             }
-
-            var oYearModel = new sap.ui.model.json.JSONModel({
+            this.getView().setModel(new sap.ui.model.json.JSONModel({
                 years: aSelectYears,
                 selectedYear: iActualYear
-            });
-            this.getView().setModel(oYearModel, "yearsModel");
+            }), "yearsModel");
+
+            // Se registra el resize aquí con referencia guardada, igual que el beforeunload
+            this._boundResizeHandler = function () {
+                this._calculateDynamicRows();
+            }.bind(this);
+            $(window).on("resize", this._boundResizeHandler);
 
             this._boundBrowserClose = this.onBrowserClose.bind(this);
             window.addEventListener("beforeunload", this._boundBrowserClose);
         },
+
         /**
          * Escucha cuando el header se expande o colapsa y recalcula las filas
          */
         _attachHeaderToggleListener: function () {
-
-
             var oObjectPageLayout = this.byId("objectPageLayout");
+            if (!oObjectPageLayout) return;
 
-            if (!oObjectPageLayout) {
-
-                return;
-            }
-
-            // Delegación de eventos - Intercepta todos los clicks en los botones collapse/expand
             setTimeout(function () {
                 var oDom = oObjectPageLayout.getDomRef();
+                if (!oDom) return;
 
-                if (!oDom) {
+                oDom.addEventListener("click", function () {
+                    setTimeout(function () {
+                        this._calculateDynamicRows();
+                    }.bind(this), 200);
+                }.bind(this), true);
 
-                    return;
-                }
-
-                // Event delegation: intercepta los clicks en cualquier botón de toggle
-                oDom.addEventListener("click", function (e) {
-                    var target = e.target;
-
-                    // Se verifica si el click es en un botón de collapse o expand
-                    if (target.closest(".sapFDynamicPageToggleHeaderIndicator") ||
-                        target.closest('[id$="-collapseBtn"]') ||
-                        target.closest('[id$="-expandBtn"]')) {
-
-
-
-                        setTimeout(function () {
-
-                            this._calculateDynamicRows();
-                        }.bind(this), 200);
-                    }
-                }.bind(this), true); // true = useCapture
-
-
-
-            }.bind(this), 1000); // Delay mayor para asegurar que el DOM esté listo
-
-
+            }.bind(this), 1000);
         },
 
         /** 
@@ -238,8 +221,73 @@ sap.ui.define([
 
             return bResult;
         },
-
         /**
+        * Manejador del evento de añadir elemento.
+         * Inserta un nuevo nodo hijo dentro del elemento seleccionado actualmente
+         */
+
+        onAddPress: function () {
+            var oTable = this.byId("TreeTableBasic");
+            var iSelectedIndex = oTable.getSelectedIndex();
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+
+            if (iSelectedIndex === -1) {
+                sap.m.MessageToast.show(oBundle.getText("msgSelectRow"));
+                return;
+            }
+
+            var oContext = oTable.getContextByIndex(iSelectedIndex);
+            var oParentData = oContext.getObject();
+            var sParentName = oParentData.name;
+
+            // --- NUEVA VALIDACIÓN POR PARÁMETRO "PADRE" ---
+            // Solo si el objeto tiene "padre: true" en el JSON permitiremos añadir.
+            if (oParentData.padre !== true) {
+                // Si intentan añadir en un hijo (que no tiene este parámetro), saltará el error.
+                sap.m.MessageToast.show(oBundle.getText("msgOnlyRootAllowed", [sParentName]));
+                return;
+            }
+
+            var iCurrentYear = new Date().getFullYear();
+
+            // --- CREACIÓN DEL OBJETO HIJO ---
+            var oNewChild = {
+                name: sParentName + ".",
+                currency: "",
+                amount: "",
+                isGroup: false,
+                expandible: true, // Para que se vea como una fila normal de la tabla
+                // IMPORTANTE: No le ponemos "padre: true" al hijo.
+                // Al no tenerlo, el botón no funcionará cuando se seleccione esta nueva fila.
+                categories: [],
+                months: {}
+            };
+
+            // Bucle de inicialización de meses (se mantiene igual)
+            for (var i = 0; i < 3; i++) {
+                var iYear = iCurrentYear + i;
+                oNewChild["y" + iYear] = "";
+                for (var m = 1; m <= 12; m++) {
+                    var sMonthKey = "m" + iYear + "_" + (m < 10 ? "0" + m : m);
+                    oNewChild.months[sMonthKey] = "";
+                }
+            }
+
+            if (!oParentData.categories) {
+                oParentData.categories = [];
+            }
+
+            oParentData.categories.push(oNewChild);
+
+            this.getView().getModel("catalog").refresh(true);
+            oTable.expand(iSelectedIndex);
+
+            if (oTable.getBinding("rows")) {
+                oTable.getBinding("rows").refresh();
+            }
+
+            sap.m.MessageToast.show(oBundle.getText("msgAddSuccess", [sParentName]));
+        },   /**
          * Resetea todos los inputs dinámicos (años y meses) y recrea el snapshot
          */
         resetInputs: function () {
@@ -255,7 +303,8 @@ sap.ui.define([
          * Fuerza el renderizado de la tabla una vez que la vista está disponible en el DOM.
          */
         onAfterRendering: function (oEvent) {
-            this.byId("TreeTableBasic").rerender(true);
+            this._attachHeaderToggleListener();
+
         },
         /**
          * Gestiona la visibilidad de columnas extendidas al expandir nodos en la TreeTable.
@@ -359,6 +408,9 @@ sap.ui.define([
             // Se utiliza la misma referencia para eliminar
             if (this._boundBrowserClose) {
                 window.removeEventListener("beforeunload", this._boundBrowserClose);
+            }
+            if (this._boundResizeHandler) {
+                $(window).off("resize", this._boundResizeHandler);
             }
         },
         onRowSelectionChange: function (oEvent) {

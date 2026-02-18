@@ -3,7 +3,7 @@
     "models": {
       "categories": [
 {"name": "I.003", "currency": "Corrientes", "expandible": false, "amount": "1.491.495,14", "pricepending": "630.462,90", "pricetotal": "1.732.958,04", "size": "Manual/Lineal/OEO/", "last": "01 enero 2028", "year2": null, "monthsData": [], "ejecutado": "12.500,00", "ej2026_0": "6.000,00", "ej2026_1": "6.500,00", "firstYearBudget": "firstYearBudget", "secondYearBudget": "secondYearBudget", "thirdYearBudget": "thirdYearBudget", "categories": []},
-        {"name": "I.003","currency": "Corrientes", "expandible": true, "amount": "1.491.495,14", "pricepending": "630.462,90", "pricetotal": "1.732.958,04", "size": "Manual/Lineal/OEO/","last": "01 enero 2028", "year2":null,"monthsData": [], "ejecutado": "12.500,00", "ej2026_0": "6.000,00", "ej2026_1": "6.500,00","categories": [
+        {"name": "I.003","currency": "Corrientes", "expandible": true,"padre": true,"amount": "1.491.495,14", "pricepending": "630.462,90", "pricetotal": "1.732.958,04", "size": "Manual/Lineal/OEO/","last": "01 enero 2028", "year2":null,"monthsData": [], "ejecutado": "12.500,00", "ej2026_0": "6.000,00", "ej2026_1": "6.500,00","categories": [
          {"name": "I.003.031", "currency": "Personal mensual", "expandible": true, "amount": "1.491.495,14", "pricepending": "630.462,90", "pricetotal": "630.462,90", "size": "Manual/Lineal/OEO/","last": "01 enero 2028", "year2": null,"monthsData": [], "ejecutado": "12.500,00", "ej2026_0": "6.000,00", "ej2026_1": "6.500,00", "categories": [
          {"name":"Agrupador", "isGroup": true,"cabecera":true, "currency": "Descripción", "amount": "Proveedor", "pricepending": "Coste pend", "pricetotal": "Tarifa", "size": "Fecha de Inicio","last": "Fecha de fin","months": "Nºmonths","pend": "Otros"},
         {"name": "Jefe de proyecto", "currency": "Personal horario", "amount": "Nombre 1", "pricepending": "50.000,00", "pricetotal": "50.000,00", "size": "01/2026", "last": "01/2028", "pend": "16,00", "year2": null, "ejecutado": "12.500,00", "ej2026_0": "6.000,00", "ej2026_1": "6.500,00", "monthsData": []},
@@ -1426,7 +1426,60 @@
          {"name":"Jefe de desarollo", "currency": "Nombre 3", "amount": "Nombre 3", "pricepending": "50.000,00", "pricetotal": "50.000,00", "size": "01/2026","last": "01/2028","months": "16,00","year2": null, "ejecutado": "12.500,00", "ej2026_0": "6.000,00", "ej2026_1": "6.500,00", "monthsData": []},
          {"name":"Jefe de desarollo", "currency": "Nombre 4", "amount": "Nombre 4", "pricepending": "50.000,00", "pricetotal": "50.000,00", "size": "01/2026","last": "01/2028","months": "16,00","year2": null, "ejecutado": "12.500,00", "ej2026_0": "6.000,00", "ej2026_1": "6.500,00", "monthsData": []}
         ]}
-         ]}
+         ]},
+         {
+  "name": "I.004",
+  "currency": "Inversión Nueva",
+  "expandible": true,
+  "padre": true,
+  "amount": "0,00",
+  "pricepending": "0,00",
+  "pricetotal": "0,00",
+  "size": "Manual/Lineal/OEO/",
+  "last": "01 enero 2028",
+  "year2": null,
+  "monthsData": [],
+  "ejecutado": "0,00",
+  "ej2026_0": "0,00",
+  "ej2026_1": "0,00",
+  "categories": [
+    {
+      "name": "I.004.001",
+      "currency": "Subcategoría Nueva",
+      "expandible": true,
+      "amount": "0,00",
+      "pricepending": "0,00",
+      "pricetotal": "0,00",
+      "categories": [
+        {
+          "name": "Agrupador",
+          "isGroup": true,
+          "cabecera": true,
+          "pricetotal": "Descripción",
+          "amount": "Proveedor",
+          "pricepending": "Coste pend",
+          "currency": "Tarifa",
+          "size": "Fecha de Inicio",
+          "last": "Fecha de fin",
+          "months": "Nºmonths",
+          "pend": "Otros"
+        },
+        {
+          "name": "Nuevo Puesto",
+          "currency": "Nombre Ejemplo",
+          "amount": "Persona Ejemplo",
+          "pricepending": "0,00",
+          "pricetotal": "0,00",
+          "size": "01/2026",
+          "last": "01/2028",
+          "pend": "0,00",
+          "year2": null,
+          "monthsData": []
+        }
+      ]
+    }
+  ]
+}
         ]}
     },  
     "rowsTable": {
