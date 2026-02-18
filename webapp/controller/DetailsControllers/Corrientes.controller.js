@@ -53,28 +53,19 @@ sap.ui.define([
                 this._editBackupData = JSON.parse(JSON.stringify(oModel.getData()));
             }
 
-            // --- DELEGADO DE TECLADO (OPCIÓN 2) ---
             var oTable = this.byId("TreeTableBasic");
             oTable.addEventDelegate({
                 onAfterRendering: function () {
 
                     var oTableDom = oTable.getDomRef();
                     if (!oTableDom) return;
-
-                    // Usamos jQuery (.on) para capturar el keydown de cualquier input presente o futuro
                     $(oTableDom).off("keydown", "input").on("keydown", "input", function (oNativeEvent) {
                         var iKeyCode = oNativeEvent.keyCode;
-                        // Solo nos interesan las flechas (37, 38, 39, 40)
                         if (iKeyCode < 37 || iKeyCode > 40) return;
-
-                        // Obtenemos el control SAPUI5 a partir del ID del elemento DOM
                         var sId = oNativeEvent.target.id;
-                        // A veces el ID del input real termina en -inner, lo limpiamos
                         var sControlId = sId.replace("-inner", "");
                         var oInput = sap.ui.getCore().byId(sControlId);
-
                         if (oInput && oInput.isA("sap.m.Input")) {
-                            // Llamamos a tu función de navegación
                             this._onInputKeyDown({
                                 srcControl: oInput,
                                 keyCode: iKeyCode,
@@ -85,14 +76,9 @@ sap.ui.define([
                     }.bind(this));
                 }.bind(this)
             });
-            // --------------------------------------
 
             this.getView().attachEventOnce("afterRendering", function () {
-                this.createYearColumns(
-                    new Date().getFullYear(), 3, "TreeTableBasic"
-                );
-
-                // Se adjunta el listener de cambios en el header
+                this.createYearColumns(new Date().getFullYear(), 3, "TreeTableBasic");
                 this._attachHeaderToggleListener();
             }.bind(this));
 
@@ -123,65 +109,42 @@ sap.ui.define([
 
             var iActualYear = new Date().getFullYear();
             var aSelectYears = [];
-            var iRangeSelect = 10;
-            for (var i = 0; i < iRangeSelect; i++) {
+            for (var i = 0; i < 10; i++) {
                 aSelectYears.push({ year: iActualYear + i });
             }
-
-            var oYearModel = new sap.ui.model.json.JSONModel({
+            this.getView().setModel(new sap.ui.model.json.JSONModel({
                 years: aSelectYears,
                 selectedYear: iActualYear
-            });
-            this.getView().setModel(oYearModel, "yearsModel");
+            }), "yearsModel");
+
+            // Se registra el resize aquí con referencia guardada, igual que el beforeunload
+            this._boundResizeHandler = function () {
+                this._calculateDynamicRows();
+            }.bind(this);
+            $(window).on("resize", this._boundResizeHandler);
 
             this._boundBrowserClose = this.onBrowserClose.bind(this);
             window.addEventListener("beforeunload", this._boundBrowserClose);
         },
+
         /**
          * Escucha cuando el header se expande o colapsa y recalcula las filas
          */
         _attachHeaderToggleListener: function () {
-
-
             var oObjectPageLayout = this.byId("objectPageLayout");
+            if (!oObjectPageLayout) return;
 
-            if (!oObjectPageLayout) {
-
-                return;
-            }
-
-            // Delegación de eventos - Intercepta todos los clicks en los botones collapse/expand
             setTimeout(function () {
                 var oDom = oObjectPageLayout.getDomRef();
+                if (!oDom) return;
 
-                if (!oDom) {
+                oDom.addEventListener("click", function () {
+                    setTimeout(function () {
+                        this._calculateDynamicRows();
+                    }.bind(this), 200);
+                }.bind(this), true);
 
-                    return;
-                }
-
-                // Event delegation: intercepta los clicks en cualquier botón de toggle
-                oDom.addEventListener("click", function (e) {
-                    var target = e.target;
-
-                    // Se verifica si el click es en un botón de collapse o expand
-                    if (target.closest(".sapFDynamicPageToggleHeaderIndicator") ||
-                        target.closest('[id$="-collapseBtn"]') ||
-                        target.closest('[id$="-expandBtn"]')) {
-
-
-
-                        setTimeout(function () {
-
-                            this._calculateDynamicRows();
-                        }.bind(this), 200);
-                    }
-                }.bind(this), true); // true = useCapture
-
-
-
-            }.bind(this), 1000); // Delay mayor para asegurar que el DOM esté listo
-
-
+            }.bind(this), 1000);
         },
         /**
         * Manejador del evento de añadir elemento.
@@ -262,7 +225,8 @@ sap.ui.define([
          * Fuerza el renderizado de la tabla una vez que la vista está disponible en el DOM.
          */
         onAfterRendering: function (oEvent) {
-            this.byId("TreeTableBasic").rerender(true);
+            this._attachHeaderToggleListener();
+
         },
         /**
          * Gestiona la visibilidad de columnas extendidas al expandir nodos en la TreeTable.
@@ -366,6 +330,9 @@ sap.ui.define([
             // Se utiliza la misma referencia para eliminar
             if (this._boundBrowserClose) {
                 window.removeEventListener("beforeunload", this._boundBrowserClose);
+            }
+            if (this._boundResizeHandler) {
+                $(window).off("resize", this._boundResizeHandler);
             }
         },
 

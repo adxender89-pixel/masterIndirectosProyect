@@ -27,7 +27,7 @@
 }
 
 
-/* Por seguridad, se aplica también a la label si la propiedad design="Bold" no fuera suficiente */
+/* Por seguridad, se aplica también a la etiqueta si la propiedad design="Bold" no fuera suficiente */
 .testBold {
     font-weight: bold !important;
 }
@@ -45,7 +45,7 @@
 
 
 /* Introducción de estilos personalizados */
-/* Reduce la altura de los inputs y el espacio de las etiquetas */
+/* Reduce la altura de los campos de entrada y el espacio de las etiquetas */
 .sapUiSizeCompact .sapMInputBaseInner {
     height: 1.5rem !important; /* Por defecto es 2rem */
     padding-top: 0.20rem !important;
@@ -97,9 +97,10 @@
 .sapMFlexItemAlignAuto {
     font-weight: bold !important;
 }
-
-.secondStickyText {  
-    font-size: 0.85rem;            
+         
+.secondStickyText {
+    font-weight: 600 !important;   
+    font-size: 0.75rem;            
     padding-top: 0.2rem;
     padding-bottom: 0.2rem;
     width: 100%;
@@ -119,11 +120,11 @@
     font-weight: 300 !important;    
     color: #504f4f;                
 }
-
 .parentHeaderBox {
     background-color: #ffffff;
-    font-weight:normal;
+    font-weight: normal;
     width: 100%;
+    min-height: 2rem; /* ← aggiungere questo */
 }
 
 .childHeaderBox {
@@ -162,13 +163,13 @@
 
 /* Texto pequeño */
 .sapUiTable .sapMText, 
-.sapUiTable .sapMLabel:not(.titleGrande),
+.sapUiTable .sapMLabel,
 .sapUiTable .sapMInputBaseInner {
-    font-size: 10px !important; /* Aproximadamente 12px */
+    font-size: 10px !important;
 }
 
 
-/* Tabla más pequeña */
+/* Tabla más compacta */
 .sapUiTableHeaderDataCell {
     padding-top: 0 !important;
     padding-bottom: 0 !important;
@@ -210,9 +211,10 @@
 /* Tercera cabecera */
 .parentHeader {
     background-color: #9e9b9b;
-    font-weight:normal;
+    font-weight: normal;
     align-items: center;
     width: 100%;
+    min-height: 1rem; /* ← questa riga è fondamentale */
 }
 
 
@@ -292,7 +294,7 @@
 }
 
 
-/* Campos de entrada (Input) */
+/* Campos de entrada del buscador */
 .sapUiSizeCompact .sapMSFI {
     padding-left: 0 !important;
     padding-right: 0 !important;
@@ -320,7 +322,7 @@
 }
 
 
-/* Iconos */
+/* Iconos del buscador */
 .sapUiSizeCompact .sapMSFB::before {
     font-size: 0.45rem !important;
 }
@@ -492,7 +494,7 @@
 }
 
 
-/* Icono de años */
+/* Icono de los botones de año */
 .sapMBtnInner.sapMBtnText .sapMBtnIcon:before {
     width: 1rem;
     text-align: start;
@@ -534,14 +536,14 @@
 }
 
 
-/* Bottom tercera cabecera */
+/* Botón de la tercera cabecera */
 .childHeaderBtn.sapMBtn {
     height: 1.1rem !important;
     min-height: 1.1rem !important;
 }
 
 
-/* Contenido interno */
+/* Contenido interno del botón de la tercera cabecera */
 .childHeaderBtn .sapMBtnInner {
     height: 1rem !important;
     line-height: 1.1rem !important;
@@ -550,7 +552,7 @@
 }
 
 
-/* Icono */
+/* Icono del botón de la tercera cabecera */
 .childHeaderBtn .sapMBtnIcon {
     font-size: 0.7rem !important;
     line-height: 1rem !important;
@@ -561,7 +563,7 @@
 }
 
 
-/* Textos segunda columna cabecera */
+/* Textos de la segunda columna de cabecera */
 .sapUiTableHeaderCell .sapUiTableCellInner {
   display: flex;
   align-items: flex-start;
@@ -578,18 +580,18 @@
 
 /* Ajuste de altura de la barra de pestañas de iconos */
 .customTabBar .sapMITH {
-    height: 35px !important; /* Reducido de 40px a 35px */
-    line-height: 35px !important; /* Centra verticalmente */
+    height: 35px !important;
+    line-height: 35px !important;
 }
 
 
 /* Permite alinear correctamente los elementos internos a la nueva altura */
 .customTabBar .sapMITBHead {
-    height: 35px !important; /* Reducido de 80px a 35px */
+    height: 35px !important;
 }
 
 
-/* Barra (Altura compacta basada en headerDarkBlue) */
+/* Barra con altura compacta basada en headerDarkBlue */
 .headerHeightCustom.sapMBar {
     height: 2.1rem !important; 
     min-height: 2.1rem !important;
@@ -597,7 +599,7 @@
 }
 
 
-/* Posicionamiento (Cada sección en su lado correspondiente) */
+/* Posicionamiento de cada sección en su lado correspondiente */
 .headerHeightCustom .sapMBarLeft {
     position: absolute;
     left: 0.5rem;
@@ -630,22 +632,21 @@
 }
 
 
-/* Parte izquierda (Único elemento de mayor tamaño) */
+/* Elemento destacado de la parte izquierda */
 .headerHeightCustom .sapMTitle {
-    font-size: 1.1rem !important; /* Elemento destacado del conjunto */
+    font-size: 1.1rem !important;
     font-weight: bold !important;
 }
 
 
-/* Resto de elementos (Tamaño pequeño original) */
 /* Control de selección central (ComboBox) */
 .headerHeightCustom .sapMComboBox,
 .headerHeightCustom .sapMComboBox .sapMInputBaseContentWrapper {
-    height: 1.2rem !important; /* Mantiene la medida de los inputs originales */
+    height: 1.2rem !important;
 }
 
 .headerHeightCustom .sapMComboBox .sapMInputBaseInner {
-    font-size: 9px !important; /* Mantiene la fuente pequeña original */
+    font-size: 9px !important;
     height: 100% !important;
 }
 
@@ -665,13 +666,13 @@
 }
 
 .headerHeightCustom .sapMBtnIcon {
-    font-size: 9px !important; /* Mantiene los iconos en el tamaño original */
+    font-size: 9px !important;
 }
 
 
-/* Ajuste del grosor del selector de pestañas (flecha/línea) */
+/* Ajuste del grosor del selector de pestañas */
 .customTabBar .sapMITBInLine.sapMITBTextOnly>.sapMITBVertical.sapMITBFilter>.sapMITBText + .sapMITBContentArrow {
-    height: 9px !important; /* El valor que encontraste con F12 */
+    height: 9px !important;
 }
 
 
@@ -689,106 +690,73 @@
 
 /* Espacio desde el borde superior de la celda */
 .textoaño {
-    margin-top: 5px !important;   /* Espacio desde el borde superior de la celda */
-    margin-bottom: 2px !important; /* Espacio respecto al botón del mes */
+    margin-top: 5px !important;
+    margin-bottom: 2px !important;
     display: inline-block;
 }
 
 
-/* Selecciona la etiqueta de la checkbox para bajarla ligeramente */
+/* Ajusta la alineación vertical de la etiqueta del checkbox */
 .alignTextCheckBox .sapMCbLabel {
     margin-bottom: 0.10rem !important;
     vertical-align: middle;
 }
-/* Selector de máxima prioridad para el título Operación */
-.fullWidthHeader .sapMLabel.titleGrande {
-    font-size: 12px !important;
-    font-weight: bold !important;
-    padding: 2px 0 !important;
-    margin: 0 !important;
-    line-height: 1.1 !important;
-    display: block !important;
-    width: 100% !important;
-    text-align: center !important; /* El centrado se queda aquí */
-}
-/* Ajuste del contenedor */
-.fullWidthHeader {
-    padding-top: 0 !important;
-    margin-top: 0 !important;
-    display: block !important; /* Cambiado de flex a block para ocupar todo el ancho natural */
-    width: 100% !important;
-}
-/* 1. Quitamos la negrita a los textos normales de la tabla */
-.sapUiTable .sapMText {
-    font-weight: normal !important;
-}
 
-/* 2. Nos aseguramos de que el Input de la nueva fila también sea normal */
-.sapUiTable .sapMInputBaseInner {
-    font-weight: normal !important;
-}
 
-/* 3. Si quieres que los IMPORTES (amount) resalten un poco pero sin ser negrita bruta */
-.alignEndColumn {
-    text-align: right;
-    font-weight: 400 !important; /* 400 es peso normal */
-
-}
-/* Elimina espacios entre header y TreeTable */
-/* Elimina padding del headerContent */
+/* Elimina el padding del contenido del encabezado */
 .sapUxAPObjectPageHeaderContent {
     padding-bottom: 0 !important;
 }
 
 
-/* Elimina margen de las sections */
+/* Elimina el margen de las secciones */
 .sapUxAPObjectPageLayout .sapUxAPObjectPageSection {
     margin-top: 0 !important;
     padding-top: 0 !important;
 }
 
 
-/* Elimina padding de las subSections */
+/* Elimina el padding de las subsecciones */
 .sapUxAPObjectPageSubSection {
     padding-top: 0 !important;
     margin-top: 0 !important;
 }
 
 
-/* Elimina margen de los blocks */
+/* Elimina el margen de los bloques */
 .sapUxAPBlockBase {
     margin-top: 0 !important;
     padding-top: 0 !important;
 }
 
 
-/* Elimina margen de la VBox que contiene la TreeTable */
+/* Elimina el margen del VBox que contiene la TreeTable */
 .noMarginTop {
     margin-top: 0 !important;
     padding-top: 0 !important;
 }
 
 
-/* Elimina espacio sobre la TreeTable */
+/* Elimina el espacio sobre la TreeTable */
 #TreeTableBasic {
     margin-top: 0 !important;
 }
 
 
-/* Elimina padding del container de las tablas en el header */
+/* Elimina el padding del contenedor de las tablas en el encabezado */
 #tablesContainer {
     padding-bottom: 0 !important;
     margin-bottom: 0 !important;
 }
 
 
-/* Si se desea eliminar también el margen superior de las tablas en el header */
+/* Elimina el margen superior de las tablas en el encabezado */
 #tablesContainer .sapUiSmallMarginTop {
-    margin-top: 0.5rem !important; /* Se puede reducir aún más o poner a 0 */
+    margin-top: 0.5rem !important;
 }
 
 
-/* Cero espacio total entre header y content */
+/* Elimina el espacio total entre encabezado y contenido */
 .sapUxAPObjectPageHeaderContent {
     padding: 0 !important;
 }
@@ -798,12 +766,11 @@
 }
 
 #tablesContainer .sapUiSmallMarginTop {
-    margin-top: 0 !important; /* Elimina también el margen pequeño */
+    margin-top: 0 !important;
 }
 
 
-/* Redimensiona título header */
-/* Título principal en el ObjectPageHeaderTitle - Solo hijos directos */
+/* Reduce el tamaño del título del encabezado */
 .sapUxAPObjectPageHeaderTitle > .sapMTitle,
 .sapUxAPObjectPageHeaderTitle > .sapMText,
 .compactTitle {
@@ -815,7 +782,7 @@
 }
 
 
-/* Reduce únicamente el espacio superior del header */
+/* Reduce únicamente el espacio superior del encabezado dinámico */
 .sapFDynamicPageHeader.sapFDynamicPageHeaderWithContent {
     padding-top: 10px !important;
     padding-right: 3rem !important;
@@ -824,8 +791,7 @@
 }
 
 
-/* Elimina spacer bajo el título de la section */
-/* Si se desea mantenerlo pero sin espacio */
+/* Elimina el espacio bajo el título de la sección */
 .sapUxAPObjectPageSectionHeader {
     height: 0 !important;
     min-height: 0 !important;
@@ -835,14 +801,13 @@
 }
 
 
-/* Elimina también el padding de la section misma */
+/* Elimina el padding de la sección */
 .sapUxAPObjectPageSection {
     padding-top: 0 !important;
 }
 
 
-/* Dimensiones del encabezado con título */
-/* Elimina el padding vertical y min-height del título dinámico */
+/* Elimina el padding vertical y la altura mínima del título dinámico */
 .sapFDynamicPageTitle {
     padding-top: 0 !important;
     padding-bottom: 0 !important;
@@ -850,19 +815,7 @@
 }
 
 
-/* El título mismo - Tamaño de fuente y peso */
-/* .sapUxAPObjectPageHeaderTitle .sapMTitle,
-.sapUxAPObjectPageHeaderTitle .sapMText,
-.compactTitle {
-    font-size: 0.875rem !important;
-    font-weight: normal !important;
-    line-height: 1.5rem !important;
-    margin: 0 !important;
-    padding: 0 !important;
-} */
-
-
-/* Botón expandir/colapsar */
+/* Botón de expandir/colapsar el encabezado */
 .sapFDynamicPageToggleHeaderIndicator {
     height: 1.5rem !important;
     width: 1.5rem !important;
@@ -870,41 +823,40 @@
 }
 
 
-/* Icono del botón expandir */
+/* Icono del botón de expandir */
 .sapFDynamicPageToggleHeaderIndicator .sapMBtnIcon {
     font-size: 0.75rem !important;
 }
 
 
-/* Elimina padding extra cuando el encabezado está fijo */
+/* Elimina el padding extra cuando el encabezado está fijo */
 .sapUxAPObjectPageHeaderStickied {
     padding-right: 0.5rem !important;
 }
 
 
-/* Elimina padding de la subsection */
-/* Elimina padding de la SubSection que contiene la TreeTable */
+/* Elimina el padding de la subsección que contiene la TreeTable */
 .sapUxAPObjectPageSubSection {
     padding: 0 !important;
     margin: 0 !important;
 }
 
 
-/* Elimina padding del contenedor de los blocks */
+/* Elimina el padding del contenedor de bloques */
 .sapUxAPBlockContainer {
     padding: 0 !important;
     margin: 0 !important;
 }
 
 
-/* Elimina padding de la grid interna */
+/* Elimina el padding de la rejilla interna */
 .sapUiRespGrid {
     padding: 0 !important;
     margin: 0 !important;
 }
 
 
-/* Elimina padding de las celdas de la grid */
+/* Elimina el padding de las celdas de la rejilla */
 .sapUiRespGridSpanXL12,
 .sapUiRespGridSpanL12,
 .sapUiRespGridSpanM12,
@@ -913,7 +865,7 @@
 }
 
 
-/* Adjunta la TreeTable a los bordes */
+/* Ajusta la TreeTable a los bordes */
 #TreeTableBasic {
     margin: 0 !important;
     padding: 0 !important;
@@ -948,3 +900,140 @@
     cursor: default;
 }
 
+
+
+/* Oculta la barra de desplazamiento vertical del ObjectPageLayout por identificador específico */
+#__xmlview1--objectPageLayout-vertSB {
+    display: none !important;
+}
+
+/* Oculta la barra de desplazamiento vertical de cualquier ObjectPageLayout */
+[id$="-vertSB"] {
+    display: none !important;
+}
+
+
+/* Aplica Bold al texto del botón de año */
+.yearButton .sapMBtnContent {
+    font-weight: bold !important;
+}
+
+
+/* Aplica Bold al texto del IconTabFilter */
+.sapMITBText {
+    font-weight: bold !important;
+}
+/* Aplica Bold al texto de los años en el Select */
+.yearSelect .sapMSltLabel {
+    font-weight: bold !important;
+}
+
+
+
+
+/* Collassa il titolo a quasi nulla */
+.sapUxAPObjectPageHeaderTitle {
+    min-height: 0 !important;
+    padding: 0 !important;
+}
+
+.sapFDynamicPageTitleMainInner {
+    height: 10px !important;
+    min-height: 10px !important;
+}
+
+.sapFDynamicPageTitle {
+    min-height: 10px !important;
+    padding: 0 !important;
+}
+
+
+
+.monthHeaderHBox {
+    position: relative;
+}
+
+.monthHeaderHBox .sapMBtn {
+    position: absolute;
+    right: 0;
+}
+
+
+.monthHeaderGray {
+    background-color: #9e9b9b !important;
+    min-height: 1rem;
+    padding: 0 !important;
+    margin: 0 !important;
+    line-height: 1rem !important;
+}
+.fullWidthHeader .monthHeaderGray.sapMLabel {
+    padding: 0 !important;
+    margin: 0 !important;
+    height: 1rem !important;
+    line-height: 1rem !important;
+}
+.fullWidthHeader .sapMFlexItem {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-height: 2.8rem;
+    min-height: 0 !important;
+}
+.monthHeaderHBox {
+    position: relative;
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+}
+.parentHeader {
+    background-color: #9e9b9b;
+    font-weight: normal;
+    align-items: center;
+    width: 100%;
+    min-height: 0.8rem; /* ridotto */
+}
+
+
+/* Allinea l'altezza del primo mese agli altri — il button non deve gonfiare la riga */
+.monthHeaderHBox {
+    position: relative;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;  /* evita che il button venga tagliato */
+    padding-right: 1.4rem !important; /* spazio per il button assoluto */
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    box-sizing: border-box;
+}
+
+/* Il button dentro l'HBox va posizionato in assoluto così non altera l'altezza */
+.monthHeaderHBox .sapMBtn {
+    position: absolute !important;
+    right: 0 !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    height: 1rem !important;
+    min-height: 1rem !important;
+    margin: 0 !important;
+    overflow: visible !important;
+}
+
+.monthHeaderHBox .sapMBtnInner {
+    height: 1rem !important;
+    line-height: 1rem !important;
+    padding: 0 0.2rem !important;
+}
+
+/* Permette al button di uscire dai bordi della cella senza essere clippato */
+.sapUiTableHeaderDataCell,
+.sapUiTableHeaderDataCell .sapUiTableCellInner,
+.fullWidthHeader {
+    overflow: visible !important;
+}
+
+/* Label dentro monthHeaderHBox — stessa altezza degli altri mesi */
+.monthHeaderHBox .sapMLabel {
+    line-height: 1.2rem !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 1px 0 !important;
+    display: inline-block !important;
+}
