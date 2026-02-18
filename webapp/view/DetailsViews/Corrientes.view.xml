@@ -11,10 +11,10 @@
         <uxap:headerTitle>
             <uxap:ObjectPageDynamicHeaderTitle>
                 <uxap:expandedHeading>
-                    <Text text="{i18n>ObjPpageTitle}" wrapping="true" class="compactTitle"/>
+                    <Text text=""/>
                 </uxap:expandedHeading>
                 <uxap:snappedHeading>
-                    <Text text="{i18n>ObjPpageTitle}" wrapping="true" class="compactTitle"/>
+                    <Text text=""/>
                 </uxap:snappedHeading>
             </uxap:ObjectPageDynamicHeaderTitle>
         </uxap:headerTitle>
@@ -27,7 +27,7 @@
 
                   
 
-                    <VBox width="49%" fitContainer="true" class="sapUiSmallMarginTop">
+                    <VBox width="49%" fitContainer="true">
                         <t:Table class="sapUiSizeCompact smallHeaderTable" rows="{dataTitle>/data}" visibleRowCount="1" width="100%" selectionMode="None">
                             <!-- <t:extension>
                         <OverflowToolbar class="yellowToolbar" height="90%">
@@ -65,7 +65,7 @@
                         </t:Table>
                     </VBox>
 
-                    <VBox width="49%" height="100%" class="sapUiSmallMarginTop">
+                    <VBox width="49%" height="100%" >
                         <t:Table class="sapUiSizeCompact smallHeaderTable" rows="{dataTitle>/data}" visibleRowCount="1" columnHeaderHeight="10" width="100%" selectionMode="None">
                             <!-- <t:extension>
                         <OverflowToolbar class="yellowToolbar" height="90%">
@@ -118,8 +118,21 @@
                                 <ComboBox width="180px" class="sapUiSizeCompact" selectionChange="onOperacionChange" showClearIcon="true" items="{operacionesModel>/items}">
                                     <core:Item key="{operacionesModel>key}" text="{operacionesModel>text}" />
                                 </ComboBox>
-
-
+                                <Label text="Reales:vacio" width="8rem"/>
+                                <Label text="OEO:vacio" width="8rem"/>
+                                        <Label text="Inflación:"/>
+                                <Input id="inflacionInput" 
+                                    value="15.00" 
+                                    change="oninflacionInputChange"
+                                    width="45px" 
+                                    textAlign="Center"
+                                    type="Number" />
+                                <Text
+                                    text="%"
+                                >
+                                    
+                                </Text>
+                                
                                 <ToolbarSpacer />
                                 <CheckBox id="idEjecutadoCheckBox" text="{i18n>cbEjecutado}" class="alignTextCheckBox" select="onEjecutadoCheckBoxSelect">
 
@@ -128,9 +141,9 @@
                                     <core:Item key="{yearsModel>year}" text="{yearsModel>year}" />
                                 </Select>
                                 <Button icon="sap-icon://add" press="onAddPress" class="sapUiSizeCompact" />
-                                <Button icon="sap-icon://delete" press="onDeletePress" class="sapUiSizeCompact" />
-                                <Button icon="sap-icon://process" press="onProcessPress" class="sapUiSizeCompact" />
+                                <Button icon="sap-icon://delete" press="onDeletePress" class="sapUiSizeCompact" />                              
                                 <Button icon="sap-icon://shortcut" press="onShortcutPress" class="sapUiSizeCompact" />
+                                <Button icon="sap-icon://arrow-bottom" press="onProcessPress" class="sapUiSizeCompact" />
                             </OverflowToolbar>
                         </t:extension>
 
@@ -313,6 +326,39 @@
                                     <Text text="{pend}" visible="{= !!${pend} }" />
                                 </t:template>
                             </t:Column>
+                            <t:Column width="80px" hAlign="Center">
+    <t:label>
+        <VBox width="100%" class="fullWidthHeader">
+            <Label text="Flag 1" design="Bold" textAlign="Center" class="titleGrande"/>
+            <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                <Text text="&#160;" />
+            </VBox>
+            <VBox class="parentHeader">
+                <Text text="&#160;" visible="{ui>/showStickyChild}" class="secondStickyText" />
+            </VBox>
+        </VBox>
+    </t:label>
+    <t:template>
+        <CheckBox selected="{flag1}" />
+    </t:template>
+</t:Column>
+
+<t:Column width="80px" hAlign="Center">
+    <t:label>
+        <VBox width="100%" class="fullWidthHeader">
+            <Label text="Inflacion" design="Bold" textAlign="Center" class="titleGrande"/>
+            <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                <Text text="&#160;" />
+            </VBox>
+            <VBox class="parentHeader">
+                <Text text="&#160;" visible="{ui>/showStickyChild}" class="secondStickyText" />
+            </VBox>
+        </VBox>
+    </t:label>
+    <t:template>
+        <CheckBox selected="{flag2}" />
+    </t:template>
+</t:Column>
                         </t:columns>
                     </t:TreeTable>
                         </VBox>
