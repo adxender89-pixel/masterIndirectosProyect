@@ -186,7 +186,7 @@ sap.ui.define([
             // this._openedYear = null;
 
             //var iStartFrom = (iSkipFields !== undefined) ? iSkipFields : 13;
-var iStartFrom = 13;
+            var iStartFrom = 13;
             // Nueva sección: Columna Ejecutados para los años con formato correcto
             var bShowEjecutado = this.byId("idEjecutadoCheckBox") ? this.byId("idEjecutadoCheckBox").getSelected() : false;
 
@@ -359,13 +359,13 @@ var iStartFrom = 13;
          * Genera las columnas mensuales correspondientes al año seleccionado en la cabecera.
          */
         onCreateMonthsTable: function (oEvent) {
-            
+
 
             var oSource = oEvent.getSource();
             var oTable = this.getControlTable();
 
             var bShowEjecutado = this.byId("idEjecutadoCheckBox") ? this.byId("idEjecutadoCheckBox").getSelected() : false;
-            
+
 
             // Guarda la posición actual del scroll horizontal
             var iCurrentScrollLeft = 0;
@@ -373,15 +373,15 @@ var iStartFrom = 13;
                 var oScrollExt = oTable._getScrollExtension();
                 if (oScrollExt && oScrollExt.getHorizontalScrollbar()) {
                     iCurrentScrollLeft = oScrollExt.getHorizontalScrollbar().scrollLeft;
-                    
+
                 }
             } catch (e) {
-                
+
             }
 
             var sYearText = "";
             var sSourceName = oSource.getMetadata().getName();
-            
+
 
             if (sSourceName === "sap.m.Button") {
                 sYearText = oSource.getText();
@@ -391,32 +391,32 @@ var iStartFrom = 13;
             }
 
             var sYear = parseInt(sYearText, 10);
-            
+
             if (!sYear) return;
 
             // Si se hace clic en el mismo año, cierra los meses
             if (this._openedYear === sYear && sSourceName === "sap.m.Button") {
-                
+
                 this._openedYear = null;
 
                 // Bloquea la tabla durante los cambios
                 oTable.setBusy(true);
 
                 var monthColsToRemove = oTable.getColumns().filter(c => c.data("dynamicMonth"));
-                
+
                 monthColsToRemove.forEach(c => oTable.removeColumn(c));
 
                 // Cuando cierra los meses, recrea la columna Ejecutados para los años si el checkbox está activo
                 if (bShowEjecutado) {
-                    
+
                     // Elimina eventuales columnas Ejecutados
                     var ejecutadosColsToRemove = oTable.getColumns().filter(c => c.data("ejecutadosColumn"));
-                    
+
                     ejecutadosColsToRemove.forEach(c => oTable.removeColumn(c));
 
                     // Recrea la columna Ejecutados para los años
                     var iInsertIndex = oTable.getColumns().findIndex(c => c.data("dynamicYear") === true);
-                    
+
 
                     if (iInsertIndex !== -1) {
                         var currentYear = new Date().getFullYear();
@@ -449,7 +449,7 @@ var iStartFrom = 13;
                         oColEjecAnual.data("dynamicYear", true);
                         oColEjecAnual.data("ejecutadosColumn", true);
                         oTable.insertColumn(oColEjecAnual, iInsertIndex);
-                        
+
                     }
                 }
 
@@ -459,27 +459,27 @@ var iStartFrom = 13;
                         var oScrollExt = oTable._getScrollExtension();
                         if (oScrollExt && oScrollExt.getHorizontalScrollbar()) {
                             oScrollExt.getHorizontalScrollbar().scrollLeft = iCurrentScrollLeft;
-                            
+
                         }
                     } catch (e) {
-                        
+
                     }
                     oTable.setBusy(false);
-                    
+
                 }.bind(this), 50);
 
-                
+
                 return;
             }
 
             // Bloquea la tabla ANTES de hacer cualquier cambio
             oTable.setBusy(true);
-            
+
 
             // Elimina las columnas de meses existentes Y la columna Ejecutados de los años
-            
+
             var colsToRemove = oTable.getColumns().filter(c => c.data("dynamicMonth") || c.data("ejecutadosColumn"));
-            
+
             colsToRemove.forEach(c => oTable.removeColumn(c));
 
             this._openedYear = sYear;
@@ -489,7 +489,7 @@ var iStartFrom = 13;
             var currentMonth = new Date().getMonth();
 
             var iStartIdx = (sYear === currentYear && !bShowEjecutado) ? currentMonth + 1 : 0;
-            
+
 
             var oYearCol = oTable.getColumns().find(c => {
                 var lab = c.getLabel();
@@ -497,13 +497,13 @@ var iStartFrom = 13;
                 return txt === String(sYear);
             });
             var colIndex = oTable.indexOfColumn(oYearCol);
-            
+
 
             var iOffset = 0;
 
             // Columna "Ejecutados" - SOLO si el checkbox está activo
             if (bShowEjecutado) {
-                
+
                 var oColEjec = new sap.ui.table.Column({
                     width: "8rem",
                     label: new sap.m.VBox({
@@ -532,13 +532,13 @@ var iStartFrom = 13;
                 oColEjec.data("ejecutadosColumn", true);
 
                 var insertPos = colIndex + iOffset;
-                
+
                 oTable.insertColumn(oColEjec, insertPos);
                 iOffset++;
             }
 
             // Columnas de los meses
-            
+
             for (var i = iStartIdx; i < 12; i++) {
                 var sMonthLabel = aMonthNames[i];
                 var iRealIdx = i;
@@ -606,12 +606,12 @@ var iStartFrom = 13;
 
                 var monthInsertPos = colIndex + iOffset + (i - iStartIdx);
                 if (i === iStartIdx) {
-                    
+
                 }
                 oTable.insertColumn(oColumn, monthInsertPos);
             }
 
-            
+
 
             // Desbloquea la tabla y restaura el scroll después de insertar todas las columnas
             setTimeout(function () {
@@ -619,16 +619,16 @@ var iStartFrom = 13;
                     var oScrollExt = oTable._getScrollExtension();
                     if (oScrollExt && oScrollExt.getHorizontalScrollbar()) {
                         oScrollExt.getHorizontalScrollbar().scrollLeft = iCurrentScrollLeft;
-                        
+
                     }
                 } catch (e) {
-                    
+
                 }
                 oTable.setBusy(false);
-                
+
             }.bind(this), 50);
 
-            
+
         },
 
 
@@ -712,9 +712,6 @@ var iStartFrom = 13;
                 }
             }
         },
-
-
-
         /**
          * Lógica de gestión de cabeceras sticky durante el desplazamiento de la tabla.
          */
@@ -771,7 +768,6 @@ var iStartFrom = 13;
             });
             this._applyCabeceraStyle();
         },
-
         /**
          * Analiza el modelo de la tabla para definir los rangos de índices de cada grupo de datos.
          */
@@ -810,41 +806,40 @@ var iStartFrom = 13;
 
             this._aGroupRanges = aRanges;
         },
-
         /**
          * Calcula dinámicamente la cantidad de filas que caben en pantalla según el tamaño de la ventana.
          */
         _calculateDynamicRows: function () {
-            
+
 
             var oTable = this.getControlTable();
             if (!oTable || !oTable.getDomRef()) {
-                
+
                 return;
             }
 
             var iWindowHeight = window.innerHeight;
-            
+
 
             var oTableRect = oTable.getDomRef().getBoundingClientRect();
             var iTableTop = oTableRect.top;
-            
+
 
             // Se modifica únicamente este valor de 20 a 148
             var iBottomSpace = 148; // Footer, scrollbar, márgenes (4 filas × 32px + 20px base)
-            
+
 
             var iAvailableHeight = iWindowHeight - iTableTop - iBottomSpace;
-            
+
 
             var iRowHeight = 32;
-            
+
 
             var iRows = Math.floor(iAvailableHeight / iRowHeight);
-            
+
 
             if (iRows < 5) {
-                
+
                 iRows = 5;
             }
 
@@ -853,7 +848,7 @@ var iStartFrom = 13;
                 return col.getVisible();
             }).length;
 
-            
+
 
             this.getView().getModel("viewModel").setProperty("/dynamicRowCount", iRows);
         },
@@ -1001,7 +996,7 @@ var iStartFrom = 13;
          * Configura las propiedades y eventos necesarios para el funcionamiento de una TreeTable.
          */
         setupDynamicTreeTable: function (sTableId) {
-var oTable = sTableId ? this.byId(sTableId) : this.getControlTable();
+            var oTable = sTableId ? this.byId(sTableId) : this.getControlTable();
             if (!oTable) {
                 return;
             }
@@ -1490,7 +1485,7 @@ var oTable = sTableId ? this.byId(sTableId) : this.getControlTable();
 
             // Filtro
             var sKey = oSelectedItem.getKey();
-            
+
 
             // Se cuentan los puntos para distinguir padre (I.003) de hijo (I.003.031)
             var iPunti = (sKey.match(/\./g) || []).length;
@@ -1502,7 +1497,7 @@ var oTable = sTableId ? this.byId(sTableId) : this.getControlTable();
             }
             // Si tiene solo 1 punto (ej. I.003), sParentKey se mantiene null (es un padre)
 
-            
+
 
             var aCurrent = oDefaultModel.getProperty("/catalog/models/categories");
             var aWorkingCopy = this._mergeModifications(
@@ -1510,14 +1505,14 @@ var oTable = sTableId ? this.byId(sTableId) : this.getControlTable();
                 aCurrent
             );
 
-            
+
 
             var aFilteredRoot = [];
 
             for (var i = 0; i < aWorkingCopy.length; i++) {
                 var rootCat = aWorkingCopy[i];
 
-                
+
 
                 if (!Array.isArray(rootCat.categories)) {
                     rootCat.categories = [];
@@ -1525,21 +1520,21 @@ var oTable = sTableId ? this.byId(sTableId) : this.getControlTable();
 
                 // Caso 1: Padre principal (ej. I.003)
                 if (rootCat.name === sKey && !sParentKey) {
-                    
+
                     aFilteredRoot.push(rootCat);
                     continue;
                 }
 
                 // Caso 2: Hijo específico (ej. I.003.031)
                 if (sParentKey) {
-                    
+
                     var aFilteredChildren = this._filterCategories(rootCat.categories, sKey);
                     var bIncludeParent = rootCat.name === sParentKey;
 
-                    
+
 
                     if (aFilteredChildren.length === 0 && !bIncludeParent) {
-                        
+
                         continue;
                     }
 
@@ -1549,14 +1544,14 @@ var oTable = sTableId ? this.byId(sTableId) : this.getControlTable();
                         rootCat.categories = this._filterCategories(rootCat.categories, sKey);
                     }
 
-                    
+
                     aFilteredRoot.push(rootCat);
                 }
             }
 
-            
+
             for (var j = 0; j < aFilteredRoot.length; j++) {
-                
+
             }
 
             oDefaultModel.setProperty("/catalog/models/categories", aFilteredRoot);
@@ -1593,7 +1588,7 @@ var oTable = sTableId ? this.byId(sTableId) : this.getControlTable();
                     } else if (sKey) {
                         // Caso 1: Padre principal, se expande solo el nodo con hijos
                         if (oObj.name === sKey && oObj.expandible === true) {
-                            
+
                             oTable.expand(i);
 
                             // Se verifica si el padre tiene nietos (isGroup)
@@ -1655,7 +1650,7 @@ var oTable = sTableId ? this.byId(sTableId) : this.getControlTable();
             mergeRecursive(aBase, aModified);
             return aBase;
         },
- onRowSelectionChange: function (oEvent) {
+        onRowSelectionChange: function (oEvent) {
 
             if (this._lock) return;
             this._lock = true;
@@ -1723,83 +1718,173 @@ var oTable = sTableId ? this.byId(sTableId) : this.getControlTable();
 
             this._lock = false;
         },
+        _createSnapshot: function () {
+
+            var oModel = this.getView().getModel();
+
+            if (oModel) {
+                this._originalData = JSON.parse(
+                    JSON.stringify(oModel.getData())
+                );
+            }
+        }
+        ,
+        /* Resetea todos los inputs dinámicos (años y meses) y recrea el snapshot
+        */
+        resetInputs: function () {
+            if (!this._originalData) return;
+            var oDefaultModel = this.getView().getModel();
+            // Copia profunda para evitar referencias al objeto original
+            var oResetCopy = jQuery.extend(true, {}, this._originalData);
+            oDefaultModel.setData(oResetCopy);
+            oDefaultModel.refresh(true);
+        },
+        /**
+        * Verifica si hay cambios no guardados comparando el modelo actual con el snapshot
+        */
+        hasUnsavedChanges: function () {
+
+
+            if (!this._originalData) return false;
+
+            var oDefaultModel = this.getView().getModel();
+            if (!oDefaultModel) return false;
+
+            var aCurrentCat = oDefaultModel.getProperty("/catalog/models/categories");
+            var aOriginalCat = this._originalData.catalog.models.categories;
+
+            /**
+             * Helper de Normalización Avanzado
+             * Convierte en cadena vacía todo lo que sea "zero-like"
+             */
+            var normalize = function (val) {
+                // Si es null, undefined o una cadena vacía
+                if (val === undefined || val === null || val === "") return "";
+
+                // Si es un array (ej. el caso 0,0,0,0...), se une y se comprueba si contiene solo ceros o está vacío
+                if (Array.isArray(val)) {
+                    var sJoined = val.join("").replace(/,/g, "").trim();
+                    return (sJoined === "" || /^0+$/.test(sJoined)) ? "" : sJoined;
+                }
+
+                var sVal = val.toString().trim();
+
+                // Si la cadena resultante es "0", "0,0,0..." o "0.00", se considera vacía
+                if (sVal === "0" || sVal === "0.0" || sVal === "0,0" || /^0+(?:[.,]0+)*$/.test(sVal) || /^0+(?:,0+)*$/.test(sVal)) {
+                    return "";
+                }
+
+                return sVal;
+            };
+
+            var checkRecursive = function (aCurrent, aOriginal, sPath) {
+                if (!aCurrent) return false;
+
+                for (var i = 0; i < aCurrent.length; i++) {
+                    var oCur = aCurrent[i];
+                    var oOri = (aOriginal && aOriginal[i]) ? aOriginal[i] : {};
+                    var currentPath = sPath + " -> " + (oCur.name || i);
+
+                    for (var key in oCur) {
+                        // 1. Control de Años y Meses (y2026, m2026_01)
+                        if (/^y\d{4}$/.test(key) || /^m\d{4}_\d+$/.test(key)) {
+                            if (normalize(oCur[key]) !== normalize(oOri[key])) {
+
+                                return true;
+                            }
+                        }
+
+                        // 2. Control del objeto 'months' (el caso crítico)
+                        if (key === "months" && oCur[key] && typeof oCur[key] === "object") {
+                            for (var mKey in oCur[key]) {
+                                var vCurM = normalize(oCur[key][mKey]);
+                                var vOriM = (oOri.months) ? normalize(oOri.months[mKey]) : "";
+
+                                if (vCurM !== vOriM) {
+
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+
+                    // 3. Recursión sobre los hijos
+                    if (oCur.categories && Array.isArray(oCur.categories) && oCur.categories.length > 0) {
+                        if (checkRecursive(oCur.categories, oOri.categories, currentPath)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            };
+
+            var bResult = checkRecursive(aCurrentCat, aOriginalCat, "Root");
+
+            return bResult;
+        },
         onSave: function () {
 
+    var oModel = this.getView().getModel();
     var oUiModel = this.getView().getModel("ui");
-    var oDataModel = this.getView().getModel();
-    var bEditMode = oUiModel.getProperty("/isEditMode");
-    var that = this;
+    var oBundle = this.getView().getModel("i18n").getResourceBundle();
 
-    // 🔹 Se NON è in edit → entra in edit mode
-    if (!bEditMode) {
+    if (!oModel) return;
 
-        // Backup dati originali
-        this._originalData = JSON.parse(JSON.stringify(oDataModel.getData()));
-
-        oUiModel.setProperty("/isEditMode", true);
-        return;
-    }
-
-    // 🔹 Se è in edit → chiedi conferma salvataggio
     sap.m.MessageBox.confirm(
-        "¿Salvar cambios?",
+        oBundle.getText("saveConfirmMessage"),
         {
-            title: "Confirmación",
-            actions: [sap.m.MessageBox.Action.OK, sap.m.MessageBox.Action.CANCEL],
+            title: oBundle.getText("saveConfirmTitle"),
+            actions: [
+                sap.m.MessageBox.Action.OK,
+                sap.m.MessageBox.Action.CANCEL
+            ],
             emphasizedAction: sap.m.MessageBox.Action.OK,
 
             onClose: function (oAction) {
 
                 if (oAction === sap.m.MessageBox.Action.OK) {
 
-                    // 👉 QUI puoi mettere la logica di salvataggio backend
-
-                    // Esce da edit mode
+                    // 🔹 Tu lógica original intacta
+                    this._editBackupData = JSON.parse(JSON.stringify(oModel.getData()));
                     oUiModel.setProperty("/isEditMode", false);
 
-                    // Elimina backup
-                    that._originalData = null;
-
+                    sap.m.MessageToast.show(
+                        oBundle.getText("saveSuccess")
+                    );
                 }
 
-            }
+            }.bind(this)
         }
     );
-
 }
-
-        ,
-        onCancel: function () {
+,
+        onCancelPress: function () {
 
             var oUiModel = this.getView().getModel("ui");
-            var oDataModel = this.getView().getModel();
-            var that = this;
 
             sap.m.MessageBox.confirm(
-                "¿Seguro de borrar todo?",
+                "¿Seguro que desea cancelar los cambios?",
                 {
-                    title: "Confirmación",
-                    actions: [sap.m.MessageBox.Action.OK, sap.m.MessageBox.Action.CANCEL],
-                    emphasizedAction: sap.m.MessageBox.Action.OK,
+                    actions: [
+                        sap.m.MessageBox.Action.OK,
+                        sap.m.MessageBox.Action.CANCEL
+                    ],
 
                     onClose: function (oAction) {
 
                         if (oAction === sap.m.MessageBox.Action.OK) {
 
-                            // 🔹 RIPRISTINA DATI ORIGINALI
-                            if (that._originalData) {
-                                oDataModel.setData(that._originalData);
-                            }
+                            var oModel = this.getView().getModel();
+                            oModel.loadData("model/Catalog.json");
 
-                            // 🔹 Esci da edit mode
                             oUiModel.setProperty("/isEditMode", false);
-
                         }
 
-                    }
+                    }.bind(this)
                 }
             );
-
         }
+        ,
+
     });
 });

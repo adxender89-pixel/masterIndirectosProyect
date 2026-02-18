@@ -48,7 +48,10 @@
 /* Reduce la altura de los inputs y el espacio de las etiquetas */
 .sapUiSizeCompact .sapMInputBaseInner {
     height: 1.5rem !important; /* Por defecto es 2rem */
-    padding: 0 0.5rem;
+    padding-top: 0.20rem !important;
+    padding-bottom: 0 !important;
+    margin-left: -1rem;
+    padding-right: 1rem;
 }
 
 .sapUiSizeCompact .sapMLabel {
@@ -82,18 +85,20 @@
 .sapUiSizeCompact .sapMHBox:not(.maxHeight) {
     height: auto !important;
 }
-
+/* cabecera dentro TreeTable */
 .cabeceracolor {
     background-color: #9e9b9b !important;
-    font-weight: bold !important;   
+}
+.sapUiTableRow.cabeceracolor .sapMInputBaseInner {
+    font-weight: 600 !important;
 }
 
+/* */
 .sapMFlexItemAlignAuto {
     font-weight: bold !important;
 }
 
-.secondStickyText {
-    font-weight: 600 !important;   
+.secondStickyText {  
     font-size: 0.85rem;            
     padding-top: 0.2rem;
     padding-bottom: 0.2rem;
@@ -102,6 +107,10 @@
     text-align: center;
     color: #000000 !important;
 }
+.sapUiTable .sapMText.secondStickyText {
+    font-weight: 600 !important;
+}
+
 
 
 /* Margen inferior y alineación automática hacia la derecha */
@@ -515,16 +524,6 @@
 }
 
 
-/* Reduce el relleno en la tabla de árbol */
-.sapUiTableDataCell>.sapUiTableCellInner, .sapUiTableCreationRow .sapUiTableCreationRowForm .sapUiTableCell>.sapUiTableCellInner
- {
-    text-overflow: ellipsis;
-    overflow: hidden;
-    padding: 0rem;
-    white-space: nowrap;
-}
-
-
 /* Elimina el borde superior y ajusta el espacio derecho */
 .sapUiTableCellDummy,
 .sapUiTableCellDummy * {
@@ -919,21 +918,33 @@
     margin: 0 !important;
     padding: 0 !important;
 }
-
-
 /* Elimina márgenes del VBox que contiene la TreeTable */
 .noMarginTop {
     margin: 0 !important;
     padding: 0 !important;
 }
-/* Rimuove padding della cella */
-.sapUiTableCell .fullCellInput {
-    height: 100%;
+/* no border input TreeTable */
+.flatCellInput .sapMInputBaseContentWrapper {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
 }
 
-/* Fa riempire tutto */
-.fullCellInput .sapMInputBaseInner {
-    height: 100%;
-    width: 100%;
-    box-sizing: border-box;
+.flatCellInput .sapMInputBaseInner {
+    padding: 0.0rem !important;
+    margin: 0.1rem !important;
+    box-sizing: border-box !important;
 }
+.flatCellInput .sapMInputBaseIconContainer {
+    display: none !important;
+}
+/* menor espacio primera columna TreeTable */
+.sapUiTableTreeIcon {
+    display: flex;
+    flex: none;
+    justify-content: center;
+    align-items: center;
+    width: 1rem;
+    cursor: default;
+}
+
