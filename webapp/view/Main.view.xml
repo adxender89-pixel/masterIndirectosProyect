@@ -197,14 +197,13 @@
                 <ToolbarSpacer />
                 <!--Button text="{i18n>btnGuardarTodo}" type="Emphasized" press="onSaveAll" /-->
                 <Button
-                    text="{= ${ui>/isEditMode} ? ${i18n>btnGuardar} : ${i18n>btnEditar} }"
-                    type="{= ${ui>/isEditMode} ? 'Emphasized' : 'Default' }"
+                    text="{i18n>btnGuardar}"
                     press="onSave"
                 />
                 <Button
                     text="{i18n>btnCancelar}"
                     type="Transparent"
-                    press="onCancel"
+                    press="onCancelPress"
                 />
             </OverflowToolbar>
         </footer>

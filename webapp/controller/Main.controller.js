@@ -5,7 +5,7 @@ sap.ui.define(
     "sap/m/MessageToast",
     "sap/m/MessageBox"
   ],
-  function (BaseController, JSONModel, MessageToast, MessageBox ) {
+  function (BaseController, JSONModel, MessageToast, MessageBox) {
     "use strict";
 
     return BaseController.extend("masterindirectos.controller.Main", {
@@ -177,22 +177,43 @@ sap.ui.define(
         this.getView().setModel(
           new sap.ui.model.json.JSONModel({
             showStickyAgrupador: false,
+            showStickyParent: false,
             showStickyChild: false,
             stickyHeaderData: {
-              name: "",
-              currency: "",
-              amount: "",
-              pricepending: "",
-              pricetotal: "",
-              size: "",
-              last: "",
-              months: "",
+              parent: {
+                name: "",
+                currency: "",
+                amount: "",
+                pricepending: "",
+                pricetotal: "",
+                size: "",
+                last: "",
+                months: "",
+                pend: "",
+                flag1: false,
+                flag2: false
+              },
+              child: {
+                name: "",
+                currency: "",
+                amount: "",
+                pricepending: "",
+                pricetotal: "",
+                size: "",
+                last: "",
+                months: "",
+                pend: "",
+                flag1: false,
+                flag2: false
+              }
             },
-            operacionesCombo: []
+            operacionesCombo: [],
+            isEditMode: false,
+            dynamicRowCount: 10
           }),
-          "ui",
+          "ui"
         );
-        this.getView().getModel("ui").setProperty("/isEditMode", false);
+        this.getView().getModel("ui").setProperty("/isEditMode", true);
 
 
         // Modelo para los indicadores numéricos superiores.
@@ -227,66 +248,66 @@ sap.ui.define(
       /**
        * Maneja el evento de selección en las pestañas para cargar la vista correspondiente.
        */
-onTabSelect: function (oEvent) {
-    var sNewKey = oEvent.getParameter("key");
-    var oIconTabBar = this.byId("itb");
-    
-    var sCurrentKey = this._lastSelectedKey || oIconTabBar.getSelectedKey();
-    
-    // Reinicia le columnas al salir de "corrientes"
-    if (sCurrentKey === "corrientes" && sNewKey !== "corrientes") {
-        this._resetCorrientesColumns();
-    }
-    
-    // Comprueba si se está abandonando la vista "corrientes"
-    if (sCurrentKey === "corrientes" && this._mViews["corrientes"]) {
-        var oCorrientesController = this._mViews["corrientes"].getController();
-        
-        if (oCorrientesController.hasUnsavedChanges && oCorrientesController.hasUnsavedChanges()) {
-            
-            MessageBox.confirm("Hay cambios sin guardar. ¿Está seguro de que desea descartarlos?", {
-                actions: [MessageBox.Action.OK, MessageBox.Action.CANCEL],
-                onClose: function(oAction) {
-                    if (oAction === MessageBox.Action.OK) {
-                        if (oCorrientesController.resetInputs) {
-                             oCorrientesController.resetInputs();
-                        }
-                        
-                        this._lastSelectedKey = sNewKey;
-                        this._showView(sNewKey);
-                    } else {
-                        oIconTabBar.setSelectedKey(sCurrentKey);
-                    }
-                }.bind(this)
-            });
-            return; 
+      onTabSelect: function (oEvent) {
+        var sNewKey = oEvent.getParameter("key");
+        var oIconTabBar = this.byId("itb");
+
+        var sCurrentKey = this._lastSelectedKey || oIconTabBar.getSelectedKey();
+
+        // Reinicia le columnas al salir de "corrientes"
+        if (sCurrentKey === "corrientes" && sNewKey !== "corrientes") {
+          this._resetCorrientesColumns();
         }
-    }
 
-    this._lastSelectedKey = sNewKey;
-    this._showView(sNewKey);
-},
+        // Comprueba si se está abandonando la vista "corrientes"
+        if (sCurrentKey === "corrientes" && this._mViews["corrientes"]) {
+          var oCorrientesController = this._mViews["corrientes"].getController();
 
-// NUEVA FUNCIÓN POR AÑADIR
-_resetCorrientesColumns: function() {
-    if (this._mViews["corrientes"]) {
-        var oCorrientesController = this._mViews["corrientes"].getController();
-        
-        // Oculta las columnas
-        var oColMonths = oCorrientesController.byId("colMonths");
-        var oColNew = oCorrientesController.byId("colNew");
-        
-        if (oColMonths) oColMonths.setVisible(false);
-        if (oColNew) oColNew.setVisible(false);
-        
-        // Restablece el modelo de IU si es necesario
-        var oUiModel = oCorrientesController.getView().getModel("ui");
-        if (oUiModel) {
+          if (oCorrientesController.hasUnsavedChanges && oCorrientesController.hasUnsavedChanges()) {
+
+            MessageBox.confirm("Hay cambios sin guardar. ¿Está seguro de que desea descartarlos?", {
+              actions: [MessageBox.Action.OK, MessageBox.Action.CANCEL],
+              onClose: function (oAction) {
+                if (oAction === MessageBox.Action.OK) {
+                  if (oCorrientesController.resetInputs) {
+                    oCorrientesController.resetInputs();
+                  }
+
+                  this._lastSelectedKey = sNewKey;
+                  this._showView(sNewKey);
+                } else {
+                  oIconTabBar.setSelectedKey(sCurrentKey);
+                }
+              }.bind(this)
+            });
+            return;
+          }
+        }
+
+        this._lastSelectedKey = sNewKey;
+        this._showView(sNewKey);
+      },
+
+      // NUEVA FUNCIÓN POR AÑADIR
+      _resetCorrientesColumns: function () {
+        if (this._mViews["corrientes"]) {
+          var oCorrientesController = this._mViews["corrientes"].getController();
+
+          // Oculta las columnas
+          var oColMonths = oCorrientesController.byId("colMonths");
+          var oColNew = oCorrientesController.byId("colNew");
+
+          if (oColMonths) oColMonths.setVisible(false);
+          if (oColNew) oColNew.setVisible(false);
+
+          // Restablece el modelo de IU si es necesario
+          var oUiModel = oCorrientesController.getView().getModel("ui");
+          if (oUiModel) {
             oUiModel.setProperty("/showStickyParent", false);
             oUiModel.setProperty("/showStickyChild", false);
+          }
         }
-    }
-},
+      },
 
       /**
        * Inyecta dinámicamente la vista seleccionada en el contenedor de contenido.
