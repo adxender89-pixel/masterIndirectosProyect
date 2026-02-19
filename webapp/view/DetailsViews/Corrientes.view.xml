@@ -43,7 +43,6 @@
                     <VBox
                         width="49%"
                         fitContainer="true"
-                        class="sapUiSmallMarginTop"
                     >
                         <t:Table
                             class="sapUiSizeCompact smallHeaderTable"
