@@ -884,7 +884,13 @@
 }
 
 /* Aplica Bold al texto del botón de año */
+
+.yearButton.sapMBtn {
+    height: 2rem !important;
+}
+
 .yearButton .sapMBtnContent {
+    font-size: 11px !important;
     font-weight: bold !important;
 }
 
@@ -1048,4 +1054,7 @@
 .iconOnlyBtn .sapMBtnInner:hover {
     background: transparent !important;
     border: none !important;
+}
+.sapUiTableHeaderDataCell .titleGrande {
+    font-size: 11px !important;
 }

@@ -287,6 +287,7 @@
                                                 >
                                                     <Label
                                                         text="{i18n>operacion}"
+                                                        class="titleGrande"
                                                         design="Bold"
                                                     />
                                                     <HBox
@@ -352,6 +353,7 @@
                                                 >
                                                     <Label
                                                         text="{i18n>descripcionOperacion}"
+                                                        class="titleGrande"
                                                         design="Bold"
                                                     />
                                                     <VBox
@@ -403,6 +405,7 @@
                                                 >
                                                     <Label
                                                         text="{i18n>coste}"
+                                                        class="titleGrande"
                                                         design="Bold"
                                                     />
                                                     <VBox
@@ -456,6 +459,7 @@
                                                     <Label
                                                         text="{i18n>costepend}"
                                                         design="Bold"
+                                                        class="titleGrande"
                                                     />
                                                     <VBox
                                                         renderType="Bare"
@@ -506,6 +510,7 @@
                                                 >
                                                     <Label
                                                         text="{i18n>costetotal}"
+                                                        class="titleGrande"
                                                         design="Bold"
                                                     />
                                                     <VBox
@@ -561,6 +566,7 @@
                                                     <Label
                                                         text="{i18n>dbReparto}"
                                                         design="Bold"
+                                                        class="titleGrande"
                                                         textAlign="Center"
                                                     />
                                                     <VBox
@@ -604,7 +610,7 @@
                                         </t:Column>
                                         <t:Column
                                             id="colEnd"
-                                            width="85px"
+                                            width="100px"
                                             hAlign="Center"
                                         >
                                             <t:label>
@@ -615,6 +621,7 @@
                                                     <Label
                                                         text="{i18n>dbPendPlanificar}"
                                                         design="Bold"
+                                                        class="titleGrande"
                                                         textAlign="Center"
                                                     />
                                                     <VBox
