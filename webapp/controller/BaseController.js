@@ -16,7 +16,8 @@ sap.ui.define([
     "sap/ui/core/mvc/XMLView",
     "sap/m/Label",
     "sap/m/Text",
-    "sap/m/VBox"
+    "sap/m/VBox",
+    "sap/ui/core/Fragment",
 ], function (
     Controller,
     History,
@@ -31,7 +32,13 @@ sap.ui.define([
     Bar,
     Message,
     Filter,
-    FilterOperator
+    FilterOperator,
+    XMLView,
+    Label,
+    Text,
+    VBox,
+    Fragment
+
 ) {
     "use strict";
 
@@ -413,8 +420,43 @@ sap.ui.define([
                 }
             }
         },
+        /**
+        * Lógica global para abrir el menú contextual (Popover)
+        */
+        onContextMenu: function (oParams) {
+            var oRowContext = oParams.rowBindingContext;
+            var oOriginControl = oParams.cellControl;
+            var oView = this.getView();
+            // Guardamos la fila para que el AddPress sepa dónde trabajar
+            this._oContextRecord = oRowContext;
+            if (!this._pPopover) {
+                this._pPopover = Fragment.load({
+                    id: oView.getId(),
+                    name: "masterindirectos.fragment.ActionPopover",
+                    controller: this
+                }).then(function (oPopover) {
+                    oView.addDependent(oPopover);
+                    return oPopover;
+                });
+            }
 
-
+            this._pPopover.then(function (oPopover) {
+                oPopover.setBindingContext(oRowContext, "catalog");
+                setTimeout(function () {
+                    oPopover.openBy(oOriginControl);
+                }, 50);
+            });
+        },
+        /**
+         * Cierra el popover de forma global
+         */
+        onCloseContextMenu: function () {
+            if (this._pPopover) {
+                this._pPopover.then(function (oPopover) {
+                    oPopover.close();
+                });
+            }
+        },
         /**
                  * Genera las columnas mensuales correspondientes al año seleccionado en la cabecera.
                  * Incluye cabecera sticky de tres niveles que se activa unicamente durante el desplazamiento vertical.
@@ -433,11 +475,15 @@ sap.ui.define([
                 var oScrollExt = oTable._getScrollExtension();
                 if (oScrollExt && oScrollExt.getHorizontalScrollbar()) {
                     iCurrentScrollLeft = oScrollExt.getHorizontalScrollbar().scrollLeft;
+
                 }
-            } catch (e) { }
+            } catch (e) {
+
+            }
 
             var sYearText = "";
             var sSourceName = oSource.getMetadata().getName();
+
 
             if (sSourceName === "sap.m.Button") {
                 sYearText = oSource.data("year");
@@ -1593,6 +1639,8 @@ sap.ui.define([
             recurse(aCategories);
             return aResult;
         },
+
+
         /**
          * Filtra la TreeTable según la operación seleccionada en el Select.
          */

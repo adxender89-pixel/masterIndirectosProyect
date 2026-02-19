@@ -43,6 +43,7 @@
                     <VBox
                         width="49%"
                         fitContainer="true"
+                        class="sapUiSmallMarginTop"
                     >
                         <t:Table
                             class="sapUiSizeCompact smallHeaderTable"
@@ -194,41 +195,87 @@
                                     visibleRowCount="{viewModel>/dynamicRowCount}"
                                     width="100%"
                                 >
-                                   <t:extension>
-                            <OverflowToolbar height="100%" >
-                                <Button width="8%" text="{i18n>TBorigen}" press="onOriginPress" />
-                                <ComboBox width="180px" class="sapUiSizeCompact" selectionChange="onOperacionChange" showClearIcon="true" items="{operacionesModel>/items}">
-                                    <core:Item key="{operacionesModel>key}" text="{operacionesModel>text}" />
-                                </ComboBox>
-                                <Label text="Reales:vacio" width="8rem"/>
-                                <Label text="OEO:vacio" width="8rem"/>
-                                        <Label text="Inflación:"/>
-                                <Input id="inflacionInput" 
-                                    value="15.00"
-                                    change="oninflacionInputChange"
-                                    width="50px" 
-                                    class="inflacionNoMargin"
-                                    textAlign="Initial"
-                                    type="Number" />
-                                <Text
-                                    text="%"
-                                >
-                                    
-                                </Text>
-                                
-                                <ToolbarSpacer />
-                                <CheckBox id="idEjecutadoCheckBox" text="{i18n>cbEjecutado}" class="alignTextCheckBox" select="onEjecutadoCheckBoxSelect">
+                                    <t:extension>
+                                        <OverflowToolbar height="100%">
+                                            <Button
+                                                width="8%"
+                                                text="{i18n>TBorigen}"
+                                                press="onOriginPress"
+                                            />
+                                            <ComboBox
+                                                width="180px"
+                                                class="sapUiSizeCompact"
+                                                selectionChange="onOperacionChange"
+                                                showClearIcon="true"
+                                                items="{operacionesModel>/items}"
+                                            >
+                                                <core:Item
+                                                    key="{operacionesModel>key}"
+                                                    text="{operacionesModel>text}"
+                                                />
+                                            </ComboBox>
+                                            <Label
+                                                text="Reales:vacio"
+                                                width="8rem"
+                                            />
+                                            <Label
+                                                text="OEO:vacio"
+                                                width="8rem"
+                                            />
+                                            <Label text="Inflación:" />
+                                            <Input
+                                                id="inflacionInput"
+                                                value="15.00"
+                                                change="oninflacionInputChange"
+                                                width="50px"
+                                                class="inflacionNoMargin"
+                                                textAlign="Initial"
+                                                type="Number"
+                                            />
+                                            <Text text="%" />
 
-                                </CheckBox>
-                                <Select items="{yearsModel>/years}" selectedKey="{yearsModel>/selectedYear}" forceSelection="true" width="100px" change="onYearChange" class="sapUiSizeCompact yearSelect">
-                                    <core:Item key="{yearsModel>year}" text="{yearsModel>year}" />
-                                </Select>
-                                <Button icon="sap-icon://add" press="onAddPress" class="sapUiSizeCompact" />
-                                <Button icon="sap-icon://delete" press="onDeletePress" class="sapUiSizeCompact" />                              
-                                <Button icon="sap-icon://shortcut" press="onShortcutPress" class="sapUiSizeCompact" />
-                                <Button icon="sap-icon://arrow-bottom" press="onProcessPress" class="sapUiSizeCompact" />
-                            </OverflowToolbar>
-                        </t:extension>
+                                            <ToolbarSpacer />
+                                            <CheckBox
+                                                id="idEjecutadoCheckBox"
+                                                text="{i18n>cbEjecutado}"
+                                                class="alignTextCheckBox"
+                                                select="onEjecutadoCheckBoxSelect"
+                                            />
+                                            <Select
+                                                items="{yearsModel>/years}"
+                                                selectedKey="{yearsModel>/selectedYear}"
+                                                forceSelection="true"
+                                                width="100px"
+                                                change="onYearChange"
+                                                class="sapUiSizeCompact yearSelect"
+                                            >
+                                                <core:Item
+                                                    key="{yearsModel>year}"
+                                                    text="{yearsModel>year}"
+                                                />
+                                            </Select>
+                                            <Button
+                                                icon="sap-icon://add"
+                                                press="onAddPress"
+                                                class="sapUiSizeCompact"
+                                            />
+                                            <Button
+                                                icon="sap-icon://delete"
+                                                press="onDeletePress"
+                                                class="sapUiSizeCompact"
+                                            />
+                                            <Button
+                                                icon="sap-icon://shortcut"
+                                                press="onShortcutPress"
+                                                class="sapUiSizeCompact"
+                                            />
+                                            <Button
+                                                icon="sap-icon://arrow-bottom"
+                                                press="onProcessPress"
+                                                class="sapUiSizeCompact"
+                                            />
+                                        </OverflowToolbar>
+                                    </t:extension>
                                     <t:columns>
                                         <t:Column
                                             width="170px"
