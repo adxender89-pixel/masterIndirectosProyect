@@ -244,17 +244,18 @@ sap.ui.define([
                     }).addStyleClass("yearButton"),
                     template: new sap.m.HBox({
                         renderType: "Bare",
-                        width: "100%",
+                        justifyContent: "Center",
+                        alignItems: "Center",
                         items: [
                             new sap.m.Input({
-                                width: "100%",
+                                width: "7.2rem",
                                 textAlign: "Center",
                                 value: "{y" + iYear + "}",
                                 visible: "{= ${expandible} !== false && !${isGroup} }",
                                 liveChange: function (oEvt) {
                                     // Se mantiene todo el código del liveChange
                                 }
-                            }).addStyleClass("sapUiSizeCompact"),
+                            }).addStyleClass("customYearInput sapUiSizeCompact"),
                             new sap.m.Text({
                                 width: "100%",
                                 textAlign: "Center",
@@ -271,9 +272,8 @@ sap.ui.define([
                                 }
                             })
                         ]
-                    })
+                    }).addStyleClass("yearCell")
                 });
-
                 oColumn.data("dynamicYear", true);
                 oColumn.data("year", iYear);
                 oTable.addColumn(oColumn);
@@ -407,6 +407,8 @@ sap.ui.define([
                 var oObj = oCtx.getObject();
                 if (oObj && oObj.cabecera === true) {
                     oRow.addStyleClass("cabeceracolor");
+                    oRow.removeStyleClass("flatCellInput");
+                    
                 }
                 if (oObj && oObj.expandible === true) {
                     oRow.addStyleClass("cabeceracolor-Group");
@@ -661,6 +663,7 @@ sap.ui.define([
                         // ↓ IIFE per congelare il valore di iRealIdx in questa iterazione
                         oControlTemplate = (function (iIdx, iYr) {
                             return new sap.m.Input({
+                                width: "6rem",
                                 value: "{m" + iYr + "_" + iIdx + "}",
                                 textAlign: "Center",
                                 visible: "{= ${expandible} !== false && !${isGroup} }",
@@ -682,7 +685,7 @@ sap.ui.define([
                                         oUiModel.setProperty("/stickyHeaderData/parent", oCurrentParent);
                                     }
                                 }.bind(this)
-                            });
+                            }).addStyleClass("customYearInput sapUiSizeCompact");
                         }.bind(this))(iRealIdx, sYear);
                     }
                 }
@@ -1238,24 +1241,12 @@ sap.ui.define([
 
             if (!bDown && !bUp && !bRight && !bLeft) return;
 
-            // Gestión del cursor en el campo de texto
             var oDomRef = oInput.getFocusDomRef();
             if (!oDomRef) return;
 
-            var iCursorPos = oDomRef.selectionStart;
-            var iTextLength = oDomRef.value.length;
-
-            // Si LEFT y el cursor NO está al principio, se permite que el cursor se mueva
-            if (bLeft && iCursorPos > 0) {
-                return;
+            if (bLeft || bRight) {
+                oEvent.preventDefault();
             }
-
-            // Si RIGHT y el cursor NO está al final, se permite que el cursor se mueva
-            if (bRight && iCursorPos < iTextLength) {
-                return;
-            }
-
-            // Navegación entre celdas
 
             // Se sincroniza el valor
             var sCurrentDomValue = oDomRef.value;
@@ -1972,67 +1963,86 @@ sap.ui.define([
         },
         onSave: function () {
 
-    var oModel = this.getView().getModel();
-    var oUiModel = this.getView().getModel("ui");
-    var oBundle = this.getView().getModel("i18n").getResourceBundle();
-
-    if (!oModel) return;
-
-    sap.m.MessageBox.confirm(
-        oBundle.getText("saveConfirmMessage"),
-        {
-            title: oBundle.getText("saveConfirmTitle"),
-            actions: [
-                sap.m.MessageBox.Action.OK,
-                sap.m.MessageBox.Action.CANCEL
-            ],
-            emphasizedAction: sap.m.MessageBox.Action.OK,
-
-            onClose: function (oAction) {
-
-                if (oAction === sap.m.MessageBox.Action.OK) {
-
-                    // 🔹 Tu lógica original intacta
-                    this._editBackupData = JSON.parse(JSON.stringify(oModel.getData()));
-                    oUiModel.setProperty("/isEditMode", false);
-
-                    sap.m.MessageToast.show(
-                        oBundle.getText("saveSuccess")
-                    );
-                }
-
-            }.bind(this)
-        }
-    );
-}
-,
-        onCancelPress: function () {
-
+            var oModel = this.getView().getModel();
             var oUiModel = this.getView().getModel("ui");
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+
+            if (!oModel) return;
 
             sap.m.MessageBox.confirm(
-                "¿Seguro que desea cancelar los cambios?",
+                oBundle.getText("saveConfirmMessage"),
                 {
+                    title: oBundle.getText("saveConfirmTitle"),
                     actions: [
                         sap.m.MessageBox.Action.OK,
                         sap.m.MessageBox.Action.CANCEL
                     ],
+                    emphasizedAction: sap.m.MessageBox.Action.OK,
 
                     onClose: function (oAction) {
 
                         if (oAction === sap.m.MessageBox.Action.OK) {
 
-                            var oModel = this.getView().getModel();
-                            oModel.loadData("model/Catalog.json");
+                            this._savedData = JSON.parse(
+                                JSON.stringify(oModel.getData())
+                            );
 
                             oUiModel.setProperty("/isEditMode", false);
+
+                            sap.m.MessageToast.show(
+                                oBundle.getText("saveSuccess")
+                            );
                         }
 
                     }.bind(this)
                 }
             );
-        }
-        ,
+        },
+        onCancelPress: function () {
+            var oUiModel = this.getView().getModel("ui");
+            var oModel = this.getView().getModel();
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
 
+            var oCurrentData = oModel.getData();
+
+            var oReferenceData = this._savedData || this._initialData;
+
+            if (!oReferenceData) {
+                this._initialData = JSON.parse(JSON.stringify(oCurrentData));
+                oReferenceData = this._initialData;
+
+                var bHasChanges = true;
+            } else {
+                var bHasChanges = JSON.stringify(oCurrentData) !== JSON.stringify(oReferenceData);
+            }
+
+            if (!bHasChanges) {
+                sap.m.MessageToast.show(
+                    oBundle.getText("noChangesToCancel")
+                );
+                return;
+            }
+            sap.m.MessageBox.confirm(
+                oBundle.getText("cancelConfirmMessage"),
+                {
+                    actions: [
+                        sap.m.MessageBox.Action.OK,
+                        sap.m.MessageBox.Action.CANCEL
+                    ],
+                    onClose: function (oAction) {
+                        if (oAction === sap.m.MessageBox.Action.OK) {
+                            if (this._savedData) {
+                                oModel.setData(JSON.parse(JSON.stringify(this._savedData)));
+                            } else {
+                                oModel.loadData("model/Catalog.json");
+                            }
+
+                            oModel.refresh(true);
+                            oUiModel.setProperty("/isEditMode", false);
+                        }
+                    }.bind(this)
+                }
+            );
+        }
     });
 });

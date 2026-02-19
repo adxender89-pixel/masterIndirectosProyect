@@ -231,7 +231,7 @@
                         </t:extension>
                                     <t:columns>
                                         <t:Column
-                                            width="170px"
+                                            width="160px"
                                             hAlign="Center"
                                         >
                                             <t:label>
@@ -286,10 +286,11 @@
                                                     alignContent="Center"
                                                 >
                                                     <Input
-                                                        width="5.8rem"
+                                                        width="100%"
+                                                        textAlign="Center"
                                                         editable="{= ${isGroup} !== true}"
                                                         value="{name}"
-                                                        class="flatCellInput"
+                                                        class="flatCellInput yearCell"
                                                     />
                                                 </VBox>
                                             </t:template>
@@ -388,7 +389,7 @@
                                                     alignContent="Center"
                                                 >
                                                     <Input
-                                                        width="4.3rem"
+                                                        width="100%"
                                                         textAlign="Center"
                                                         editable="{= ${isGroup} !== true}"
                                                         value="{amount}"
@@ -611,7 +612,7 @@
                                         </t:Column>
                                         <t:Column
                                             id="colMonths"
-                                            width="80px"
+                                            width="60px"
                                             hAlign="Center"
                                         >
                                             <t:label>
@@ -656,7 +657,7 @@
                                         </t:Column>
                                         <t:Column
                                             id="colNew"
-                                            width="80px"
+                                            width="60px"
                                             hAlign="Center"
                                         >
                                             <t:label>
