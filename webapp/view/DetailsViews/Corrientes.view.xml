@@ -265,6 +265,7 @@
                                                                 visible="{ui>/showStickyChild}"
                                                                 class="childHeaderBtn sapUiTinyMarginEnd"
                                                                 icon="sap-icon://navigation-up-arrow"
+
                                                                 press="onCollapseFromHeader"
                                                             />
                                                             <Text
@@ -280,6 +281,7 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
+                                                <!-- hola-->
                                                 <VBox
                                                     renderType="Bare"
                                                     width="100%"
