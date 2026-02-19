@@ -16,7 +16,8 @@ sap.ui.define([
     "sap/ui/core/mvc/XMLView",
     "sap/m/Label",
     "sap/m/Text",
-    "sap/m/VBox"
+    "sap/m/VBox",
+    "sap/ui/core/Fragment",
 ], function (
     Controller,
     History,
@@ -31,7 +32,13 @@ sap.ui.define([
     Bar,
     Message,
     Filter,
-    FilterOperator
+    FilterOperator,
+    XMLView,
+    Label,
+    Text,
+    VBox,
+    Fragment
+
 ) {
     "use strict";
 
@@ -408,15 +415,50 @@ sap.ui.define([
                 if (oObj && oObj.cabecera === true) {
                     oRow.addStyleClass("cabeceracolor");
                     oRow.removeStyleClass("flatCellInput");
-                    
+
                 }
                 if (oObj && oObj.expandible === true) {
                     oRow.addStyleClass("cabeceracolor-Group");
                 }
             }
         },
+        /**
+        * Lógica global para abrir el menú contextual (Popover)
+        */
+        onContextMenu: function (oParams) {
+            var oRowContext = oParams.rowBindingContext;
+            var oOriginControl = oParams.cellControl;
+            var oView = this.getView();
+            // Guardamos la fila para que el AddPress sepa dónde trabajar
+            this._oContextRecord = oRowContext;
+            if (!this._pPopover) {
+                this._pPopover = Fragment.load({
+                    id: oView.getId(),
+                    name: "masterindirectos.fragment.ActionPopover",
+                    controller: this
+                }).then(function (oPopover) {
+                    oView.addDependent(oPopover);
+                    return oPopover;
+                });
+            }
 
-
+            this._pPopover.then(function (oPopover) {
+                oPopover.setBindingContext(oRowContext, "catalog");
+                setTimeout(function () {
+                    oPopover.openBy(oOriginControl);
+                }, 50);
+            });
+        },
+        /**
+         * Cierra el popover de forma global
+         */
+        onCloseContextMenu: function () {
+            if (this._pPopover) {
+                this._pPopover.then(function (oPopover) {
+                    oPopover.close();
+                });
+            }
+        },
         /**
                  * Genera las columnas mensuales correspondientes al año seleccionado en la cabecera.
                  * Incluye cabecera sticky de tres niveles que se activa unicamente durante el desplazamiento vertical.
@@ -435,11 +477,15 @@ sap.ui.define([
                 var oScrollExt = oTable._getScrollExtension();
                 if (oScrollExt && oScrollExt.getHorizontalScrollbar()) {
                     iCurrentScrollLeft = oScrollExt.getHorizontalScrollbar().scrollLeft;
+
                 }
-            } catch (e) { }
+            } catch (e) {
+
+            }
 
             var sYearText = "";
             var sSourceName = oSource.getMetadata().getName();
+
 
             if (sSourceName === "sap.m.Button") {
                 sYearText = oSource.data("year");
@@ -713,6 +759,7 @@ sap.ui.define([
                                     this.onCreateMonthsTable(oEv);
                                 }.bind(this)
                             }).data("year", String(sYear))
+                                .addStyleClass("iconOnlyBtn")
                         ]
                     }).addStyleClass("monthHeaderHBox")
                     : new sap.m.Label({
@@ -749,6 +796,7 @@ sap.ui.define([
                         // Livello 3: valore child — visibile con showStickyChild (era il bug!)
                         new sap.m.VBox({
                             width: "100%",
+                            visible: "{ui>/showStickyChild}",
                             items: [
                                 new sap.m.Text({
                                     text: {
@@ -759,7 +807,7 @@ sap.ui.define([
                                     visible: "{ui>/showStickyChild}"
                                 }).addStyleClass("secondStickyText")
                             ]
-                        }).addStyleClass("parentHeader")
+                        }).addStyleClass("parentHeader" + (i === iStartIdx ? " parentHeaderFirstMonth" : ""))
                     ]
                 }).addStyleClass("fullWidthHeader");
                 // ─────────────────────────────────────────────────────────────────────
@@ -1582,6 +1630,8 @@ sap.ui.define([
             recurse(aCategories);
             return aResult;
         },
+
+
         /**
          * Filtra la TreeTable según la operación seleccionada en el Select.
          */
@@ -1983,10 +2033,8 @@ sap.ui.define([
 
                         if (oAction === sap.m.MessageBox.Action.OK) {
 
-                            this._savedData = JSON.parse(
-                                JSON.stringify(oModel.getData())
-                            );
-
+                            // 🔹 Tu lógica original intacta
+                            this._editBackupData = JSON.parse(JSON.stringify(oModel.getData()));
                             oUiModel.setProperty("/isEditMode", false);
 
                             sap.m.MessageToast.show(
@@ -1997,6 +2045,126 @@ sap.ui.define([
                     }.bind(this)
                 }
             );
+        }
+        ,
+
+        // Guarda los valores originales de la fila y aplica o restaura la inflacion
+        onInflacionCheckBoxSelect: function (oEvent) {
+            var oCheckBox = oEvent.getSource();
+            var bSelected = oCheckBox.getSelected();
+            var oCtx = oCheckBox.getBindingContext();
+            if (!oCtx) return;
+
+            var sPath = oCtx.getPath();
+
+            if (bSelected) {
+                this._applyInflacionToRow(sPath);
+            } else {
+                this._restoreInflacionRow(sPath);
+            }
+        },
+
+        // Se ejecuta cuando el usuario modifica el valor del input de inflacion en la barra de herramientas
+        oninflacionInputChange: function (oEvent) {
+            var oInput = oEvent.getSource();
+            var fValue = parseFloat(oInput.getValue()) || 0;
+
+            // Se formatea el valor con dos decimales
+            oInput.setValue(fValue.toFixed(2));
+
+            var oModel = this.getView().getModel();
+            var aCategories = oModel.getProperty("/catalog/models/categories");
+
+            // Se recalculan todas las filas que tienen el checkbox de inflacion activo
+            var that = this;
+            var recalculate = function (aNodes) {
+                if (!Array.isArray(aNodes)) return;
+                aNodes.forEach(function (oNode) {
+                    if (oNode.flag2 === true) {
+                        // Se obtiene la ruta del nodo en el modelo
+                        var sPath = that._findPathByNode(oNode, aCategories);
+                        if (sPath) {
+                            // Se restaura el valor original antes de aplicar el nuevo porcentaje
+                            that._restoreInflacionRow(sPath, true);
+                            that._applyInflacionToRow(sPath);
+                        }
+                    }
+                    if (Array.isArray(oNode.categories)) {
+                        recalculate(oNode.categories);
+                    }
+                });
+            };
+            recalculate(aCategories);
+        },
+
+        // Se aplica el porcentaje de inflacion a todos los campos dinamicos de anios y meses de la fila
+        _applyInflacionToRow: function (sPath) {
+            var oModel = this.getView().getModel();
+            var oRow = oModel.getProperty(sPath);
+            if (!oRow) return;
+
+            var fInflacion = parseFloat(
+                this.byId("inflacionInput") ? this.byId("inflacionInput").getValue() : 0
+            ) || 0;
+
+            // Se inicializa el contenedor de valores originales si no existe
+            if (!this._inflacionOriginals) this._inflacionOriginals = {};
+            if (!this._inflacionOriginals[sPath]) this._inflacionOriginals[sPath] = {};
+
+            var oOriginals = this._inflacionOriginals[sPath];
+
+            Object.keys(oRow).forEach(function (sKey) {
+                // Se procesan unicamente las claves dinamicas de anios (y2025) y meses (m2025_0)
+                if (/^y\d{4}$/.test(sKey) || /^m\d{4}_\d+$/.test(sKey)) {
+                    var fOriginal = parseFloat(oRow[sKey]) || 0;
+
+                    // Se omiten los campos vacios o con valor cero
+                    if (fOriginal === 0) return;
+
+                    // Se guarda el valor original unicamente la primera vez
+                    if (oOriginals[sKey] === undefined) {
+                        oOriginals[sKey] = oRow[sKey];
+                    }
+
+                    var fCalculated = fOriginal * (1 + fInflacion / 100);
+                    oModel.setProperty(sPath + "/" + sKey, fCalculated.toFixed(2));
+                }
+            });
+        },
+
+        // Se restauran los valores originales de la fila indicada
+        // El parametro skipDelete permite mantener los originales en memoria para un recalculo posterior
+        _restoreInflacionRow: function (sPath, skipDelete) {
+            if (!this._inflacionOriginals || !this._inflacionOriginals[sPath]) return;
+
+            var oModel = this.getView().getModel();
+            var oOriginals = this._inflacionOriginals[sPath];
+
+            Object.keys(oOriginals).forEach(function (sKey) {
+                oModel.setProperty(sPath + "/" + sKey, oOriginals[sKey]);
+            });
+
+            if (!skipDelete) {
+                delete this._inflacionOriginals[sPath];
+            }
+        },
+
+        // Se localiza la ruta en el modelo a partir de la referencia directa al nodo
+        _findPathByNode: function (oTargetNode, aCategories, sBasePath) {
+            sBasePath = sBasePath || "/catalog/models/categories";
+            for (var i = 0; i < aCategories.length; i++) {
+                var sPath = sBasePath + "/" + i;
+                if (aCategories[i] === oTargetNode) return sPath;
+                if (Array.isArray(aCategories[i].categories)) {
+                    var sFound = this._findPathByNode(
+                        oTargetNode,
+                        aCategories[i].categories,
+                        sPath + "/categories"
+                    );
+                    if (sFound) return sFound;
+                }
+            }
+            return null;
         },
         onCancelPress: function () {
             var oUiModel = this.getView().getModel("ui");
