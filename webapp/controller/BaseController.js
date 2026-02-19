@@ -2034,7 +2034,7 @@ sap.ui.define([
                         if (oAction === sap.m.MessageBox.Action.OK) {
 
                             // 🔹 Tu lógica original intacta
-                            this._editBackupData = JSON.parse(JSON.stringify(oModel.getData()));
+                            this._savedData = JSON.parse(JSON.stringify(oModel.getData()));
                             oUiModel.setProperty("/isEditMode", false);
 
                             sap.m.MessageToast.show(
@@ -2166,51 +2166,59 @@ sap.ui.define([
             }
             return null;
         },
-        onCancelPress: function () {
-            var oUiModel = this.getView().getModel("ui");
-            var oModel = this.getView().getModel();
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+       onCancelPress: function () {
+    var oUiModel = this.getView().getModel("ui");
+    var oModel = this.getView().getModel();
+    var oBundle = this.getView().getModel("i18n").getResourceBundle();
 
-            var oCurrentData = oModel.getData();
+    var oCurrentData = oModel.getData();
 
-            var oReferenceData = this._savedData || this._initialData;
+    // Determino con cosa confrontare
+    var oReferenceData = this._savedData || this._initialData;
 
-            if (!oReferenceData) {
-                this._initialData = JSON.parse(JSON.stringify(oCurrentData));
-                oReferenceData = this._initialData;
+    // Se è la primissima volta, salvo i dati correnti
+    if (!oReferenceData) {
+        this._initialData = JSON.parse(JSON.stringify(oCurrentData));
+        oReferenceData = this._initialData;
 
-                var bHasChanges = true;
-            } else {
-                var bHasChanges = JSON.stringify(oCurrentData) !== JSON.stringify(oReferenceData);
-            }
+        // Forzo a considerare che ci siano modifiche per permettere il cancel
+        var bHasChanges = true;
+    } else {
+        // Controllo se ci sono modifiche reali
+        var bHasChanges = JSON.stringify(oCurrentData) !== JSON.stringify(oReferenceData);
+    }
 
-            if (!bHasChanges) {
-                sap.m.MessageToast.show(
-                    oBundle.getText("noChangesToCancel")
-                );
-                return;
-            }
-            sap.m.MessageBox.confirm(
-                oBundle.getText("cancelConfirmMessage"),
-                {
-                    actions: [
-                        sap.m.MessageBox.Action.OK,
-                        sap.m.MessageBox.Action.CANCEL
-                    ],
-                    onClose: function (oAction) {
-                        if (oAction === sap.m.MessageBox.Action.OK) {
-                            if (this._savedData) {
-                                oModel.setData(JSON.parse(JSON.stringify(this._savedData)));
-                            } else {
-                                oModel.loadData("model/Catalog.json");
-                            }
+    // Se non ci sono modifiche reali
+    if (!bHasChanges) {
+        sap.m.MessageToast.show(
+            oBundle.getText("noChangesToCancel")
+        );
+        return;
+    }
 
-                            oModel.refresh(true);
-                            oUiModel.setProperty("/isEditMode", false);
-                        }
-                    }.bind(this)
+    // Conferma cancellazione
+    sap.m.MessageBox.confirm(
+        oBundle.getText("cancelConfirmMessage"),
+        {
+            actions: [
+                sap.m.MessageBox.Action.OK,
+                sap.m.MessageBox.Action.CANCEL
+            ],
+            onClose: function (oAction) {
+                if (oAction === sap.m.MessageBox.Action.OK) {
+                    // Ripristino dati salvati o caricamento dati originali
+                    if (this._savedData) {
+                        oModel.setData(JSON.parse(JSON.stringify(this._savedData)));
+                    } else {
+                        oModel.loadData("model/Catalog.json");
+                    }
+
+                    oModel.refresh(true);
+                    oUiModel.setProperty("/isEditMode", false);
                 }
-            );
+            }.bind(this)
         }
+    );
+}
     });
 });
