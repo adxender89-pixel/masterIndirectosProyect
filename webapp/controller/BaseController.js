@@ -424,9 +424,8 @@ sap.ui.define([
             var oSource = oEvent.getSource();
             var oTable = this.getControlTable();
 
-            var bShowEjecutado = this.byId("idEjecutadoCheckBox")
-                ? this.byId("idEjecutadoCheckBox").getSelected()
-                : false;
+            var bShowEjecutado = this.byId("idEjecutadoCheckBox") ? this.byId("idEjecutadoCheckBox").getSelected() : false;
+
 
             // Guarda la posizione attuale dello scroll orizzontale
             var iCurrentScrollLeft = 0;
@@ -711,6 +710,7 @@ sap.ui.define([
                                     this.onCreateMonthsTable(oEv);
                                 }.bind(this)
                             }).data("year", String(sYear))
+                                .addStyleClass("iconOnlyBtn")
                         ]
                     }).addStyleClass("monthHeaderHBox")
                     : new sap.m.Label({
@@ -747,6 +747,7 @@ sap.ui.define([
                         // Livello 3: valore child — visibile con showStickyChild (era il bug!)
                         new sap.m.VBox({
                             width: "100%",
+                            visible: "{ui>/showStickyChild}",
                             items: [
                                 new sap.m.Text({
                                     text: {
@@ -757,7 +758,7 @@ sap.ui.define([
                                     visible: "{ui>/showStickyChild}"
                                 }).addStyleClass("secondStickyText")
                             ]
-                        }).addStyleClass("parentHeader")
+                        }).addStyleClass("parentHeader" + (i === iStartIdx ? " parentHeaderFirstMonth" : ""))
                     ]
                 }).addStyleClass("fullWidthHeader");
                 // ─────────────────────────────────────────────────────────────────────
@@ -865,9 +866,6 @@ sap.ui.define([
                 }
             }
         },
-
-
-
         /**
          * Lógica de gestión de cabeceras sticky durante el desplazamiento de la tabla.
          */
@@ -924,7 +922,6 @@ sap.ui.define([
             });
             this._applyCabeceraStyle();
         },
-
         /**
          * Analiza el modelo de la tabla para definir los rangos de índices de cada grupo de datos.
          */
@@ -963,7 +960,6 @@ sap.ui.define([
 
             this._aGroupRanges = aRanges;
         },
-
         /**
          * Calcula dinámicamente la cantidad de filas que caben en pantalla según el tamaño de la ventana.
          */
@@ -1872,83 +1868,291 @@ sap.ui.define([
 
             this._lock = false;
         },
+        _createSnapshot: function () {
+
+            var oModel = this.getView().getModel();
+
+            if (oModel) {
+                this._originalData = JSON.parse(
+                    JSON.stringify(oModel.getData())
+                );
+            }
+        }
+        ,
+        /* Resetea todos los inputs dinámicos (años y meses) y recrea el snapshot
+        */
+        resetInputs: function () {
+            if (!this._originalData) return;
+            var oDefaultModel = this.getView().getModel();
+            // Copia profunda para evitar referencias al objeto original
+            var oResetCopy = jQuery.extend(true, {}, this._originalData);
+            oDefaultModel.setData(oResetCopy);
+            oDefaultModel.refresh(true);
+        },
+        /**
+        * Verifica si hay cambios no guardados comparando el modelo actual con el snapshot
+        */
+        hasUnsavedChanges: function () {
+
+
+            if (!this._originalData) return false;
+
+            var oDefaultModel = this.getView().getModel();
+            if (!oDefaultModel) return false;
+
+            var aCurrentCat = oDefaultModel.getProperty("/catalog/models/categories");
+            var aOriginalCat = this._originalData.catalog.models.categories;
+
+            /**
+             * Helper de Normalización Avanzado
+             * Convierte en cadena vacía todo lo que sea "zero-like"
+             */
+            var normalize = function (val) {
+                // Si es null, undefined o una cadena vacía
+                if (val === undefined || val === null || val === "") return "";
+
+                // Si es un array (ej. el caso 0,0,0,0...), se une y se comprueba si contiene solo ceros o está vacío
+                if (Array.isArray(val)) {
+                    var sJoined = val.join("").replace(/,/g, "").trim();
+                    return (sJoined === "" || /^0+$/.test(sJoined)) ? "" : sJoined;
+                }
+
+                var sVal = val.toString().trim();
+
+                // Si la cadena resultante es "0", "0,0,0..." o "0.00", se considera vacía
+                if (sVal === "0" || sVal === "0.0" || sVal === "0,0" || /^0+(?:[.,]0+)*$/.test(sVal) || /^0+(?:,0+)*$/.test(sVal)) {
+                    return "";
+                }
+
+                return sVal;
+            };
+
+            var checkRecursive = function (aCurrent, aOriginal, sPath) {
+                if (!aCurrent) return false;
+
+                for (var i = 0; i < aCurrent.length; i++) {
+                    var oCur = aCurrent[i];
+                    var oOri = (aOriginal && aOriginal[i]) ? aOriginal[i] : {};
+                    var currentPath = sPath + " -> " + (oCur.name || i);
+
+                    for (var key in oCur) {
+                        // 1. Control de Años y Meses (y2026, m2026_01)
+                        if (/^y\d{4}$/.test(key) || /^m\d{4}_\d+$/.test(key)) {
+                            if (normalize(oCur[key]) !== normalize(oOri[key])) {
+
+                                return true;
+                            }
+                        }
+
+                        // 2. Control del objeto 'months' (el caso crítico)
+                        if (key === "months" && oCur[key] && typeof oCur[key] === "object") {
+                            for (var mKey in oCur[key]) {
+                                var vCurM = normalize(oCur[key][mKey]);
+                                var vOriM = (oOri.months) ? normalize(oOri.months[mKey]) : "";
+
+                                if (vCurM !== vOriM) {
+
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+
+                    // 3. Recursión sobre los hijos
+                    if (oCur.categories && Array.isArray(oCur.categories) && oCur.categories.length > 0) {
+                        if (checkRecursive(oCur.categories, oOri.categories, currentPath)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            };
+
+            var bResult = checkRecursive(aCurrentCat, aOriginalCat, "Root");
+
+            return bResult;
+        },
         onSave: function () {
 
+            var oModel = this.getView().getModel();
             var oUiModel = this.getView().getModel("ui");
-            var oDataModel = this.getView().getModel();
-            var bEditMode = oUiModel.getProperty("/isEditMode");
-            var that = this;
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
 
-            // Si no está en modo edición, se activa el modo edición
-            if (!bEditMode) {
+            if (!oModel) return;
 
-                // Se realiza una copia de seguridad de los datos originales
-                this._originalData = JSON.parse(JSON.stringify(oDataModel.getData()));
-
-                oUiModel.setProperty("/isEditMode", true);
-                return;
-            }
-
-            // Si está en modo edición, se solicita confirmación para guardar
             sap.m.MessageBox.confirm(
-                "¿Salvar cambios?",
+                oBundle.getText("saveConfirmMessage"),
                 {
-                    title: "Confirmación",
-                    actions: [sap.m.MessageBox.Action.OK, sap.m.MessageBox.Action.CANCEL],
+                    title: oBundle.getText("saveConfirmTitle"),
+                    actions: [
+                        sap.m.MessageBox.Action.OK,
+                        sap.m.MessageBox.Action.CANCEL
+                    ],
                     emphasizedAction: sap.m.MessageBox.Action.OK,
 
                     onClose: function (oAction) {
 
                         if (oAction === sap.m.MessageBox.Action.OK) {
 
-
-
-                            // Se desactiva el modo edición
+                            // 🔹 Tu lógica original intacta
+                            this._editBackupData = JSON.parse(JSON.stringify(oModel.getData()));
                             oUiModel.setProperty("/isEditMode", false);
 
-                            // Se elimina la copia de seguridad
-                            that._originalData = null;
-
+                            sap.m.MessageToast.show(
+                                oBundle.getText("saveSuccess")
+                            );
                         }
 
-                    }
+                    }.bind(this)
                 }
             );
-
         }
-
         ,
-        onCancel: function () {
+        onCancelPress: function () {
 
             var oUiModel = this.getView().getModel("ui");
-            var oDataModel = this.getView().getModel();
-            var that = this;
 
             sap.m.MessageBox.confirm(
-                "¿Seguro de borrar todo?",
+                "¿Seguro que desea cancelar los cambios?",
                 {
-                    title: "Confirmación",
-                    actions: [sap.m.MessageBox.Action.OK, sap.m.MessageBox.Action.CANCEL],
-                    emphasizedAction: sap.m.MessageBox.Action.OK,
+                    actions: [
+                        sap.m.MessageBox.Action.OK,
+                        sap.m.MessageBox.Action.CANCEL
+                    ],
 
                     onClose: function (oAction) {
 
                         if (oAction === sap.m.MessageBox.Action.OK) {
 
-                            // Se restauran los datos originales
-                            if (that._originalData) {
-                                oDataModel.setData(that._originalData);
-                            }
+                            var oModel = this.getView().getModel();
+                            oModel.loadData("model/Catalog.json");
 
-                            // Se desactiva el modo edición
                             oUiModel.setProperty("/isEditMode", false);
-
                         }
 
-                    }
+                    }.bind(this)
                 }
             );
+        },
 
+        // Guarda los valores originales de la fila y aplica o restaura la inflacion
+        onInflacionCheckBoxSelect: function (oEvent) {
+            var oCheckBox = oEvent.getSource();
+            var bSelected = oCheckBox.getSelected();
+            var oCtx = oCheckBox.getBindingContext();
+            if (!oCtx) return;
+
+            var sPath = oCtx.getPath();
+
+            if (bSelected) {
+                this._applyInflacionToRow(sPath);
+            } else {
+                this._restoreInflacionRow(sPath);
+            }
+        },
+
+        // Se ejecuta cuando el usuario modifica el valor del input de inflacion en la barra de herramientas
+        oninflacionInputChange: function (oEvent) {
+            var oInput = oEvent.getSource();
+            var fValue = parseFloat(oInput.getValue()) || 0;
+
+            // Se formatea el valor con dos decimales
+            oInput.setValue(fValue.toFixed(2));
+
+            var oModel = this.getView().getModel();
+            var aCategories = oModel.getProperty("/catalog/models/categories");
+
+            // Se recalculan todas las filas que tienen el checkbox de inflacion activo
+            var that = this;
+            var recalculate = function (aNodes) {
+                if (!Array.isArray(aNodes)) return;
+                aNodes.forEach(function (oNode) {
+                    if (oNode.flag2 === true) {
+                        // Se obtiene la ruta del nodo en el modelo
+                        var sPath = that._findPathByNode(oNode, aCategories);
+                        if (sPath) {
+                            // Se restaura el valor original antes de aplicar el nuevo porcentaje
+                            that._restoreInflacionRow(sPath, true);
+                            that._applyInflacionToRow(sPath);
+                        }
+                    }
+                    if (Array.isArray(oNode.categories)) {
+                        recalculate(oNode.categories);
+                    }
+                });
+            };
+            recalculate(aCategories);
+        },
+
+        // Se aplica el porcentaje de inflacion a todos los campos dinamicos de anios y meses de la fila
+        _applyInflacionToRow: function (sPath) {
+            var oModel = this.getView().getModel();
+            var oRow = oModel.getProperty(sPath);
+            if (!oRow) return;
+
+            var fInflacion = parseFloat(
+                this.byId("inflacionInput") ? this.byId("inflacionInput").getValue() : 0
+            ) || 0;
+
+            // Se inicializa el contenedor de valores originales si no existe
+            if (!this._inflacionOriginals) this._inflacionOriginals = {};
+            if (!this._inflacionOriginals[sPath]) this._inflacionOriginals[sPath] = {};
+
+            var oOriginals = this._inflacionOriginals[sPath];
+
+            Object.keys(oRow).forEach(function (sKey) {
+                // Se procesan unicamente las claves dinamicas de anios (y2025) y meses (m2025_0)
+                if (/^y\d{4}$/.test(sKey) || /^m\d{4}_\d+$/.test(sKey)) {
+                    var fOriginal = parseFloat(oRow[sKey]) || 0;
+
+                    // Se omiten los campos vacios o con valor cero
+                    if (fOriginal === 0) return;
+
+                    // Se guarda el valor original unicamente la primera vez
+                    if (oOriginals[sKey] === undefined) {
+                        oOriginals[sKey] = oRow[sKey];
+                    }
+
+                    var fCalculated = fOriginal * (1 + fInflacion / 100);
+                    oModel.setProperty(sPath + "/" + sKey, fCalculated.toFixed(2));
+                }
+            });
+        },
+
+        // Se restauran los valores originales de la fila indicada
+        // El parametro skipDelete permite mantener los originales en memoria para un recalculo posterior
+        _restoreInflacionRow: function (sPath, skipDelete) {
+            if (!this._inflacionOriginals || !this._inflacionOriginals[sPath]) return;
+
+            var oModel = this.getView().getModel();
+            var oOriginals = this._inflacionOriginals[sPath];
+
+            Object.keys(oOriginals).forEach(function (sKey) {
+                oModel.setProperty(sPath + "/" + sKey, oOriginals[sKey]);
+            });
+
+            if (!skipDelete) {
+                delete this._inflacionOriginals[sPath];
+            }
+        },
+
+        // Se localiza la ruta en el modelo a partir de la referencia directa al nodo
+        _findPathByNode: function (oTargetNode, aCategories, sBasePath) {
+            sBasePath = sBasePath || "/catalog/models/categories";
+            for (var i = 0; i < aCategories.length; i++) {
+                var sPath = sBasePath + "/" + i;
+                if (aCategories[i] === oTargetNode) return sPath;
+                if (Array.isArray(aCategories[i].categories)) {
+                    var sFound = this._findPathByNode(
+                        oTargetNode,
+                        aCategories[i].categories,
+                        sPath + "/categories"
+                    );
+                    if (sFound) return sFound;
+                }
+            }
+            return null;
         }
+
     });
 });

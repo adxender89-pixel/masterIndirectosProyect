@@ -213,6 +213,7 @@ sap.ui.define(
           }),
           "ui"
         );
+        this.getView().getModel("ui").setProperty("/isEditMode", true);
 
 
         // Modelo para los indicadores numéricos superiores.
