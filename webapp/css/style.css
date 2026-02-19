@@ -1048,3 +1048,26 @@
     margin-left: 0 !important;
     padding-right: 6px !important; /* puoi cambiare il valore */
 }
+.parentHeaderFirstMonth {
+    height: 18.29px !important;
+}
+
+.iconOnlyBtn.sapMBtn {
+    height: 1rem !important;
+    width: 1rem !important;
+    margin: 0 0 0 4px !important;
+}
+
+.iconOnlyBtn .sapMBtnInner {
+    padding: 0 !important;
+    min-width: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.iconOnlyBtn .sapMBtnInner:hover {
+    background: transparent !important;
+    border: none !important;
+}

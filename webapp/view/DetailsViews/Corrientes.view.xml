@@ -736,7 +736,7 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <CheckBox selected="{flag1}" />
+                                                <CheckBox selected="{flag1}" visible="{= ${expandible} !== false &amp;&amp; !${isGroup} }"/>
                                             </t:template>
                                         </t:Column>
 
@@ -750,7 +750,7 @@
                                                     class="fullWidthHeader"
                                                 >
                                                     <Label
-                                                        text="Inflacion"
+                                                        text="{i18n>CBInflacion}"
                                                         design="Bold"
                                                         textAlign="Center"
                                                         class="titleGrande"
@@ -772,7 +772,7 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <CheckBox selected="{flag2}" />
+                                                <CheckBox selected="{flag2}" select="onInflacionCheckBoxSelect" visible="{= ${expandible} !== false &amp;&amp; !${isGroup} }"/>
                                             </t:template>
                                         </t:Column>
                                     </t:columns>
