@@ -884,7 +884,13 @@
 }
 
 /* Aplica Bold al texto del botón de año */
+
+.yearButton.sapMBtn {
+    height: 2rem !important;
+}
+
 .yearButton .sapMBtnContent {
+    font-size: 11px !important;
     font-weight: bold !important;
 }
 
@@ -1017,9 +1023,7 @@
     margin-left: 0 !important;
     padding: 0 !important;
 }
-.sapUiTableDataCell .yearCell {
-    margin-right: -0.5rem;
-}
+
 .sapUiTableDataCell>.sapUiTableCellInner,
 .sapUiTableCreationRow .sapUiTableCreationRowForm .sapUiTableCell>.sapUiTableCellInner {
     text-overflow: ellipsis;
@@ -1050,4 +1054,7 @@
 .iconOnlyBtn .sapMBtnInner:hover {
     background: transparent !important;
     border: none !important;
+}
+.sapUiTableHeaderDataCell .titleGrande {
+    font-size: 11px !important;
 }
