@@ -18,26 +18,28 @@ sap.ui.define([
     "sap/m/Text",
     "sap/m/VBox",
     "sap/ui/core/Fragment",
+    "sap/m/MessageBox"
 ], function (
     Controller,
-    History,
-    JSONModel,
-    MessageItem,
-    Input,
-    MessageView,
-    MessageToast,
-    IconPool,
-    Button,
-    Dialog,
-    Bar,
-    Message,
-    Filter,
-    FilterOperator,
-    XMLView,
-    Label,
-    Text,
-    VBox,
-    Fragment
+	History,
+	JSONModel,
+	MessageItem,
+	Input,
+	MessageView,
+	MessageToast,
+	IconPool,
+	Button,
+	Dialog,
+	Bar,
+	Message,
+	Filter,
+	FilterOperator,
+	XMLView,
+	Label,
+	Text,
+	VBox,
+	Fragment,
+	MessageBox
 
 ) {
     "use strict";
@@ -1984,42 +1986,6 @@ sap.ui.define([
 
             return bResult;
         },
-        onSave: function () {
-
-            var oModel = this.getView().getModel();
-            var oUiModel = this.getView().getModel("ui");
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
-
-            if (!oModel) return;
-
-            sap.m.MessageBox.confirm(
-                oBundle.getText("saveConfirmMessage"),
-                {
-                    title: oBundle.getText("saveConfirmTitle"),
-                    actions: [
-                        sap.m.MessageBox.Action.OK,
-                        sap.m.MessageBox.Action.CANCEL
-                    ],
-                    emphasizedAction: sap.m.MessageBox.Action.OK,
-
-                    onClose: function (oAction) {
-
-                        if (oAction === sap.m.MessageBox.Action.OK) {
-
-                            // 🔹 Tu lógica original intacta
-                            this._savedData = JSON.parse(JSON.stringify(oModel.getData()));
-                            oUiModel.setProperty("/isEditMode", false);
-
-                            sap.m.MessageToast.show(
-                                oBundle.getText("saveSuccess")
-                            );
-                        }
-
-                    }.bind(this)
-                }
-            );
-        }
-        ,
 
         // Guarda los valores originales de la fila y aplica o restaura la inflacion
         onInflacionCheckBoxSelect: function (oEvent) {
@@ -2139,59 +2105,88 @@ sap.ui.define([
             }
             return null;
         },
-       onCancelPress: function () {
-    var oUiModel = this.getView().getModel("ui");
-    var oModel = this.getView().getModel();
-    var oBundle = this.getView().getModel("i18n").getResourceBundle();
+         onSave: function () {
 
-    var oCurrentData = oModel.getData();
+            var oModel = this.getView().getModel();
+            var oUiModel = this.getView().getModel("ui");
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
 
-    // Determino con cosa confrontare
-    var oReferenceData = this._savedData || this._initialData;
+            if (!oModel) return;
 
-    // Se è la primissima volta, salvo i dati correnti
-    if (!oReferenceData) {
-        this._initialData = JSON.parse(JSON.stringify(oCurrentData));
-        oReferenceData = this._initialData;
+            MessageBox.confirm(
+                oBundle.getText("saveConfirmMessage"),
+                {
+                    title: oBundle.getText("saveConfirmTitle"),
+                    actions: [
+                        MessageBox.Action.OK,
+                        MessageBox.Action.CANCEL
+                    ],
+                    emphasizedAction: sap.m.MessageBox.Action.OK,
 
-        // Forzo a considerare che ci siano modifiche per permettere il cancel
-        var bHasChanges = true;
-    } else {
-        // Controllo se ci sono modifiche reali
-        var bHasChanges = JSON.stringify(oCurrentData) !== JSON.stringify(oReferenceData);
-    }
+                    onClose: function (oAction) {
 
-    // Se non ci sono modifiche reali
-    if (!bHasChanges) {
-        sap.m.MessageToast.show(
-            oBundle.getText("noChangesToCancel")
-        );
-        return;
-    }
+                        if (oAction === MessageBox.Action.OK) {
 
-    // Conferma cancellazione
-    sap.m.MessageBox.confirm(
-        oBundle.getText("cancelConfirmMessage"),
-        {
-            actions: [
-                sap.m.MessageBox.Action.OK,
-                sap.m.MessageBox.Action.CANCEL
-            ],
-            onClose: function (oAction) {
-                if (oAction === sap.m.MessageBox.Action.OK) {
-                    // Ripristino dati salvati o caricamento dati originali
-                    if (this._savedData) {
-                        oModel.setData(JSON.parse(JSON.stringify(this._savedData)));
-                    } else {
-                        oModel.loadData("model/Catalog.json");
-                    }
+                            // 🔹 Tu lógica original intacta
+                            this._savedData = JSON.parse(JSON.stringify(oModel.getData()));
+                            oUiModel.setProperty("/isEditMode", false);
 
-                    oModel.refresh(true);
-                    oUiModel.setProperty("/isEditMode", false);
+                            MessageToast.show(
+                                oBundle.getText("saveSuccess")
+                            );
+                        }
+
+                    }.bind(this)
                 }
-            }.bind(this)
+            );
         }
-    );
-}
+        ,
+        onCancelPress: function () {
+            var oUiModel = this.getView().getModel("ui");
+            var oModel = this.getView().getModel();
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+
+            var oCurrentData = oModel.getData();
+           
+            var oReferenceData = this._savedData || this._initialData;
+            
+            if (!oReferenceData) {
+                this._initialData = JSON.parse(JSON.stringify(oCurrentData));
+                oReferenceData = this._initialData;
+
+                var bHasChanges = true;
+            } else {
+                
+                var bHasChanges = JSON.stringify(oCurrentData) !== JSON.stringify(oReferenceData);
+            }
+
+            if (!bHasChanges) {
+                MessageToast.show(
+                    oBundle.getText("noChangesToCancel")
+                );
+                return;
+            }
+            MessageBox.confirm(
+                oBundle.getText("cancelConfirmMessage"),
+                {
+                    actions: [
+                        MessageBox.Action.OK,
+                        MessageBox.Action.CANCEL
+                    ],
+                    onClose: function (oAction) {
+                        if (oAction === MessageBox.Action.OK) {
+                            if (this._savedData) {
+                                oModel.setData(JSON.parse(JSON.stringify(this._savedData)));
+                            } else {
+                                oModel.loadData("model/Catalog.json");
+                            }
+
+                            oModel.refresh(true);
+                            oUiModel.setProperty("/isEditMode", false);
+                        }
+                    }.bind(this)
+                }
+            );
+        }
     });
 });
