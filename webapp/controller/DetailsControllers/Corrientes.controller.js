@@ -98,7 +98,7 @@ sap.ui.define([
                     "operacionesModel"
 
                 );
-                var oModel = this.getView().getModel(); // modello principale
+                var oModel = this.getView().getModel(); 
                 if (oModel) {
                     this._editBackupData = JSON.parse(JSON.stringify(oModel.getData()));
                 }
