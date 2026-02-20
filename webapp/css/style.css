@@ -830,6 +830,11 @@
     margin: 0 !important;
     padding: 0 !important;
 }
+
+
+.kpiBoxExternos .sapMFlexItem {
+    width: 50% !important;
+}
 /* no border input TreeTable */
 .flatCellInput .sapMInputBaseContentWrapper {
     box-shadow: none !important;
