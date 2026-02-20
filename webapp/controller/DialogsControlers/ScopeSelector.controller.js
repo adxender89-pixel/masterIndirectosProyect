@@ -9,14 +9,6 @@ sap.ui.define(
 
         return BaseController.extend("masterindirectos.controller.DialogsControlers.ScopeSelector", {
             onInit: function () {
-                // Set up the JSON model for the scope selector dialog in data/nodeList.json
-                const oModel = new JSONModel();
-                const sUrl = sap.ui.require.toUrl("masterindirectos/data/nodeList.json");
-
-                oModel.loadData(sUrl);
-                this.getView().setModel(oModel, "scopeSelectorModel");
-
-
                 this.getView().setModel(new JSONModel([]), "tramosByObraModel");
             },
 
@@ -67,12 +59,13 @@ sap.ui.define(
 
             setVisibleCombo: function (aObra) {
                 if (aObra){
-                    const modelTramos = this.getGlobalModel("tramosModel");
+                    const modelTramos = this.getGlobalModel("allTramosModel");
                     const tramos = modelTramos.getData();
                     const existeTramo = tramos.some(tramo => tramo.Prctr === aObra);
                     
                     return existeTramo;
                 }
+                return false;
             },
 
             obraSelected: function (oEvent) {
@@ -83,7 +76,7 @@ sap.ui.define(
                     const oSelectedNode = oContext.getObject();
                     const obra = oSelectedNode.profitCenter;
                     const modelTramosByObra = new JSONModel();
-                    const modelTramos = this.getGlobalModel("tramosModel");
+                    const modelTramos = this.getGlobalModel("allTramosModel");
                     const tramos = modelTramos.getData();
                     const tramosByObra = tramos.filter(tramo => tramo.Prctr === obra);
                     modelTramosByObra.setData(tramosByObra);

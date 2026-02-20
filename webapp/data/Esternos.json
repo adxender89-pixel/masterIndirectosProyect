@@ -1,0 +1,157 @@
+[
+    {
+        "codigo": "PE.CXX",
+        "descripcion": "Obra Ejecutada Objetivo",
+        "coste_ejecucion": 0,
+        "tasa": null,
+        "coste_pendiente": 1250000.00,
+        "coste_total": null,
+        "planificacion": {
+            "septiembre": 500000.00,
+            "octubre": 500000.00,
+            "noviembre": 250000.00,
+            "diciembre": 0,
+            "total_2026": null,
+            "2027": null,
+            "2028": null
+        }
+    },
+    {
+        "codigo": "V.I.005",
+        "descripcion": "Diferidos",
+        "coste_ejecucion": 6623236.00,
+        "tasa": null,
+        "coste_pendiente": 6623236.00,
+        "coste_total": 13246472.01,
+        "planificacion": {
+            "septiembre": 1048853.40,
+            "octubre": 2097706.80,
+            "noviembre": 2898950.70,
+            "diciembre": 524426.70,
+            "total_2026": 6569937.60,
+            "2027": 1573280.10,
+            "2028": 2097706.80
+        }
+    },
+    {
+        "codigo": "V.I.005.061",
+        "descripcion": "Tasa de estructura",
+        "coste_ejecucion": 3865298.00,
+        "tasa": 0.002,
+        "coste_pendiente": 3865298.00,
+        "coste_total": 7730596.00,
+        "planificacion": {
+            "septiembre": 773059.60,
+            "octubre": 1546119.20,
+            "noviembre": 2319178.80,
+            "diciembre": 386529.80,
+            "total_2026": 5024887.40,
+            "2027": 1159589.40,
+            "2028": 1546119.20
+        },
+        "desgloses": [
+            {
+                "nombre": "Desglose 1",
+                "proveedor": "Nombre 1",
+                "coste_pendiente": 100000.00,
+                "planificacion": {
+                    "septiembre": 77305.96,
+                    "octubre": 154611.92,
+                    "noviembre": 231917.88,
+                    "diciembre": 38652.98,
+                    "total_2026": 502488.74,
+                    "2027": 115958.94,
+                    "2028": 154611.92
+                }
+            },
+            {
+                "nombre": "Desglose 2",
+                "proveedor": "Nombre 2",
+                "coste_pendiente": 100000.00,
+                "planificacion": {
+                    "septiembre": 154611.92,
+                    "octubre": 309223.84,
+                    "noviembre": 463835.76,
+                    "diciembre": 77305.96,
+                    "total_2026": 1004977.48,
+                    "2027": 231917.88,
+                    "2028": 309223.84
+                }
+            },
+            {
+                "nombre": "Desglose 3",
+                "proveedor": "Nombre 3",
+                "coste_pendiente": 100000.00,
+                "planificacion": {
+                    "septiembre": 231917.88,
+                    "octubre": 463835.76,
+                    "noviembre": 695753.64,
+                    "diciembre": 115958.94,
+                    "total_2026": 1507466.22,
+                    "2027": 347876.82,
+                    "2028": 463835.76
+                }
+            },
+            {
+                "nombre": "Desglose 4",
+                "proveedor": "Nombre 4",
+                "coste_pendiente": 100000.00,
+                "planificacion": {
+                    "septiembre": 193264.90,
+                    "octubre": 386529.80,
+                    "noviembre": 579794.70,
+                    "diciembre": 96632.45,
+                    "total_2026": 1256221.85,
+                    "2027": 289897.35,
+                    "2028": 386529.80
+                }
+            },
+            {
+                "nombre": "Desglose 5",
+                "proveedor": "Nombre 5",
+                "coste_pendiente": 200000.00,
+                "planificacion": {
+                    "septiembre": 115958.94,
+                    "octubre": 231917.88,
+                    "noviembre": 347876.82,
+                    "diciembre": 57979.47,
+                    "total_2026": 753733.11,
+                    "2027": 173938.41,
+                    "2028": 231917.88
+                }
+            }
+        ]
+    },
+    {
+        "codigo": "I.005.062",
+        "descripcion": "Tasa de inspección",
+        "coste_ejecucion": 662038.00,
+        "tasa": 0.002,
+        "coste_pendiente": 662038.00,
+        "coste_total": 1324076.00
+    },
+    {
+        "codigo": "I.005.063",
+        "descripcion": "Tasa de ensayos",
+        "coste_ejecucion": 762123.00,
+        "tasa": 0.002,
+        "coste_pendiente": 762123.00,
+        "coste_total": 1524246.00
+    },
+    {
+        "codigo": "I.005.072",
+        "descripcion": "Otras tasas",
+        "coste_ejecucion": 766038.00,
+        "tasa": 0.002,
+        "coste_pendiente": 766038.00,
+        "coste_total": 1532076.00
+    },
+    {
+        "codigo": "I.005.073",
+        "descripcion": "Tasa instalación",
+        "coste_ejecucion": 567739.00,
+        "tasa": 0.002,
+        "coste_pendiente": 567739.00,
+        "coste_total": 1135478.00
+    }
+]

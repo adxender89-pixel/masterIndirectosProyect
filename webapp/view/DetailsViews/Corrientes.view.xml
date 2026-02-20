@@ -43,7 +43,6 @@
                     <VBox
                         width="49%"
                         fitContainer="true"
-                        class="sapUiSmallMarginTop"
                     >
                         <t:Table
                             class="sapUiSizeCompact smallHeaderTable"
@@ -278,7 +277,7 @@
                                     </t:extension>
                                     <t:columns>
                                         <t:Column
-                                            width="170px"
+                                            width="160px"
                                             hAlign="Center"
                                         >
                                             <t:label>
@@ -288,6 +287,7 @@
                                                 >
                                                     <Label
                                                         text="{i18n>operacion}"
+                                                        class="titleGrande"
                                                         design="Bold"
                                                     />
                                                     <HBox
@@ -333,10 +333,11 @@
                                                     alignContent="Center"
                                                 >
                                                     <Input
-                                                        width="5.8rem"
+                                                        width="100%"
+                                                        textAlign="Center"
                                                         editable="{= ${isGroup} !== true}"
                                                         value="{name}"
-                                                        class="flatCellInput"
+                                                        class="flatCellInput yearCell"
                                                     />
                                                 </VBox>
                                             </t:template>
@@ -352,6 +353,7 @@
                                                 >
                                                     <Label
                                                         text="{i18n>descripcionOperacion}"
+                                                        class="titleGrande"
                                                         design="Bold"
                                                     />
                                                     <VBox
@@ -403,6 +405,7 @@
                                                 >
                                                     <Label
                                                         text="{i18n>coste}"
+                                                        class="titleGrande"
                                                         design="Bold"
                                                     />
                                                     <VBox
@@ -435,7 +438,7 @@
                                                     alignContent="Center"
                                                 >
                                                     <Input
-                                                        width="4.3rem"
+                                                        width="100%"
                                                         textAlign="Center"
                                                         editable="{= ${isGroup} !== true}"
                                                         value="{amount}"
@@ -456,6 +459,7 @@
                                                     <Label
                                                         text="{i18n>costepend}"
                                                         design="Bold"
+                                                        class="titleGrande"
                                                     />
                                                     <VBox
                                                         renderType="Bare"
@@ -506,6 +510,7 @@
                                                 >
                                                     <Label
                                                         text="{i18n>costetotal}"
+                                                        class="titleGrande"
                                                         design="Bold"
                                                     />
                                                     <VBox
@@ -561,6 +566,7 @@
                                                     <Label
                                                         text="{i18n>dbReparto}"
                                                         design="Bold"
+                                                        class="titleGrande"
                                                         textAlign="Center"
                                                     />
                                                     <VBox
@@ -604,7 +610,7 @@
                                         </t:Column>
                                         <t:Column
                                             id="colEnd"
-                                            width="85px"
+                                            width="100px"
                                             hAlign="Center"
                                         >
                                             <t:label>
@@ -615,6 +621,7 @@
                                                     <Label
                                                         text="{i18n>dbPendPlanificar}"
                                                         design="Bold"
+                                                        class="titleGrande"
                                                         textAlign="Center"
                                                     />
                                                     <VBox
@@ -658,7 +665,7 @@
                                         </t:Column>
                                         <t:Column
                                             id="colMonths"
-                                            width="80px"
+                                            width="60px"
                                             hAlign="Center"
                                         >
                                             <t:label>
@@ -703,7 +710,7 @@
                                         </t:Column>
                                         <t:Column
                                             id="colNew"
-                                            width="80px"
+                                            width="60px"
                                             hAlign="Center"
                                         >
                                             <t:label>
@@ -783,7 +790,7 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <CheckBox selected="{flag1}" />
+                                                <CheckBox selected="{flag1}" visible="{= ${expandible} !== false &amp;&amp; !${isGroup} }"/>
                                             </t:template>
                                         </t:Column>
 
@@ -797,7 +804,7 @@
                                                     class="fullWidthHeader"
                                                 >
                                                     <Label
-                                                        text="Inflacion"
+                                                        text="{i18n>CBInflacion}"
                                                         design="Bold"
                                                         textAlign="Center"
                                                         class="titleGrande"
@@ -819,65 +826,7 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <CheckBox selected="{flag2}" />
-                                                <VBox>
-                                                    <Text
-                                                        text="{nMonths}"
-                                                        visible="{= ${isGroup} !== false }"
-                                                    />
-
-                                                    <Input
-                                                        value="{nMonths}"
-                                                        visible="{= ${isGroup} === false }"
-                                                        textAlign="Center"
-                                                    />
-                                                </VBox>
-                                            </t:template>
-                                        </t:Column>
-
-                                        <t:Column
-                                            id="colNew"
-                                            width="80px"
-                                            hAlign="Center"
-                                        >
-                                            <t:label>
-                                                <VBox
-                                                    width="100%"
-                                                    class="fullWidthHeader"
-                                                >
-                                                    <Label text="&#160;" />
-                                                    <VBox
-                                                        renderType="Bare"
-                                                        visible="{ui>/showStickyParent}"
-                                                        class="parentHeaderBox"
-                                                    >
-                                                        <Text text="&#160;" />
-                                                    </VBox>
-                                                    <VBox class="parentHeader">
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/child/pend}"
-                                                            visible="{ui>/showStickyChild}"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                            class="secondStickyText"
-                                                        />
-                                                    </VBox>
-                                                </VBox>
-                                            </t:label>
-                                            <t:template>
-                                                <VBox>
-                                                    <Text
-                                                        text="{pend}"
-                                                        visible="{= ${isGroup} !== false }"
-                                                    />
-
-                                                    <Input
-                                                        value="{pend}"
-                                                        visible="{= ${isGroup} === false }"
-                                                        textAlign="Center"
-                                                    />
-                                                </VBox>
+                                                <CheckBox selected="{flag2}" select="onInflacionCheckBoxSelect" visible="{= ${expandible} !== false &amp;&amp; !${isGroup} }"/>
                                             </t:template>
                                         </t:Column>
                                     </t:columns>
