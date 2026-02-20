@@ -9,11 +9,13 @@ sap.ui.define(
     "use strict";
 
     return BaseController.extend("masterindirectos.controller.Main", {
+
+      
       /**
        * Inicializa el controlador principal de la aplicación.
        * Se encarga de instanciar los modelos globales de alcance, tramos y estado de la interfaz.
        */
-      onInit: function () {
+      onInit: async function () {
         // Establece el modelo de alcance inicial con los datos del centro de beneficio y sociedad.
         this.setGlobalModel(
           new JSONModel({
@@ -232,10 +234,127 @@ sap.ui.define(
         // Carga el modelo de datos principal desde el JSON externo.
         var oDataModel = new sap.ui.model.json.JSONModel("model/models.json");
         this.getView().setModel(oDataModel, "data");
-
         this._mViews = {};
+
+
+        // INICIAMOS LA CONFIGURACION BASICA DE LA APLICACION CARGANDO LOS DATOS DEL USUARIO, LOS TRAMOS Y EL ACCESO
+
+        const userConfig = await this.getUserConfig()
+        const userInsite = await this.getUserInsite(userConfig);
+        // delete userInsite.userData.userParameters;
+        const userData = {
+          ...userInsite.userData,
+          ...userConfig
+        }
+        delete userData.userParameters;
+        const appDataModel = new JSONModel({
+          userData: userData,
+          tramo: null
+        });
+        this.setGlobalModel(appDataModel, "appData");
+        const tramo = await this.getTramos(userData);
+        delete tramo.__metadata;
+        appDataModel.setProperty("/tramo", tramo);
+
+        const dashBoardData = await this.getDashboardData();
+        const dashboardModel = new JSONModel({
+          kpi: dashBoardData.NavKpisIndirectos.results,
+          resumen: dashBoardData.NavResumenIndirectos.results
+        });
+
+        this.setGlobalModel(dashboardModel, "dashboardModel");
+
         this._showView("dashboard");
       },
+      
+      getDashboardData: async function () {
+        return this.post(this.getGlobalModel("mainService"), "/AccesoIndirectosSet", {
+          NavSelProyecto: [
+            this.getGlobalModel("appData").getData().tramo
+          ],
+          NavMensajes: [],
+          NavKpisIndirectos: [],
+          NavResumenIndirectos: [],
+        }, {
+          headers: {
+            ambito: this.getGlobalModel("appData").getData().userData.initialNode,
+            lang: this.getGlobalModel("appData").getData().userData.AplicationLangu,
+            norma: this.getGlobalModel("normModel").getData().norma || "",
+          }
+        }).then(function (response) {
+          return response;
+        }.bind(this));
+      },
+
+      getUserConfig: async function () {
+        return this.post(this.getGlobalModel("mainService"), "/ConfigLoadSet", {
+          NavEscenario1: [],
+          NavEscenario2: [],
+          NavEscenario3: [],
+          NavLoadAmount: [],
+          NavLoadDate: [],
+          NavLoadLang: [],
+          NavLoadUserConfig: []
+        }).then(function (response) {
+
+          if (response.NavLoadUserConfig.results.length > 0) {
+            const userConfig = response.NavLoadUserConfig.results[0];
+
+            return userConfig;
+          }
+        }.bind(this));
+
+      },
+
+      getUserInsite: async function (user) {
+        let url = this.getEndpointData().urlInsite;
+        return this.callExternalService(url + "/security/userLogin", "GET", {
+          loginUser: user.User,
+          idLanguage: user.AplicationLangu
+        })
+      },
+
+
+      getTramos: async function (userData) {
+        return new Promise((resolve, reject) => {
+
+          this.getTramosByObra(userData.initialNode).then((response) => {
+
+            if (response.NavTramosDatos.results.length > 0) {
+              const norm = response.NavTramosDatos.results[0].Norma;
+              const normModel = new JSONModel({
+                norma: norm
+              });
+              this.setGlobalModel(normModel, "normModel");
+            }
+
+            if (response.NavTramosProy.results.length > 1) {
+
+              this.openSelectorDialog({
+                title: "Selecciona un tramo",
+                columns: [
+                  { label: "Tramo", property: "ProyectoExt" },
+                  { label: "Descripción", property: "Descripcion" }
+                ],
+
+                onAccept: function (selectedItems) {
+                  resolve(selectedItems[0]);
+                }
+
+              }, response.NavTramosProy.results);
+
+            } else {
+              resolve(response.NavTramosProy.results[0]);
+            }
+
+          }).catch(err => {
+            reject(err);
+          });
+
+        });
+      },
+
+
 
       /**
        * Alterna la visibilidad de la barra lateral de acciones.
@@ -313,19 +432,21 @@ sap.ui.define(
        * Inyecta dinámicamente la vista seleccionada en el contenedor de contenido.
        * Utiliza una caché interna (_mViews) para no volver a crear vistas ya instanciadas.
        */
-      _showView: function (sKey) {
+      _showView: async function (sKey) {
         var oContainer = this.byId("tabContent");
         oContainer.removeAllItems();
+        var oComp = this.getOwnerComponent();
 
         if (!this._mViews[sKey]) {
-          this._mViews[sKey] = sap.ui.xmlview({
-            height: "100%",
-            layoutData: new sap.m.FlexItemData({
-              growFactor: 1
-            }),
-            viewName:
-              "masterindirectos.view.DetailsViews." + this._mapKeyToView(sKey),
-          });
+          this._mViews[sKey] = await oComp.runAsOwner(() =>
+            sap.ui.xmlview({
+              height: "100%",
+              layoutData: new sap.m.FlexItemData({
+                growFactor: 1
+              }),
+              viewName: "masterindirectos.view.DetailsViews." + this._mapKeyToView(sKey),
+            })
+          );
         }
 
         oContainer.addItem(this._mViews[sKey]);
@@ -337,8 +458,11 @@ sap.ui.define(
       _mapKeyToView: function (sKey) {
         return {
           dashboard: "Dashboard",
+           anticipados: "Anticipados",
+          diferidos: "Diferidos",
           corrientes: "Corrientes",
           inmov: "Inmovilizados",
+          externos: "Externos",
         }[sKey];
       },
 
@@ -346,7 +470,31 @@ sap.ui.define(
        * Abre el diálogo de selección de alcance (Scope Selector) de manera asíncrona.
        * Gestiona la actualización de los modelos globales tras la selección del usuario.
        */
+      getUserScopes: async function () {
+        const appData = this.getGlobalModel("appData").getData();
+        let url = this.getEndpointData().urlInsite;
+        return this.callExternalService(url + "/security/userScopes", "GET", {
+          loadAll: false,
+          idUser: appData.userData.idUser,
+          applicationCode: "FIDE",
+          onlyStandard: false,
+          idLanguage: appData.userData.AplicationLangu,
+          erpNode: ""
+        }).then(async function (response) {
+          return {
+            children: response.userNodeList
+          }
+        }.bind(this))
+
+      },
+
       openScopeSelector: async function () {
+         const userScopes = await this.getUserScopes();
+        this.setGlobalModel(new JSONModel(userScopes), "scopeSelectorModel");
+
+        const allTramos = await this.getTramosByObra();
+        this.setGlobalModel(new JSONModel(allTramos.NavTramosProy.results), "allTramosModel");
+
         if (!this.oScopeSelectorView) {
           const oComp = this.getOwnerComponent();
           this.oScopeSelectorView = await oComp.runAsOwner(() =>
@@ -401,7 +549,11 @@ sap.ui.define(
         }
 
         this._oScopeSelectorDialog.open();
-      },
+
+      }
+
+
     });
   },
 );
+

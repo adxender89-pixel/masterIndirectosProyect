@@ -14,6 +14,17 @@
       "id": "@sap/generator-fiori:basic",
       "version": "1.20.0",
       "toolsId": "f3b13746-bde5-43b9-87d1-b30b0598ee07"
+    },
+    "dataSources": {
+      "mainService": {
+        "uri": "/sap/opu/odata/SAP/ZFERR_MASTER_SRV/",
+        "type": "OData",
+        "settings": {
+          "annotations": [],
+          "localUri": "localService/mainService/metadata.xml",
+          "odataVersion": "2.0"
+        }
+      }
     }
   },
   "sap.ui": {
@@ -39,7 +50,9 @@
       "minUI5Version": "1.71.64",
       "libs": {
         "sap.m": {},
-        "sap.ui.core": {}      
+        "sap.ui.core": {},
+        "sap.ui.table": {},
+        "sap.ui.layout": {}
       }
     },
     "contentDensities": {
@@ -47,9 +60,18 @@
       "cozy": true
     },
     "models": {
+      "mainService": {
+        "dataSource": "mainService",
+        "preload": true,
+        "settings": {}
+      },
       "": {
         "type": "sap.ui.model.json.JSONModel",
         "uri": "model/Catalog.json"
+      },
+      "externos": {
+        "type": "sap.ui.model.json.JSONModel",
+        "uri": "model/CatalogExternos.json"
       },
       "i18n": {
         "type": "sap.ui.model.resource.ResourceModel",
@@ -89,7 +111,7 @@
           "viewType": "XML",
           "transition": "slide",
           "clearControlAggregation": false,
-          "viewId": "Main" ,
+          "viewId": "Main",
           "viewName": "Main"
         }
       }

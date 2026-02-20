@@ -27,6 +27,8 @@ sap.ui.define([
                 // enable routing
                 this.getRouter().initialize();
 
+                //CREA Y SETEA EL MODELO DE ENDPOINTS
+                this.setModel(models.createEndpointModel(), "endpointModel");
                 // set the device model
                 this.setModel(models.createDeviceModel(), "device");
             }

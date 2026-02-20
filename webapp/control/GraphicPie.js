@@ -4,7 +4,9 @@ sap.ui.define(["sap/ui/core/Control"], function (Control) {
         metadata: {
             properties: {
                 data: { type: "any", defaultValue: [] },
-                labels: { type: "any", defaultValue: [] }
+                labels: { type: "any", defaultValue: [] },
+                width: { type: "string", defaultValue: "200" },
+                height: { type: "string", defaultValue: "112" }
             },
             aggregations: {
                 layoutData: { type: "sap.ui.core.LayoutData", multiple: false }
@@ -18,7 +20,8 @@ sap.ui.define(["sap/ui/core/Control"], function (Control) {
 
         renderer: function (oRm, oControl) {
             oRm.write('<canvas id="' + oControl.getId() + '-pie" ');
-            oRm.write('style="height:100%; width:100%;" ');
+            oRm.write("width='" + oControl.getWidth() + "' ");
+            oRm.write("height='" + oControl.getHeight() + "' ");
             oRm.write("></canvas>");
         },
 
@@ -65,18 +68,20 @@ sap.ui.define(["sap/ui/core/Control"], function (Control) {
                     datasets: [{
                         data: this.data,
                         backgroundColor: ["#D4A100", "#FFE0A3"],
-                        borderWidth: 2,
+                        borderWidth: 1,
                         borderColor: "#fff"
                     }]
                 },
                 options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
                     plugins: {
                         legend: {
                             display: true,
                             position: "right",
                             labels: {
                                 boxWidth: 15,
-                                padding: 5
+                                padding: 10
                             }
                         },
                         tooltip: {
@@ -84,7 +89,8 @@ sap.ui.define(["sap/ui/core/Control"], function (Control) {
                                 label: ctx =>
                                     `${ctx.label}: ${ctx.raw.toLocaleString("es-ES")} €`
                             }
-                        }
+                        },
+
                     }
                 },
                 plugins: [centerText]

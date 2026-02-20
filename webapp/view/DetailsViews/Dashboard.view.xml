@@ -8,146 +8,145 @@
 
     <VBox height="100%" width="100%">
         <l:Grid defaultSpan="L4 M6 S12" vSpacing="0" class="sapUiSmallMarginTop">
-            <t:Table rows="{oModelCosteTotal>/}" visibleRowCount="1" selectionMode="None" class="technicalTable yellowHeader">
+            <t:Table rows="{dashboardModel>/kpi}" visibleRowCount="1" selectionMode="None" class="technicalTable yellowHeader">
                 <t:columns>
                     <t:Column hAlign="Center">
                         <Label text="{i18n>dbCosteTotalEjecutado}" />
                         <t:template>
-                            <Text text="{oModelCosteTotal>ejecutado}" />
+                            <Text text="{dashboardModel>CtotEje}" />
                         </t:template>
                     </t:Column>
                     <t:Column hAlign="Center">
                         <Label text="{i18n>dbCosteTotalPendiente}" />
                         <t:template>
-                            <Text text="{oModelCosteTotal>pendiente}" />
+                            <Text text="{dashboardModel>CtotPen}" />
                         </t:template>
                     </t:Column>
                     <t:Column hAlign="Center">
                         <Label text="{i18n>dbCosteTotalTotal}" />
                         <t:template>
-                            <Text text="{oModelCosteTotal>total}" />
+                            <Text text="{dashboardModel>Ctot}" />
                         </t:template>
                     </t:Column>
                 </t:columns>
             </t:Table>
 
-            <t:Table rows="{oModelDataObraNeta>/}" visibleRowCount="1" selectionMode="None" class="technicalTable yellowHeader">
+            <t:Table rows="{dashboardModel>/kpi}" visibleRowCount="1" selectionMode="None" class="technicalTable yellowHeader">
                 <t:columns>
                     <t:Column hAlign="Center">
                         <Label text="{i18n>dbObraEjecutadaNetaEjecutado}" />
                         <t:template>
-                            <Text text="{oModelDataObraNeta>ejecutado}" />
+                            <Text text="{dashboardModel>OenEje}" />
                         </t:template>
                     </t:Column>
                     <t:Column hAlign="Center">
                         <Label text="{i18n>dbObraEjecutadaNetaPendiente}" />
                         <t:template>
-                            <Text text="{oModelDataObraNeta>pendiente}" />
+                            <Text text="{dashboardModel>OenPen}" />
                         </t:template>
                     </t:Column>
                     <t:Column hAlign="Center">
                         <Label text="{i18n>dbObraEjecutadaNetaTotal}" />
                         <t:template>
-                            <Text text="{oModelDataObraNeta>total}" />
+                            <Text text="{dashboardModel>OenTot}" />
                         </t:template>
                     </t:Column>
                 </t:columns>
             </t:Table>
 
-            <t:Table rows="{oModelCosteDirecto>/}" visibleRowCount="1" selectionMode="None" class="technicalTable yellowHeader">
+            <t:Table rows="{dashboardModel>/kpi}" visibleRowCount="1" selectionMode="None" class="technicalTable yellowHeader">
                 <t:columns>
                     <t:Column hAlign="Center">
                         <Label text="{i18n>dbCosteDirectoEjecutado}" />
                         <t:template>
-                            <Text text="{oModelCosteDirecto>ejecutado}" />
+                            <Text text="{dashboardModel>CdirEje}" />
                         </t:template>
                     </t:Column>
                     <t:Column hAlign="Center">
                         <Label text="{i18n>dbCosteDirectoPendiente}" />
                         <t:template>
-                            <Text text="{oModelCosteDirecto>pendiente}" />
+                            <Text text="{dashboardModel>CdirPen}" />
                         </t:template>
                     </t:Column>
                     <t:Column hAlign="Center">
                         <Label text="{i18n>dbCosteDirectoTotal}" />
                         <t:template>
-                            <Text text="{oModelCosteDirecto>total}" />
+                            <Text text="{dashboardModel>CdirTot}" />
                         </t:template>
                     </t:Column>
                 </t:columns>
             </t:Table>
         </l:Grid>
-        <HBox height="10rem" justifyContent="SpaceAround" class="maxHeight">
+        <HBox height="5rem" justifyContent="SpaceAround" class="maxHeight sapUiTinyMarginTopBottom">
 
             <vn:GraphicPie id="idGraphicPieCosteTotal" data="{oModelTartas>/datasets/0}" labels="{oModelTartas>/labels}" title="{i18n>dbCosteTotal}"/>
 
             <vn:GraphicPie id="idGraphicPieObraNeta" data="{oModelTartas>/datasets/1}" labels="{oModelTartas>/labels}" title="{i18n>dbObraEjecutadaNeta}"/>
 
             <vn:GraphicPie id="idGraphicPieCosteDirecto" data="{oModelTartas>/datasets/2}" labels="{oModelTartas>/labels}" title="{i18n>dbCosteDirecto}"/>
-
         </HBox>
 
 
 
-        <t:Table class="sapUiMediumMarginBeginEnd" selectionMode="None" rowHeight="20" rows="{oModelDashboard>/Dashboard}" visibleRowCount="10">
+        <t:Table class="sapUiMediumMarginBeginEnd" selectionMode="None" rowHeight="20" rows="{dashboardModel>/resumen}" visibleRowCount="10">
             <t:columns>
 
                 <t:Column>
-                    <Label text="{i18n>conceptoTable}" design="Bold" />
+                    <Label width="100%" textAlign="Center" text="{i18n>conceptoTable}" design="Bold" />
                     <t:template>
-                        <Text text="{oModelDashboard>concepto}" />
+                        <Text text="{dashboardModel>Post1}" />
                     </t:template>
                 </t:Column>
                 <t:Column>
-                    <Label text="{i18n>impEject}" design="Bold" />
+                    <Label width="100%" textAlign="Center" text="{i18n>impEject}" design="Bold" />
                     <t:template>
-                        <Text text="{oModelDashboard>impEjec}" textAlign="End" width="100%" />
+                        <Text text="{dashboardModel>ImpEje}" textAlign="Center" width="100%" />
                     </t:template>
                 </t:Column>
                 <t:Column>
-                    <Label text="{i18n>impPend}" design="Bold" />
+                    <Label width="100%" textAlign="Center" text="{i18n>impPend}" design="Bold" />
                     <t:template>
-                        <Text text="{oModelDashboard>impPend}" textAlign="End" width="100%" />
+                        <Text text="{dashboardModel>ImpPen}" textAlign="Center" width="100%" />
                     </t:template>
                 </t:Column>
                 <t:Column>
-                    <Label text="{i18n>ImpTot}" design="Bold" />
+                    <Label width="100%" textAlign="Center" text="{i18n>ImpTot}" design="Bold" />
                     <t:template>
-                        <Text text="{oModelDashboard>impTot}" textAlign="End" width="100%" />
+                        <Text text="{dashboardModel>ImpTot}" textAlign="Center" width="100%" />
                     </t:template>
                 </t:Column>
                 <t:Column>
-                    <Label text="{i18n>totCost%}" design="Bold" />
+                    <Label width="100%" textAlign="Center" text="{i18n>totCost%}" design="Bold" />
                     <t:template>
-                        <Text text="{oModelDashboard>percTotCost}" textAlign="End" width="100%" />
+                        <Text text="{dashboardModel>PorcCoste}" textAlign="Center" width="100%" />
                     </t:template>
                 </t:Column>
                 <t:Column>
-                    <Label text="{i18n>totCD%}" design="Bold" />
+                    <Label width="100%" textAlign="Center" text="{i18n>totCI%}" design="Bold" />
                     <t:template>
-                        <Text text="{oModelDashboard>percTotalCD}" textAlign="End" width="100%" />
+                        <Text text="{dashboardModel>PorcCi}" textAlign="Center" width="100%" />
                     </t:template>
                 </t:Column>
                 <t:Column>
-                    <Label text="{i18n>totVentas%}" design="Bold" />
+                    <Label width="100%" textAlign="Center" text="{i18n>totCD%}" design="Bold" />
                     <t:template>
-                        <Text text="{oModelDashboard>percTotVenta}" textAlign="End" width="100%" />
+                        <Text text="{dashboardModel>PorcCd}" textAlign="Center" width="100%" />
+                    </t:template>
+                </t:Column>
+                <t:Column>
+                    <Label width="100%" textAlign="Center" text="{i18n>totVentas%}" design="Bold" />
+                    <t:template>
+                        <Text text="{dashboardModel>PorcVenta}" textAlign="Center" width="100%" />
                     </t:template>
                 </t:Column>
             </t:columns>
         </t:Table>
 
-        <HBox height="100%" class="maxHeight">
-            <layoutData>
+        <vn:GraphicBar data="{oModelGraphicBar>/}" class="barras" barThickness="5" borderRadius="0" grouped="true">
+            <vn:layoutData>
                 <FlexItemData growFactor="1"/>
-            </layoutData>
-            <vn:GraphicBar data="{oModelGraphicBar>/}" class="barras" barThickness="5" borderRadius="0" grouped="true">
-                <vn:layoutData>
-                    <FlexItemData growFactor="1"/>
-                </vn:layoutData>
-
-            </vn:GraphicBar>
-        </HBox>
+            </vn:layoutData>
+        </vn:GraphicBar>
 
     </VBox>
 </mvc:View>

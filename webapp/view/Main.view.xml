@@ -37,7 +37,7 @@
                         alignItems="Center"
                         justifyContent="Center"
                     >
-                        <Label text="{i18n>Applicacion}:"/>
+                        <Label text="{i18n>Applicacion}:" />
                         <ComboBox
                             class="sapUiTinyMarginBegin"
                             selectedKey="presu"
