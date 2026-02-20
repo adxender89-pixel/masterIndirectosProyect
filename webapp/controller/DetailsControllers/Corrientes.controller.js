@@ -177,10 +177,10 @@ sap.ui.define([
             }.bind(this), 1000);
         },
 
-      /**
-         * Crea masivamente nuevos registros en el catálogo.
-         * Ahora permite creación en Raíz y en Agrupadores.
-         */
+        /**
+           * Crea masivamente nuevos registros en el catálogo.
+           * Ahora permite creación en Raíz y en Agrupadores.
+           */
         onAddPress: function (oEvent) {
             var oTable = this.byId("TreeTableBasic");
             var oModel = this.getView().getModel("catalog");
@@ -208,7 +208,7 @@ sap.ui.define([
 
                 // CAMBIO: Ahora permitimos si es 'padre' O si es 'isGroup'
                 if (oParentData.padre === true || oParentData.isGroup === true) {
-                    
+
                     if (!oParentData.categories) { oParentData.categories = []; }
                     aTargetArray = oParentData.categories;
                     sParentName = oParentData.name;
@@ -220,47 +220,49 @@ sap.ui.define([
                 }
             }
 
-// 3. CREACIÓN
-var iCurrentYear = new Date().getFullYear();
-var sNewItemDefaultName = oBundle.getText("labelNewOperation");
+            // 3. CREACIÓN
+            var iCurrentYear = new Date().getFullYear();
+            var sNewItemDefaultName = oBundle.getText("labelNewOperation");
 
-for (var k = 0; k < iQuantity; k++) {
-    
-    // LÓGICA DE NOMBRE:
-    var sFinalName = "";
-    
-    if (!oContext) {
-        // Si estamos creando en la RAÍZ (sin contexto), usamos el nombre por defecto
-        sFinalName = sNewItemDefaultName + " " + (aTargetArray.length + 1);
-    } else {
-        // Si estamos creando dentro de un agrupador o padre:
-        var oParentData = oContext.getObject();
-        
-        if (oParentData.padre === true) {
-            // Si el padre es de nivel Raíz (ej: I.003), le ponemos el prefijo I.003.
-            sFinalName = sParentName + ".";
-        } else {
-            // Si es un agrupador intermedio, lo dejamos vacío ""
-            sFinalName = ""; 
-        }
-    }
+            for (var k = 0; k < iQuantity; k++) {
 
-    var oNew = {
-        name: sFinalName, // Aquí aplicamos la lógica anterior
-        isGroup: false,
-        padre: false,
-        categories: [],
-        amount: "", 
-        currency: "",
-        nMonths: "",
-        pend: "",
-        months: "", 
-        monthsData: {}
-    };
+                // LÓGICA DE NOMBRE:
+                var sFinalName = "";
 
-    this._fillMonths(oNew, iCurrentYear);
-    aTargetArray.push(oNew);
-}
+                if (!oContext) {
+                    // Si estamos creando en la RAÍZ (sin contexto), usamos el nombre por defecto
+                    sFinalName = sNewItemDefaultName + " " + (aTargetArray.length + 1);
+                } else {
+                    // Si estamos creando dentro de un agrupador o padre:
+                    var oParentData = oContext.getObject();
+
+                    if (oParentData.padre === true) {
+                        // Si el padre es de nivel Raíz (ej: I.003), le ponemos el prefijo I.003.
+                        sFinalName = sParentName + ".";
+                    } else {
+                        // Si es un agrupador intermedio, lo dejamos vacío ""
+                        sFinalName = "";
+                    }
+                }
+
+                var oNew = {
+                    name: sFinalName, // Aquí aplicamos la lógica anterior
+                    isGroup: false,
+                    padre: false,
+                    flag1: false,           // Flag 1
+                    flag2: false,           // Inflación
+                    categories: [],
+                    amount: "",
+                    currency: "",
+                    nMonths: "",
+                    pend: "",
+                    months: "",
+                    monthsData: {}
+                };
+
+                this._fillMonths(oNew, iCurrentYear);
+                aTargetArray.push(oNew);
+            }
 
             // 4. REFRESCO Y EXPANSIÓN
             oModel.refresh(true);
@@ -293,22 +295,22 @@ for (var k = 0; k < iQuantity; k++) {
             sap.m.MessageToast.show(oBundle.getText("msgItemsAdded", [iQuantity]));
         },
 
-     _fillMonths: function (oItem, iYearStart) {
-    // Aseguramos que monthsData exista
-    oItem.monthsData = {}; 
-    
-    for (var i = 0; i < 3; i++) {
-        var iYear = iYearStart + i;
-        oItem["y" + iYear] = "";
-        for (var m = 1; m <= 12; m++) {
-            var sMonthKey = "m" + iYear + "_" + (m < 10 ? "0" + m : m);
-            // Guardamos en la propiedad de datos, no en la que se muestra en la columna
-            oItem.monthsData[sMonthKey] = "";
-        }
-    }
-},
-       
-       
+        _fillMonths: function (oItem, iYearStart) {
+            // Aseguramos que monthsData exista
+            oItem.monthsData = {};
+
+            for (var i = 0; i < 3; i++) {
+                var iYear = iYearStart + i;
+                oItem["y" + iYear] = "";
+                for (var m = 1; m <= 12; m++) {
+                    var sMonthKey = "m" + iYear + "_" + (m < 10 ? "0" + m : m);
+                    // Guardamos en la propiedad de datos, no en la que se muestra en la columna
+                    oItem.monthsData[sMonthKey] = "";
+                }
+            }
+        },
+
+
         /**
          * Fuerza el renderizado de la tabla una vez que la vista está disponible en el DOM.
          */
