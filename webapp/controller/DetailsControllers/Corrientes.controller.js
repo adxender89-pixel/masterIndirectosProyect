@@ -241,9 +241,11 @@ sap.ui.define([
                 }
 
                 var oNew = {
-                    name: sFinalName, 
+                    name: sFinalName, // Aquí aplicamos la lógica anterior
                     isGroup: false,
                     padre: false,
+                    flag1: false,           // Flag 1
+                    flag2: false,           // Inflación
                     categories: [],
                     amount: "",
                     currency: "",
