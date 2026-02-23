@@ -2,6 +2,8 @@ sap.ui.define([
     "sap/ui/core/mvc/Controller",
     "sap/ui/core/routing/History",
     "sap/ui/model/json/JSONModel",
+    "masterindirectos/fragments/MessageDialog.fragment",
+    "masterindirectos/fragments/Selector.fragment",
     'sap/m/MessageItem',
     "sap/m/Input",
     'sap/m/MessageView',
@@ -17,11 +19,15 @@ sap.ui.define([
     "sap/m/Label",
     "sap/m/Text",
     "sap/m/VBox",
+    "masterindirectos/utils/ServiceCaller",
     "sap/ui/core/Fragment",
+    "sap/m/MessageBox"
 ], function (
     Controller,
     History,
     JSONModel,
+    messageDialog,
+    selectorDialog,
     MessageItem,
     Input,
     MessageView,
@@ -37,12 +43,99 @@ sap.ui.define([
     Label,
     Text,
     VBox,
-    Fragment
+    serviceCaller,
+    Fragment,
+    MessageBox
 
 ) {
     "use strict";
 
     return Controller.extend("masterindirectos.controller.BaseController", {
+        loadingDialog: null,
+        tableModelName: "",
+        getBind: function (sField) {
+            return "{" + (this.tableModelName ? this.tableModelName + ">" : "") + sField + "}";
+        },
+        getEndpointData: function () {
+            return this.getOwnerComponent().getModel("endpointModel").getData();
+        },
+
+        get: async function (oModel, sPath, oParams = {}) {
+            if (!this.loadingDialog) {
+                this.loadingDialog = this.createMessageDialog({
+                    title: this.getTranslatedText("CARGANDO_DATOS"),
+                    messages: [{
+                        text: this.getTranslatedText("ESPERE_POR_FAVOR"),
+                        type: "Information",
+                        showIcon: false
+                    }]
+                })
+            }
+            return new Promise((resolve, reject) => {
+                oModel.read(sPath, {
+                    ...oParams,
+                    success: function (data) {
+                        resolve(data);
+                        if (this.loadingDialog) {
+                            this.loadingDialog.close();
+                            this.loadingDialog.destroy();
+                            this.loadingDialog = null;
+                        }
+                    }.bind(this),
+                    error: function (error) {
+                        reject(error);
+                        if (this.loadingDialog) {
+                            this.loadingDialog.close();
+                            this.loadingDialog.destroy();
+                            this.loadingDialog = null;
+                        }
+                    }.bind(this),
+                });
+            });
+        },
+
+        post: async function (oModel, sPath, oData, oParams = {}) {
+            if (!this.loadingDialog) {
+                this.loadingDialog = this.createMessageDialog({
+                    title: this.getTranslatedText("CARGANDO_DATOS"),
+                    messages: [{
+                        text: this.getTranslatedText("ESPERE_POR_FAVOR"),
+                        type: "Information",
+                        showIcon: false
+                    }]
+                })
+            }
+            return new Promise((resolve, reject) => {
+                oModel.create(sPath, oData, {
+                    ...oParams,
+                    success: function (data) {
+                        resolve(data);
+                        if (this.loadingDialog) {
+                            this.loadingDialog.close();
+                            this.loadingDialog.destroy();
+                            this.loadingDialog = null;
+                        }
+                    }.bind(this),
+                    error: function (error) {
+                        reject(error);
+                        if (this.loadingDialog) {
+                            this.loadingDialog.close();
+                            this.loadingDialog.destroy();
+                            this.loadingDialog = null;
+                        }
+                    }.bind(this),
+                });
+            });
+        },
+
+        callExternalService: async function (url, method = "GET", data = null, headers = {}) {
+            return new Promise((resolve, reject) => {
+                serviceCaller.callService(url, method, data, headers)
+                    .then(response => resolve(response))
+                    .catch(error => reject(error));
+            })
+        },
+
         /** Acceso al enrutador de la aplicación */
         getRouter: function () {
             return this.getOwnerComponent().getRouter();
@@ -212,7 +305,7 @@ sap.ui.define([
                                 text: "2024-" + currentYear
                             }).addStyleClass("sapUiTinyFontSize textoaño"),
                             new sap.m.Label({
-                                text: "Ejecutados",
+                                text: "Ejercicios anteriores",
                                 design: "Bold",
                                 textAlign: "Center",
                                 width: "100%"
@@ -220,7 +313,7 @@ sap.ui.define([
                         ]
                     }),
                     template: new sap.m.Text({
-                        text: "{ejecutado}",
+                        text: this.getBind("ejecutado"),
                         textAlign: "Center",
                         width: "100%"
                     })
@@ -251,24 +344,25 @@ sap.ui.define([
                     }).addStyleClass("yearButton"),
                     template: new sap.m.HBox({
                         renderType: "Bare",
-                        width: "100%",
+                        justifyContent: "Center",
+                        alignItems: "Center",
                         items: [
                             new sap.m.Input({
-                                width: "100%",
+                                width: "7.2rem",
                                 textAlign: "Center",
-                                value: "{y" + iYear + "}",
-                                visible: "{= ${expandible} !== false && !${isGroup} }",
+                                value: this.getBind("y" + iYear),
+                                visible: "{= ${ " + this.tableModelName + ">expandible} !== false && !${" + this.tableModelName + ">isGroup} }",
                                 liveChange: function (oEvt) {
                                     // Se mantiene todo el código del liveChange
                                 }
-                            }).addStyleClass("sapUiSizeCompact"),
+                            }).addStyleClass("customYearInput sapUiSizeCompact"),
                             new sap.m.Text({
                                 width: "100%",
                                 textAlign: "Center",
-                                visible: "{= ${expandible} === false || ${isGroup} === true }",
+                                visible: "{= ${" + this.tableModelName + ">expandible} === false || ${" + this.tableModelName + ">isGroup} === true }",
                                 wrapping: false,
                                 text: {
-                                    path: "",
+                                    path: this.tableModelName + ">",
                                     formatter: function (oRow) {
                                         if (!oRow || (oRow.expandible !== false && !oRow.isGroup)) return "";
                                         var aKeys = Object.keys(oRow);
@@ -278,9 +372,8 @@ sap.ui.define([
                                 }
                             })
                         ]
-                    })
+                    }).addStyleClass("yearCell")
                 });
-
                 oColumn.data("dynamicYear", true);
                 oColumn.data("year", iYear);
                 oTable.addColumn(oColumn);
@@ -297,11 +390,21 @@ sap.ui.define([
          * Maneja el cambio de año en el selector, ajustando las columnas mostradas dinámicamente.
          */
         onYearChange: function (oEvent) {
-            var oSelect = oEvent.getSource();
-            var aItems = oSelect.getItems();
+            var oSelect = oEvent.getSource(); // El Select
+            var aItems = oSelect.getItems();  // Todas las opciones (las 10 anualidades)
+
+            // 1. Se toma el año seleccionado
             var sSelectedYear = parseInt(oEvent.getParameter("selectedItem").getKey(), 10);
+
+            // 2. Se encuentra dinámicamente el último año de la lista (ej. 2025 o 2035)
             var iMaxYearInSelect = parseInt(aItems[aItems.length - 1].getKey(), 10);
+
+            // 3. Se define cuántas columnas se quieren mostrar (en este caso 3)
             var iNumColumns = 3;
+
+            // 4. CÁLCULO DINÁMICO:
+            // Si (AñoSeleccionado + 2) supera el año máximo, se debe "retroceder"
+            // En la práctica: se empieza como máximo desde (ÚltimoAño - 2)
             var iYearToPass = Math.min(sSelectedYear, iMaxYearInSelect - (iNumColumns - 1));
 
             var oTable = this.getControlTable();
@@ -333,7 +436,7 @@ sap.ui.define([
                                         text: "2024-" + currentYear
                                     }).addStyleClass("sapUiTinyFontSize textoaño"),
                                     new sap.m.Label({
-                                        text: "Ejecutados",
+                                        text: "Ejercicios anteriores",
                                         design: "Bold",
                                         textAlign: "Center",
                                         width: "100%"
@@ -341,7 +444,7 @@ sap.ui.define([
                                 ]
                             }),
                             template: new sap.m.Text({
-                                text: "{ejecutado}",
+                                text: this.getBind("ejecutado"),
                                 textAlign: "Center",
                                 width: "100%"
                             })
@@ -414,13 +517,15 @@ sap.ui.define([
                 var oObj = oCtx.getObject();
                 if (oObj && oObj.cabecera === true) {
                     oRow.addStyleClass("cabeceracolor");
+                    oRow.removeStyleClass("flatCellInput");
+
                 }
                 if (oObj && oObj.expandible === true) {
                     oRow.addStyleClass("cabeceracolor-Group");
                 }
             }
         },
-        /**
+       /**
         * Lógica global para abrir el menú contextual (Popover)
         */
         onContextMenu: function (oParams) {
@@ -469,7 +574,7 @@ sap.ui.define([
             var bShowEjecutado = this.byId("idEjecutadoCheckBox") ? this.byId("idEjecutadoCheckBox").getSelected() : false;
 
 
-            // Guarda la posizione attuale dello scroll orizzontale
+            // Guarda la posición actual del scroll horizontal
             var iCurrentScrollLeft = 0;
             try {
                 var oScrollExt = oTable._getScrollExtension();
@@ -500,10 +605,12 @@ sap.ui.define([
             var sYear = parseInt(sYearText, 10);
             if (!sYear) return;
 
-            // Se si preme lo stesso anno già aperto, si chiudono i mesi
+            // Si se hace clic en el mismo año, cierra los meses
             if (this._openedYear === sYear && sSourceName === "sap.m.Button") {
 
                 this._openedYear = null;
+
+                // Bloquea la tabla durante los cambios
                 oTable.setBusy(true);
 
                 var monthColsToRemove = oTable.getColumns().filter(function (c) {
@@ -511,12 +618,16 @@ sap.ui.define([
                 });
                 monthColsToRemove.forEach(function (c) { oTable.removeColumn(c); });
 
+                // Cuando cierra los meses, recrea la columna Ejecutados para los años si el checkbox está activo
+
                 if (bShowEjecutado) {
+                    // Elimina eventuales columnas Ejecutados
                     var ejecutadosColsToRemove = oTable.getColumns().filter(function (c) {
                         return c.data("ejecutadosColumn");
                     });
                     ejecutadosColsToRemove.forEach(function (c) { oTable.removeColumn(c); });
 
+                    // Recrea la columna Ejecutados para los años
                     var iInsertIndex = oTable.getColumns().findIndex(function (c) {
                         return c.data("dynamicYear") === true;
                     });
@@ -530,7 +641,7 @@ sap.ui.define([
                                 width: "100%",
                                 items: [
                                     new sap.m.Label({
-                                        text: "Ejecutados",
+                                        text: "Ejercicios anteriores",
                                         design: "Bold",
                                         textAlign: "Center",
                                         width: "100%"
@@ -561,7 +672,7 @@ sap.ui.define([
                                 ]
                             }).addStyleClass("fullWidthHeader"),
                             template: new sap.m.Text({
-                                text: "{ejecutado}",
+                                text: this.getBind("ejecutado"),
                                 textAlign: "Center",
                                 width: "100%"
                             })
@@ -572,6 +683,7 @@ sap.ui.define([
                     }
                 }
 
+                // Desbloquea la tabla y restaura el scroll
                 setTimeout(function () {
                     try {
                         var oScrollExt = oTable._getScrollExtension();
@@ -587,7 +699,7 @@ sap.ui.define([
 
             oTable.setBusy(true);
 
-            // Rimuove le colonne mesi esistenti e la colonna ejecutados
+            // Elimina las columnas de meses existentes Y la columna Ejecutados de los años
             var colsToRemove = oTable.getColumns().filter(function (c) {
                 return c.data("dynamicMonth") || c.data("ejecutadosColumn");
             });
@@ -595,13 +707,13 @@ sap.ui.define([
 
             this._openedYear = sYear;
 
-            // Sincronizza il selettore anni
+            // Sincronizar el selector de año
             var oYearsModel = this.getView().getModel("yearsModel");
             if (oYearsModel) {
                 oYearsModel.setProperty("/selectedYear", sYear);
             }
 
-            // Nomi mesi abbreviati in inglese
+            // Nombres abreviados de los meses en inglés
             var aMonthNames = [];
             for (var i = 0; i < 12; i++) {
                 var date = new Date(2024, i, 1);
@@ -613,7 +725,7 @@ sap.ui.define([
 
             var iStartIdx = (sYear === currentYear && !bShowEjecutado) ? currentMonth + 1 : 0;
 
-            // Trova la colonna anno per calcolare l'indice di inserimento
+            // Encuentra la columna del año para calcular el índice de inserción
             var oYearCol = oTable.getColumns().find(function (c) {
                 var lab = c.getLabel();
                 var txt = lab.getText
@@ -623,10 +735,12 @@ sap.ui.define([
             });
             var colIndex = oTable.indexOfColumn(oYearCol);
 
+
             var iOffset = 0;
 
-            // Inserisce la colonna ejecutados se il checkbox è attivo
+            // Columna "Ejecutados" - SOLO si el checkbox está activo
             if (bShowEjecutado) {
+
                 var oColEjec = new sap.ui.table.Column({
                     width: "80px",
                     hAlign: "Center",
@@ -634,7 +748,7 @@ sap.ui.define([
                         width: "100%",
                         items: [
                             new sap.m.Label({
-                                text: "Ejecutados",
+                                text: "Ejercicios anteriores",
                                 design: "Bold",
                                 textAlign: "Center",
                                 width: "100%"
@@ -665,7 +779,7 @@ sap.ui.define([
                         ]
                     }).addStyleClass("fullWidthHeader"),
                     template: new sap.m.Text({
-                        text: "{ejecutado}",
+                        text: this.getBind("ejecutado"),
                         textAlign: "Center",
                         width: "100%"
                     })
@@ -676,30 +790,29 @@ sap.ui.define([
                 iOffset++;
             }
 
-            // Genera le colonne per ogni mese dell'anno selezionato
+            // Columnas de los meses
             for (var i = iStartIdx; i < 12; i++) {
 
                 var sMonthLabel = aMonthNames[i];
                 var iRealIdx = i;
                 var bIsPassedMonth = (sYear < currentYear) || (sYear === currentYear && i <= currentMonth);
 
-                // Template della cella
+                // Plantilla de celda
                 var oControlTemplate;
 
                 if (bShowEjecutado && bIsPassedMonth) {
                     oControlTemplate = new sap.m.Text({
-                        text: "{ej" + sYear + "_" + iRealIdx + "}",
+                        text: this.getBind("ej" + sYear + "_" + iRealIdx),
                         textAlign: "Center",
                         width: "100%"
                     }).addStyleClass("sapUiTinyMarginEnd");
                 } else {
-                    // ↓ IIFE per congelare il valore di iRealIdx in questa iterazione
-                    // Sostituisci questo blocco nel for loop:
+                    // De lo contrario muestra Input para los meses futuros
                     var oControlTemplate;
 
                     if (bShowEjecutado && bIsPassedMonth) {
                         oControlTemplate = new sap.m.Text({
-                            text: "{ej" + sYear + "_" + iRealIdx + "}",
+                            text: this.getBind("ej" + sYear + "_" + iRealIdx),
                             textAlign: "Center",
                             width: "100%"
                         }).addStyleClass("sapUiTinyMarginEnd");
@@ -707,6 +820,7 @@ sap.ui.define([
                         // ↓ IIFE per congelare il valore di iRealIdx in questa iterazione
                         oControlTemplate = (function (iIdx, iYr) {
                             return new sap.m.Input({
+                                width: "6rem",
                                 value: "{m" + iYr + "_" + iIdx + "}",
                                 textAlign: "Center",
                                 visible: "{= ${expandible} !== false && !${isGroup} }",
@@ -728,12 +842,12 @@ sap.ui.define([
                                         oUiModel.setProperty("/stickyHeaderData/parent", oCurrentParent);
                                     }
                                 }.bind(this)
-                            });
+                            }).addStyleClass("customYearInput sapUiSizeCompact");
                         }.bind(this))(iRealIdx, sYear);
                     }
                 }
 
-                // ─── LABEL COLONNA — struttura identica alle colonne statiche XML ───
+                // ─── ETIQUETA DE COLUMNA: estructura idéntica a las columnas estáticas XML ───
                 var sParentPath = "ui>/stickyHeaderData/parent/m" + sYear + "_" + iRealIdx;
                 var sChildPath = "ui>/stickyHeaderData/child/m" + sYear + "_" + iRealIdx;
 
@@ -769,10 +883,10 @@ sap.ui.define([
                 var oColLabel = new sap.m.VBox({
                     width: "100%",
                     items: [
-                        // Livello 1: titolo mese
+                        // Nivel 1: Título del mes
                         oTitleControl,
 
-                        // Livello 2: valore padre — visibile con showStickyParent
+                        // Nivel 2: Valor principal — visible con showStickyParent
                         new sap.m.VBox({
                             renderType: "Bare",
                             width: "100%",
@@ -790,7 +904,7 @@ sap.ui.define([
                             ]
                         }).addStyleClass("parentHeaderBox"),
 
-                        // Livello 3: valore child — visibile con showStickyChild (era il bug!)
+
                         new sap.m.VBox({
                             width: "100%",
                             visible: "{ui>/showStickyChild}",
@@ -810,7 +924,7 @@ sap.ui.define([
                 // ─────────────────────────────────────────────────────────────────────
 
                 var oColumn = new sap.ui.table.Column({
-                    width: "105px",          // px coerente con le colonne statiche
+                    width: "105px",          // px consistente con columnas estáticas
                     hAlign: "Center",
                     label: oColLabel,
                     template: oControlTemplate
@@ -819,16 +933,24 @@ sap.ui.define([
                 oTable.insertColumn(oColumn, colIndex + iOffset + (i - iStartIdx));
             }
 
-            // Ripristina scroll e sblocca la tabella
+
+
+            // Desbloquea la tabla y restaura el scroll después de insertar todas las columnas
             setTimeout(function () {
                 try {
                     var oScrollExt = oTable._getScrollExtension();
                     if (oScrollExt && oScrollExt.getHorizontalScrollbar()) {
                         oScrollExt.getHorizontalScrollbar().scrollLeft = iCurrentScrollLeft;
+
                     }
-                } catch (e) { }
+                } catch (e) {
+
+                }
                 oTable.setBusy(false);
+
             }.bind(this), 50);
+
+
         },
 
 
@@ -893,7 +1015,7 @@ sap.ui.define([
                                     text: "2024-" + currentYear
                                 }).addStyleClass("sapUiTinyFontSize textoaño"),
                                 new sap.m.Label({
-                                    text: "Ejecutados",
+                                    text: "Ejercicios anteriores",
                                     design: "Bold",
                                     textAlign: "Center",
                                     width: "100%"
@@ -901,7 +1023,7 @@ sap.ui.define([
                             ]
                         }),
                         template: new sap.m.Text({
-                            text: "{ejecutado}",
+                            text: this.getBind("ejecutado"),
                             textAlign: "Center",
                             width: "100%"
                         })
@@ -912,6 +1034,9 @@ sap.ui.define([
                 }
             }
         },
+
+
+
         /**
          * Lógica de gestión de cabeceras sticky durante el desplazamiento de la tabla.
          */
@@ -968,6 +1093,7 @@ sap.ui.define([
             });
             this._applyCabeceraStyle();
         },
+
         /**
          * Analiza el modelo de la tabla para definir los rangos de índices de cada grupo de datos.
          */
@@ -1203,6 +1329,7 @@ sap.ui.define([
 
             oTable.attachFirstVisibleRowChanged(function (oEvent) {
                 this._onScrollLike(oEvent);
+                // Se vuelven a asignar los delegados tras el scroll
                 this._attachArrowDelegates(oTable);
             }.bind(this));
 
@@ -1211,6 +1338,7 @@ sap.ui.define([
             if (this.byId("colMonths")) this.byId("colMonths").setVisible(false);
             if (this.byId("colNew")) this.byId("colNew").setVisible(false);
 
+            // Se inicializa el delegado
             if (!this._arrowDelegate) {
                 this._arrowDelegate = {
                     onkeydown: function (oEvent) {
@@ -1219,6 +1347,7 @@ sap.ui.define([
                 };
             }
 
+            // Se asignan los delegados en la primera renderización
             oTable.addEventDelegate({
                 onAfterRendering: function () {
                     this._attachArrowDelegates(oTable);
@@ -1226,6 +1355,7 @@ sap.ui.define([
                 }.bind(this)
             });
 
+            // Se asignan los delegados cuando las filas se actualizan
             if (!oTable._rowsDelegateAttached) {
                 oTable.attachEvent("rowsUpdated", function () {
                     this._attachArrowDelegates(oTable);
@@ -1240,7 +1370,7 @@ sap.ui.define([
                 this.getView().setModel(oViewModel, "viewModel");
             }
 
-            // Se elimina el registro del resize aquí
+            // Se elimina el registro del resize
 
             this._calculateDynamicRows();
         },
@@ -1286,24 +1416,12 @@ sap.ui.define([
 
             if (!bDown && !bUp && !bRight && !bLeft) return;
 
-            // Gestión del cursor en el campo de texto
             var oDomRef = oInput.getFocusDomRef();
             if (!oDomRef) return;
 
-            var iCursorPos = oDomRef.selectionStart;
-            var iTextLength = oDomRef.value.length;
-
-            // Si LEFT y el cursor NO está al principio, se permite que el cursor se mueva
-            if (bLeft && iCursorPos > 0) {
-                return;
+            if (bLeft || bRight) {
+                oEvent.preventDefault();
             }
-
-            // Si RIGHT y el cursor NO está al final, se permite que el cursor se mueva
-            if (bRight && iCursorPos < iTextLength) {
-                return;
-            }
-
-            // Navegación entre celdas
 
             // Se sincroniza el valor
             var sCurrentDomValue = oDomRef.value;
@@ -1639,8 +1757,6 @@ sap.ui.define([
             recurse(aCategories);
             return aResult;
         },
-
-
         /**
          * Filtra la TreeTable según la operación seleccionada en el Select.
          */
@@ -1848,6 +1964,48 @@ sap.ui.define([
             mergeRecursive(aBase, aModified);
             return aBase;
         },
+
+        createMessageDialog: function (options) {
+            const mDialog = messageDialog.createDialog(options, this);
+            this.getView().addDependent(mDialog);
+            mDialog.open()
+            return mDialog;
+        },
+
+        getTranslatedText: function (key) {
+            return this.getGlobalModel("i18n").getResourceBundle().getText(key);
+        },
+
+        openSelectorDialog: function (options, data) {
+            if (this.selectorDialog) {
+                this.selectorDialog.destroy();
+            }
+            this.selectorDialog = selectorDialog.createDialog(options, this);
+            const oModel = new JSONModel({ data: data });
+            this.selectorDialog.setModel(oModel);
+            this.getView().addDependent(this.selectorDialog);
+            this.selectorDialog.open();
+            return this.selectorDialog;
+        },
+
+        getTramosByObra: async function (obra) {
+            const modelTramos = this.getGlobalModel("appData");
+            return this.post(
+                this.getGlobalModel("mainService"),
+                "/SelectTramosSet",
+                {
+                    "NavTramosProy": [],
+                    "NavTramosDatos": []
+                },
+                {
+                    headers: {
+                        ambito: obra,
+                        lang: this.getGlobalModel("appData").getData().userData.AplicationLangu,
+                    }
+                }
+            )
+        },
+
         onRowSelectionChange: function (oEvent) {
 
             if (this._lock) return;
@@ -2020,68 +2178,6 @@ sap.ui.define([
 
             return bResult;
         },
-        onSave: function () {
-
-            var oModel = this.getView().getModel();
-            var oUiModel = this.getView().getModel("ui");
-            var oBundle = this.getView().getModel("i18n").getResourceBundle();
-
-            if (!oModel) return;
-
-            sap.m.MessageBox.confirm(
-                oBundle.getText("saveConfirmMessage"),
-                {
-                    title: oBundle.getText("saveConfirmTitle"),
-                    actions: [
-                        sap.m.MessageBox.Action.OK,
-                        sap.m.MessageBox.Action.CANCEL
-                    ],
-                    emphasizedAction: sap.m.MessageBox.Action.OK,
-
-                    onClose: function (oAction) {
-
-                        if (oAction === sap.m.MessageBox.Action.OK) {
-
-                            // 🔹 Tu lógica original intacta
-                            this._editBackupData = JSON.parse(JSON.stringify(oModel.getData()));
-                            oUiModel.setProperty("/isEditMode", false);
-
-                            sap.m.MessageToast.show(
-                                oBundle.getText("saveSuccess")
-                            );
-                        }
-
-                    }.bind(this)
-                }
-            );
-        }
-        ,
-        onCancelPress: function () {
-
-            var oUiModel = this.getView().getModel("ui");
-
-            sap.m.MessageBox.confirm(
-                "¿Seguro que desea cancelar los cambios?",
-                {
-                    actions: [
-                        sap.m.MessageBox.Action.OK,
-                        sap.m.MessageBox.Action.CANCEL
-                    ],
-
-                    onClose: function (oAction) {
-
-                        if (oAction === sap.m.MessageBox.Action.OK) {
-
-                            var oModel = this.getView().getModel();
-                            oModel.loadData("model/Catalog.json");
-
-                            oUiModel.setProperty("/isEditMode", false);
-                        }
-
-                    }.bind(this)
-                }
-            );
-        },
 
         // Guarda los valores originales de la fila y aplica o restaura la inflacion
         onInflacionCheckBoxSelect: function (oEvent) {
@@ -2200,7 +2296,89 @@ sap.ui.define([
                 }
             }
             return null;
-        }
+        },
+        onSave: function () {
 
+            var oModel = this.getView().getModel();
+            var oUiModel = this.getView().getModel("ui");
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+
+            if (!oModel) return;
+
+            MessageBox.confirm(
+                oBundle.getText("saveConfirmMessage"),
+                {
+                    title: oBundle.getText("saveConfirmTitle"),
+                    actions: [
+                        MessageBox.Action.OK,
+                        MessageBox.Action.CANCEL
+                    ],
+                    emphasizedAction: sap.m.MessageBox.Action.OK,
+
+                    onClose: function (oAction) {
+
+                        if (oAction === MessageBox.Action.OK) {
+
+                            // 🔹 Tu lógica original intacta
+                            this._savedData = JSON.parse(JSON.stringify(oModel.getData()));
+                            oUiModel.setProperty("/isEditMode", false);
+
+                            MessageToast.show(
+                                oBundle.getText("saveSuccess")
+                            );
+                        }
+
+                    }.bind(this)
+                }
+            );
+        }
+        ,
+        onCancelPress: function () {
+            var oUiModel = this.getView().getModel("ui");
+            var oModel = this.getView().getModel();
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+
+            var oCurrentData = oModel.getData();
+
+            var oReferenceData = this._savedData || this._initialData;
+
+            if (!oReferenceData) {
+                this._initialData = JSON.parse(JSON.stringify(oCurrentData));
+                oReferenceData = this._initialData;
+
+                var bHasChanges = true;
+            } else {
+
+                var bHasChanges = JSON.stringify(oCurrentData) !== JSON.stringify(oReferenceData);
+            }
+
+            if (!bHasChanges) {
+                MessageToast.show(
+                    oBundle.getText("noChangesToCancel")
+                );
+                return;
+            }
+            MessageBox.confirm(
+                oBundle.getText("cancelConfirmMessage"),
+                {
+                    actions: [
+                        MessageBox.Action.OK,
+                        MessageBox.Action.CANCEL
+                    ],
+                    onClose: function (oAction) {
+                        if (oAction === MessageBox.Action.OK) {
+                            if (this._savedData) {
+                                oModel.setData(JSON.parse(JSON.stringify(this._savedData)));
+                            } else {
+                                oModel.loadData("model/Catalog.json");
+                            }
+
+                            oModel.refresh(true);
+                            oUiModel.setProperty("/isEditMode", false);
+                        }
+                    }.bind(this)
+                }
+            );
+        }
     });
 });

@@ -38,7 +38,7 @@ sap.ui.define([
          * resubida
          */
         onInit: function () {
-
+            this.tableModelName = ""
             this.getView().setModel(new JSONModel({
                 selectedKey: "Home"
             }), "state");
@@ -57,7 +57,7 @@ sap.ui.define([
 
             var oTable = this.byId("TreeTableBasic");
 
-            // 3. DELEGADO DE EVENTOS (Corregido para el ContextMenu)
+
             oTable.addEventDelegate({
                 onAfterRendering: function () {
 
@@ -70,14 +70,14 @@ sap.ui.define([
                         oNativeEvent.preventDefault();
                         var $target = $(oNativeEvent.target);
 
-                        // Buscamos el control UI5 que recibió el clic
+
                         var oTargetControl = $target.control(0);
 
-                        // Buscamos el contexto de la fila (importante sumar el FirstVisibleRow para scroll)
+
                         var iRowIndex = $target.closest(".sapUiTableTr").index();
                         var oRowContext = oTable.getContextByIndex(oTable.getFirstVisibleRow() + iRowIndex);
 
-                        // Si tenemos contexto, llamamos al padre (BaseController)
+
                         if (oRowContext) {
                             this.onContextMenu({
                                 rowBindingContext: oRowContext,
@@ -86,7 +86,7 @@ sap.ui.define([
                         }
                     }.bind(this));
 
-                    // B. LÓGICA TECLADO (Ya la tenías)
+
                     $table.off("keydown", "input").on("keydown", "input", function (oNativeEvent) {
                         var iKeyCode = oNativeEvent.keyCode;
                         if (iKeyCode < 37 || iKeyCode > 40) return;
@@ -105,14 +105,13 @@ sap.ui.define([
                 }.bind(this)
             });
 
-            // --- RESTO DE TU CÓDIGO DE INICIALIZACIÓN ---
             this.getView().attachEventOnce("afterRendering", function () {
                 this.createYearColumns(new Date().getFullYear(), 3, "TreeTableBasic");
                 this._attachHeaderToggleListener();
             }.bind(this));
 
             var oCatalogModel = new JSONModel();
-            this.getView().setModel(oCatalogModel, "catalog");
+            this.getView().setModel(oCatalogModel,  this.tableModelName);
             oCatalogModel.loadData("model/Catalog.json");
 
             oCatalogModel.attachRequestCompleted(function () {
@@ -122,13 +121,13 @@ sap.ui.define([
                     this.getView().setModel(new JSONModel({ items: aComboItems }), "operacionesModel");
                     this._createSnapshot();
                 }
-                var aComboItems = this._buildOperacionesCombo(aCategories, "catalog");
+                var aComboItems = this._buildOperacionesCombo(aCategories,  this.tableModelName);
                 this.getView().setModel(
                     new JSONModel({ items: aComboItems }),
                     "operacionesModel"
 
                 );
-                var oModel = this.getView().getModel(); // modello principale
+                var oModel = this.getView().getModel();
                 if (oModel) {
                     this._editBackupData = JSON.parse(JSON.stringify(oModel.getData()));
                 }
@@ -147,7 +146,6 @@ sap.ui.define([
                 selectedYear: iActualYear
             }), "yearsModel");
 
-            // Se registra el resize aquí con referencia guardada, igual que el beforeunload
             this._boundResizeHandler = function () {
                 this._calculateDynamicRows();
             }.bind(this);
@@ -176,17 +174,15 @@ sap.ui.define([
 
             }.bind(this), 1000);
         },
-
-      /**
-         * Crea masivamente nuevos registros en el catálogo.
-         * Ahora permite creación en Raíz y en Agrupadores.
-         */
+        /**
+           * Crea masivamente nuevos registros en el catálogo.
+           * Ahora permite creación en Raíz y en Agrupadores.
+           */
         onAddPress: function (oEvent) {
             var oTable = this.byId("TreeTableBasic");
             var oModel = this.getView().getModel("catalog");
             var oBundle = this.getView().getModel("i18n").getResourceBundle();
 
-            // 1. CANTIDAD
             var iQuantity = 1;
             var oInput = this.byId("itemQuantityInput");
             if (oInput) {
@@ -194,73 +190,74 @@ sap.ui.define([
                 oInput.setValue(1);
             }
 
-            // 2. CONTEXTO
             var oContext = this._oContextRecord || oTable.getContextByIndex(oTable.getSelectedIndex());
             var aTargetArray;
             var sParentName = "";
 
             if (!oContext) {
-                // MODO RAÍZ
+
                 aTargetArray = oModel.getProperty("/catalog/models/categories");
             } else {
-                // MODO HIJO (Aquí está el cambio)
+
                 var oParentData = oContext.getObject();
 
-                // CAMBIO: Ahora permitimos si es 'padre' O si es 'isGroup'
+
                 if (oParentData.padre === true || oParentData.isGroup === true) {
-                    
+
                     if (!oParentData.categories) { oParentData.categories = []; }
                     aTargetArray = oParentData.categories;
                     sParentName = oParentData.name;
 
                 } else {
-                    // Si no es ninguno de los dos, entonces sí damos error
+
                     sap.m.MessageToast.show(oBundle.getText("msgOnlyRootAllowed"));
                     return;
                 }
             }
 
-// 3. CREACIÓN
-var iCurrentYear = new Date().getFullYear();
-var sNewItemDefaultName = oBundle.getText("labelNewOperation");
 
-for (var k = 0; k < iQuantity; k++) {
-    
-    // LÓGICA DE NOMBRE:
-    var sFinalName = "";
-    
-    if (!oContext) {
-        // Si estamos creando en la RAÍZ (sin contexto), usamos el nombre por defecto
-        sFinalName = sNewItemDefaultName + " " + (aTargetArray.length + 1);
-    } else {
-        // Si estamos creando dentro de un agrupador o padre:
-        var oParentData = oContext.getObject();
-        
-        if (oParentData.padre === true) {
-            // Si el padre es de nivel Raíz (ej: I.003), le ponemos el prefijo I.003.
-            sFinalName = sParentName + ".";
-        } else {
-            // Si es un agrupador intermedio, lo dejamos vacío ""
-            sFinalName = ""; 
-        }
-    }
+            var iCurrentYear = new Date().getFullYear();
+            var sNewItemDefaultName = oBundle.getText("labelNewOperation");
 
-    var oNew = {
-        name: sFinalName, // Aquí aplicamos la lógica anterior
-        isGroup: false,
-        padre: false,
-        categories: [],
-        amount: "", 
-        currency: "",
-        nMonths: "",
-        pend: "",
-        months: "", 
-        monthsData: {}
-    };
+            for (var k = 0; k < iQuantity; k++) {
 
-    this._fillMonths(oNew, iCurrentYear);
-    aTargetArray.push(oNew);
-}
+
+                var sFinalName = "";
+
+                if (!oContext) {
+
+                    sFinalName = sNewItemDefaultName + " " + (aTargetArray.length + 1);
+                } else {
+
+                    var oParentData = oContext.getObject();
+
+                    if (oParentData.padre === true) {
+                        // Si el padre es de nivel Raíz (ej: I.003), le ponemos el prefijo I.003.
+                        sFinalName = sParentName + ".";
+                    } else {
+                        
+                        sFinalName = "";
+                    }
+                }
+
+                var oNew = {
+                    name: sFinalName, // Aquí aplicamos la lógica anterior
+                    isGroup: false,
+                    padre: false,
+                    flag1: false,           // Flag 1
+                    flag2: false,           // Inflación
+                    categories: [],
+                    amount: "",
+                    currency: "",
+                    nMonths: "",
+                    pend: "",
+                    months: "",
+                    monthsData: {}
+                };
+
+                this._fillMonths(oNew, iCurrentYear);
+                aTargetArray.push(oNew);
+            }
 
             // 4. REFRESCO Y EXPANSIÓN
             oModel.refresh(true);
@@ -293,22 +290,19 @@ for (var k = 0; k < iQuantity; k++) {
             sap.m.MessageToast.show(oBundle.getText("msgItemsAdded", [iQuantity]));
         },
 
-     _fillMonths: function (oItem, iYearStart) {
-    // Aseguramos que monthsData exista
-    oItem.monthsData = {}; 
-    
-    for (var i = 0; i < 3; i++) {
-        var iYear = iYearStart + i;
-        oItem["y" + iYear] = "";
-        for (var m = 1; m <= 12; m++) {
-            var sMonthKey = "m" + iYear + "_" + (m < 10 ? "0" + m : m);
-            // Guardamos en la propiedad de datos, no en la que se muestra en la columna
-            oItem.monthsData[sMonthKey] = "";
-        }
-    }
-},
-       
-       
+        _fillMonths: function (oItem, iYearStart) {
+            oItem.monthsData = {};
+
+            for (var i = 0; i < 3; i++) {
+                var iYear = iYearStart + i;
+                oItem["y" + iYear] = "";
+                for (var m = 1; m <= 12; m++) {
+                    var sMonthKey = "m" + iYear + "_" + (m < 10 ? "0" + m : m);
+                    
+                    oItem.monthsData[sMonthKey] = "";
+                }
+            }
+        },
         /**
          * Fuerza el renderizado de la tabla una vez que la vista está disponible en el DOM.
          */
@@ -404,10 +398,10 @@ for (var k = 0; k < iQuantity; k++) {
          */
         onBrowserClose: function (oEvent) {
             if (this.hasUnsavedChanges()) {
-                // Si hay cambios reales, bloquea el cierre
+                
                 oEvent.preventDefault();
-                oEvent.returnValue = ''; // Estándar para Chrome
-                return ''; // Para otros navegadores
+                oEvent.returnValue = ''; 
+                return ''; 
             }
         },
 
@@ -415,7 +409,7 @@ for (var k = 0; k < iQuantity; k++) {
          * Limpia los event listeners al destruir el controlador
          */
         onExit: function () {
-            // Se utiliza la misma referencia para eliminar
+            
             if (this._boundBrowserClose) {
                 window.removeEventListener("beforeunload", this._boundBrowserClose);
             }

@@ -43,7 +43,6 @@
                     <VBox
                         width="49%"
                         fitContainer="true"
-                        class="sapUiSmallMarginTop"
                     >
                         <t:Table
                             class="sapUiSizeCompact smallHeaderTable"
@@ -197,11 +196,6 @@
                                 >
                                     <t:extension>
                                         <OverflowToolbar height="100%">
-                                            <Button
-                                                width="8%"
-                                                text="{i18n>TBorigen}"
-                                                press="onOriginPress"
-                                            />
                                             <ComboBox
                                                 width="180px"
                                                 class="sapUiSizeCompact"
@@ -214,6 +208,11 @@
                                                     text="{operacionesModel>text}"
                                                 />
                                             </ComboBox>
+                                              <Button
+                                                width="8%"
+                                                text="{i18n>TBorigen}"
+                                                press="onOriginPress"
+                                            />
                                             <Label
                                                 text="Reales:vacio"
                                                 width="8rem"
@@ -278,7 +277,7 @@
                                     </t:extension>
                                     <t:columns>
                                         <t:Column
-                                            width="170px"
+                                            width="200px"
                                             hAlign="Center"
                                         >
                                             <t:label>
@@ -288,6 +287,7 @@
                                                 >
                                                     <Label
                                                         text="{i18n>operacion}"
+                                                        class="titleGrande"
                                                         design="Bold"
                                                     />
                                                     <HBox
@@ -333,16 +333,17 @@
                                                     alignContent="Center"
                                                 >
                                                     <Input
-                                                        width="5.8rem"
+                                                        width="8.5rem"
+                                                        textAlign="Center"
                                                         editable="{= ${isGroup} !== true}"
                                                         value="{name}"
-                                                        class="flatCellInput"
+                                                        class="flatCellInput yearCell"
                                                     />
                                                 </VBox>
                                             </t:template>
                                         </t:Column>
                                         <t:Column
-                                            width="100px"
+                                            width="160px"
                                             hAlign="Center"
                                         >
                                             <t:label>
@@ -352,6 +353,7 @@
                                                 >
                                                     <Label
                                                         text="{i18n>descripcionOperacion}"
+                                                        class="titleGrande"
                                                         design="Bold"
                                                     />
                                                     <VBox
@@ -385,6 +387,7 @@
                                                 >
                                                     <Input
                                                         value="{currency}"
+                                                        width="9.1rem"
                                                         editable="{= ${isGroup} !== true}"
                                                         textAlign="Center"
                                                         class="flatCellInput"
@@ -403,6 +406,7 @@
                                                 >
                                                     <Label
                                                         text="{i18n>coste}"
+                                                        class="titleGrande"
                                                         design="Bold"
                                                     />
                                                     <VBox
@@ -435,7 +439,7 @@
                                                     alignContent="Center"
                                                 >
                                                     <Input
-                                                        width="4.3rem"
+                                                        width="4.2rem"
                                                         textAlign="Center"
                                                         editable="{= ${isGroup} !== true}"
                                                         value="{amount}"
@@ -456,6 +460,7 @@
                                                     <Label
                                                         text="{i18n>costepend}"
                                                         design="Bold"
+                                                        class="titleGrande"
                                                     />
                                                     <VBox
                                                         renderType="Bare"
@@ -488,6 +493,7 @@
                                                 >
                                                     <Input
                                                         value="{pricepending}"
+                                                        width="4.2rem"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
                                                         textAlign="Center"
@@ -506,6 +512,7 @@
                                                 >
                                                     <Label
                                                         text="{i18n>costetotal}"
+                                                        class="titleGrande"
                                                         design="Bold"
                                                     />
                                                     <VBox
@@ -541,7 +548,7 @@
                                                     <Input
                                                         value="{pricetotal}"
                                                         editable="{= ${isGroup} !== true}"
-                                                        width="100%"
+                                                        width="4.2rem"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                     />
@@ -561,6 +568,7 @@
                                                     <Label
                                                         text="{i18n>dbReparto}"
                                                         design="Bold"
+                                                        class="titleGrande"
                                                         textAlign="Center"
                                                     />
                                                     <VBox
@@ -596,7 +604,7 @@
                                                         value="{size}"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
-                                                        width="100%"
+                                                        width="6.3rem"
                                                         textAlign="Center"
                                                     />
                                                 </VBox>
@@ -604,7 +612,7 @@
                                         </t:Column>
                                         <t:Column
                                             id="colEnd"
-                                            width="85px"
+                                            width="100px"
                                             hAlign="Center"
                                         >
                                             <t:label>
@@ -615,6 +623,7 @@
                                                     <Label
                                                         text="{i18n>dbPendPlanificar}"
                                                         design="Bold"
+                                                        class="titleGrande"
                                                         textAlign="Center"
                                                     />
                                                     <VBox
@@ -650,7 +659,7 @@
                                                         value="{last}"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
-                                                        width="100%"
+                                                        width="5.5rem"
                                                         textAlign="Center"
                                                     />
                                                 </VBox>
@@ -658,7 +667,7 @@
                                         </t:Column>
                                         <t:Column
                                             id="colMonths"
-                                            width="80px"
+                                            width="60px"
                                             hAlign="Center"
                                         >
                                             <t:label>
@@ -695,7 +704,7 @@
                                                         value="{months}"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
-                                                        width="100%"
+                                                        width="3rem"
                                                         textAlign="Center"
                                                     />
                                                 </VBox>
@@ -703,7 +712,7 @@
                                         </t:Column>
                                         <t:Column
                                             id="colNew"
-                                            width="80px"
+                                            width="60px"
                                             hAlign="Center"
                                         >
                                             <t:label>
@@ -746,7 +755,7 @@
                                                         editable="{= ${isGroup} !== true}"
                                                         textAlign="Center"
                                                         class="flatCellInput"
-                                                        width="100%"
+                                                        width="3rem"
                                                     />
                                                 </VBox>
                                             </t:template>

@@ -1,0 +1,235 @@
+<mvc:View controllerName="masterindirectos.controller.DetailsControllers.Externos"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:core="sap.ui.core" displayBlock="true" height="100%"
+    xmlns="sap.m"
+    xmlns:t="sap.ui.table">
+
+    <VBox width="100%" fitContainer="true">
+            <HBox width="100%" class="kpiBoxExternos sapUiSmallMarginTop" height="6rem" alignItems="Center" justifyContent="SpaceAround">
+
+            <t:Table class="sapUiSizeCompact smallHeaderTable" rows="{dataTitle>/data}" visibleRowCount="1" selectionMode="None">
+                <t:columns>
+                    <t:Column hAlign="Center" class="operacionColumn">
+                        <Label text="{i18n>cost}" design="Bold" />
+                        <t:template>
+                            <Text text="{KpiExternos>/Coste}" />
+                        </t:template>
+                    </t:Column>
+                    <t:Column hAlign="Center">
+                        <Label text="{i18n>costPend}" design="Bold" />
+                        <t:template>
+                            <Text text="{KpiExternos>/CostePendiente}" />
+                        </t:template>
+                    </t:Column>
+                    <t:Column hAlign="Center">
+                        <Label text="{i18n>costTotal}" design="Bold" />
+                        <t:template>
+                            <Text text="{KpiExternos>/CosteTotal}" />
+                        </t:template>
+                    </t:Column>
+                </t:columns>
+            </t:Table>
+        </HBox>
+
+        <VBox width="100%" height="100%" class="sapUiSmallMarginTop">
+            <layoutData>
+                <FlexItemData growFactor="15" />
+            </layoutData>
+            <t:TreeTable id="TreeTableExternos" rows="{ path: 'externos>/catalogExternos/models', parameters: { arrayNames: ['categories'] } }" toggleOpenState="onToggleOpenState" class="sapUiSizeCompact" visibleRowCount="{viewModel>/dynamicRowCount}" width="100%">
+                <t:extension>
+                    <OverflowToolbar height="100%">
+                    </OverflowToolbar>
+                </t:extension>
+
+                <t:columns>
+                    <t:Column width="180px" hAlign="Center" class="operacionColumn">
+                        <t:label>
+                            <VBox width="100%" class="fullWidthHeader">
+                                <Label text="{i18n>operacion}" design="Bold" />
+                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                    <Text text="{ui>/stickyHeaderData/parent/name}" wrapping="false" width="100%" textAlign="Center" />
+                                </VBox>
+                                <VBox class="parentHeader">
+                                    <Text text="{ui>/stickyHeaderData/child/name}" textAlign="Center" class="secondStickyText" wrapping="false" visible="{ui>/showStickyChild}" />
+                                </VBox>
+                            </VBox>
+                        </t:label>
+                        <t:template>
+                            <Text text="{externos>name}" wrapping="false" />
+                        </t:template>
+                    </t:Column>
+
+                    <t:Column width="180px" hAlign="Center">
+                        <t:label>
+                            <VBox width="100%" class="fullWidthHeader">
+                                <Label text="{i18n>descripcionOperacion}" design="Bold" />
+                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                    <Text text="{ui>/stickyHeaderData/parent/currency}" wrapping="false" width="100%" textAlign="Center" />
+                                </VBox>
+                                <VBox class="parentHeader">
+                                    <Text text="{ui>/stickyHeaderData/child/currency}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                </VBox>
+                            </VBox>
+                        </t:label>
+                        <t:template>
+                            <Text text="{externos>currency}" wrapping="false" />
+                        </t:template>
+                    </t:Column>
+
+                    <t:Column width="80px" hAlign="Center">
+                        <t:label>
+                            <VBox width="100%" class="fullWidthHeader">
+                                <Label text="{i18n>type}" design="Bold" />
+                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                    <Text text="{ui>/stickyHeaderData/parent/amount}" width="100%" textAlign="Center" wrapping="false" />
+                                </VBox>
+                                <VBox class="parentHeader">
+                                    <Text text="{ui>/stickyHeaderData/child/amount}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                </VBox>
+                            </VBox>
+                        </t:label>
+                        <t:template>
+                            <Text text="{externos>type}" wrapping="false" />
+                        </t:template>
+                    </t:Column>
+
+                    <t:Column width="80px" hAlign="Center">
+                        <t:label>
+                            <VBox width="100%" class="fullWidthHeader">
+                                <Label text="{i18n>ejecutado}" design="Bold" />
+                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                    <Text text="{ui>/stickyHeaderData/parent/pricepending}" width="100%" textAlign="Center" wrapping="false" />
+                                </VBox>
+                                <VBox class="parentHeader">
+                                    <Text text="{ui>/stickyHeaderData/child/pricepending}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                </VBox>
+                            </VBox>
+                        </t:label>
+                        <t:template>
+                            <Text text="{externos>ejecutado}" wrapping="false" />
+                        </t:template>
+                    </t:Column>
+
+                    <t:Column width="80px" hAlign="Center">
+                        <t:label>
+                            <VBox width="100%" class="fullWidthHeader">
+                                <Label text="{i18n>pendiente}" design="Bold" />
+                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                    <Text text="{ui>/stickyHeaderData/parent/pricetotal}" width="100%" textAlign="Center" wrapping="false" />
+                                </VBox>
+                                <VBox class="parentHeader">
+                                    <Text text="{ui>/stickyHeaderData/child/pricetotal}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                </VBox>
+                            </VBox>
+                        </t:label>
+                        <t:template>
+                            <Text text="{externos>pendiente}" wrapping="false" />
+                        </t:template>
+                    </t:Column>
+                    <t:Column width="80px" hAlign="Center">
+                        <t:label>
+                            <VBox width="100%" class="fullWidthHeader">
+                                <Label text="{i18n>pendiente%}" design="Bold" />
+                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                    <Text text="{ui>/stickyHeaderData/parent/pricetotal}" width="100%" textAlign="Center" wrapping="false" />
+                                </VBox>
+                                <VBox class="parentHeader">
+                                    <Text text="{ui>/stickyHeaderData/child/pricetotal}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                </VBox>
+                            </VBox>
+                        </t:label>
+                        <t:template>
+                            <Text text="{externos>porcpendiente}" wrapping="false" />
+                        </t:template>
+                    </t:Column>
+                    <t:Column width="80px" hAlign="Center">
+                        <t:label>
+                            <VBox width="100%" class="fullWidthHeader">
+                                <Label text="{i18n>total}" design="Bold" />
+                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                    <Text text="{ui>/stickyHeaderData/parent/pricetotal}" width="100%" textAlign="Center" wrapping="false" />
+                                </VBox>
+                                <VBox class="parentHeader">
+                                    <Text text="{ui>/stickyHeaderData/child/pricetotal}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                </VBox>
+                            </VBox>
+                        </t:label>
+                        <t:template>
+                            <Text text="{externos>pricetotal}" wrapping="false" />
+                        </t:template>
+                    </t:Column>
+
+
+                    <t:Column id="colStart" width="80px">
+                        <t:label>
+                            <VBox width="100%" class="fullWidthHeader">
+                                <Label text="{i18n>dbReparto}" width="100%" design="Bold" textAlign="Center" />
+                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                    <Text text="{ui>/stickyHeaderData/parent/size}" width="100%" textAlign="Center" wrapping="false" />
+                                </VBox>
+                                <VBox class="parentHeader">
+                                    <Text text="{ui>/stickyHeaderData/child/size}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                </VBox>
+                            </VBox>
+                        </t:label>
+                        <t:template>
+                            <Text class="sapUiTinyMarginBegin" text="{externos>size}" visible="{= !!${externos>size} }" />
+                        </t:template>
+                    </t:Column>
+
+                    <t:Column id="colEnd" width="80px">
+                        <t:label>
+                            <VBox width="100%" class="fullWidthHeader">
+                                <Label text="{i18n>dbPendPlanificar}" design="Bold" textAlign="Center" />
+                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                    <Text text="{ui>/stickyHeaderData/parent/last}" width="100%" textAlign="Center" wrapping="false" />
+                                </VBox>
+                                <VBox class="parentHeader">
+                                    <Text text="{ui>/stickyHeaderData/child/last}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                </VBox>
+                            </VBox>
+                        </t:label>
+                        <t:template>
+                            <Text text="{externos>last}" visible="{= !!${externos>last} }" />
+                        </t:template>
+                    </t:Column>
+
+                    <t:Column id="colMonths" width="80px">
+                        <t:label>
+                            <VBox width="100%" class="fullWidthHeader">
+                                <Label text="&#160;" />
+                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                    <Text text="&#160;" />
+                                </VBox>
+                                <VBox class="parentHeader">
+                                    <Text text="{ui>/stickyHeaderData/child/months}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                </VBox>
+                            </VBox>
+                        </t:label>
+                        <t:template>
+                            <Text text="{externos>months}" visible="{= !!${externos>months} }" />
+                        </t:template>
+                    </t:Column>
+
+                    <t:Column id="colNew" width="80px">
+                        <t:label>
+                            <VBox width="100%" class="fullWidthHeader">
+                                <Label text="&#160;"/>
+                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                    <Text text="&#160;" />
+                                </VBox>
+                                <VBox class="parentHeader">
+                                    <Text text="{ui>/stickyHeaderData/child/pend}" visible="{ui>/showStickyChild}" width="100%" textAlign="Center" wrapping="false" class="secondStickyText" />
+                                </VBox>
+                            </VBox>
+                        </t:label>
+                        <t:template>
+                            <Text text="{externos>pend}" visible="{= !!${externos>pend} }" />
+                        </t:template>
+                    </t:Column>
+                </t:columns>
+            </t:TreeTable>
+        </VBox>
+    </VBox>
+</mvc:View>
+
