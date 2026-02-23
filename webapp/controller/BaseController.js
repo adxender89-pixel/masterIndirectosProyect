@@ -350,7 +350,7 @@ sap.ui.define([
                             new sap.m.Input({
                                 width: "7.2rem",
                                 textAlign: "Center",
-                                value: "{" + this.tableModelName + ">y" + iYear + "}",
+                                value: this.getBind("y" + iYear),
                                 visible: "{= ${ " + this.tableModelName + ">expandible} !== false && !${" + this.tableModelName + ">isGroup} }",
                                 liveChange: function (oEvt) {
                                     // Se mantiene todo el código del liveChange
