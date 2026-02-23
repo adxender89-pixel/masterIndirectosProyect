@@ -525,6 +525,33 @@ sap.ui.define([
                 }
             }
         },
+       /**
+        * Lógica global para abrir el menú contextual (Popover)
+        */
+        onContextMenu: function (oParams) {
+            var oRowContext = oParams.rowBindingContext;
+            var oOriginControl = oParams.cellControl;
+            var oView = this.getView();
+            // Guardamos la fila para que el AddPress sepa dónde trabajar
+            this._oContextRecord = oRowContext;
+            if (!this._pPopover) {
+                this._pPopover = Fragment.load({
+                    id: oView.getId(),
+                    name: "masterindirectos.fragment.ActionPopover",
+                    controller: this
+                }).then(function (oPopover) {
+                    oView.addDependent(oPopover);
+                    return oPopover;
+                });
+            }
+
+            this._pPopover.then(function (oPopover) {
+                oPopover.setBindingContext(oRowContext, "catalog");
+                setTimeout(function () {
+                    oPopover.openBy(oOriginControl);
+                }, 50);
+            });
+        },
         /**
          * Cierra el popover de forma global
          */
