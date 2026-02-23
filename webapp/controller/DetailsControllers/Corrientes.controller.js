@@ -180,7 +180,7 @@ sap.ui.define([
            */
         onAddPress: function (oEvent) {
             var oTable = this.byId("TreeTableBasic");
-            var oModel = this.getView().getModel("catalog");
+            var oModel = this.getView().getModel();
             var oBundle = this.getView().getModel("i18n").getResourceBundle();
 
             var iQuantity = 1;
