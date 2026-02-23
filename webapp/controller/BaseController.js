@@ -53,6 +53,9 @@ sap.ui.define([
     return Controller.extend("masterindirectos.controller.BaseController", {
         loadingDialog: null,
         tableModelName: "",
+        getBind: function (sField) {
+            return "{" + (this.tableModelName ? this.tableModelName + ">" : "") + sField + "}";
+        },
         getEndpointData: function () {
             return this.getOwnerComponent().getModel("endpointModel").getData();
         },
@@ -302,7 +305,7 @@ sap.ui.define([
                                 text: "2024-" + currentYear
                             }).addStyleClass("sapUiTinyFontSize textoaño"),
                             new sap.m.Label({
-                                text: "Ejecutados",
+                                text: "Ejercicios anteriores",
                                 design: "Bold",
                                 textAlign: "Center",
                                 width: "100%"
@@ -310,7 +313,7 @@ sap.ui.define([
                         ]
                     }),
                     template: new sap.m.Text({
-                        text: "{" + this.tableModelName + ">ejecutado}",
+                        text: this.getBind("ejecutado"),
                         textAlign: "Center",
                         width: "100%"
                     })
@@ -433,7 +436,7 @@ sap.ui.define([
                                         text: "2024-" + currentYear
                                     }).addStyleClass("sapUiTinyFontSize textoaño"),
                                     new sap.m.Label({
-                                        text: "Ejecutados",
+                                        text: "Ejercicios anteriores",
                                         design: "Bold",
                                         textAlign: "Center",
                                         width: "100%"
@@ -441,7 +444,7 @@ sap.ui.define([
                                 ]
                             }),
                             template: new sap.m.Text({
-                                text: "{ejecutado}",
+                                text: this.getBind("ejecutado"),
                                 textAlign: "Center",
                                 width: "100%"
                             })
@@ -611,7 +614,7 @@ sap.ui.define([
                                 width: "100%",
                                 items: [
                                     new sap.m.Label({
-                                        text: "Ejecutados",
+                                        text: "Ejercicios anteriores",
                                         design: "Bold",
                                         textAlign: "Center",
                                         width: "100%"
@@ -642,7 +645,7 @@ sap.ui.define([
                                 ]
                             }).addStyleClass("fullWidthHeader"),
                             template: new sap.m.Text({
-                                text: "{" + this.tableModelName + ">ejecutado}",
+                                text: this.getBind("ejecutado"),
                                 textAlign: "Center",
                                 width: "100%"
                             })
@@ -718,7 +721,7 @@ sap.ui.define([
                         width: "100%",
                         items: [
                             new sap.m.Label({
-                                text: "Ejecutados",
+                                text: "Ejercicios anteriores",
                                 design: "Bold",
                                 textAlign: "Center",
                                 width: "100%"
@@ -749,7 +752,7 @@ sap.ui.define([
                         ]
                     }).addStyleClass("fullWidthHeader"),
                     template: new sap.m.Text({
-                        text: "{" + this.tableModelName + ">/ejecutado}",
+                        text: this.getBind("ejecutado"),
                         textAlign: "Center",
                         width: "100%"
                     })
@@ -772,7 +775,7 @@ sap.ui.define([
 
                 if (bShowEjecutado && bIsPassedMonth) {
                     oControlTemplate = new sap.m.Text({
-                        text: "{" + this.tableModelName + ">ej" + sYear + "_" + iRealIdx + "}",
+                        text: this.getBind("ej" + sYear + "_" + iRealIdx),
                         textAlign: "Center",
                         width: "100%"
                     }).addStyleClass("sapUiTinyMarginEnd");
@@ -782,7 +785,7 @@ sap.ui.define([
 
                     if (bShowEjecutado && bIsPassedMonth) {
                         oControlTemplate = new sap.m.Text({
-                            text: "{ej" + sYear + "_" + iRealIdx + "}",
+                            text: this.getBind("ej" + sYear + "_" + iRealIdx),
                             textAlign: "Center",
                             width: "100%"
                         }).addStyleClass("sapUiTinyMarginEnd");
@@ -985,7 +988,7 @@ sap.ui.define([
                                     text: "2024-" + currentYear
                                 }).addStyleClass("sapUiTinyFontSize textoaño"),
                                 new sap.m.Label({
-                                    text: "Ejecutados",
+                                    text: "Ejercicios anteriores",
                                     design: "Bold",
                                     textAlign: "Center",
                                     width: "100%"
@@ -993,7 +996,7 @@ sap.ui.define([
                             ]
                         }),
                         template: new sap.m.Text({
-                            text: "{" + this.tableModelName + ">ejecutado}",
+                            text: this.getBind("ejecutado"),
                             textAlign: "Center",
                             width: "100%"
                         })
@@ -1731,17 +1734,18 @@ sap.ui.define([
          * Filtra la TreeTable según la operación seleccionada en el Select.
          */
         onOperacionChange: function (oEvent) {
-
             var oSelectedItem = oEvent.getParameter("selectedItem");
             var oTable = this.getControlTable();
             var oDefaultModel = this.getView().getModel();
             var oUiModel = this.getView().getModel("ui");
 
+            // Backup inicial solo una vez
             if (!this._fullCategoriesBackup) {
                 var aOriginal = oDefaultModel.getProperty("/catalog/models/categories");
                 this._fullCategoriesBackup = JSON.parse(JSON.stringify(aOriginal));
             }
 
+            // Reset
             if (!oSelectedItem) {
                 var aCurrent = oDefaultModel.getProperty("/catalog/models/categories");
 
@@ -1766,15 +1770,21 @@ sap.ui.define([
                 return;
             }
 
+            // Filtro
             var sKey = oSelectedItem.getKey();
 
-            var aOriginalTree = this._fullCategoriesBackup;
 
-            var oSearch = this._findNodeAndParent(aOriginalTree, sKey);
+            // Se cuentan los puntos para distinguir padre (I.003) de hijo (I.003.031)
+            var iPunti = (sKey.match(/\./g) || []).length;
+            var sParentKey = null;
 
-            var sParentKey = oSearch && oSearch.parent
-                ? oSearch.parent.name
-                : null;
+            if (iPunti >= 2) {
+                // Tiene al menos 2 puntos, es un hijo (ej. I.003.031)
+                sParentKey = sKey.substring(0, sKey.lastIndexOf("."));
+            }
+            // Si tiene solo 1 punto (ej. I.003), sParentKey se mantiene null (es un padre)
+
+
 
             var aCurrent = oDefaultModel.getProperty("/catalog/models/categories");
             var aWorkingCopy = this._mergeModifications(
@@ -1782,39 +1792,53 @@ sap.ui.define([
                 aCurrent
             );
 
+
+
             var aFilteredRoot = [];
 
             for (var i = 0; i < aWorkingCopy.length; i++) {
                 var rootCat = aWorkingCopy[i];
 
+
+
                 if (!Array.isArray(rootCat.categories)) {
                     rootCat.categories = [];
                 }
 
+                // Caso 1: Padre principal (ej. I.003)
                 if (rootCat.name === sKey && !sParentKey) {
 
                     aFilteredRoot.push(rootCat);
                     continue;
                 }
 
+                // Caso 2: Hijo específico (ej. I.003.031)
                 if (sParentKey) {
 
                     var aFilteredChildren = this._filterCategories(rootCat.categories, sKey);
                     var bIncludeParent = rootCat.name === sParentKey;
 
+
+
                     if (aFilteredChildren.length === 0 && !bIncludeParent) {
+
                         continue;
                     }
+
                     if (aFilteredChildren.length > 0) {
                         rootCat.categories = aFilteredChildren;
                     } else if (bIncludeParent) {
                         rootCat.categories = this._filterCategories(rootCat.categories, sKey);
                     }
 
+
                     aFilteredRoot.push(rootCat);
                 }
             }
+
+
             for (var j = 0; j < aFilteredRoot.length; j++) {
+
             }
 
             oDefaultModel.setProperty("/catalog/models/categories", aFilteredRoot);
@@ -1824,9 +1848,9 @@ sap.ui.define([
                 if (!oBinding) return;
 
                 var bHasData = false;
-                var bAnyDetailExpanded = false;
+                var bAnyDetailExpanded = false; // Nueva variable
 
-
+                // Se colapsa todo primero
                 oTable.collapseAll();
 
                 for (var i = 0; i < oBinding.getLength(); i++) {
@@ -1834,11 +1858,13 @@ sap.ui.define([
                     var oObj = oCtx && oCtx.getObject();
                     if (!oObj) continue;
 
+                    // Se expande según el caso
                     if (sParentKey) {
-
+                        // Caso 2: Hijo específico, se expande padre e hijo
                         if ((oObj.name === sParentKey || oObj.name === sKey) && oObj.expandible) {
                             oTable.expand(i);
 
+                            // Se verifica si el nodo expandido tiene nietos (isGroup)
                             if (oObj.name === sKey &&
                                 Array.isArray(oObj.categories) &&
                                 oObj.categories.length > 0 &&
@@ -1847,11 +1873,12 @@ sap.ui.define([
                             }
                         }
                     } else if (sKey) {
-
+                        // Caso 1: Padre principal, se expande solo el nodo con hijos
                         if (oObj.name === sKey && oObj.expandible === true) {
 
                             oTable.expand(i);
 
+                            // Se verifica si el padre tiene nietos (isGroup)
                             if (Array.isArray(oObj.categories) &&
                                 oObj.categories.length > 0 &&
                                 oObj.categories[0].isGroup === true) {
@@ -1860,6 +1887,7 @@ sap.ui.define([
                         }
                     }
 
+                    // Se mantiene la lógica original para bHasData (opcional, si sirve)
                     if (Array.isArray(oObj.categories)) {
                         if (oObj.categories.some(c => c.isGroup === true)) {
                             bHasData = true;
@@ -1867,6 +1895,7 @@ sap.ui.define([
                     }
                 }
 
+                // Se utiliza bAnyDetailExpanded en lugar de bHasData
                 this.byId("colMonths")?.setVisible(bAnyDetailExpanded);
                 this.byId("colNew")?.setVisible(bAnyDetailExpanded);
 
@@ -1875,35 +1904,6 @@ sap.ui.define([
 
                 this._refreshAfterToggle(oTable.getId());
             }.bind(this), 100);
-        },
-        _findNodeAndParent: function (aNodes, sKey, oParent) {
-
-            for (var i = 0; i < aNodes.length; i++) {
-
-                var node = aNodes[i];
-
-                if (node.name === sKey) {
-                    return {
-                        node: node,
-                        parent: oParent || null
-                    };
-                }
-
-                if (node.categories && node.categories.length) {
-
-                    var result = this._findNodeAndParent(
-                        node.categories,
-                        sKey,
-                        node
-                    );
-
-                    if (result) {
-                        return result;
-                    }
-                }
-            }
-
-            return null;
         },
 
         /**

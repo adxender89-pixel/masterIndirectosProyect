@@ -394,7 +394,7 @@
 
 /* Ajusta el tamaño del texto del campo de entrada */
 .sapUiSizeCompact .sapMInputBaseInner {
-    font-size: 0.65rem !important;
+    font-size: 0.57rem !important;
     line-height: 1rem !important;
 }
 
@@ -853,6 +853,30 @@
 .flatCellInput .sapMInputBaseIconContainer {
     display: none !important;
 }
+.sapUiTableCell .flatCellInput {
+    margin: 0.1rem 0.4rem !important;
+}
+
+.sapUiTableCell .flatCellInput .sapMInputBaseContentWrapper {
+    box-shadow: none !important;
+    height: 1.6rem !important;
+    background: transparent !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.sapUiTableCell .flatCellInput .sapMInputBaseInner {
+    padding: 0 !important;
+    margin: 0 !important;
+    height: 1.6rem !important;
+    line-height: 1.6rem !important;
+    text-align: center !important;
+}
+
+.sapUiTableCell .flatCellInput .sapMInputBaseIconContainer {
+    display: none !important;
+}
+
 /* para que la cabecera no coja el css de los input */
 .cabeceracolor .flatCellInput .sapMInputBaseContentWrapper {
     all: unset !important;
@@ -1063,3 +1087,7 @@
 .sapUiTableHeaderDataCell .titleGrande {
     font-size: 11px !important;
 }
+.smallFont .sapMInputBaseInner {
+    font-size: 11px  !important;
+}
+
