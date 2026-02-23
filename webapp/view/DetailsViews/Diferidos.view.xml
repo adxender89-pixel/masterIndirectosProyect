@@ -65,8 +65,8 @@
         <VBox width="100%" height="100%" class="sapUiSmallMarginTop">
             <layoutData><FlexItemData growFactor="15" /></layoutData>
             <t:TreeTable
-                id="TreeTableBasic"
-                rows="{ path: '/catalogDiferidos/models', parameters: { arrayNames: ['categories'] } }"
+                id="TreeTableDiferidos"
+                rows="{ path: 'diferidos>/catalogDiferidos/models', parameters: { arrayNames: ['categories'] } }"
                 toggleOpenState="onToggleOpenState"
                 class="sapUiSizeCompact"
                 visibleRowCount="{viewModel>/dynamicRowCount}"
@@ -100,7 +100,7 @@
                                 </VBox>
                             </VBox>
                         </t:label>
-                        <t:template><Text text="{name}" wrapping="false" /></t:template>
+                        <t:template><Text text="{diferidos>name}" wrapping="false" /></t:template>
                     </t:Column>
 
                     <t:Column width="100px" hAlign="Center">
@@ -115,7 +115,7 @@
                                 </VBox>
                             </VBox>
                         </t:label>
-                        <t:template><Text text="{currency}" wrapping="false" /></t:template>
+                        <t:template><Text text="{diferidos>currency}" wrapping="false" /></t:template>
                     </t:Column>
                     <t:Column width="100px" hAlign="Center">
                         <t:label>
@@ -129,7 +129,7 @@
                                 </VBox>
                             </VBox>
                         </t:label>
-                        <t:template><Text text="{type}" wrapping="false" /></t:template>
+                        <t:template><Text text="{diferidos>type}" wrapping="false" /></t:template>
                     </t:Column>
                     <t:Column width="80px" hAlign="Center">
                         <t:label>
@@ -143,7 +143,7 @@
                                 </VBox>
                             </VBox>
                         </t:label>
-                        <t:template><Text text="{amount}" wrapping="false" /></t:template>
+                        <t:template><Text text="{diferidos>amount}" wrapping="false" /></t:template>
                     </t:Column>
 
                     <t:Column width="80px" hAlign="Center">
@@ -158,7 +158,7 @@
                                 </VBox>
                             </VBox>
                         </t:label>
-                        <t:template><Text text="{pricepending}" wrapping="false" /></t:template>
+                        <t:template><Text text="{diferidos>pricepending}" wrapping="false" /></t:template>
                     </t:Column>
 
                     <t:Column width="80px" hAlign="Center">
@@ -173,7 +173,7 @@
                                 </VBox>
                             </VBox>
                         </t:label>
-                        <t:template><Text text="{pricetotal}" wrapping="false" /></t:template>
+                        <t:template><Text text="{diferidos>pricetotal}" wrapping="false" /></t:template>
                     </t:Column>
 
                     <t:Column id="colStart" width="85px">
@@ -188,7 +188,7 @@
                                 </VBox>
                             </VBox>
                         </t:label>
-                        <t:template><Text text="{size}" visible="{= !!${size} }" /></t:template>
+                        <t:template><Text text="{diferidos>size}" visible="{= !!${diferidos>size} }" /></t:template>
                     </t:Column>
 
                     <t:Column id="colEnd" width="85px">
@@ -203,7 +203,7 @@
                                 </VBox>
                             </VBox>
                         </t:label>
-                        <t:template><Text text="{last}" visible="{= !!${last} }" /></t:template>
+                        <t:template><Text text="{diferidos>last}" visible="{= !!${diferidos>last} }" /></t:template>
                     </t:Column>
 
                     <t:Column id="colMonths" width="80px">
@@ -216,7 +216,7 @@
                                 </VBox>
                             </VBox>
                         </t:label>
-                        <t:template><Text text="{months}" visible="{= !!${months} }" /></t:template>
+                        <t:template><Text text="{diferidos>months}" visible="{= !!${diferidos>months} }" /></t:template>
                     </t:Column>
 
                     <t:Column id="colNew" width="120px">
@@ -229,7 +229,7 @@
                                 </VBox>
                             </VBox>
                         </t:label>
-                        <t:template><Text text="{pend}" visible="{= !!${pend} }" /></t:template>
+                        <t:template><Text text="{diferidos>pend}" visible="{= !!${diferidos>pend} }" /></t:template>
                     </t:Column>
                 </t:columns>
             </t:TreeTable>

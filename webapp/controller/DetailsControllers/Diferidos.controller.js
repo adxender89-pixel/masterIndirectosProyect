@@ -16,6 +16,9 @@ sap.ui.define([
     "use strict";
 
     return BaseController.extend("masterindirectos.controller.DetailsControllers.Diferidos", {
+         getCustomTableId: function () {
+            return "TreeTableDiferidos";
+        },
 
         /**
          * Inicializa la vista de Diferidos definiendo el estado de navegación y visibilidad.
@@ -23,23 +26,53 @@ sap.ui.define([
          */
         onInit: function () {
             this.getView().setModel(new JSONModel({
-                selectedKey: "Home"
+                selectedKey: "Diferidos"
             }), "state");
+            
+            this.getView().setModel(new JSONModel({
+                Coste: "19.882.313,17",
+                CostePendiente: "3.134.026,07",
+                CosteTotal: "23.016.339,24"
+
+            }), "KpiDiferidos");
 
             this.getView().setModel(new JSONModel({
                 tableVisible: false,
                 splitterSizeMain: "100%"
             }), "viewModel");
 
+            this.tableModelName = "diferidos"; // Nombre del modelo para la tabla, se usará en funciones genéricas del BaseController
+            var oCatalogModel = new JSONModel();
+            this.getView().setModel(oCatalogModel, this.tableModelName);
+
+            oCatalogModel.loadData("model/CatalogDiferidos.json");
+
+            oCatalogModel.attachRequestCompleted(function () {
+                var aCategories = oCatalogModel.getProperty("/catalogDiferidos/models/categories");
+                if (!Array.isArray(aCategories)) {
+
+                    return;
+                }
+
+                var aComboItems = this._buildOperacionesCombo(aCategories);
+
+                this.getView().setModel(
+                    new JSONModel({ items: aComboItems }),
+                    "operacionesModel"
+                );
+
+                this._createSnapshot();
+            }.bind(this));
+
             // Ejecuta la configuración base para la TreeTable.
-            this.setupDynamicTreeTable("TreeTableBasic");
+            this.setupDynamicTreeTable("TreeTableExternos");
 
             // Tras el renderizado, añade las columnas de los próximos 3 años.
             this.getView().attachEventOnce("afterRendering", function () {
                 this.createYearColumns(
-                    "TreeTableBasic",
+                    
                     new Date().getFullYear(),
-                    3
+                    3, "TreeTableExternos"
                 );
             }.bind(this));
         },
@@ -48,7 +81,7 @@ sap.ui.define([
          * Forza el renderizado de la tabla una vez la vista está disponible en el DOM.
          */
         onAfterRendering: function(oEvent){
-            this.byId("TreeTableBasic").rerender(true);
+            this.byId("TreeTableDiferidos").rerender(true);
         },
       
         /**
@@ -95,6 +128,13 @@ sap.ui.define([
             setTimeout(function () {
                 this._refreshAfterToggle(sTableId);
             }.bind(this), 0);
-        }
+        },
+         _createSnapshot: function () {
+            var oDefaultModel = this.getView().getModel("diferidos");  // SIN "catalog"
+            if (oDefaultModel) {
+                var oData = oDefaultModel.getData();
+                this._originalData = JSON.parse(JSON.stringify(oData));
+            }
+        },
     });
 });

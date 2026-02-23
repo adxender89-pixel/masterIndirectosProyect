@@ -196,11 +196,6 @@
                                 >
                                     <t:extension>
                                         <OverflowToolbar height="100%">
-                                            <Button
-                                                width="8%"
-                                                text="{i18n>TBorigen}"
-                                                press="onOriginPress"
-                                            />
                                             <ComboBox
                                                 width="180px"
                                                 class="sapUiSizeCompact"
@@ -213,6 +208,11 @@
                                                     text="{operacionesModel>text}"
                                                 />
                                             </ComboBox>
+                                              <Button
+                                                width="8%"
+                                                text="{i18n>TBorigen}"
+                                                press="onOriginPress"
+                                            />
                                             <Label
                                                 text="Reales:vacio"
                                                 width="8rem"
@@ -277,7 +277,7 @@
                                     </t:extension>
                                     <t:columns>
                                         <t:Column
-                                            width="160px"
+                                            width="200px"
                                             hAlign="Center"
                                         >
                                             <t:label>
@@ -333,7 +333,7 @@
                                                     alignContent="Center"
                                                 >
                                                     <Input
-                                                        width="100%"
+                                                        width="8.5rem"
                                                         textAlign="Center"
                                                         editable="{= ${isGroup} !== true}"
                                                         value="{name}"
@@ -343,7 +343,7 @@
                                             </t:template>
                                         </t:Column>
                                         <t:Column
-                                            width="100px"
+                                            width="160px"
                                             hAlign="Center"
                                         >
                                             <t:label>
@@ -387,6 +387,7 @@
                                                 >
                                                     <Input
                                                         value="{currency}"
+                                                        width="9.1rem"
                                                         editable="{= ${isGroup} !== true}"
                                                         textAlign="Center"
                                                         class="flatCellInput"
@@ -438,7 +439,7 @@
                                                     alignContent="Center"
                                                 >
                                                     <Input
-                                                        width="100%"
+                                                        width="4.2rem"
                                                         textAlign="Center"
                                                         editable="{= ${isGroup} !== true}"
                                                         value="{amount}"
@@ -492,6 +493,7 @@
                                                 >
                                                     <Input
                                                         value="{pricepending}"
+                                                        width="4.2rem"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
                                                         textAlign="Center"
@@ -546,7 +548,7 @@
                                                     <Input
                                                         value="{pricetotal}"
                                                         editable="{= ${isGroup} !== true}"
-                                                        width="100%"
+                                                        width="4.2rem"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                     />
@@ -602,7 +604,7 @@
                                                         value="{size}"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
-                                                        width="100%"
+                                                        width="6.3rem"
                                                         textAlign="Center"
                                                     />
                                                 </VBox>
@@ -657,7 +659,7 @@
                                                         value="{last}"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
-                                                        width="100%"
+                                                        width="5.5rem"
                                                         textAlign="Center"
                                                     />
                                                 </VBox>
@@ -702,7 +704,7 @@
                                                         value="{months}"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
-                                                        width="100%"
+                                                        width="3rem"
                                                         textAlign="Center"
                                                     />
                                                 </VBox>
@@ -753,7 +755,7 @@
                                                         editable="{= ${isGroup} !== true}"
                                                         textAlign="Center"
                                                         class="flatCellInput"
-                                                        width="100%"
+                                                        width="3rem"
                                                     />
                                                 </VBox>
                                             </t:template>

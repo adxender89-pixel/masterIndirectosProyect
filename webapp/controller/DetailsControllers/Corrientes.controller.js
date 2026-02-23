@@ -38,7 +38,7 @@ sap.ui.define([
          * resubida
          */
         onInit: function () {
-
+            this.tableModelName = ""
             this.getView().setModel(new JSONModel({
                 selectedKey: "Home"
             }), "state");
@@ -111,7 +111,7 @@ sap.ui.define([
             }.bind(this));
 
             var oCatalogModel = new JSONModel();
-            this.getView().setModel(oCatalogModel, "catalog");
+            this.getView().setModel(oCatalogModel,  this.tableModelName);
             oCatalogModel.loadData("model/Catalog.json");
 
             oCatalogModel.attachRequestCompleted(function () {
@@ -121,7 +121,7 @@ sap.ui.define([
                     this.getView().setModel(new JSONModel({ items: aComboItems }), "operacionesModel");
                     this._createSnapshot();
                 }
-                var aComboItems = this._buildOperacionesCombo(aCategories, "catalog");
+                var aComboItems = this._buildOperacionesCombo(aCategories,  this.tableModelName);
                 this.getView().setModel(
                     new JSONModel({ items: aComboItems }),
                     "operacionesModel"
@@ -241,9 +241,11 @@ sap.ui.define([
                 }
 
                 var oNew = {
-                    name: sFinalName, 
+                    name: sFinalName, // Aquí aplicamos la lógica anterior
                     isGroup: false,
                     padre: false,
+                    flag1: false,           // Flag 1
+                    flag2: false,           // Inflación
                     categories: [],
                     amount: "",
                     currency: "",
