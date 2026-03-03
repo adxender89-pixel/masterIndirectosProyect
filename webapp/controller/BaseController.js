@@ -375,10 +375,9 @@ sap.ui.define([
             var iStartFrom = 13;
             var bShowEjecutado = this.byId("idEjecutadoCheckBox") ? this.byId("idEjecutadoCheckBox").getSelected() : false;
 
-            // PUNTO 1 — usa il helper
+            // Agregar columna “Ejercicios anteriores” si está activo
             if (bShowEjecutado) {
                 oTable.addColumn(this._buildEjecutadosColumn(false, new Date().getFullYear()));
-
             }
 
             var aYears = [];
@@ -387,58 +386,108 @@ sap.ui.define([
             }
 
             aYears.forEach(function (iYear, index) {
-                var oColumn = new sap.ui.table.Column({
+                // Construcción del label alineado en la línea blanca
+                var oYearLabel = new sap.m.VBox({
+                    width: "100%",
+                    height: "100%",
+                    renderType: "Bare",
+
+                    alignItems: "Stretch",   // 👈 importante
+                    justifyContent: "Start", // 👈 importante
+                    // Eliminamos el justifyContent: "Center" para que no empuje el botón hacia abajo
+                    items: [
+                        // Botón del año
+                        new sap.m.Button({
+                            text: iYear.toString(),
+                            type: "Transparent",
+                            width: "100%",
+                            press: function (oEvent) {
+                                this.onCreateMonthsTable(oEvent);
+                            }.bind(this)
+                        }).addStyleClass("yearButton"), // Asegúrate de que esta clase no tenga un margin-top grande en CSS
+
+                        // Sticky header padre (Caja Blanca)
+                        new sap.m.VBox({
+                            renderType: "Bare",
+                            width: "100%",
+                            visible: "{ui>/showStickyParent}",
+                            items: [
+                                new sap.m.Text({
+                                    text: "{ui>/stickyHeaderData/parent/y" + iYear + "}",
+                                    textAlign: "Center",
+                                    wrapping: false,
+                                    width: "100%"
+                                })
+                            ]
+                        }).addStyleClass("parentHeaderBox"),
+
+                        // Sticky header hijo
+                        new sap.m.VBox({
+                            width: "100%",
+                            visible: "{ui>/showStickyChild}",
+                            height: "16px" ,
+
+                            items: [
+                                new sap.m.Text({
+                                    text: "{ui>/stickyHeaderData/child/y" + iYear + "}",
+                                    wrapping: false
+                                }).addStyleClass("secondStickyText")
+                            ]
+                        }).addStyleClass("parentHeader")
+                    ]
+                }).addStyleClass("fullWidthHeader");
+
+                // Plantilla de la columna (Inputs y textos según expandible/isGroup)
+                var oColumnTemplate = new sap.m.HBox({
+                    renderType: "Bare",
+                    justifyContent: "Center",
+                    alignItems: "Center",
+                    items: [
+                        new sap.m.Input({
+                            width: "7.2rem",
+                            textAlign: "Center",
+                            value: this.getBind("y" + iYear),
+                            visible: "{= ${" + this.tableModelName + ">expandible} !== false && !${" + this.tableModelName + ">isGroup} }",
+                            liveChange: function () { }
+                        }).addStyleClass("customYearInput sapUiSizeCompact"),
+                        new sap.m.Text({
+                            width: "100%",
+                            textAlign: "Center",
+                            visible: "{= ${" + this.tableModelName + ">expandible} === false || ${" + this.tableModelName + ">isGroup} === true }",
+                            wrapping: false,
+                            text: {
+                                path: this.tableModelName + ">",
+                                formatter: function (oRow) {
+                                    if (!oRow || (oRow.expandible !== false && !oRow.isGroup)) return "";
+                                    var aKeys = Object.keys(oRow);
+                                    var sTargetKey = aKeys[iStartFrom + index];
+                                    return sTargetKey ? oRow[sTargetKey] : "";
+                                }
+                            }
+                        })
+                    ]
+                }).addStyleClass("yearCell");
+
+                // Crear columna y asignar datos
+                var oCol = new sap.ui.table.Column({
                     width: "8rem",
                     minWidth: 60,
                     autoResizable: true,
-                    label: new sap.m.Button({
-                        text: iYear.toString(),
-                        type: "Transparent",
-                        width: "100%",
-                        press: function (oEvent) {
-                            this.onCreateMonthsTable(oEvent);
-                        }.bind(this)
-                    }).addStyleClass("yearButton"),
-                    template: new sap.m.HBox({
-                        renderType: "Bare",
-                        justifyContent: "Center",
-                        alignItems: "Center",
-                        items: [
-                            new sap.m.Input({
-                                width: "7.2rem",
-                                textAlign: "Center",
-                                value: this.getBind("y" + iYear),
-                                visible: "{= ${ " + this.tableModelName + ">expandible} !== false && !${" + this.tableModelName + ">isGroup} }",
-                                liveChange: function (oEvt) { }
-                            }).addStyleClass("customYearInput sapUiSizeCompact"),
-                            new sap.m.Text({
-                                width: "100%",
-                                textAlign: "Center",
-                                visible: "{= ${" + this.tableModelName + ">expandible} === false || ${" + this.tableModelName + ">isGroup} === true }",
-                                wrapping: false,
-                                text: {
-                                    path: this.tableModelName + ">",
-                                    formatter: function (oRow) {
-                                        if (!oRow || (oRow.expandible !== false && !oRow.isGroup)) return "";
-                                        var aKeys = Object.keys(oRow);
-                                        var sTargetKey = aKeys[iStartFrom + index];
-                                        return sTargetKey ? oRow[sTargetKey] : "";
-                                    }
-                                }
-                            })
-                        ]
-                    }).addStyleClass("yearCell")
+                    label: oYearLabel,
+                    template: oColumnTemplate
                 });
-                oColumn.data("dynamicYear", true);
-                oColumn.data("year", iYear);
-                oTable.addColumn(oColumn);
+
+                oCol.data("dynamicYear", true);
+                oCol.data("year", iYear);
+                oTable.addColumn(oCol);
+
             }.bind(this));
 
+            // Refrescar tabla dinámica
             setTimeout(function () {
                 this.setupDynamicTreeTable();
             }.bind(this), 0);
         },
-
 
 
         /**
