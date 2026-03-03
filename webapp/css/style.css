@@ -188,13 +188,22 @@
 
 
 /* Elimina márgenes y alturas mínimas de las cabeceras */
-.fullWidthHeader, 
-.parentHeaderBox,
+.fullWidthHeader,
 .fullWidthHeader .sapMFlexItem {
-    margin: 0 !important;
-    padding: 0 !important;
-    max-height: 2.8rem;
-    min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  max-height: none !important;
+  min-height: 0 !important;
+}
+
+/* parentHeaderBox por separado */
+.parentHeaderBox {
+  background-color: #ffffff;
+  font-weight: normal;
+  width: 100%;
+  min-height: 22px !important;
+  min-height: 22px !important;
+  height: 22px !important;
 }
 
 
@@ -915,12 +924,12 @@
 /* Aplica Bold al texto del botón de año */
 
 .yearButton.sapMBtn {
-    height: 2rem !important;
+    height: 1.2rem !important;
 }
 
 .yearButton .sapMBtnContent {
-    font-size: 11px !important;
-    font-weight: bold !important;
+  line-height: 1rem !important; /* coincide con la altura del contenedor */ 
+  padding: 0 !important; margin: 0 !important;
 }
 
 /* Aplica Bold al texto del IconTabFilter */
@@ -1090,4 +1099,7 @@
 .smallFont .sapMInputBaseInner {
     font-size: 11px  !important;
 }
-
+.fullWidthHeader .sapMFlexItem:has(.parentHeaderBox) {
+  min-height: 22px !important;
+  max-height: none !important;
+}
