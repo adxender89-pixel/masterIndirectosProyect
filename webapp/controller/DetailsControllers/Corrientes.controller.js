@@ -111,7 +111,7 @@ sap.ui.define([
             }.bind(this));
 
             var oCatalogModel = new JSONModel();
-            this.getView().setModel(oCatalogModel,  this.tableModelName);
+            this.getView().setModel(oCatalogModel, this.tableModelName);
             oCatalogModel.loadData("model/Catalog.json");
 
             oCatalogModel.attachRequestCompleted(function () {
@@ -121,7 +121,7 @@ sap.ui.define([
                     this.getView().setModel(new JSONModel({ items: aComboItems }), "operacionesModel");
                     this._createSnapshot();
                 }
-                var aComboItems = this._buildOperacionesCombo(aCategories,  this.tableModelName);
+                var aComboItems = this._buildOperacionesCombo(aCategories, this.tableModelName);
                 this.getView().setModel(
                     new JSONModel({ items: aComboItems }),
                     "operacionesModel"
@@ -235,7 +235,7 @@ sap.ui.define([
                         // Si el padre es de nivel Raíz (ej: I.003), le ponemos el prefijo I.003.
                         sFinalName = sParentName + ".";
                     } else {
-                        
+
                         sFinalName = "";
                     }
                 }
@@ -298,7 +298,7 @@ sap.ui.define([
                 oItem["y" + iYear] = "";
                 for (var m = 1; m <= 12; m++) {
                     var sMonthKey = "m" + iYear + "_" + (m < 10 ? "0" + m : m);
-                    
+
                     oItem.monthsData[sMonthKey] = "";
                 }
             }
@@ -322,17 +322,20 @@ sap.ui.define([
 
             var oColMonths = this.byId("colMonths");
             var oColNew = this.byId("colNew");
+            var oColCheck1 = this.byId("colCheckBox1");
+            var oColCheck2 = this.byId("colCheckBox2");
 
             var oContext = oTable.getContextByIndex(iRowIndex);
             var sPath = oContext && oContext.getPath();
             var oObject = oContext && oContext.getObject();
 
-
-            // expand
+            // Livello del nodo: 1 = padre (I.003), 2 = figlio (I.003.031)
+            var iLevel = sPath ? (sPath.match(/\/categories/g) || []).length : 0;
 
             if (bExpanded) {
 
                 var bIsDetailLevel =
+                    iLevel >= 2 &&          // ← solo se è un figlio, non un padre
                     oObject &&
                     oObject.categories &&
                     oObject.categories.length > 0 &&
@@ -340,15 +343,14 @@ sap.ui.define([
 
                 if (oColMonths) oColMonths.setVisible(bIsDetailLevel);
                 if (oColNew) oColNew.setVisible(bIsDetailLevel);
+                if (oColCheck1) oColCheck1.setVisible(bIsDetailLevel);
+                if (oColCheck2) oColCheck2.setVisible(bIsDetailLevel);
 
                 if (bIsDetailLevel && sPath) {
                     this._sLastExpandedPath = sPath;
                 }
-            }
 
-            // collapse
-
-            else {
+            } else {
 
                 if (this._sLastExpandedPath === sPath) {
                     this._sLastExpandedPath = null;
@@ -359,13 +361,16 @@ sap.ui.define([
 
                 if (oBinding) {
                     var iLength = oBinding.getLength();
-
                     for (var i = 0; i < iLength; i++) {
                         if (oTable.isExpanded(i)) {
                             var oCtx = oTable.getContextByIndex(i);
                             var oObj = oCtx && oCtx.getObject();
+                            var sCtxPath = oCtx ? oCtx.getPath() : "";
+                            var iCtxLevel = (sCtxPath.match(/\/categories/g) || []).length;
 
+                            // Stesso controllo: solo figli (level >= 2) con nipoti isGroup
                             if (
+                                iCtxLevel >= 2 &&
                                 oObj &&
                                 oObj.categories &&
                                 oObj.categories[0] &&
@@ -378,10 +383,11 @@ sap.ui.define([
                     }
                 }
 
-                // Si nada está abierto: reset UI
                 if (!bAnyDetailExpanded) {
                     if (oColMonths) oColMonths.setVisible(false);
                     if (oColNew) oColNew.setVisible(false);
+                    if (oColCheck1) oColCheck1.setVisible(false);
+                    if (oColCheck2) oColCheck2.setVisible(false);
 
                     this._aGroupRanges = [];
                     oUiModel.setProperty("/showStickyAgrupador", false);
@@ -389,6 +395,7 @@ sap.ui.define([
                     oUiModel.setProperty("/showStickyChild", false);
                 }
             }
+
             setTimeout(function () {
                 this._refreshAfterToggle(sTableId);
             }.bind(this));
@@ -398,10 +405,10 @@ sap.ui.define([
          */
         onBrowserClose: function (oEvent) {
             if (this.hasUnsavedChanges()) {
-                
+
                 oEvent.preventDefault();
-                oEvent.returnValue = ''; 
-                return ''; 
+                oEvent.returnValue = '';
+                return '';
             }
         },
 
@@ -409,7 +416,7 @@ sap.ui.define([
          * Limpia los event listeners al destruir el controlador
          */
         onExit: function () {
-            
+
             if (this._boundBrowserClose) {
                 window.removeEventListener("beforeunload", this._boundBrowserClose);
             }

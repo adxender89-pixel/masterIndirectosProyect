@@ -1,0 +1,29 @@
+<c:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:c="sap.ui.core"
+>
+    <Popover
+        id="myPopover"
+        placement="Bottom"
+        showHeader="false"
+        height="auto"
+    >
+        <HBox
+            alignItem="Center"
+            class="sapUiTinyMargin"
+            width="190px">
+            <c:Icon
+                src="sap-icon://filter"
+                class="sapUiTinyMarginBegin sapUiTinyMarginTop sapUiTinyMarginEnd">
+
+            </c:Icon>
+            <SearchField
+                id="searchField"
+                class="smallPlaceholder"
+                width="150px"
+                search="onSearchSibling"
+            />
+        </HBox>
+    </Popover>
+
+</c:FragmentDefinition>
