@@ -1078,8 +1078,9 @@
                                             </t:template>
                                         </t:Column>
                                         <!-- COLONNA: Auto (CheckBox1) - nessun filtro -->
-                                         <t:Column
-                                            width="80px"
+                                        <t:Column
+                                            id="colCheckBox1"
+                                            width="50px"
                                             hAlign="Center"
                                         >
                                             <t:label>
@@ -1087,9 +1088,73 @@
                                                     width="100%"
                                                     class="fullWidthHeader"
                                                 >
+                                                    <Label text="&#160;"
+                                                    class="titleGrande" />
+                                                    <VBox
+                                                        renderType="Bare"
+                                                        alignItems="Center"
+                                                        visible="{ui>/showStickyParent}"
+                                                        class="parentHeaderBox"
+                                                    >
+                                                        <Text
+                                                            text="&#160;"
+                                                            textAlign="Center"
+                                                        />
+                                                    </VBox>
+                                                    <VBox >
+                                                        <HBox
+                                                            class="parentHeader"
+                                                            renderType="Bare"
+                                                            alignContent="Start"
+                                                        >
+                                                        <Text
+                                                            text="Auto"
+                                                            visible="{ui>/showStickyChild}"
+                                                            textAlign="Center"
+                                                            wrapping="false"
+                                                            class="secondStickyContainer"
+                                                        />
+                                                         </HBox>
+                                                    </VBox>
+                                                </VBox>
+                                            </t:label>
+                                            <t:template>
+                                                <VBox
+                                                    renderType="Bare"
+                                                    alignItems="Center"
+                                                    alignContent="Center"
+                                                >
+                                                    <Input
+                                                        value="{flag1Label}"
+                                                        editable="false"
+                                                        class="flatCellInput sapUiSmallMarginBegin"
+                                                        textAlign="Center"
+                                                        visible="{= ${cabecera} === true }"
+                                                        width="50px"
+                                                    />
+                                                    <CheckBox
+                                                        selected="{flag1}"
+                                                        visible="{= ${expandible} !== false &amp;&amp; !${isGroup} }"
+                                                    />
+                                                </VBox>
+                                            </t:template>
+                                        </t:Column>
+                                        <!-- COLONNA: Inflaz (CheckBox2) - nessun filtro -->
+                                        <t:Column
+                                            id="colCheckBox2"
+                                            width="50px"
+                                            hAlign="Center"
+                                        >
+                                            <t:label>
+                                                <VBox
+                                                    width="100%"
+                                                    class="fullWidthHeader"
+                                                    alignItems="Center"
+                                                >
                                                     <Label text="&#160;" />
                                                     <VBox
                                                         renderType="Bare"
+                                                        alignItems="Center"
                                                         visible="{ui>/showStickyParent}"
                                                         class="parentHeaderBox"
                                                     >
@@ -1099,9 +1164,9 @@
                                                             textAlign="Center"
                                                         />
                                                     </VBox>
-                                                    <VBox class="parentHeader" height="1.7rem"  visible="{ui>/showStickyChild}">
+                                                    <VBox class="parentHeader" alignItems="Center">
                                                         <Text
-                                                            text="Auto"
+                                                            text="Infla"
                                                             visible="{ui>/showStickyChild}"
                                                             width="100%"
                                                             textAlign="Center"
@@ -1114,82 +1179,17 @@
                                             <t:template>
                                                 <VBox
                                                     renderType="Bare"
-                                                    width="100%"
-                                                    alignItems="Center"
-                                                    alignContent="Center"
-                                                    height="1.7rem" 
-                                                >
-                                                    <Input
-                                                        value="{flag1Label}"
-                                                        editable="false"
-                                                        class="flatCellInput cabeceraFlagInput"
-                                                        width="4rem"
-                                                        textAlign="Center"
-                                                        visible="{= ${cabecera} === true }"
-                                                    />
-                                                    <CheckBox
-                                                        selected="{flag1}"
-                                                        visible="{= ${expandible} !== false &amp;&amp; !${isGroup} }"
-                                                    />
-                                                </VBox>
-                                            </t:template>
-                                        </t:Column>
-                                        <!-- COLONNA: Inflaz (CheckBox2) - nessun filtro -->
-                                   <t:Column
-                                            width="80px"
-                                            hAlign="Center"
-                                           
-                                        >
-                                            <t:label >
-                                                <VBox
-                                                    width="100%"
-                                                    class="fullWidthHeader"
-                                                    
-                                                >
-                                                    <Label text="&#160;"    />
-                                                    <VBox
-                                                        renderType="Bare"
-                                                        visible="{ui>/showStickyParent}"
-                                                        class="parentHeaderBox "
-                                                        
-                                                    >
-                                                        <Text
-                                                            text="&#160;"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                            
-                                                        />
-                                                    </VBox>
-                                                    <VBox class="parentHeader" height="1.7rem"  visible="{ui>/showStickyChild}">
-                                                        <Text
-                                                            text="Infla"
-                                                            visible="{ui>/showStickyChild}"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                            class="secondStickyText "
-                                                        />
-                                                    </VBox>
-                                                </VBox>
-                                            </t:label>
-                                            <t:template>
-                                                <VBox
-                                                    renderType="Bare"
                                                     alignItems="Center"
                                                     width="100%"
                                                     alignContent="Center"
-                                                 
-                                                   
                                                 >
                                                     <Input
                                                         value="{flag2Label}"
                                                         editable="false"
                                                         class="flatCellInput"
-                                                        width="4rem"
+                                                        width="50px"
                                                         textAlign="Center"
                                                         visible="{= ${cabecera} === true }"
-                                                        
-
                                                     />
                                                     <CheckBox
                                                         selected="{flag2}"

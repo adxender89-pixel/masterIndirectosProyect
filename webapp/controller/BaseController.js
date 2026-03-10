@@ -2428,6 +2428,11 @@ var oColumnTemplate = new sap.m.HBox({
             }
 
             this._pPopover.then(function (oPopover) {
+                // ✅ Se il popover è già aperto, lo chiude e non fa altro
+                if (oPopover.isOpen()) {
+                    oPopover.close();
+                    return;
+                }
                 // ✅ All'apertura: mostra il filtro attivo per questa colonna
                 var oSearchField = sap.ui.core.Fragment.byId(oView.getId(), "searchField");
                 if (oSearchField) {
