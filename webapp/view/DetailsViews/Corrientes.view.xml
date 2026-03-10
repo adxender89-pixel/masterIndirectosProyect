@@ -108,7 +108,6 @@
                             </t:columns>
                         </t:Table>
                     </VBox>
-
                     <VBox
                         width="49%"
                         height="100%"
@@ -192,6 +191,7 @@
                                     rowSelectionChange="onRowSelectionChange"
                                     class="sapUiSizeCompact"
                                     visibleRowCount="{viewModel>/dynamicRowCount}"
+                                    filter="onTreeTableFilter"
                                     width="100%"
                                 >
                                     <t:extension>
@@ -208,7 +208,7 @@
                                                     text="{operacionesModel>text}"
                                                 />
                                             </ComboBox>
-                                              <Button
+                                            <Button
                                                 width="8%"
                                                 text="{i18n>TBorigen}"
                                                 press="onOriginPress"
@@ -228,11 +228,10 @@
                                                 change="oninflacionInputChange"
                                                 width="50px"
                                                 class="inflacionNoMargin"
-                                                textAlign="Initial"
+                                                 textAlign="Center"
                                                 type="Number"
                                             />
                                             <Text text="%" />
-
                                             <ToolbarSpacer />
                                             <CheckBox
                                                 id="idEjecutadoCheckBox"
@@ -256,29 +255,32 @@
                                             <Button
                                                 icon="sap-icon://add"
                                                 press="onAddPress"
-                                                class="sapUiSizeCompact"
+                                                class="toolbarActionBtn"
                                             />
                                             <Button
                                                 icon="sap-icon://delete"
                                                 press="onDeletePress"
-                                                class="sapUiSizeCompact"
+                                                class="toolbarActionBtn"
                                             />
                                             <Button
                                                 icon="sap-icon://shortcut"
                                                 press="onShortcutPress"
-                                                class="sapUiSizeCompact"
+                                                 class="toolbarActionBtn"
                                             />
                                             <Button
                                                 icon="sap-icon://arrow-bottom"
                                                 press="onProcessPress"
-                                                class="sapUiSizeCompact"
+                                                class="toolbarActionBtn"
                                             />
                                         </OverflowToolbar>
                                     </t:extension>
                                     <t:columns>
+                                        <!-- COLONNA: Operacion / name -->
                                         <t:Column
                                             width="200px"
                                             hAlign="Center"
+                                            label="name"
+                                            filterProperty="name"
                                         >
                                             <t:label>
                                                 <VBox
@@ -314,6 +316,20 @@
                                                                 icon="sap-icon://navigation-up-arrow"
                                                                 press="onCollapseFromHeader"
                                                             />
+                                                            <Button
+                                                                icon="sap-icon://filter"
+                                                                press="filterTableCabecera"
+                                                                width="0.9rem"
+                                                                class="bottomFilter"
+                                                                visible="{ui>/showStickyChild}"
+                                                            >
+                                                                <customData>
+                                                                    <core:CustomData
+                                                                        key="filterProp"
+                                                                        value="name"
+                                                                    />
+                                                                </customData>
+                                                            </Button>
                                                             <Text
                                                                 text="{ui>/stickyHeaderData/child/name}"
                                                                 width="100%"
@@ -327,24 +343,41 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <VBox
+                                                <HBox
                                                     renderType="Bare"
                                                     width="100%"
                                                     alignContent="Center"
                                                 >
+                                                    <Button
+                                                        icon="sap-icon://filter"
+                                                        press="filterTableRow"
+                                                         class="bottomFilter"
+                                                        width="0.9rem"
+                                                        visible="{= ${cabecera} === true}"
+                                                    >
+                                                        <customData>
+                                                            <core:CustomData
+                                                                key="filterProp"
+                                                                value="name"
+                                                            />
+                                                        </customData>
+                                                    </Button>
                                                     <Input
-                                                        width="8.5rem"
                                                         textAlign="Center"
                                                         editable="{= ${isGroup} !== true}"
                                                         value="{name}"
+                                                        showValueHelp="true"
                                                         class="flatCellInput yearCell"
                                                     />
-                                                </VBox>
+                                                </HBox>
                                             </t:template>
                                         </t:Column>
+                                        <!-- COLONNA: Descripcion / currency -->
                                         <t:Column
-                                            width="160px"
+                                            width="170px"
                                             hAlign="Center"
+                                            label="name"
+                                            filterProperty="currency"
                                         >
                                             <t:label>
                                                 <VBox
@@ -368,36 +401,71 @@
                                                             textAlign="Center"
                                                         />
                                                     </VBox>
-                                                    <VBox class="parentHeader">
+                                                    <HBox
+                                                        class="parentHeader"
+                                                        renderType="Bare"
+                                                        alignContent="Start"
+                                                    >
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableCabecera"
+                                                            class="bottomFilter"
+                                                            width="0.9rem"
+                                                            visible="{ui>/showStickyChild}"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="currency"
+                                                                />
+                                                            </customData>
+                                                        </Button>
                                                         <Text
                                                             text="{ui>/stickyHeaderData/child/currency}"
                                                             textAlign="Center"
                                                             wrapping="false"
                                                             class="secondStickyText"
                                                             visible="{ui>/showStickyChild}"
+                                                            width="100%"
                                                         />
-                                                    </VBox>
+                                                    </HBox>
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <VBox
+                                                <HBox
                                                     renderType="Bare"
-                                                    alignContent="Center"
+                                                    alignItems="Center"
                                                     width="100%"
                                                 >
+                                                    <Button
+                                                        icon="sap-icon://filter"
+                                                        press="filterTableRow"
+                                                        class="bottomFilter"
+                                                        width="0.9rem"
+                                                        visible="{= ${cabecera} === true}"
+                                                    >
+                                                        <customData>
+                                                            <core:CustomData
+                                                                key="filterProp"
+                                                                value="currency"
+                                                            />
+                                                        </customData>
+                                                    </Button>
                                                     <Input
                                                         value="{currency}"
-                                                        width="9.1rem"
                                                         editable="{= ${isGroup} !== true}"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                     />
-                                                </VBox>
+                                                </HBox>
                                             </t:template>
                                         </t:Column>
+                                        <!-- COLONNA: Coste / amount -->
                                         <t:Column
                                             width="80px"
                                             hAlign="Center"
+                                            label="name"
+                                            filterProperty="amount"
                                         >
                                             <t:label>
                                                 <VBox
@@ -421,23 +489,56 @@
                                                             wrapping="false"
                                                         />
                                                     </VBox>
-                                                    <VBox class="parentHeader">
+                                                    <HBox
+                                                        class="parentHeader"
+                                                        renderType="Bare"
+                                                        alignContent="Start"
+                                                    >
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableCabecera"
+                                                            class="bottomFilter"
+                                                              width="0.9rem"
+                                                            visible="{ui>/showStickyChild}"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="amount"
+                                                                />
+                                                            </customData>
+                                                        </Button>
                                                         <Text
                                                             text="{ui>/stickyHeaderData/child/amount}"
                                                             textAlign="Center"
                                                             wrapping="false"
                                                             class="secondStickyText"
                                                             visible="{ui>/showStickyChild}"
+                                                            width="100%"
                                                         />
-                                                    </VBox>
+                                                    </HBox>
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <VBox
+                                                <HBox
                                                     renderType="Bare"
                                                     width="100%"
-                                                    alignContent="Center"
+                                                    alignItems="Center"
                                                 >
+                                                    <Button
+                                                        icon="sap-icon://filter"
+                                                        press="filterTableRow"
+                                                        class="bottomFilter"
+                                                          width="0.9rem"
+                                                        visible="{= ${cabecera} === true}"
+                                                    >
+                                                        <customData>
+                                                            <core:CustomData
+                                                                key="filterProp"
+                                                                value="amount"
+                                                            />
+                                                        </customData>
+                                                    </Button>
                                                     <Input
                                                         width="4.2rem"
                                                         textAlign="Center"
@@ -445,12 +546,15 @@
                                                         value="{amount}"
                                                         class="flatCellInput"
                                                     />
-                                                </VBox>
+                                                </HBox>
                                             </t:template>
                                         </t:Column>
+                                        <!-- COLONNA: Coste pend / pricepending -->
                                         <t:Column
-                                            width="80px"
+                                            width="90px"
                                             hAlign="Center"
+                                            label="name"
+                                            filterProperty="pricepending"
                                         >
                                             <t:label>
                                                 <VBox
@@ -474,36 +578,72 @@
                                                             wrapping="false"
                                                         />
                                                     </VBox>
-                                                    <VBox class="parentHeader">
+                                                    <HBox
+                                                        class="parentHeader"
+                                                        renderType="Bare"
+                                                        alignContent="Start"
+                                                    >
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableCabecera"
+                                                            class="bottomFilter"
+                                                              width="0.9rem"
+                                                            visible="{ui>/showStickyChild}"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="pricepending"
+                                                                />
+                                                            </customData>
+                                                        </Button>
                                                         <Text
                                                             text="{ui>/stickyHeaderData/child/pricepending}"
                                                             textAlign="Center"
                                                             wrapping="false"
                                                             class="secondStickyText"
                                                             visible="{ui>/showStickyChild}"
+                                                            width="100%"
                                                         />
-                                                    </VBox>
+                                                    </HBox>
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <VBox
+                                                <HBox
                                                     renderType="Bare"
                                                     width="100%"
-                                                    alignContent="Center"
+                                                     alignItems="Center"
                                                 >
+                                                    <Button
+                                                        icon="sap-icon://filter"
+                                                        press="filterTableRow"
+                                                         width="0.9rem"
+                                                          class="bottomFilter"
+                                                        visible="{= ${cabecera} === true}"
+                                                    >
+                                                        <customData>
+                                                            <core:CustomData
+                                                                key="filterProp"
+                                                                value="pricepending"
+                                                            />
+                                                        </customData>
+                                                    </Button>
                                                     <Input
                                                         value="{pricepending}"
-                                                        width="4.2rem"
+                                                        width="100%"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
                                                         textAlign="Center"
                                                     />
-                                                </VBox>
+                                                </HBox>
                                             </t:template>
                                         </t:Column>
+                                        <!-- COLONNA: Coste total / pricetotal -->
                                         <t:Column
                                             width="80px"
                                             hAlign="Center"
+                                            label="Name"
+                                            filterProperty="pricetotal"
                                         >
                                             <t:label>
                                                 <VBox
@@ -527,7 +667,25 @@
                                                             wrapping="false"
                                                         />
                                                     </VBox>
-                                                    <VBox class="parentHeader">
+                                                    <HBox
+                                                        class="parentHeader"
+                                                        renderType="Bare"
+                                                        alignItems="Center"
+                                                    >
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableCabecera"
+                                                            class="bottomFilter"
+                                                              width="0.9rem"
+                                                            visible="{ui>/showStickyChild}"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="pricetotal"
+                                                                />
+                                                            </customData>
+                                                        </Button>
                                                         <Text
                                                             text="{ui>/stickyHeaderData/child/pricetotal}"
                                                             width="100%"
@@ -536,29 +694,46 @@
                                                             class="secondStickyText"
                                                             visible="{ui>/showStickyChild}"
                                                         />
-                                                    </VBox>
+                                                    </HBox>
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <VBox
+                                                <HBox
                                                     renderType="Bare"
                                                     width="100%"
-                                                    alignContent="Center"
+                                                     alignItems="Center"
                                                 >
+                                                    <Button
+                                                        icon="sap-icon://filter"
+                                                        press="filterTableRow"
+                                                        class="bottomFilter"
+                                                        width="0.9rem"
+                                                        visible="{= ${cabecera} === true}"
+                                                    >
+                                                        <customData>
+                                                            <core:CustomData
+                                                                key="filterProp"
+                                                                value="pricetotal"
+                                                            />
+                                                        </customData>
+                                                    </Button>
                                                     <Input
                                                         value="{pricetotal}"
                                                         editable="{= ${isGroup} !== true}"
-                                                        width="4.2rem"
+                                                        width="{= ${cabecera} === true ? '4rem' : '4.2rem'}"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                     />
-                                                </VBox>
+                                                </HBox>
                                             </t:template>
                                         </t:Column>
+                                        <!-- COLONNA: Reparto / size -->
                                         <t:Column
                                             id="colStart"
                                             width="115px"
                                             hAlign="Center"
+                                            label="Name"
+                                            filterProperty="size"
                                         >
                                             <t:label>
                                                 <VBox
@@ -583,37 +758,73 @@
                                                             wrapping="false"
                                                         />
                                                     </VBox>
-                                                    <VBox class="parentHeader">
+                                                    <HBox
+                                                        class="parentHeader"
+                                                        renderType="Bare"
+                                                        alignContent="Start"
+                                                    >
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableCabecera"
+                                                            class="bottomFilter"
+                                                              width="0.9rem"
+                                                            visible="{ui>/showStickyChild}"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="size"
+                                                                />
+                                                            </customData>
+                                                        </Button>
                                                         <Text
                                                             text="{ui>/stickyHeaderData/child/size}"
                                                             textAlign="Center"
                                                             wrapping="false"
                                                             class="secondStickyText"
                                                             visible="{ui>/showStickyChild}"
+                                                            width="100%"
                                                         />
-                                                    </VBox>
+                                                    </HBox>
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <VBox
+                                                <HBox
                                                     width="100%"
                                                     alignContent="Center"
                                                     renderType="Bare"
                                                 >
+                                                    <Button
+                                                        icon="sap-icon://filter"
+                                                        press="filterTableRow"
+                                                        class="bottomFilter"
+                                                          width="0.9rem"
+                                                        visible="{= ${cabecera} === true}"
+                                                    >
+                                                        <customData>
+                                                            <core:CustomData
+                                                                key="filterProp"
+                                                                value="size"
+                                                            />
+                                                        </customData>
+                                                    </Button>
                                                     <Input
                                                         value="{size}"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
-                                                        width="6.3rem"
+                                                        width="100%"
                                                         textAlign="Center"
                                                     />
-                                                </VBox>
+                                                </HBox>
                                             </t:template>
                                         </t:Column>
+                                        <!-- COLONNA: Pend a planificar / last -->
                                         <t:Column
                                             id="colEnd"
                                             width="100px"
                                             hAlign="Center"
+                                            label="Name"
+                                            filterProperty="last"
                                         >
                                             <t:label>
                                                 <VBox
@@ -638,37 +849,74 @@
                                                             wrapping="false"
                                                         />
                                                     </VBox>
-                                                    <VBox class="parentHeader">
+                                                    <HBox
+                                                        class="parentHeader"
+                                                        renderType="Bare"
+                                                        alignContent="Start"
+                                                    >
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableCabecera"
+                                                            class="bottomFilter"
+                                                              width="0.9rem"
+                                                            visible="{ui>/showStickyChild}"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="last"
+                                                                />
+                                                            </customData>
+                                                        </Button>
                                                         <Text
                                                             text="{ui>/stickyHeaderData/child/last}"
                                                             textAlign="Center"
                                                             wrapping="false"
                                                             class="secondStickyText"
                                                             visible="{ui>/showStickyChild}"
+                                                            width="100%"
                                                         />
-                                                    </VBox>
+                                                    </HBox>
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <VBox
+                                                <HBox
                                                     width="100%"
                                                     alignContent="Center"
                                                     renderType="Bare"
                                                 >
+                                                    <Button
+                                                        icon="sap-icon://filter"
+                                                        press="filterTableRow"
+                                                        class="bottomFilter"
+                                                          width="0.9rem"
+                                                        visible="{= ${cabecera} === true}"
+                                                    >
+                                                        <customData>
+                                                            <core:CustomData
+                                                                key="filterProp"
+                                                                value="last"
+                                                            />
+                                                        </customData>
+                                                    </Button>
                                                     <Input
                                                         value="{last}"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
-                                                        width="5.5rem"
+                                                        width="{= ${cabecera} === true ? '4rem' : '5.5rem'}"
                                                         textAlign="Center"
                                                     />
-                                                </VBox>
+                                                </HBox>
                                             </t:template>
                                         </t:Column>
+                                        <!-- COLONNA: Months (nessun bottone sticky, testo solo) -->
                                         <t:Column
                                             id="colMonths"
-                                            width="60px"
+                                            width="85px"
                                             hAlign="Center"
+                                            label="Name"
+                                            filterProperty="months"
+                                            showFilterMenuEntry="false"
                                         >
                                             <t:label>
                                                 <VBox
@@ -683,37 +931,74 @@
                                                     >
                                                         <Text text="&#160;" />
                                                     </VBox>
-                                                    <VBox class="parentHeader">
+                                                    <HBox
+                                                        class="parentHeader"
+                                                        renderType="Bare"
+                                                        alignContent="Start"
+                                                    >
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableCabecera"
+                                                            class="bottomFilter"
+                                                              width="0.9rem"
+                                                            visible="{ui>/showStickyChild}"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="months"
+                                                                />
+                                                            </customData>
+                                                        </Button>
                                                         <Text
                                                             text="{ui>/stickyHeaderData/child/months}"
                                                             textAlign="Center"
                                                             wrapping="false"
                                                             class="secondStickyText"
                                                             visible="{ui>/showStickyChild}"
+                                                            width="100%"
                                                         />
-                                                    </VBox>
+                                                    </HBox>
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <VBox
+                                                <HBox
                                                     width="100%"
                                                     alignContent="Center"
                                                     renderType="Bare"
                                                 >
+                                                    <Button
+                                                        icon="sap-icon://filter"
+                                                        press="filterTableRow"
+                                                         class="bottomFilter"
+                                                          width="0.9rem"
+                                                        visible="{= ${cabecera} === true}"
+                                                    >
+                                                        <customData>
+                                                            <core:CustomData
+                                                                key="filterProp"
+                                                                value="months"
+                                                            />
+                                                        </customData>
+                                                    </Button>
                                                     <Input
                                                         value="{months}"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
-                                                        width="3rem"
+                                                        width="{= ${cabecera} === true ? '4rem' : '85px'}"
                                                         textAlign="Center"
                                                     />
-                                                </VBox>
+                                                </HBox>
                                             </t:template>
                                         </t:Column>
+                                        <!-- COLONNA: Pend -->
                                         <t:Column
                                             id="colNew"
-                                            width="60px"
+                                            width="70px"
                                             hAlign="Center"
+                                            label="Name"
+                                            filterProperty="pend"
+                                            showFilterMenuEntry="false"
                                         >
                                             <t:label>
                                                 <VBox
@@ -732,7 +1017,25 @@
                                                             textAlign="Center"
                                                         />
                                                     </VBox>
-                                                    <VBox class="parentHeader">
+                                                    <HBox
+                                                        class="parentHeader"
+                                                        renderType="Bare"
+                                                        alignContent="Start"
+                                                    >
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableCabecera"
+                                                            class="bottomFilter"
+                                                              width="0.9rem"
+                                                            visible="{ui>/showStickyChild}"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="pend"
+                                                                />
+                                                            </customData>
+                                                        </Button>
                                                         <Text
                                                             text="{ui>/stickyHeaderData/child/pend}"
                                                             visible="{ui>/showStickyChild}"
@@ -741,88 +1044,117 @@
                                                             wrapping="false"
                                                             class="secondStickyText"
                                                         />
-                                                    </VBox>
+                                                    </HBox>
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <VBox
+                                                <HBox
                                                     width="100%"
                                                     alignContent="Center"
                                                     renderType="Bare"
                                                 >
+                                                    <Button
+                                                        icon="sap-icon://filter"
+                                                        press="filterTableRow"
+                                                        class="bottomFilter"
+                                                          width="0.9rem"
+                                                        visible="{= ${cabecera} === true}"
+                                                    >
+                                                        <customData>
+                                                            <core:CustomData
+                                                                key="filterProp"
+                                                                value="pend"
+                                                            />
+                                                        </customData>
+                                                    </Button>
                                                     <Input
                                                         value="{pend}"
                                                         editable="{= ${isGroup} !== true}"
                                                         textAlign="Center"
                                                         class="flatCellInput"
-                                                        width="3rem"
+                                                        width="{= ${cabecera} === true ? '3.5rem' : '70px'}"
+                                                    />
+                                                </HBox>
+                                            </t:template>
+                                        </t:Column>
+                                        <!-- COLONNA: Auto (CheckBox1) - nessun filtro -->
+                                        <t:Column
+                                            id="colCheckBox1"
+                                            width="50px"
+                                            hAlign="Center"
+                                        >
+                                            <t:label>
+                                                <VBox
+                                                    width="100%"
+                                                    class="fullWidthHeader"
+                                                >
+                                                    <Label text="&#160;"
+                                                    class="titleGrande" />
+                                                    <VBox
+                                                        renderType="Bare"
+                                                        alignItems="Center"
+                                                        visible="{ui>/showStickyParent}"
+                                                        class="parentHeaderBox"
+                                                    >
+                                                        <Text
+                                                            text="&#160;"
+                                                            textAlign="Center"
+                                                        />
+                                                    </VBox>
+                                                    <VBox >
+                                                        <HBox
+                                                            class="parentHeader"
+                                                            renderType="Bare"
+                                                            alignContent="Start"
+                                                        >
+                                                        <Text
+                                                            text="Auto"
+                                                            visible="{ui>/showStickyChild}"
+                                                            textAlign="Center"
+                                                            wrapping="false"
+                                                            class="secondStickyContainer"
+                                                        />
+                                                         </HBox>
+                                                    </VBox>
+                                                </VBox>
+                                            </t:label>
+                                            <t:template>
+                                                <VBox
+                                                    renderType="Bare"
+                                                    alignItems="Center"
+                                                    alignContent="Center"
+                                                >
+                                                    <Input
+                                                        value="{flag1Label}"
+                                                        editable="false"
+                                                        class="flatCellInput sapUiSmallMarginBegin"
+                                                        textAlign="Center"
+                                                        visible="{= ${cabecera} === true }"
+                                                        width="50px"
+                                                    />
+                                                    <CheckBox
+                                                        selected="{flag1}"
+                                                        visible="{= ${expandible} !== false &amp;&amp; !${isGroup} }"
                                                     />
                                                 </VBox>
                                             </t:template>
                                         </t:Column>
-<t:Column
-                                            width="80px"
-                                            hAlign="Center"
-                                        >
-                                             <t:label>
-                                                <VBox
-                                                    width="100%"
-                                                    class="fullWidthHeader"
-                                                >
-                                                    <Label text="&#160;" />
-                                                    <VBox
-                                                        renderType="Bare"
-                                                        visible="{ui>/showStickyParent}"
-                                                        class="parentHeaderBox"
-                                                    >
-                                                        <Text
-                                                            text="&#160;"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                        />
-                                                    </VBox>
-                                                    <VBox class="parentHeader">
-                                                        <Text
-                                                            text="Auto"
-                                                            visible="{ui>/showStickyChild}"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                            class="secondStickyText"
-                                                        />
-                                                    </VBox>
-                                                </VBox>
-                                            </t:label>
-<t:template>
-    <VBox renderType="Bare" width="100%" alignItems="Center" alignContent="Center">
-        <Input
-            value="{flag1Label}"
-            editable="false"
-            class="flatCellInput"
-            width="4rem"
-            textAlign="Center"
-            visible="{= ${cabecera} === true }"
-        />
-        <CheckBox
-            selected="{flag1}"
-            visible="{= ${expandible} !== false &amp;&amp; !${isGroup} }"
-        />
-    </VBox>
-</t:template>
-                                        </t:Column>
-
+                                        <!-- COLONNA: Inflaz (CheckBox2) - nessun filtro -->
                                         <t:Column
-                                            width="80px"
+                                            id="colCheckBox2"
+                                            width="50px"
                                             hAlign="Center"
                                         >
-                                             <t:label>
+                                            <t:label>
                                                 <VBox
                                                     width="100%"
                                                     class="fullWidthHeader"
+                                                    alignItems="Center"
                                                 >
                                                     <Label text="&#160;" />
                                                     <VBox
                                                         renderType="Bare"
+                                                        alignItems="Center"
                                                         visible="{ui>/showStickyParent}"
                                                         class="parentHeaderBox"
                                                     >
@@ -832,7 +1164,7 @@
                                                             textAlign="Center"
                                                         />
                                                     </VBox>
-                                                    <VBox class="parentHeader">
+                                                    <VBox class="parentHeader" alignItems="Center">
                                                         <Text
                                                             text="Infla"
                                                             visible="{ui>/showStickyChild}"
@@ -844,24 +1176,30 @@
                                                     </VBox>
                                                 </VBox>
                                             </t:label>
-<t:template>
-    <VBox renderType="Bare" alignItems="Center" width="100%" alignContent="Center">
-        <Input
-            value="{flag2Label}"
-            editable="false"
-            class="flatCellInput"
-            width="4rem"
-            textAlign="Center"
-            visible="{= ${cabecera} === true }"
-        />
-        <CheckBox
-            selected="{flag2}"
-            select="onInflacionCheckBoxSelect"
-            visible="{= ${expandible} !== false &amp;&amp; !${isGroup} }"
-        />
-    </VBox>
-</t:template>
+                                            <t:template>
+                                                <VBox
+                                                    renderType="Bare"
+                                                    alignItems="Center"
+                                                    width="100%"
+                                                    alignContent="Center"
+                                                >
+                                                    <Input
+                                                        value="{flag2Label}"
+                                                        editable="false"
+                                                        class="flatCellInput"
+                                                        width="50px"
+                                                        textAlign="Center"
+                                                        visible="{= ${cabecera} === true }"
+                                                    />
+                                                    <CheckBox
+                                                        selected="{flag2}"
+                                                        select="onInflacionCheckBoxSelect"
+                                                        visible="{= ${expandible} !== false &amp;&amp; !${isGroup} }"
+                                                    />
+                                                </VBox>
+                                            </t:template>
                                         </t:Column>
+                                   
                                     </t:columns>
                                 </t:TreeTable>
                             </VBox>

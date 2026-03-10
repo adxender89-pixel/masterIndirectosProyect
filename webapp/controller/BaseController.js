@@ -425,7 +425,7 @@ sap.ui.define([
                         new sap.m.VBox({
                             width: "100%",
                             visible: "{ui>/showStickyChild}",
-                            height: "16px" ,
+                             height: "26px" ,
 
                             items: [
                                 new sap.m.Text({
@@ -438,16 +438,22 @@ sap.ui.define([
                 }).addStyleClass("fullWidthHeader");
 
                 // Plantilla de la columna (Inputs y textos según expandible/isGroup)
-                var oColumnTemplate = new sap.m.HBox({
-                    renderType: "Bare",
-                    justifyContent: "Center",
-                    alignItems: "Center",
-                    items: [
+var sCabeceraBinding = this.tableModelName 
+    ? "${" + this.tableModelName + ">cabecera}" 
+    : "${cabecera}";
+
+var oColumnTemplate = new sap.m.HBox({
+    renderType: "Bare",
+    justifyContent: "Center",
+    alignItems: "Center",
+    visible: "{= " + sCabeceraBinding + " !== true }",
+    items: [
                         new sap.m.Input({
                             width: "7.2rem",
                             textAlign: "Center",
                             value: this.getBind("y" + iYear),
-                            visible: "{= ${" + this.tableModelName + ">expandible} !== false && !${" + this.tableModelName + ">isGroup} }",
+                            visible: "{= ${" + this.tableModelName + ">expandible} !== false && !${" + this.tableModelName + ">isGroup} && ${" + this.tableModelName + ">cabecera} !== true }",
+
                             liveChange: function () { }
                         }).addStyleClass("customYearInput sapUiSizeCompact"),
                         new sap.m.Text({
@@ -915,7 +921,8 @@ sap.ui.define([
 
             if (!this._aGroupRanges || !this._aGroupRanges.length) {
                 oUiModel.setProperty("/showStickyParent", false);
-                oUiModel.setProperty("/showStickyChild", false);
+                this._setStickyChild(false);
+
                 return;
             }
 
@@ -948,7 +955,7 @@ sap.ui.define([
 
             // Muestra u oculta los elementos fijos si su contraparte original ya no está en pantalla
             oUiModel.setProperty("/showStickyParent", !bParentVisible);
-            oUiModel.setProperty("/showStickyChild", !bChildVisible && !bParentVisible);
+            this._setStickyChild(!bChildVisible && !bParentVisible);
 
             oUiModel.setProperty("/stickyHeaderData", {
                 parent: oActiveGroup.data,
@@ -1147,9 +1154,13 @@ sap.ui.define([
 
                 var oColMonths = this.byId("colMonths");
                 var oColNew = this.byId("colNew");
+                var oColCheck1 = this.byId("colCheckBox1");
+                var oColCheck2 = this.byId("colCheckBox2");
 
                 if (oColMonths) oColMonths.setVisible(bAnyDetailExpanded);
                 if (oColNew) oColNew.setVisible(bAnyDetailExpanded);
+                if (oColCheck1) oColCheck1.setVisible(bAnyDetailExpanded);
+                if (oColCheck2) oColCheck2.setVisible(bAnyDetailExpanded);
 
                 // Se reinicia la interfaz si todo está cerrado
                 if (!bAnyDetailExpanded) {
@@ -1158,7 +1169,8 @@ sap.ui.define([
 
                     oUiModel.setProperty("/showStickyAgrupador", false);
                     oUiModel.setProperty("/showStickyParent", false);
-                    oUiModel.setProperty("/showStickyChild", false);
+                    this._setStickyChild(false);
+
                 }
                 // Se reinicia el sticky header
                 if (!oUiModel.getProperty("/showStickyParent") &&
@@ -1201,6 +1213,8 @@ sap.ui.define([
 
             if (this.byId("colMonths")) this.byId("colMonths").setVisible(false);
             if (this.byId("colNew")) this.byId("colNew").setVisible(false);
+            if (this.byId("colCheckBox1")) this.byId("colCheckBox1").setVisible(false);
+            if (this.byId("colCheckBox2")) this.byId("colCheckBox2").setVisible(false);
 
             // Se inicializa el delegado
             if (!this._arrowDelegate) {
@@ -1237,6 +1251,15 @@ sap.ui.define([
             // Se elimina el registro del resize
 
             this._calculateDynamicRows();
+            if (!oTable._filterEmptyAttached) {
+                oTable.attachEvent("filter", function (oEvent) {
+                    if (!oEvent.getParameter("value")) {
+                        oEvent.preventDefault();
+                        this.onTreeTableFilter(oEvent);
+                    }
+                }.bind(this));
+                oTable._filterEmptyAttached = true;
+            }
         },
 
         /**
@@ -1649,9 +1672,12 @@ sap.ui.define([
 
                 this.byId("colMonths")?.setVisible(false);
                 this.byId("colNew")?.setVisible(false);
+                this.byId("colCheckBox1")?.setVisible(false);
+                this.byId("colCheckBox2")?.setVisible(false);
 
                 oUiModel?.setProperty("/showStickyParent", false);
-                oUiModel?.setProperty("/showStickyChild", false);
+                this._setStickyChild(false);
+
 
                 setTimeout(function () {
                     oTable.collapseAll();
@@ -1789,6 +1815,8 @@ sap.ui.define([
                 // Se utiliza bAnyDetailExpanded en lugar de bHasData
                 this.byId("colMonths")?.setVisible(bAnyDetailExpanded);
                 this.byId("colNew")?.setVisible(bAnyDetailExpanded);
+                this.byId("colCheckBox1")?.setVisible(bAnyDetailExpanded);
+                this.byId("colCheckBox2")?.setVisible(bAnyDetailExpanded);
 
                 oUiModel?.setProperty("/showStickyParent", false);
                 oUiModel?.setProperty("/showStickyChild", false);
@@ -2243,6 +2271,341 @@ sap.ui.define([
                     }.bind(this)
                 }
             );
-        }
+        },
+        filterTableRow: function (oEvent) {
+            var oButton = oEvent.getSource();
+            var oContext = oButton.getBindingContext();
+            if (!oContext) return;
+
+            var sRowPath = oContext.getPath();
+            var sSiblingsPath = sRowPath.substring(0, sRowPath.lastIndexOf("/"));
+            this._sSiblingsPath = sSiblingsPath;
+
+            var oModel = this.getView().getModel();
+            var aSiblings = oModel.getProperty(sSiblingsPath);
+            if (!Array.isArray(aSiblings)) return;
+
+            if (this._lastSiblingsPath !== sSiblingsPath) {
+                this._aOriginalSiblings = JSON.parse(JSON.stringify(aSiblings));
+                this._lastSiblingsPath = sSiblingsPath;
+                this._aActiveFilters = {}; // ✅ Reset filtri quando cambia gruppo
+            }
+
+            this._sFilterProperty = oButton.data("filterProp") || "name";
+            this._openFilterPopover(oButton);
+        },
+        onSearchSibling: function (oEvent) {
+
+            var sQuery = oEvent.getParameter("query") || "";
+            var oModel = this.getView().getModel();
+
+            if (!this._sSiblingsPath || !this._aOriginalSiblings) return;
+
+            if (!this._aActiveFilters) this._aActiveFilters = {};
+
+            if (sQuery) {
+                this._aActiveFilters[this._sFilterProperty] = sQuery;
+            } else {
+                delete this._aActiveFilters[this._sFilterProperty];
+            }
+
+            var aFilterKeys = Object.keys(this._aActiveFilters);
+
+            if (aFilterKeys.length === 0) {
+                oModel.setProperty(this._sSiblingsPath, this._aOriginalSiblings);
+            } else {
+                var aActiveFilters = this._aActiveFilters;
+
+                var aFiltered = this._aOriginalSiblings.filter(function (item) {
+                    if (item.cabecera === true) return true;
+                    return aFilterKeys.every(function (sProp) {
+                        var sVal = item[sProp];
+                        var sFilter = aActiveFilters[sProp];
+                        return sVal && sVal.toLowerCase().includes(sFilter.toLowerCase());
+                    });
+                });
+
+                var iRealResults = aFiltered.filter(function (item) {
+                    return item.cabecera !== true;
+                }).length;
+
+                if (iRealResults === 0) {
+                    aFiltered = aFiltered.filter(function (item) {
+                        return item.cabecera === true;
+                    });
+                }
+
+                oModel.setProperty(this._sSiblingsPath, aFiltered);
+            }
+
+            // ✅ Chiude il popover
+            if (this._pPopover) {
+                this._pPopover.then(function (oPopover) {
+                    oPopover.close();
+                });
+            }
+
+            setTimeout(function () {
+                this._buildGroupRanges();
+                this._applyCabeceraStyle();
+
+                // ✅ Ricalcola lo sticky in base alla posizione attuale
+                // così se le righe padre sono visibili, lo sticky sparisce
+                var oTable = this.getControlTable();
+                if (oTable) {
+                    this._onScrollLike({
+                        getParameter: function (sName) {
+                            if (sName === "firstVisibleRow") {
+                                return oTable.getFirstVisibleRow();
+                            }
+                        }
+                    });
+                }
+            }.bind(this), 50);
+        },
+        filterTableCabecera: function (oEvent) {
+            oEvent.preventDefault();
+
+            var oButton = oEvent.getSource();
+            var oTable = this.getControlTable();
+            var iFirstVisible = oTable.getFirstVisibleRow();
+
+            if (!this._aGroupRanges || !this._aGroupRanges.length) return;
+
+            var oActiveGroup = null;
+            for (var i = 0; i < this._aGroupRanges.length; i++) {
+                var oGroup = this._aGroupRanges[i];
+                if (iFirstVisible >= oGroup.start && iFirstVisible <= oGroup.end) {
+                    oActiveGroup = oGroup;
+                    break;
+                }
+            }
+
+            if (!oActiveGroup) return;
+
+            this._activeGroupStart = oActiveGroup.start;
+
+            var sSiblingsPath = oActiveGroup.path + "/categories";
+            this._sSiblingsPath = sSiblingsPath;
+
+            var oModel = this.getView().getModel();
+            var aSiblings = oModel.getProperty(sSiblingsPath);
+            if (!Array.isArray(aSiblings)) return;
+
+            if (this._lastSiblingsPath !== sSiblingsPath) {
+                this._aOriginalSiblings = JSON.parse(JSON.stringify(aSiblings));
+                this._lastSiblingsPath = sSiblingsPath;
+                this._aActiveFilters = {};
+            }
+
+            // ✅ Legge filterProp dal customData, come filterTableRow
+            this._sFilterProperty = oButton.data("filterProp") || "name";
+
+            this._openFilterPopover(oButton);
+        },
+        _openFilterPopover: function (oButton) {
+            var oView = this.getView();
+
+            if (!this._pPopover) {
+                this._pPopover = sap.ui.core.Fragment.load({
+                    id: oView.getId(),
+                    name: "masterindirectos.fragment.PopoverFilter",
+                    controller: this
+                }).then(function (oPopover) {
+                    oView.addDependent(oPopover);
+
+                    // ✅ Alla chiusura: se non ha premuto la lente, ripristina il valore attivo
+                    oPopover.attachAfterClose(function () {
+                        var oSearchField = sap.ui.core.Fragment.byId(oView.getId(), "searchField");
+                        if (oSearchField) {
+                            var sActive = (this._aActiveFilters && this._aActiveFilters[this._sFilterProperty]) || "";
+                            oSearchField.setValue(sActive);
+                        }
+                    }.bind(this));
+
+                    return oPopover;
+                }.bind(this));
+            }
+
+            this._pPopover.then(function (oPopover) {
+                // ✅ Se il popover è già aperto, lo chiude e non fa altro
+                if (oPopover.isOpen()) {
+                    oPopover.close();
+                    return;
+                }
+                // ✅ All'apertura: mostra il filtro attivo per questa colonna
+                var oSearchField = sap.ui.core.Fragment.byId(oView.getId(), "searchField");
+                if (oSearchField) {
+                    var sActive = (this._aActiveFilters && this._aActiveFilters[this._sFilterProperty]) || "";
+                    oSearchField.setValue(sActive);
+                }
+                oPopover.openBy(oButton);
+            }.bind(this));
+        },
+        _setStickyChild: function (bValue) {
+            var oUiModel = this.getView().getModel("ui");
+            oUiModel.setProperty("/showStickyChild", bValue);
+
+            var oTable = this.getControlTable();
+            if (!oTable) return;
+
+            if (bValue) {
+                oTable.addStyleClass("stickyHeaderActive");
+
+                // Salva e azzera il filterProperty di ogni colonna
+                oTable.getColumns().forEach(function (oCol) {
+                    var sFilter = oCol.getFilterProperty();
+                    if (sFilter) {
+                        oCol.data("savedFilterProperty", sFilter);
+                        oCol.setFilterProperty("");
+                    }
+                });
+
+            } else {
+                oTable.removeStyleClass("stickyHeaderActive");
+
+                // Ripristina il filterProperty salvato
+                oTable.getColumns().forEach(function (oCol) {
+                    var sSaved = oCol.data("savedFilterProperty");
+                    if (sSaved) {
+                        oCol.setFilterProperty(sSaved);
+                        oCol.data("savedFilterProperty", null);
+                    }
+                });
+            }
+        },
+        onTreeTableFilter: function (oEvent) {
+            oEvent.preventDefault();
+            
+
+            var sValue = oEvent.getParameter("value") || "";
+            var oModel = this.getView().getModel();
+            var oTable = this.getControlTable();
+            var oUiModel = this.getView().getModel("ui");
+
+            var oColumn = oEvent.getParameter("column");
+            var sFilterProperty = (oColumn && oColumn.getFilterProperty())
+                ? oColumn.getFilterProperty()
+                : "name";
+
+            if (!this._aTreeActiveFilters) {
+                this._aTreeActiveFilters = {};
+            }
+
+            if (sValue) {
+                this._aTreeActiveFilters[sFilterProperty] = sValue.toLowerCase();
+                oColumn && oColumn.setFiltered(true);
+            } else {
+                delete this._aTreeActiveFilters[sFilterProperty];
+                oColumn && oColumn.setFiltered(false);
+            }
+
+            if (!this._fullTreeBackup) {
+                this._fullTreeBackup = JSON.parse(JSON.stringify(oModel.getData()));
+            }
+
+            var fnResetUI = function () {
+                this.byId("colMonths") && this.byId("colMonths").setVisible(false);
+                this.byId("colNew") && this.byId("colNew").setVisible(false);
+                this.byId("colCheckBox1") && this.byId("colCheckBox1").setVisible(false);
+                this.byId("colCheckBox2") && this.byId("colCheckBox2").setVisible(false);
+                oUiModel && oUiModel.setProperty("/showStickyParent", false);
+                oUiModel && oUiModel.setProperty("/showStickyChild", false);
+                this._setStickyChild(false);
+            }.bind(this);
+
+            var aFilterKeys = Object.keys(this._aTreeActiveFilters);
+
+            // ── Nessun filtro attivo: stato iniziale, solo padri collassati ───────────
+            if (aFilterKeys.length === 0) {
+                oModel.setProperty(
+                    "/catalog/models/categories",
+                    JSON.parse(JSON.stringify(this._fullTreeBackup.catalog.models.categories))
+                );
+                fnResetUI();
+                oTable.collapseAll();
+                this._buildGroupRanges();
+                this._applyCabeceraStyle();
+                return;
+            }
+
+            var aActiveFilters = this._aTreeActiveFilters;
+
+            // ── Helper: il nodo soddisfa TUTTI i filtri attivi? ───────────────────────
+            var fnMatchesAll = function (oNode) {
+                return aFilterKeys.every(function (sProp) {
+                    return oNode[sProp] != null &&
+                        String(oNode[sProp]).toLowerCase().includes(aActiveFilters[sProp]);
+                });
+            };
+
+            var aFiltered = [];
+            var bCasoHijo = false;
+            var bDetalleExpanded = false;
+
+            this._fullTreeBackup.catalog.models.categories.forEach(function (oPadre) {
+
+                var bEsNodoReal = oPadre.isGroup === true ||
+                    (Array.isArray(oPadre.categories) && oPadre.categories.length > 0);
+                if (!bEsNodoReal) { return; }
+
+                // ── CASO PADRE: soddisfa tutti i filtri → mostrato con figli collassati
+                if (fnMatchesAll(oPadre)) {
+                    aFiltered.push(JSON.parse(JSON.stringify(oPadre)));
+                    return;
+                }
+
+                // ── CASO HIJO: cerca figli che soddisfino tutti i filtri ──────────────
+                var aHijosMatchados = [];
+                if (Array.isArray(oPadre.categories)) {
+                    oPadre.categories.forEach(function (oHijo) {
+                        if (fnMatchesAll(oHijo)) {
+                            aHijosMatchados.push(JSON.parse(JSON.stringify(oHijo)));
+
+                            if (Array.isArray(oHijo.categories) &&
+                                oHijo.categories.length > 0 &&
+                                oHijo.categories[0].isGroup === true) {
+                                bDetalleExpanded = true;
+                            }
+                        }
+                    });
+                }
+
+                if (aHijosMatchados.length > 0) {
+                    var oPadreCopia = JSON.parse(JSON.stringify(oPadre));
+                    oPadreCopia.categories = aHijosMatchados;
+                    aFiltered.push(oPadreCopia);
+                    bCasoHijo = true;
+                }
+            });
+
+            fnResetUI();
+            oModel.setProperty("/catalog/models/categories", aFiltered);
+
+            var oBinding = oTable.getBinding("rows");
+            if (!oBinding) { return; }
+
+            if (bCasoHijo) {
+                oTable.expandToLevel(2);
+                this.byId("colMonths") && this.byId("colMonths").setVisible(bDetalleExpanded);
+                this.byId("colNew") && this.byId("colNew").setVisible(bDetalleExpanded);
+                this.byId("colCheckBox1") && this.byId("colCheckBox1").setVisible(bDetalleExpanded);
+                this.byId("colCheckBox2") && this.byId("colCheckBox2").setVisible(bDetalleExpanded);
+            } else {
+                // Padre: chiude tutto inclusi eventuali figli aperti da ricerche precedenti
+                // poi espande solo il primo livello → figli visibili ma collassati
+                oTable.collapseAll();
+                oTable.expandToLevel(1);
+            }
+
+            this._buildGroupRanges();
+            this._applyCabeceraStyle();
+        },
+
+
+
+
+
+
     });
 });
