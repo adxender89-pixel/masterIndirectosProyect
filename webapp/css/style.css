@@ -110,7 +110,7 @@
 }
 .sapUiTable .sapMText.secondStickyText {
     font-weight: 600 !important;
-    padding-right: 0.7rem;
+    
 }
 
 
@@ -1190,4 +1190,10 @@ padding-top: 7px;
     padding-top: 0 !important;
    padding-bottom: 0.05rem !important;
     line-height: 1rem !important;
+}
+
+
+.checkboxStickyText {
+    height: 28.8px !important;
+    line-height: 23.5px !important;
 }

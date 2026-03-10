@@ -425,13 +425,13 @@ sap.ui.define([
                         new sap.m.VBox({
                             width: "100%",
                             visible: "{ui>/showStickyChild}",
-                             height: "26px" ,
+                              
 
                             items: [
                                 new sap.m.Text({
                                     text: "{ui>/stickyHeaderData/child/y" + iYear + "}",
                                     wrapping: false
-                                }).addStyleClass("secondStickyText")
+                                }).addStyleClass("secondStickyText checkboxStickyText")
                             ]
                         }).addStyleClass("parentHeader")
                     ]

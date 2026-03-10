@@ -1083,41 +1083,30 @@
                                             width="50px"
                                             hAlign="Center"
                                         >
-                                            <t:label>
-                                                <VBox
-                                                    width="100%"
-                                                    class="fullWidthHeader"
-                                                >
-                                                    <Label text="&#160;"
-                                                    class="titleGrande" />
-                                                    <VBox
-                                                        renderType="Bare"
-                                                        alignItems="Center"
-                                                        visible="{ui>/showStickyParent}"
-                                                        class="parentHeaderBox"
-                                                    >
-                                                        <Text
-                                                            text="&#160;"
-                                                            textAlign="Center"
-                                                        />
-                                                    </VBox>
-                                                    <VBox >
-                                                        <HBox
-                                                            class="parentHeader"
-                                                            renderType="Bare"
-                                                            alignContent="Start"
-                                                        >
-                                                        <Text
-                                                            text="Auto"
-                                                            visible="{ui>/showStickyChild}"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                            class="secondStickyContainer"
-                                                        />
-                                                         </HBox>
-                                                    </VBox>
-                                                </VBox>
-                                            </t:label>
+<t:label>
+    <VBox width="100%" class="fullWidthHeader">
+        <Label text="&#160;" class="titleGrande"  />
+        <VBox
+            renderType="Bare"
+            visible="{ui>/showStickyParent}"
+            class="parentHeaderBox"
+            height="26px"
+        >
+            <Text text="&#160;"  width="100%" textAlign="Center" wrapping="false" />
+        </VBox>
+        <HBox class="parentHeader" renderType="Bare" justifyContent="Center" alignItems="Center">
+            <Text
+                text="Auto"
+                visible="{ui>/showStickyChild}"
+                textAlign="Center"
+                wrapping="false"
+                class="secondStickyText checkboxStickyText"
+                width="100%"
+                
+            />
+        </HBox>
+    </VBox>
+</t:label>
                                             <t:template>
                                                 <VBox
                                                     renderType="Bare"
@@ -1145,37 +1134,29 @@
                                             width="50px"
                                             hAlign="Center"
                                         >
-                                            <t:label>
-                                                <VBox
-                                                    width="100%"
-                                                    class="fullWidthHeader"
-                                                    alignItems="Center"
-                                                >
-                                                    <Label text="&#160;" />
-                                                    <VBox
-                                                        renderType="Bare"
-                                                        alignItems="Center"
-                                                        visible="{ui>/showStickyParent}"
-                                                        class="parentHeaderBox"
-                                                    >
-                                                        <Text
-                                                            text="&#160;"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                        />
-                                                    </VBox>
-                                                    <VBox class="parentHeader" alignItems="Center">
-                                                        <Text
-                                                            text="Infla"
-                                                            visible="{ui>/showStickyChild}"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                            class="secondStickyText"
-                                                        />
-                                                    </VBox>
-                                                </VBox>
-                                            </t:label>
+<t:label>
+    <VBox width="100%" class="fullWidthHeader">
+        <Label text="&#160;" class="titleGrande" />
+        <VBox
+            renderType="Bare"
+            visible="{ui>/showStickyParent}"
+            class="parentHeaderBox"
+            height="26px"
+        >
+            <Text text="&#160;" width="100%" textAlign="Center" wrapping="false" />
+        </VBox>
+        <HBox class="parentHeader" renderType="Bare" justifyContent="Center" alignItems="Center">
+            <Text
+                text="Infla"
+                visible="{ui>/showStickyChild}"
+                textAlign="Center"
+                wrapping="false"
+                class="secondStickyText checkboxStickyText"
+                width="100%"
+            />
+        </HBox>
+    </VBox>
+</t:label>
                                             <t:template>
                                                 <VBox
                                                     renderType="Bare"
