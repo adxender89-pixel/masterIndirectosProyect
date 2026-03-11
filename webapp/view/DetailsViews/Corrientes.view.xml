@@ -209,7 +209,7 @@
                                                     text="{operacionesModel>text}"
                                                 />
                                             </ComboBox>
-                                              <Button
+                                            <Button
                                                 width="8%"
                                                 text="{i18n>TBorigen}"
                                                 press="onOriginPress"
@@ -253,7 +253,7 @@
                                                     text="{yearsModel>year}"
                                                 />
                                             </Select>
-                                              <Button
+                                            <Button
                                                 icon="sap-icon://add"
                                                 press="onAddPress"
                                                 class="toolbarActionBtn"
@@ -266,7 +266,7 @@
                                             <Button
                                                 icon="sap-icon://shortcut"
                                                 press="onShortcutPress"
-                                                 class="toolbarActionBtn"
+                                                class="toolbarActionBtn"
                                             />
                                             <Button
                                                 icon="sap-icon://arrow-bottom"
@@ -348,10 +348,10 @@
                                                     width="100%"
                                                     alignContent="Center"
                                                 >
-                                                <Button
+                                                    <Button
                                                         icon="sap-icon://filter"
                                                         press="filterTableRow"
-                                                         class="bottomFilter"
+                                                        class="bottomFilter"
                                                         width="0.9rem"
                                                         visible="{= ${cabecera} === true}"
                                                     >
@@ -400,7 +400,7 @@
                                                             textAlign="Center"
                                                         />
                                                     </VBox>
-                                                                                                       <HBox
+                                                    <HBox
                                                         class="parentHeader"
                                                         renderType="Bare"
                                                         alignContent="Start"
@@ -497,7 +497,7 @@
                                                             icon="sap-icon://filter"
                                                             press="filterTableCabecera"
                                                             class="bottomFilter"
-                                                              width="0.9rem"
+                                                            width="0.9rem"
                                                             visible="{ui>/showStickyChild}"
                                                         >
                                                             <customData>
@@ -528,7 +528,7 @@
                                                         icon="sap-icon://filter"
                                                         press="filterTableRow"
                                                         class="bottomFilter"
-                                                          width="0.9rem"
+                                                        width="0.9rem"
                                                         visible="{= ${cabecera} === true}"
                                                     >
                                                         <customData>
@@ -586,7 +586,7 @@
                                                             icon="sap-icon://filter"
                                                             press="filterTableCabecera"
                                                             class="bottomFilter"
-                                                              width="0.9rem"
+                                                            width="0.9rem"
                                                             visible="{ui>/showStickyChild}"
                                                         >
                                                             <customData>
@@ -611,13 +611,13 @@
                                                 <HBox
                                                     renderType="Bare"
                                                     width="100%"
-                                                     alignItems="Center"
+                                                    alignItems="Center"
                                                 >
                                                     <Button
                                                         icon="sap-icon://filter"
                                                         press="filterTableRow"
-                                                         width="0.9rem"
-                                                          class="bottomFilter"
+                                                        width="0.9rem"
+                                                        class="bottomFilter"
                                                         visible="{= ${cabecera} === true}"
                                                     >
                                                         <customData>
@@ -675,7 +675,7 @@
                                                             icon="sap-icon://filter"
                                                             press="filterTableCabecera"
                                                             class="bottomFilter"
-                                                              width="0.9rem"
+                                                            width="0.9rem"
                                                             visible="{ui>/showStickyChild}"
                                                         >
                                                             <customData>
@@ -700,7 +700,7 @@
                                                 <HBox
                                                     renderType="Bare"
                                                     width="100%"
-                                                     alignItems="Center"
+                                                    alignItems="Center"
                                                 >
                                                     <Button
                                                         icon="sap-icon://filter"
@@ -766,7 +766,7 @@
                                                             icon="sap-icon://filter"
                                                             press="filterTableCabecera"
                                                             class="bottomFilter"
-                                                              width="0.9rem"
+                                                            width="0.9rem"
                                                             visible="{ui>/showStickyChild}"
                                                         >
                                                             <customData>
@@ -797,7 +797,7 @@
                                                         icon="sap-icon://filter"
                                                         press="filterTableRow"
                                                         class="bottomFilter"
-                                                          width="0.9rem"
+                                                        width="0.9rem"
                                                         visible="{= ${cabecera} === true}"
                                                     >
                                                         <customData>
@@ -857,7 +857,7 @@
                                                             icon="sap-icon://filter"
                                                             press="filterTableCabecera"
                                                             class="bottomFilter"
-                                                              width="0.9rem"
+                                                            width="0.9rem"
                                                             visible="{ui>/showStickyChild}"
                                                         >
                                                             <customData>
@@ -888,7 +888,7 @@
                                                         icon="sap-icon://filter"
                                                         press="filterTableRow"
                                                         class="bottomFilter"
-                                                          width="0.9rem"
+                                                        width="0.9rem"
                                                         visible="{= ${cabecera} === true}"
                                                     >
                                                         <customData>
@@ -939,7 +939,7 @@
                                                             icon="sap-icon://filter"
                                                             press="filterTableCabecera"
                                                             class="bottomFilter"
-                                                              width="0.9rem"
+                                                            width="0.9rem"
                                                             visible="{ui>/showStickyChild}"
                                                         >
                                                             <customData>
@@ -969,8 +969,8 @@
                                                     <Button
                                                         icon="sap-icon://filter"
                                                         press="filterTableRow"
-                                                         class="bottomFilter"
-                                                          width="0.9rem"
+                                                        class="bottomFilter"
+                                                        width="0.9rem"
                                                         visible="{= ${cabecera} === true}"
                                                     >
                                                         <customData>
@@ -1025,7 +1025,7 @@
                                                             icon="sap-icon://filter"
                                                             press="filterTableCabecera"
                                                             class="bottomFilter"
-                                                              width="0.9rem"
+                                                            width="0.9rem"
                                                             visible="{ui>/showStickyChild}"
                                                         >
                                                             <customData>
@@ -1056,7 +1056,7 @@
                                                         icon="sap-icon://filter"
                                                         press="filterTableRow"
                                                         class="bottomFilter"
-                                                          width="0.9rem"
+                                                        width="0.9rem"
                                                         visible="{= ${cabecera} === true}"
                                                     >
                                                         <customData>
@@ -1087,8 +1087,10 @@
                                                     width="100%"
                                                     class="fullWidthHeader"
                                                 >
-                                                    <Label text="&#160;"
-                                                    class="titleGrande" />
+                                                    <Label
+                                                        text="&#160;"
+                                                        class="titleGrande"
+                                                    />
                                                     <VBox
                                                         renderType="Bare"
                                                         alignItems="Center"
@@ -1100,23 +1102,28 @@
                                                             textAlign="Center"
                                                         />
                                                     </VBox>
-                                                  <VBox class="parentHeader" alignItems="Center"  height="1.7rem" visible="{ui>/showStickyChild}" justifyContent="Center">
-    <HBox
-        class="parentHeader"
-        renderType="Bare"
-        alignContent="Start"
-    >
-        <Text
-            text="Auto"
-            visible="{ui>/showStickyChild}"
-            textAlign="Center"
-            wrapping="false"
-            class="secondStickyText autoInflaText"  
-            width="100%"
-           
-        />
-    </HBox>
-</VBox>
+                                                    <VBox
+                                                        class="parentHeader"
+                                                        alignItems="Center"
+                                                        height="1.7rem"
+                                                        visible="{ui>/showStickyChild}"
+                                                        justifyContent="Center"
+                                                    >
+                                                        <HBox
+                                                            class="parentHeader"
+                                                            renderType="Bare"
+                                                            alignContent="Start"
+                                                        >
+                                                            <Text
+                                                                text="Auto"
+                                                                visible="{ui>/showStickyChild}"
+                                                                textAlign="Center"
+                                                                wrapping="false"
+                                                                class="secondStickyText autoInflaText"
+                                                                width="100%"
+                                                            />
+                                                        </HBox>
+                                                    </VBox>
                                                 </VBox>
                                             </t:label>
                                             <t:template>
@@ -1124,7 +1131,6 @@
                                                     renderType="Bare"
                                                     alignItems="Center"
                                                     alignContent="Center"
-                                                    
                                                 >
                                                     <Input
                                                         value="{flag1Label}"
@@ -1166,16 +1172,22 @@
                                                             textAlign="Center"
                                                         />
                                                     </VBox>
-                                                    <VBox class="parentHeader" alignItems="Center"  height="1.7rem" visible="{ui>/showStickyChild}" justifyContent="Center">
-    <Text
-        text="Infla"
-        visible="{ui>/showStickyChild}"
-        width="100%"
-        textAlign="Center"
-        wrapping="false"
-        class="secondStickyText autoInflaText"  
-    />
-</VBox>
+                                                    <VBox
+                                                        class="parentHeader"
+                                                        alignItems="Center"
+                                                        height="1.7rem"
+                                                        visible="{ui>/showStickyChild}"
+                                                        justifyContent="Center"
+                                                    >
+                                                        <Text
+                                                            text="Infla"
+                                                            visible="{ui>/showStickyChild}"
+                                                            width="100%"
+                                                            textAlign="Center"
+                                                            wrapping="false"
+                                                            class="secondStickyText autoInflaText"
+                                                        />
+                                                    </VBox>
                                                 </VBox>
                                             </t:label>
                                             <t:template>
