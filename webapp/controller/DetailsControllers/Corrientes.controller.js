@@ -98,6 +98,7 @@ sap.ui.define([
 
                         this.onContextMenu({
                             rowBindingContext: oRowContext,
+                            nativeEvent: oNativeEvent, 
                             cellControl: oTargetControl || oTable
                         });
                     }.bind(this));

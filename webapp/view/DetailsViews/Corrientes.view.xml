@@ -1217,7 +1217,7 @@
                                                             class="secondStickyText checkboxStickyText"
                                                             width="100%"
                                                         />
-                                                    </HBox>
+                                                    </VBox>
                                                 </VBox>
                                             </t:label>
                                             <t:template>

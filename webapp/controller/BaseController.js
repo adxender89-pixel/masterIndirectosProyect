@@ -618,69 +618,38 @@ sap.ui.define([
     /**
      * Lógica global para abrir el menú contextual (Popover)
      */
-    onContextMenu: function (oParams) {
-        var oRowContext = oParams.rowBindingContext;
-        var oOriginControl = oParams.cellControl;
-        var oView = this.getView();
-        // Guardamos la fila para que el AddPress sepa dónde trabajar
-        this._oContextRecord = oRowContext;
-        if (!this._pPopover) {
-            this._pPopover = Fragment.load({
-                id: oView.getId(),
-                name: "masterindirectos.fragments.ActionPopover",
-                controller: this
-            }).then(function (oPopover) {
-                oView.addDependent(oPopover);
-                return oPopover;
-            });
-        }
+   // En BaseController
+onContextMenu: function (oParams) {
+    var oRowContext = oParams.rowBindingContext;
+    var oNativeEvent = oParams.nativeEvent; // ← pasamos el evento nativo
+    var oView = this.getView();
 
-        if (!oRowContext || !oOriginControl) return;
+    if (!oRowContext) return;
 
-        var oObj = oRowContext.getObject();
-        if (!oObj) return;
+    var oObj = oRowContext.getObject();
+    if (!oObj) return;
 
-        //  SOLO estos dos casos abren el popover:
-        // 1. Nodo padre (I.003, I.004): padre === true
-        var bEsPadre = oObj.padre === true;
+    if (oObj.padre !== true && oObj.cabecera !== true) return;
 
-        // 2. Fila "Agrupador" (cabecera gris): cabecera === true
-        var bEsCabecera = oObj.cabecera === true;
+    this._oContextRecord = oRowContext;
 
-        // Cualquier otra fila → no abrir
-        if (!bEsPadre && !bEsCabecera) return;
-
-        this._oContextRecord = oRowContext;
-
-        function getCellWrapper(oControl) {
-            var oParent = oControl.getParent();
-            while (oParent && !oParent.getDomRef()) {
-                oParent = oParent.getParent();
-            }
-            return oParent || oControl;
-        }
-
-        var oTargetControl = getCellWrapper(oOriginControl);
-        if (!oTargetControl) return;
-
-        if (!this._pPopoverAction) {
-            this._pPopoverAction = sap.ui.core.Fragment.load({
-                id: oView.getId(),
-                name: "masterindirectos.fragments.ActionPopover",
-                controller: this
-            }).then(function (oPopover) {
-                oView.addDependent(oPopover);
-                return oPopover;
-            });
-        }
-
-        this._pPopoverAction.then(function (oPopover) {
-            oPopover.setBindingContext(oRowContext, "catalog");
-            setTimeout(function () {
-                oPopover.openBy(oTargetControl);
-            }, 50);
+    if (!this._pPopoverAction) {
+        this._pPopoverAction = Fragment.load({
+            id: oView.getId(),
+            name: "masterindirectos.fragments.ActionPopover",
+            controller: this
+        }).then(function (oPopover) {
+            oView.addDependent(oPopover);
+            return oPopover;
         });
-    },
+    }
+
+    this._pPopoverAction.then(function (oPopover) {
+        oPopover.setBindingContext(oRowContext, "catalog");
+        // Usamos el target DOM nativo directamente
+        oPopover.openBy(oNativeEvent.target);
+    });
+},
     /**
      * Cierra el popover de forma global
      */
