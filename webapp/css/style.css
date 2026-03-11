@@ -932,6 +932,7 @@ padding-top: 7px;
 
 .yearButton.sapMBtn {
     height: 1.2rem !important;
+    padding: 0 0.5rem !important; /* ← añade padding horizontal */
 }
 
 .yearButton .sapMBtnContent {
@@ -941,7 +942,6 @@ padding-top: 7px;
     margin: 0 !important;
     margin-top: -2px !important;
 }
-
 /* Aplica Bold al texto del IconTabFilter */
 .sapMITBText {
     font-weight: bold !important;

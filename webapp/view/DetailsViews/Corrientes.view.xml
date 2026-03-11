@@ -108,6 +108,7 @@
                             </t:columns>
                         </t:Table>
                     </VBox>
+
                     <VBox
                         width="49%"
                         height="100%"
@@ -1186,29 +1187,27 @@
                                                 <VBox
                                                     width="100%"
                                                     class="fullWidthHeader"
+                                                    alignItems="Center"
                                                 >
-                                                    <Label
-                                                        text="&#160;"
-                                                        class="titleGrande"
-                                                    />
+                                                    <Label text="&#160;" />
                                                     <VBox
                                                         renderType="Bare"
+                                                        alignItems="Center"
                                                         visible="{ui>/showStickyParent}"
                                                         class="parentHeaderBox"
-                                                        height="26px"
                                                     >
                                                         <Text
                                                             text="&#160;"
                                                             width="100%"
                                                             textAlign="Center"
-                                                            wrapping="false"
                                                         />
                                                     </VBox>
-                                                    <HBox
+                                                    <VBox
                                                         class="parentHeader"
-                                                        renderType="Bare"
-                                                        justifyContent="Center"
                                                         alignItems="Center"
+                                                        height="1.7rem"
+                                                        visible="{ui>/showStickyChild}"
+                                                        justifyContent="Center"
                                                     >
                                                         <Text
                                                             text="Infla"

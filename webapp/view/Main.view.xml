@@ -34,10 +34,23 @@
                     </HBox>
                 </contentMiddle>
                 <!-- Acciones rápidas en la cabecera -->
-                <contentRight>
-                    <Button icon="sap-icon://search" type="Transparent" />
-                    <Button icon="sap-icon://settings" press="onToggleSideBar" type="Transparent" />
-                    <Button icon="sap-icon://log" type="Transparent" />
+               <contentRight>
+                    <Button
+                        icon="sap-icon://search"
+                        type="Transparent"
+                        class="headerIconBtn"
+                    />
+                    <Button
+                        icon="sap-icon://settings"
+                        press="onToggleSideBar"
+                        type="Transparent"
+                        class="headerIconBtn"
+                    />
+                    <Button
+                        icon="sap-icon://log"
+                        type="Transparent"
+                        class="headerIconBtn"
+                    />
                 </contentRight>
             </Bar>
         </customHeader>
@@ -76,7 +89,7 @@
             </FlexBox>
         </content>
         <!-- Footer con acciones de guardado -->
-        <footer>
+      <footer>
             <OverflowToolbar height="2.5rem">
                 <ToolbarSpacer />
                 <!--Button text="{i18n>btnGuardarTodo}" type="Emphasized" press="onSaveAll" /-->

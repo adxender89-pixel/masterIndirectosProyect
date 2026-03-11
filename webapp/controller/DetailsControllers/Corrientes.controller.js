@@ -69,21 +69,37 @@ sap.ui.define([
                     $table.off("contextmenu").on("contextmenu", function (oNativeEvent) {
                         oNativeEvent.preventDefault();
                         var $target = $(oNativeEvent.target);
-
-
                         var oTargetControl = $target.control(0);
-
 
                         var iRowIndex = $target.closest(".sapUiTableTr").index();
                         var oRowContext = oTable.getContextByIndex(oTable.getFirstVisibleRow() + iRowIndex);
 
+                        if (!oRowContext) return;
 
-                        if (oRowContext) {
-                            this.onContextMenu({
-                                rowBindingContext: oRowContext,
-                                cellControl: oTargetControl || oTable
-                            });
+                        // Verificar que es padre o cabecera
+                        var oObj = oRowContext.getObject();
+                        if (!oObj) return;
+                        if (oObj.padre !== true && oObj.cabecera !== true) return;
+
+                        // ── Solo abrir si el clic fue sobre el Input de la columna "name" ──
+                        // El oTargetControl debe ser el Input cuyo value binding sea "name"
+                        var oCtrl = oTargetControl;
+                        if (oCtrl && oCtrl.getBindingInfo) {
+                            var oBindingInfo = oCtrl.getBindingInfo("value");
+                            var sBindingPath = oBindingInfo && oBindingInfo.parts && oBindingInfo.parts[0] && oBindingInfo.parts[0].path;
+
+                            console.log("binding path:", sBindingPath);
+
+                            if (sBindingPath !== "name") return;
+                        } else {
+                            return;
                         }
+                        // ──────────────────────────────────────────────────────────────────
+
+                        this.onContextMenu({
+                            rowBindingContext: oRowContext,
+                            cellControl: oTargetControl || oTable
+                        });
                     }.bind(this));
 
 
@@ -202,13 +218,26 @@ sap.ui.define([
                 var oParentData = oContext.getObject();
 
 
-                if (oParentData.padre === true || oParentData.isGroup === true) {
+               if (oParentData.padre === true || oParentData.isGroup === true) {
 
-                    if (!oParentData.categories) { oParentData.categories = []; }
-                    aTargetArray = oParentData.categories;
-                    sParentName = oParentData.name;
-
-                } else {
+    // Si es la fila "Agrupador" (cabecera), subir un nivel al padre real
+    if (oParentData.cabecera === true) {
+        var sParentPath = oContext.getPath();
+        // Subir dos niveles: /categories/X/categories/0 → /categories/X
+        sParentPath = sParentPath.substring(0, sParentPath.lastIndexOf("/categories"));
+        var oRealParent = oModel.getProperty(sParentPath);
+        if (!oRealParent || !oRealParent.categories) {
+            sap.m.MessageToast.show(oBundle.getText("msgOnlyRootAllowed"));
+            return;
+        }
+        aTargetArray = oRealParent.categories;
+        sParentName = oRealParent.name;
+    } else {
+        if (!oParentData.categories) { oParentData.categories = []; }
+        aTargetArray = oParentData.categories;
+        sParentName = oParentData.name;
+    }
+} else {
 
                     sap.m.MessageToast.show(oBundle.getText("msgOnlyRootAllowed"));
                     return;
@@ -240,20 +269,19 @@ sap.ui.define([
                     }
                 }
 
-                var oNew = {
-                    name: sFinalName, // Aquí aplicamos la lógica anterior
-                    isGroup: false,
-                    padre: false,
-                    flag1: false,           // Flag 1
-                    flag2: false,           // Inflación
-                    categories: [],
-                    amount: "",
-                    currency: "",
-                    nMonths: "",
-                    pend: "",
-                    months: "",
-                    monthsData: {}
-                };
+    var oNew = {
+    name: sFinalName,
+    // NO pongas isGroup, padre, expandible, cabecera
+    // Solo los campos de datos
+    flag1: false,
+    flag2: false,
+    amount: "",
+    currency: "",
+    nMonths: "",
+    pend: "",
+    months: "",
+    monthsData: {}
+};
 
                 this._fillMonths(oNew, iCurrentYear);
                 aTargetArray.push(oNew);
