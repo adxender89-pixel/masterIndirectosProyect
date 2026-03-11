@@ -11,9 +11,20 @@ sap.ui.define([
 
             onInit: function () {
                 //obtenemos el modelo global de dashboard
-                const modelDashboard = this.getGlobalModel("dashboardModel"); 
-                const kpi = modelDashboard.getProperty("/kpi")[0];
-                
+                this.setInitData();
+            },
+
+            setInitData: async function () {
+                const dashBoardData = await this.getDashboardData();
+                const dashboardModel = new JSONModel({
+                    kpi: dashBoardData.NavKpisIndirectos.results,
+                    resumen: dashBoardData.NavResumenIndirectos.results
+                });
+
+                this.setGlobalModel(dashboardModel, "dashboardModel");
+
+                const kpi = dashboardModel.getProperty("/kpi")[0];
+
                 // 1. COSTE TOTAL
                 var oDataCosteTotal = [
                     {
@@ -48,13 +59,9 @@ sap.ui.define([
                         data: [parseFloat(item.ejecutado), parseFloat(item.pendiente)]
                     }))
                 }
-                this.getView().setModel(
-                    new JSONModel(tartasModel),
-                    "oModelTartas"
-                );
 
                 // Creamos un modelo para el grafico de barras con los datos obtenidos
-                let dataGraphicBar = modelDashboard.getProperty("/resumen");
+                let dataGraphicBar = dashboardModel.getProperty("/resumen");
                 dataGraphicBar = dataGraphicBar.filter(item => item.Post1 && item.Post1 !== "RESULTADO");
 
                 const oGraphicBarData = {
@@ -76,9 +83,44 @@ sap.ui.define([
                 }
 
                 this.getView().setModel(
+                    new JSONModel(tartasModel),
+                    "oModelTartas"
+                );
+
+                this.getView().setModel(
                     new JSONModel(oGraphicBarData),
                     "oModelGraphicBar"
                 );
+
+                this.renderGraphics();
+            
+            },
+
+
+            getDashboardData: async function () {
+                return this.post(this.getGlobalModel("mainService"), "/AccesoIndirectosSet", {
+                    NavSelProyecto: [
+                        this.getGlobalModel("appData").getData().tramo
+                    ],
+                    NavMensajes: [],
+                    NavKpisIndirectos: [],
+                    NavResumenIndirectos: [],
+                }, {
+                    headers: {
+                        ambito: this.getGlobalModel("appData").getData().userData.initialNode,
+                        lang: this.getGlobalModel("appData").getData().userData.AplicationLangu,
+                        norma: this.getGlobalModel("normModel").getData().norma || "",
+                    }
+                }).then(function (response) {
+                    return response;
+                }.bind(this));
+            },
+
+            renderGraphics: function () {
+                //los graficos son un poco especialitos y necesitan un pequeño delay para renderizarse correctamente, si no se renderizan con los datos actualizados
+                setTimeout(() => {
+                    this.getView().invalidate();
+                }, 500);
             }
 
 

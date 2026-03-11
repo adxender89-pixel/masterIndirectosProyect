@@ -10,169 +10,12 @@ sap.ui.define(
 
     return BaseController.extend("masterindirectos.controller.Main", {
 
-      
+
       /**
        * Inicializa el controlador principal de la aplicación.
        * Se encarga de instanciar los modelos globales de alcance, tramos y estado de la interfaz.
        */
       onInit: async function () {
-        // Establece el modelo de alcance inicial con los datos del centro de beneficio y sociedad.
-        this.setGlobalModel(
-          new JSONModel({
-            idNode: "FIDEFERRC5081",
-            profitCenter: "C5081",
-            profitCenterDescription: "FASE SERVICIO DE MAQUINARIA",
-            application: "FIDE",
-            hierarchy: "FERR",
-            normList: [],
-            sites: [],
-            status: "V",
-            currency: "EUR",
-            society: "50",
-            idParent: null,
-            country: "ES",
-            region: "45",
-            isSite: true,
-            isC2: true,
-            isUTE: false,
-            isParque: true,
-            isTramos: null,
-            access: null,
-          }),
-          "selectedScopeModel",
-        );
-
-        // Define el tramo seleccionado por defecto para la carga inicial.
-        this.setGlobalModel(
-          new JSONModel({
-            Proyecto: "00010813",
-            ProyectoExt: "P.5081",
-            Descripcion: "PARQUE DE MAQUINARIA SESEÑA ()",
-            Prctr: "C5081",
-            Tramos: "",
-          }),
-          "tramoSelectedModel",
-        );
-
-        // Carga la lista maestra de proyectos y tramos disponibles en la aplicación.
-        this.setGlobalModel(
-          new JSONModel([
-            {
-              Proyecto: "00010813",
-              ProyectoExt: "P.5081",
-              Descripcion: "PARQUE DE MAQUINARIA SESEÑA ()",
-              Prctr: "C5081",
-              Tramos: "",
-            },
-            {
-              Proyecto: "00010826",
-              ProyectoExt: "1.5081",
-              Descripcion: "PARQUE DE MAQUINARIA SESEÑA TRAMO 1",
-              Prctr: "C5081",
-              Tramos: "X",
-            },
-            {
-              Proyecto: "00010827",
-              ProyectoExt: "2.5081",
-              Descripcion: "PARQUE DE MAQUINARIA SESEÑA TRAMO 2",
-              Prctr: "C5081",
-              Tramos: "X",
-            },
-            {
-              Proyecto: "00010828",
-              ProyectoExt: "3.5081",
-              Descripcion: "PARQUE DE MAQUINARIA SESEÑA TRAMO 3",
-              Prctr: "C5081",
-              Tramos: "X",
-            },
-            {
-              Proyecto: "00010829",
-              ProyectoExt: "4.5081",
-              Descripcion: "PARQUE DE MAQUINARIA SESEÑA TRAMO 4",
-              Prctr: "C5081",
-              Tramos: "X",
-            },
-            {
-              Proyecto: "00010830",
-              ProyectoExt: "5.5081",
-              Descripcion: "PARQUE DE MAQUINARIA SESEÑA TRAMO 5",
-              Prctr: "C5081",
-              Tramos: "X",
-            },
-            {
-              Proyecto: "00010831",
-              ProyectoExt: "6.5081",
-              Descripcion: "PARQUE DE MAQUINARIA SESEÑA TRAMO 6",
-              Prctr: "C5081",
-              Tramos: "X",
-            },
-            {
-              Proyecto: "00010832",
-              ProyectoExt: "7.5081",
-              Descripcion: "PARQUE DE MAQUINARIA SESEÑA TRAMO 7",
-              Prctr: "C5081",
-              Tramos: "X",
-            },
-            {
-              Proyecto: "00010833",
-              ProyectoExt: "8.5081",
-              Descripcion: "PARQUE DE MAQUINARIA SESEÑA TRAMO 8",
-              Prctr: "C5081",
-              Tramos: "X",
-            },
-            {
-              Proyecto: "00010834",
-              ProyectoExt: "9.5081",
-              Descripcion: "PARQUE DE MAQUINARIA SESEÑA TRAMO 9",
-              Prctr: "C5081",
-              Tramos: "X",
-            },
-            {
-              Proyecto: "00010835",
-              ProyectoExt: "A.5081",
-              Descripcion: "PARQUE DE MAQUINARIA SESEÑA TRAMO 10",
-              Prctr: "C5081",
-              Tramos: "X",
-            },
-            {
-              Proyecto: "00010836",
-              ProyectoExt: "B.5081",
-              Descripcion: "PARQUE DE MAQUINARIA SESEÑA TRAMO 11",
-              Prctr: "C5081",
-              Tramos: "X",
-            },
-            {
-              Proyecto: "00010837",
-              ProyectoExt: "C.5081",
-              Descripcion: "PARQUE DE MAQUINARIA SESEÑA TRAMO 12",
-              Prctr: "C5081",
-              Tramos: "X",
-            },
-            {
-              Proyecto: "00010598",
-              ProyectoExt: "P.3ER",
-              Descripcion: "INTEGRATOR SERVICES L3 HAL",
-              Prctr: "C3ER",
-              Tramos: "",
-            },
-            {
-              Proyecto: "00010599",
-              ProyectoExt: "1.3ER",
-              Descripcion: "N2 CAR PARK",
-              Prctr: "C3ER",
-              Tramos: "X",
-            },
-            {
-              Proyecto: "00010609",
-              ProyectoExt: "2.3ER",
-              Descripcion: "BRAVO",
-              Prctr: "C3ER",
-              Tramos: "X",
-            },
-          ]),
-          "tramosModel",
-        );
-
         this._bNodeExpanded = false;
 
         // Inicializa el modelo UI para controlar la visibilidad de cabeceras fijas y datos sticky.
@@ -237,6 +80,8 @@ sap.ui.define(
         this._mViews = {};
 
 
+        //Creo modelo de diferidos
+        //this.setGlobalModel(new sap.ui.model.json.JSONModel(), "diferidosModel");
         // INICIAMOS LA CONFIGURACION BASICA DE LA APLICACION CARGANDO LOS DATOS DEL USUARIO, LOS TRAMOS Y EL ACCESO
 
         const userConfig = await this.getUserConfig()
@@ -256,35 +101,9 @@ sap.ui.define(
         delete tramo.__metadata;
         appDataModel.setProperty("/tramo", tramo);
 
-        const dashBoardData = await this.getDashboardData();
-        const dashboardModel = new JSONModel({
-          kpi: dashBoardData.NavKpisIndirectos.results,
-          resumen: dashBoardData.NavResumenIndirectos.results
-        });
-
-        this.setGlobalModel(dashboardModel, "dashboardModel");
-
         this._showView("dashboard");
       },
-      
-      getDashboardData: async function () {
-        return this.post(this.getGlobalModel("mainService"), "/AccesoIndirectosSet", {
-          NavSelProyecto: [
-            this.getGlobalModel("appData").getData().tramo
-          ],
-          NavMensajes: [],
-          NavKpisIndirectos: [],
-          NavResumenIndirectos: [],
-        }, {
-          headers: {
-            ambito: this.getGlobalModel("appData").getData().userData.initialNode,
-            lang: this.getGlobalModel("appData").getData().userData.AplicationLangu,
-            norma: this.getGlobalModel("normModel").getData().norma || "",
-          }
-        }).then(function (response) {
-          return response;
-        }.bind(this));
-      },
+
 
       getUserConfig: async function () {
         return this.post(this.getGlobalModel("mainService"), "/ConfigLoadSet", {
@@ -458,7 +277,7 @@ sap.ui.define(
       _mapKeyToView: function (sKey) {
         return {
           dashboard: "Dashboard",
-           anticipados: "Anticipados",
+          anticipados: "Anticipados",
           diferidos: "Diferidos",
           corrientes: "Corrientes",
           inmov: "Inmovilizados",
@@ -489,7 +308,7 @@ sap.ui.define(
       },
 
       openScopeSelector: async function () {
-         const userScopes = await this.getUserScopes();
+        const userScopes = await this.getUserScopes();
         this.setGlobalModel(new JSONModel(userScopes), "scopeSelectorModel");
 
         const allTramos = await this.getTramosByObra();
@@ -501,40 +320,37 @@ sap.ui.define(
             sap.ui.core.mvc.XMLView.create({
               viewName: "masterindirectos.view.DialogsViews.ScopeSelector",
               viewData: {
-                callback: function (oSelectedScope, tramoSelected) {
+                callback: async function (oSelectedScope, tramoSelected) {
                   // Actualiza el modelo de alcance global con la nueva selección.
                   if (oSelectedScope) {
-                    this.setGlobalModel(
-                      new JSONModel(oSelectedScope),
-                      "selectedScopeModel",
-                    );
+                    this.getGlobalModel("appData").setProperty("/userData/initialNode", oSelectedScope.profitCenter);
+                    this.getGlobalModel("appData").setProperty("/userData/descriptionNode", oSelectedScope.profitCenterDescription);
                   }
                   // Actualiza el tramo seleccionado basándose en la selección del diálogo.
                   if (tramoSelected) {
-                    const selectedTramoModel =
-                      this.getGlobalModel("tramoSelectedModel");
-                    const tramosModel = this.getGlobalModel("tramosModel");
-                    const tramoData = tramosModel
-                      .getData()
-                      .find((tramo) => tramo.ProyectoExt === tramoSelected);
-                    selectedTramoModel.setData(tramoData);
+                    delete tramoSelected.__metadata;
+                    this.getGlobalModel("appData").setProperty("/tramo", tramoSelected);
                   } else {
-                    // Si no hay tramo específico, busca el tramo por defecto del Centro de Beneficio.
-                    const tramosModel = this.getGlobalModel("tramosModel");
-                    const defaultTramo = tramosModel
+                    // Si no hay tramo específico, busca el tramo por defecto.
+                    const tramosModel = this.getGlobalModel("allTramosModel");
+                    let defaultTramo = null;
+                    defaultTramo = tramosModel
                       .getData()
                       .filter(
                         (tramo) => tramo.Prctr === oSelectedScope.profitCenter,
                       )[0];
-                    const selectedTramoModel =
-                      this.getGlobalModel("tramoSelectedModel");
-                    if (defaultTramo) {
-                      selectedTramoModel.setData(defaultTramo);
-                    } else {
-                      selectedTramoModel.setData({});
-                    }
+                    delete defaultTramo.__metadata;
+                    this.getGlobalModel("appData").setProperty("/tramo", defaultTramo);
                   }
+                  // Si se ha seleccionado una obra específica, se actualiza el modelo de la aplicacion con la norma correspondiente a esa obra.
+                  const tramosByObra = await this.getTramosByObra(oSelectedScope.profitCenter);
+                  if (tramosByObra.NavTramosDatos.results.length > 0) {
+                    const norm = tramosByObra.NavTramosDatos.results[0].Norma;
+                    this.getGlobalModel("normModel").setProperty("/norma", norm);
+                  }
+                  this.setUserScopeData();
                 }.bind(this),
+                cancel: function () { },
                 close: function () {
                   this._oScopeSelectorDialog.close();
                   this._oScopeSelectorDialog.destroy();
@@ -550,6 +366,31 @@ sap.ui.define(
 
         this._oScopeSelectorDialog.open();
 
+      },
+
+      setUserScopeData: function () {
+        const appData = this.getGlobalModel("appData").getData();
+        const userConfig = appData.userData;
+        this.callExternalService(this.getEndpointData().urlInsite + "/menu/mainMenu", "GET", {
+          idUser: userConfig.idUser,
+          loginUser: userConfig.User,
+          idLanguageApp: userConfig.AplicationLangu,
+          idLanguage: userConfig.Langu,
+          erpNode: userConfig.initialNode,
+          erpCountry: null,
+          erpRegion: null,
+          idHierarchy: "FERR",
+          idApplication: "FIDE"
+        }).then(function (response) {
+          //obtener la vista del icon tab bar para actualizar los datos
+          const oIconTabBar = this.getView().byId("itb");
+          const currentKey = oIconTabBar.getSelectedKey();
+          const currentView = this._mViews[currentKey];
+          if (currentView && currentView.getController().setInitData) {
+            currentView.getController().setInitData();
+          }
+
+        }.bind(this));
       }
 
 
