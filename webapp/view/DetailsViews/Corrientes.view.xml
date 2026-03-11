@@ -229,7 +229,7 @@
                                                 change="oninflacionInputChange"
                                                 width="50px"
                                                 class="inflacionNoMargin"
-                                                textAlign="Initial"
+                                                textAlign="Center"
                                                 type="Number"
                                             />
                                             <Text text="%" />
@@ -276,6 +276,7 @@
                                         </OverflowToolbar>
                                     </t:extension>
                                     <t:columns>
+                                        <!-- COLUMNA: Operacion / name -->
                                         <t:Column
                                             width="200px"
                                             hAlign="Center"
@@ -372,6 +373,7 @@
                                                 </HBox>
                                             </t:template>
                                         </t:Column>
+                                        <!-- COLUMNA: Descripcion / currency -->
                                         <t:Column
                                             width="170px"
                                             hAlign="Center"
@@ -459,7 +461,7 @@
                                                 </HBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLONNA: Coste / amount -->
+                                        <!-- COLUMNA: Coste / amount -->
                                         <t:Column
                                             width="80px"
                                             hAlign="Center"
@@ -548,7 +550,7 @@
                                                 </HBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLONNA: Coste pend / pricepending -->
+                                        <!-- COLUMNA: Coste pend / pricepending -->
                                         <t:Column
                                             width="90px"
                                             hAlign="Center"
@@ -637,7 +639,7 @@
                                                 </HBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLONNA: Coste total / pricetotal -->
+                                        <!-- COLUMNA: Coste total / pricetotal -->
                                         <t:Column
                                             width="80px"
                                             hAlign="Center"
@@ -751,7 +753,10 @@
                                                         class="parentHeaderBox"
                                                     >
                                                         <Text
-                                                            text="{ui>/stickyHeaderData/parent/size}"
+                                                            text="{
+                                                                path: 'ui>/stickyHeaderData/parent/size2',
+                                                                formatter: '.formatSizeKey'
+                                                            }"
                                                             width="100%"
                                                             textAlign="Center"
                                                             wrapping="false"
@@ -807,13 +812,43 @@
                                                             />
                                                         </customData>
                                                     </Button>
+                                                    <!-- Agrupador: mostra testo size -->
                                                     <Input
                                                         value="{size}"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
                                                         width="100%"
                                                         textAlign="Center"
+                                                        visible="{= ${cabecera} === true}"
                                                     />
+                                                    <!-- Righe normali: mostra Select con size2 -->
+                                                    <Select
+                                                        selectedKey="{size2}"
+                                                        visible="{= ${cabecera} !== true}"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        forceSelection="false"
+                                                        change="onSizeChange"
+                                                    >
+                                                        <items>
+                                                            <core:Item
+                                                                key="MAN"
+                                                                text="Manual"
+                                                            />
+                                                            <core:Item
+                                                                key="LIN"
+                                                                text="Lineal"
+                                                            />
+                                                            <core:Item
+                                                                key="OEO"
+                                                                text="OEO"
+                                                            />
+                                                            <core:Item
+                                                                key="PCT"
+                                                                text="Percentage"
+                                                            />
+                                                        </items>
+                                                    </Select>
                                                 </HBox>
                                             </t:template>
                                         </t:Column>
@@ -1093,37 +1128,32 @@
                                                     />
                                                     <VBox
                                                         renderType="Bare"
-                                                        alignItems="Center"
                                                         visible="{ui>/showStickyParent}"
                                                         class="parentHeaderBox"
+                                                        height="26px"
                                                     >
                                                         <Text
                                                             text="&#160;"
+                                                            width="100%"
                                                             textAlign="Center"
+                                                            wrapping="false"
                                                         />
                                                     </VBox>
-                                                    <VBox
+                                                    <HBox
                                                         class="parentHeader"
-                                                        alignItems="Center"
-                                                        height="1.7rem"
-                                                        visible="{ui>/showStickyChild}"
+                                                        renderType="Bare"
                                                         justifyContent="Center"
+                                                        alignItems="Center"
                                                     >
-                                                        <HBox
-                                                            class="parentHeader"
-                                                            renderType="Bare"
-                                                            alignContent="Start"
-                                                        >
-                                                            <Text
-                                                                text="Auto"
-                                                                visible="{ui>/showStickyChild}"
-                                                                textAlign="Center"
-                                                                wrapping="false"
-                                                                class="secondStickyText autoInflaText"
-                                                                width="100%"
-                                                            />
-                                                        </HBox>
-                                                    </VBox>
+                                                        <Text
+                                                            text="Auto"
+                                                            visible="{ui>/showStickyChild}"
+                                                            textAlign="Center"
+                                                            wrapping="false"
+                                                            class="secondStickyText checkboxStickyText"
+                                                            width="100%"
+                                                        />
+                                                    </HBox>
                                                 </VBox>
                                             </t:label>
                                             <t:template>
@@ -1182,10 +1212,10 @@
                                                         <Text
                                                             text="Infla"
                                                             visible="{ui>/showStickyChild}"
-                                                            width="100%"
                                                             textAlign="Center"
                                                             wrapping="false"
-                                                            class="secondStickyText autoInflaText"
+                                                            class="secondStickyText checkboxStickyText"
+                                                            width="100%"
                                                         />
                                                     </VBox>
                                                 </VBox>

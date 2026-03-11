@@ -92,24 +92,9 @@
       <footer>
             <OverflowToolbar height="2.5rem">
                 <ToolbarSpacer />
-
-                <Button
-                    text="{i18n>btnGuardarcomo}"
-                    press="onSave"
-                     class="footerBtn"
-                />
                 <!--Button text="{i18n>btnGuardarTodo}" type="Emphasized" press="onSaveAll" /-->
-                <Button
-                    text="{i18n>btnGuardar}"
-                    press="onSave"
-                     class="footerBtn"
-                />
-                <Button
-                    text="{i18n>btnCancelar}"
-                    type="Transparent"
-                    press="onCancelPress"
-                    class="footerBtn"
-                />
+                <Button text="{i18n>btnGuardar}" press="onSave" />
+                <Button text="{i18n>btnCancelar}" type="Transparent" press="onCancelPress" />
             </OverflowToolbar>
         </footer>
     </Page>

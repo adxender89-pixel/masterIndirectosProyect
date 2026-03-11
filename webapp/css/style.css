@@ -110,7 +110,6 @@
 }
 .sapUiTable .sapMText.secondStickyText {
     font-weight: 600 !important;
-    
 }
 
 
@@ -260,7 +259,7 @@ padding-top: 7px;
 
 /* Texto e icono más pequeño */
 .sapMBtnContent, .sapMBtnIcon {
-    font-size: 9px !important;
+    font-size: 11px !important;
     line-height: 1rem !important;
 }
 
@@ -905,7 +904,7 @@ padding-top: 7px;
     align-items: center !important;
     height: 1.6rem !important;
     padding: 0 !important;
-    margin-left: -0.4rem !important;
+    
     background: transparent !important;
 }
 
@@ -937,10 +936,11 @@ padding-top: 7px;
 }
 
 .yearButton .sapMBtnContent {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
+    line-height: 13px !important;
+    
+    padding: 0 !important;
+    margin: 0 !important;
+    margin-top: -2px !important;
 }
 /* Aplica Bold al texto del IconTabFilter */
 .sapMITBText {
@@ -1219,4 +1219,6 @@ padding-top: 7px;
     height: 28.8px !important;
     line-height: 23.5px !important;
 }
-
+.cabeceracolor .sapMSlt {
+    margin-top: 6px !important;
+}
