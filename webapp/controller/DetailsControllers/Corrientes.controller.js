@@ -329,13 +329,13 @@ sap.ui.define([
             var sPath = oContext && oContext.getPath();
             var oObject = oContext && oContext.getObject();
 
-            // Livello del nodo: 1 = padre (I.003), 2 = figlio (I.003.031)
             var iLevel = sPath ? (sPath.match(/\/categories/g) || []).length : 0;
+            // expand
 
             if (bExpanded) {
 
                 var bIsDetailLevel =
-                    iLevel >= 2 &&          // ← solo se è un figlio, non un padre
+                    iLevel >= 2 &&
                     oObject &&
                     oObject.categories &&
                     oObject.categories.length > 0 &&
@@ -349,8 +349,11 @@ sap.ui.define([
                 if (bIsDetailLevel && sPath) {
                     this._sLastExpandedPath = sPath;
                 }
+            }
 
-            } else {
+            // collapse
+
+            else {
 
                 if (this._sLastExpandedPath === sPath) {
                     this._sLastExpandedPath = null;
@@ -361,6 +364,7 @@ sap.ui.define([
 
                 if (oBinding) {
                     var iLength = oBinding.getLength();
+
                     for (var i = 0; i < iLength; i++) {
                         if (oTable.isExpanded(i)) {
                             var oCtx = oTable.getContextByIndex(i);
@@ -368,7 +372,6 @@ sap.ui.define([
                             var sCtxPath = oCtx ? oCtx.getPath() : "";
                             var iCtxLevel = (sCtxPath.match(/\/categories/g) || []).length;
 
-                            // Stesso controllo: solo figli (level >= 2) con nipoti isGroup
                             if (
                                 iCtxLevel >= 2 &&
                                 oObj &&
@@ -383,6 +386,7 @@ sap.ui.define([
                     }
                 }
 
+                // Si nada está abierto: reset UI
                 if (!bAnyDetailExpanded) {
                     if (oColMonths) oColMonths.setVisible(false);
                     if (oColNew) oColNew.setVisible(false);
@@ -395,7 +399,6 @@ sap.ui.define([
                     oUiModel.setProperty("/showStickyChild", false);
                 }
             }
-
             setTimeout(function () {
                 this._refreshAfterToggle(sTableId);
             }.bind(this));

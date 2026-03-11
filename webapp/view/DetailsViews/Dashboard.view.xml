@@ -142,7 +142,7 @@
             </t:columns>
         </t:Table>
 
-        <vn:GraphicBar data="{oModelGraphicBar>/}" class="barras" barThickness="5" borderRadius="0" grouped="true">
+        <vn:GraphicBar id="graphicBar" data="{oModelGraphicBar>/}" class="barras" barThickness="5" borderRadius="0" grouped="true">
             <vn:layoutData>
                 <FlexItemData growFactor="1"/>
             </vn:layoutData>
