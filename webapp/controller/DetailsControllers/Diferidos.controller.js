@@ -16,65 +16,53 @@ sap.ui.define([
     "use strict";
 
     return BaseController.extend("masterindirectos.controller.DetailsControllers.Diferidos", {
-         getCustomTableId: function () {
-            return "TreeTableDiferidos";
-        },
 
         /**
          * Inicializa la vista de Diferidos definiendo el estado de navegación y visibilidad.
          * Configura la tabla principal y prepara las columnas anuales iniciales.
          */
-        onInit: function () {
-            this.getView().setModel(new JSONModel({
-                selectedKey: "Diferidos"
-            }), "state");
-            
-            this.getView().setModel(new JSONModel({
-                Coste: "19.882.313,17",
-                CostePendiente: "3.134.026,07",
-                CosteTotal: "23.016.339,24"
+        getCustomTableId: function() {
+            return "TreeTableDiferidos";
+        },
 
-            }), "KpiDiferidos");
+        onInit: function () {
+
+            this.initDiferidosModel();
+            this.getView().setModel(new JSONModel({
+                selectedKey: "Home"
+            }), "state");
 
             this.getView().setModel(new JSONModel({
                 tableVisible: false,
                 splitterSizeMain: "100%"
             }), "viewModel");
 
-            this.tableModelName = "diferidos"; // Nombre del modelo para la tabla, se usará en funciones genéricas del BaseController
-            var oCatalogModel = new JSONModel();
-            this.getView().setModel(oCatalogModel, this.tableModelName);
-
-            oCatalogModel.loadData("model/CatalogDiferidos.json");
-
-            oCatalogModel.attachRequestCompleted(function () {
-                var aCategories = oCatalogModel.getProperty("/catalogDiferidos/models/categories");
-                if (!Array.isArray(aCategories)) {
-
-                    return;
-                }
-
-                var aComboItems = this._buildOperacionesCombo(aCategories);
-
-                this.getView().setModel(
-                    new JSONModel({ items: aComboItems }),
-                    "operacionesModel"
-                );
-
-                this._createSnapshot();
-            }.bind(this));
-
             // Ejecuta la configuración base para la TreeTable.
-            this.setupDynamicTreeTable("TreeTableExternos");
+            this.setupDynamicTreeTable("TreeTableDiferidos");
 
             // Tras el renderizado, añade las columnas de los próximos 3 años.
             this.getView().attachEventOnce("afterRendering", function () {
-                this.createYearColumns(
-                    
-                    new Date().getFullYear(),
-                    3, "TreeTableExternos"
-                );
+                this.createYearColumns(new Date().getFullYear(), 3, "TreeTableDiferidos");
+                this._attachHeaderToggleListener();
             }.bind(this));
+
+            var iActualYear = new Date().getFullYear();
+            var aSelectYears = [];
+            for (var i = 0; i < 10; i++) {
+                aSelectYears.push({ year: iActualYear + i });
+            }
+            this.getView().setModel(new sap.ui.model.json.JSONModel({
+                years: aSelectYears,
+                selectedYear: iActualYear
+            }), "yearsModel");
+
+            this._boundResizeHandler = function () {
+                this._calculateDynamicRows();
+            }.bind(this);
+            $(window).on("resize", this._boundResizeHandler);
+
+            this._boundBrowserClose = this.onBrowserClose.bind(this);
+            window.addEventListener("beforeunload", this._boundBrowserClose);
         },
 
         /**
@@ -129,11 +117,99 @@ sap.ui.define([
                 this._refreshAfterToggle(sTableId);
             }.bind(this), 0);
         },
-         _createSnapshot: function () {
-            var oDefaultModel = this.getView().getModel("diferidos");  // SIN "catalog"
-            if (oDefaultModel) {
-                var oData = oDefaultModel.getData();
-                this._originalData = JSON.parse(JSON.stringify(oData));
+
+        initDiferidosModel: function(evt){
+            this.post(
+                this.getGlobalModel("mainService"),
+                "/CambioPestIndirectosSet",
+                {
+                    "NavSelProyecto": [this.getGlobalModel("appData").getData().tramo],
+                    "NavChanges": [],
+                    "NavDatosIndirectos": [],
+                    "EvBloqueados" : "",
+                    "NavMensajes" : [],
+                    "NavDatosIndirectos" : []
+
+
+                },
+                {
+                    headers: {
+                        ambito: this.getGlobalModel("appData").getData().userData.initialNode,
+                        lang: this.getGlobalModel("appData").getData().userData.AplicationLangu,
+                        bloqueado: "",
+                        decimales: "02",
+                        ejercicio: "2026",
+                        pestana:"Diferidos"
+                    }
+                }
+            ).then(function (response) {
+                let tree = this.buildTree(response.NavDatosIndirectos.results)
+                this.getView().setModel(new sap.ui.model.json.JSONModel(tree), "diferidosModel");
+        }.bind(this));
+        },
+
+        buildTree: function (data) {
+            // Crear un mapa para acceso rápido por PhPspnr
+            const map = {};
+            data.forEach(item => {
+                map[item.PhPspnr] = { ...item, children: [] }; // Clonamos para no modificar el original
+            });
+
+            const roots = [];
+
+            data.forEach(item => {
+                if (item.ParentPath === "I") {
+                    // Nodo raíz
+                    roots.push(map[item.PhPspnr]);
+                } else {
+                    // Nodo hijo: buscar su padre por ParentPath
+                    const parent = map[item.ParentPath];
+                    if (parent) {
+                        parent.children.push(map[item.PhPspnr]);
+                    }
+                }
+            });
+
+            return roots;
+        },
+        _attachHeaderToggleListener: function () {
+            var oObjectPageLayout = this.byId("objectPageLayout");
+            if (!oObjectPageLayout) return;
+
+            setTimeout(function () {
+                var oDom = oObjectPageLayout.getDomRef();
+                if (!oDom) return;
+
+                oDom.addEventListener("click", function () {
+                    setTimeout(function () {
+                        this._calculateDynamicRows();
+                    }.bind(this), 200);
+                }.bind(this), true);
+
+            }.bind(this), 1000);
+        },
+        /**
+         * Se ejecuta antes de cerrar el navegador para advertir sobre cambios no guardados
+         */
+        onBrowserClose: function (oEvent) {
+            if (this.hasUnsavedChanges()) {
+                
+                oEvent.preventDefault();
+                oEvent.returnValue = ''; 
+                return ''; 
+            }
+        },
+
+        /**
+         * Limpia los event listeners al destruir el controlador
+         */
+        onExit: function () {
+            
+            if (this._boundBrowserClose) {
+                window.removeEventListener("beforeunload", this._boundBrowserClose);
+            }
+            if (this._boundResizeHandler) {
+                $(window).off("resize", this._boundResizeHandler);
             }
         },
     });

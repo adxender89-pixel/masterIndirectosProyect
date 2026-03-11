@@ -110,7 +110,7 @@
 }
 .sapUiTable .sapMText.secondStickyText {
     font-weight: 600 !important;
-    padding-right: 0.7rem;
+    
 }
 
 
@@ -121,7 +121,12 @@
     font-weight: 300 !important;    
     color: #504f4f;                
 }
-
+/* .parentHeaderBox {
+    background-color: #ffffff;
+    font-weight: normal;
+    width: 100%;
+    min-height: 2rem;  
+}*/
 
 .childHeaderBox {
     background-color:orange !important;
@@ -184,14 +189,21 @@
 
 
 /* Elimina márgenes y alturas mínimas de las cabeceras */
+/* .fullWidthHeader, 
+.parentHeaderBox,
+.fullWidthHeader .sapMFlexItem {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-height: 2.8rem;
+    min-height: 0 !important;
+} */
+
 .fullWidthHeader,
 .fullWidthHeader .sapMFlexItem {
   margin: 0 !important;
   max-height: none !important;
   min-height: 0 !important;
 }
-
-/* parentHeaderBox por separado */
 .parentHeaderBox {
 padding-top: 7px;
   background-color: #ffffff;
@@ -211,6 +223,17 @@ padding-top: 7px;
     padding: 1px 0 !important; 
     display: inline-block !important;
 }
+
+
+/* Tercera cabecera */
+/* .parentHeader {
+    background-color: #9e9b9b;
+    font-weight: normal;
+    align-items: center;
+    width: 100%;
+    min-height: 1rem; 
+} */
+
 
 /* Reduce la altura general de los botones */
 .sapMBtn {
@@ -882,7 +905,7 @@ padding-top: 7px;
     align-items: center !important;
     height: 1.6rem !important;
     padding: 0 !important;
-   
+    margin-left: -0.4rem !important;
     background: transparent !important;
 }
 
@@ -910,13 +933,15 @@ padding-top: 7px;
 
 .yearButton.sapMBtn {
     height: 1.2rem !important;
+    padding: 0 0.5rem !important; /* ← añade padding horizontal */
 }
 
 .yearButton .sapMBtnContent {
-  line-height: 1rem !important; /* coincide con la altura del contenedor */ 
-  padding: 0 !important; margin: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
 }
-
 /* Aplica Bold al texto del IconTabFilter */
 .sapMITBText {
     font-weight: bold !important;
@@ -953,12 +978,14 @@ padding-top: 7px;
     line-height: 1rem !important;
 }
 .fullWidthHeader .monthHeaderGray.sapMLabel {
+    /* padding: 0 !important; */
     margin: 0 !important;
     height: 1rem !important;
     line-height: 1rem !important;
 }
 .fullWidthHeader .sapMFlexItem {
     margin: 0 !important;
+    /* padding: 0 !important; */
     max-height: 2.8rem;
     min-height: 0 !important;
 }
@@ -1099,10 +1126,6 @@ padding-top: 7px;
 }
 
 
-
-
-/* Si attiva solo quando lo sticky è visibile */
-
 .sapUiSizeCompact .sapMBtnIcon {
     margin-left: -2px;
     margin-right: 0
@@ -1191,3 +1214,9 @@ padding-top: 7px;
    padding-bottom: 0.05rem !important;
     line-height: 1rem !important;
 }
+
+.checkboxStickyText {
+    height: 28.8px !important;
+    line-height: 23.5px !important;
+}
+

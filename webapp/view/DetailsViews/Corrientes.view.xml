@@ -108,6 +108,7 @@
                             </t:columns>
                         </t:Table>
                     </VBox>
+
                     <VBox
                         width="49%"
                         height="100%"
@@ -208,7 +209,7 @@
                                                     text="{operacionesModel>text}"
                                                 />
                                             </ComboBox>
-                                            <Button
+                                              <Button
                                                 width="8%"
                                                 text="{i18n>TBorigen}"
                                                 press="onOriginPress"
@@ -228,7 +229,7 @@
                                                 change="oninflacionInputChange"
                                                 width="50px"
                                                 class="inflacionNoMargin"
-                                                 textAlign="Center"
+                                                textAlign="Initial"
                                                 type="Number"
                                             />
                                             <Text text="%" />
@@ -252,7 +253,7 @@
                                                     text="{yearsModel>year}"
                                                 />
                                             </Select>
-                                            <Button
+                                              <Button
                                                 icon="sap-icon://add"
                                                 press="onAddPress"
                                                 class="toolbarActionBtn"
@@ -275,7 +276,6 @@
                                         </OverflowToolbar>
                                     </t:extension>
                                     <t:columns>
-                                        <!-- COLONNA: Operacion / name -->
                                         <t:Column
                                             width="200px"
                                             hAlign="Center"
@@ -348,7 +348,7 @@
                                                     width="100%"
                                                     alignContent="Center"
                                                 >
-                                                    <Button
+                                                <Button
                                                         icon="sap-icon://filter"
                                                         press="filterTableRow"
                                                          class="bottomFilter"
@@ -372,7 +372,6 @@
                                                 </HBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLONNA: Descripcion / currency -->
                                         <t:Column
                                             width="170px"
                                             hAlign="Center"
@@ -401,7 +400,7 @@
                                                             textAlign="Center"
                                                         />
                                                     </VBox>
-                                                    <HBox
+                                                                                                       <HBox
                                                         class="parentHeader"
                                                         renderType="Bare"
                                                         alignContent="Start"
@@ -1101,21 +1100,23 @@
                                                             textAlign="Center"
                                                         />
                                                     </VBox>
-                                                    <VBox >
-                                                        <HBox
-                                                            class="parentHeader"
-                                                            renderType="Bare"
-                                                            alignContent="Start"
-                                                        >
-                                                        <Text
-                                                            text="Auto"
-                                                            visible="{ui>/showStickyChild}"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                            class="secondStickyContainer"
-                                                        />
-                                                         </HBox>
-                                                    </VBox>
+                                                  <VBox class="parentHeader" alignItems="Center"  height="1.7rem" visible="{ui>/showStickyChild}" justifyContent="Center">
+    <HBox
+        class="parentHeader"
+        renderType="Bare"
+        alignContent="Start"
+    >
+        <Text
+            text="Auto"
+            visible="{ui>/showStickyChild}"
+            textAlign="Center"
+            wrapping="false"
+            class="secondStickyText autoInflaText"  
+            width="100%"
+           
+        />
+    </HBox>
+</VBox>
                                                 </VBox>
                                             </t:label>
                                             <t:template>
@@ -1123,6 +1124,7 @@
                                                     renderType="Bare"
                                                     alignItems="Center"
                                                     alignContent="Center"
+                                                    
                                                 >
                                                     <Input
                                                         value="{flag1Label}"
@@ -1164,16 +1166,16 @@
                                                             textAlign="Center"
                                                         />
                                                     </VBox>
-                                                    <VBox class="parentHeader" alignItems="Center">
-                                                        <Text
-                                                            text="Infla"
-                                                            visible="{ui>/showStickyChild}"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                            class="secondStickyText"
-                                                        />
-                                                    </VBox>
+                                                    <VBox class="parentHeader" alignItems="Center"  height="1.7rem" visible="{ui>/showStickyChild}" justifyContent="Center">
+    <Text
+        text="Infla"
+        visible="{ui>/showStickyChild}"
+        width="100%"
+        textAlign="Center"
+        wrapping="false"
+        class="secondStickyText autoInflaText"  
+    />
+</VBox>
                                                 </VBox>
                                             </t:label>
                                             <t:template>
@@ -1199,7 +1201,6 @@
                                                 </VBox>
                                             </t:template>
                                         </t:Column>
-                                   
                                     </t:columns>
                                 </t:TreeTable>
                             </VBox>

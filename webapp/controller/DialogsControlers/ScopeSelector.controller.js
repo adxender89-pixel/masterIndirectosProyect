@@ -47,8 +47,14 @@ sap.ui.define(
                 oSelectedNodeClone = deepClone(oSelectedNode);
                 delete oSelectedNodeClone.children;
                 delete oSelectedNodeClone.tramo;
+
+                let tramo = null;
+                if(oSelectedNode.tramo){
+                    tramo = this.getGlobalModel("allTramosModel").getData().find(tramo => tramo.ProyectoExt === oSelectedNode.tramo);
+                    tramo = deepClone(tramo);
+                }
                 
-                options.callback(oSelectedNodeClone || null, oSelectedNode?.tramo || null);
+                options.callback(oSelectedNodeClone || null, tramo);
                 options.close();
             },
 
