@@ -492,10 +492,10 @@
                                                 </HBox>
                                             </t:template>
                                         </t:Column>
-                                       <!-- COLONNA: Operacion -->
+                                        <!-- COLONNA: Operacion -->
                                         <t:Column
                                             visible="{visibleColumn>/visible}"
-                                            width="115px"
+                                            width="90px"
                                             hAlign="Center"
                                             filterProperty="operacion"
                                         >
@@ -505,7 +505,7 @@
                                                     class="fullWidthHeader"
                                                 >
                                                     <Label
-                                                        text="{i18n>CostEjAjust}"
+                                                        text="Operacion"
                                                         class="titleGrande"
                                                         design="Bold"
                                                     />
@@ -594,7 +594,7 @@
                                                     class="fullWidthHeader"
                                                 >
                                                     <Label
-                                                        text="{i18n>CostEjReal}"
+                                                        text="Destino"
                                                         class="titleGrande"
                                                         design="Bold"
                                                     />
@@ -971,7 +971,7 @@
                                             <t:label>
                                                 <VBox
                                                     width="100%"
-                                                    class="fullWidthHeader"
+                                                    class="fullWidthHeader borderRightPend"
                                                 >
                                                     <Label
                                                         text="{i18n>dbPendPlanificar}"
@@ -992,9 +992,10 @@
                                                         />
                                                     </VBox>
                                                     <HBox
-                                                        class="parentHeader"
+                                                        width="100%"
+                                                        alignContent="Center"
                                                         renderType="Bare"
-                                                        alignContent="Start"
+                                                        class="borderRightPend"
                                                     >
                                                         <Button
                                                             icon="sap-icon://filter"
@@ -1026,6 +1027,8 @@
                                                     width="100%"
                                                     alignContent="Center"
                                                     renderType="Bare"
+                                                    class="borderRightPend"
+
                                                 >
                                                     <Button
                                                         icon="sap-icon://filter"
