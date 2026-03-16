@@ -735,3 +735,7 @@
     position: relative;
     top: -1px;
 }
+.sapUiTableDataCell:has(.borderRightPend),
+.sapUiTableHeaderDataCell:has(.borderRightPend) {
+    border-right: 2px solid #f3984e !important;
+}
