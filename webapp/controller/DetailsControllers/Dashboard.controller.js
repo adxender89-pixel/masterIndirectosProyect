@@ -16,9 +16,21 @@ sap.ui.define([
 
             setInitData: async function () {
                 const dashBoardData = await this.getDashboardData();
+                Object.keys(dashBoardData.NavKpisIndirectos.results[0]).forEach(key => {
+                    if (!isNaN(parseFloat(dashBoardData.NavKpisIndirectos.results[0][key])) && isFinite(dashBoardData.NavKpisIndirectos.results[0][key])) {
+                        dashBoardData.NavKpisIndirectos.results[0][key] = this.formatDecimales(dashBoardData.NavKpisIndirectos.results[0][key], dashBoardData.EvDecimales, ",", ".");
+                    }
+                });
+                dashBoardData.NavResumenIndirectos.results.map(el=>{
+                    el.ImpEje = this.formatDecimales(el.ImpEje, dashBoardData.EvDecimales, ",", ".")
+                    el.ImpPen = this.formatDecimales(el.ImpPen, dashBoardData.EvDecimales, ",", ".")
+                    el.ImpTot = this.formatDecimales(el.ImpTot, dashBoardData.EvDecimales, ",", ".")
+                })
                 const dashboardModel = new JSONModel({
                     kpi: dashBoardData.NavKpisIndirectos.results,
-                    resumen: dashBoardData.NavResumenIndirectos.results
+                    resumen: dashBoardData.NavResumenIndirectos.results,
+                    decimales: dashBoardData.EvDecimales,
+                    NavMasterLt: dashBoardData.NavMasterLt.results
                 });
 
                 this.setGlobalModel(dashboardModel, "dashboardModel");
@@ -105,6 +117,7 @@ sap.ui.define([
                     NavMensajes: [],
                     NavKpisIndirectos: [],
                     NavResumenIndirectos: [],
+                    NavMasterLt: []
                 }, {
                     headers: {
                         ambito: this.getGlobalModel("appData").getData().userData.initialNode,

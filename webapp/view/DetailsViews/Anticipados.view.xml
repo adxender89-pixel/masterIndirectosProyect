@@ -1,5 +1,5 @@
 <mvc:View
-    controllerName="masterindirectos.controller.DetailsControllers.Diferidos"
+    controllerName="masterindirectos.controller.DetailsControllers.Anticipados"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns:core="sap.ui.core"
     displayBlock="true"
@@ -9,7 +9,7 @@
     xmlns:uxap="sap.uxap"
 >
     <uxap:ObjectPageLayout
-        id="objectPageDiferidos"
+        id="objectPageAnticipados"
         showHeaderContent="true"
         toggleHeaderOnTitleClick="true"
         alwaysShowContentHeader="false"
@@ -181,9 +181,9 @@
                                 class="noMarginTop"
                             >
                                 <t:TreeTable
-                                    id="TreeTableDiferidos"
+                                    id="TreeTableAnticipados"
                                     rows="{
-                                        path: 'diferidosModel>/',
+                                        path: 'anticipadosModel>/',
                                         parameters: {
                                             arrayNames: ['children']
                                         }
@@ -324,7 +324,7 @@
                                                         width="8.5rem"
                                                         textAlign="Center"
                                                         editable="{= ${isGroup} !== true}"
-                                                        value="{diferidosModel>PhPspnr}"
+                                                        value="{anticipadosModel>PhPspnr}"
                                                         class="flatCellInput yearCell"
                                                     />
                                                 </VBox>
@@ -374,7 +374,7 @@
                                                     width="100%"
                                                 >
                                                     <Input
-                                                        value="{diferidosModel>Post1}"
+                                                        value="{anticipadosModel>Post1}"
                                                         width="9rem"
                                                         editable="{= ${isGroup} !== true}"
                                                         textAlign="Center"
@@ -430,7 +430,7 @@
                                                         width="4.2rem"
                                                         textAlign="Center"
                                                         editable="{= ${isGroup} !== true}"
-                                                        value="{diferidosModel>Tipo}"
+                                                        value="{anticipadosModel>Tipo}"
                                                         class="flatCellInput"
                                                     />
                                                 </VBox>
@@ -497,7 +497,7 @@
                                                         width="4.2rem"
                                                         textAlign="Center"
                                                         editable="{= ${isGroup} !== true}"
-                                                        value="{diferidosModel>AmoEje}"
+                                                        value="{anticipadosModel>AmoEje}"
                                                         class="flatCellInput"
                                                     />
                                                 </HBox>
@@ -561,74 +561,7 @@
                                                         </customData>
                                                     </Button>
                                                     <Input
-                                                        value="{diferidosModel>AmoPen}"
-                                                        width="100%"
-                                                        editable="{= ${isGroup} !== true}"
-                                                        class="flatCellInput"
-                                                        textAlign="Center"
-                                                    />
-                                                </HBox>
-                                            </t:template>
-                                        </t:Column>
-                                        <t:Column
-                                            width="80px"
-                                            hAlign="Center"
-                                        >
-                                            <t:label>
-                                                <VBox
-                                                    width="100%"
-                                                    class="fullWidthHeader"
-                                                >
-                                                    <Label
-                                                        text="{i18n>porcpend}"
-                                                        design="Bold"
-                                                        class="titleGrande"
-                                                    />
-                                                    <VBox
-                                                        renderType="Bare"
-                                                        visible="{ui>/showStickyParent}"
-                                                        class="parentHeaderBox"
-                                                    >
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/parent/pricepending}"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                        />
-                                                    </VBox>
-                                                    <VBox class="parentHeader">
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/child/pricepending}"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                            class="secondStickyText"
-                                                            visible="{ui>/showStickyChild}"
-                                                        />
-                                                    </VBox>
-                                                </VBox>
-                                            </t:label>
-                                            <t:template>
-                                                <HBox
-                                                    renderType="Bare"
-                                                    width="100%"
-                                                     alignItems="Center"
-                                                >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                         width="0.9rem"
-                                                          class="bottomFilter"
-                                                        visible="{= ${cabecera} === true}"
-                                                    >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="PctjPenAmo"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                    <Input
-                                                        value="{diferidosModel>PctjPenAmo}"
+                                                        value="{anticipadosModel>AmoPen}"
                                                         width="100%"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
@@ -696,7 +629,7 @@
                                                         </customData>
                                                     </Button>
                                                     <Input
-                                                        value="{diferidosModel>AmoTot}"
+                                                        value="{anticipadosModel>AmoTot}"
                                                         width="100%"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
@@ -765,7 +698,7 @@
                                                         </customData>
                                                     </Button>
                                                     <Input
-                                                        value="{diferidosModel>Tipo}"
+                                                        value="{anticipadosModel>Tipo}"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
                                                         width="100%"
@@ -834,7 +767,7 @@
                                                         </customData>
                                                     </Button>
                                                     <Input
-                                                        value="{diferidosModel>PenPlan}"
+                                                        value="{anticipadosModel>PenPlan}"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
                                                         width="{= ${cabecera} === true ? '4rem' : '5.5rem'}"
@@ -893,7 +826,7 @@
                                                         </customData>
                                                     </Button>
                                                     <Input
-                                                        value="{diferidosModel>months}"
+                                                        value="{anticipadosModel>months}"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
                                                         width="{= ${cabecera} === true ? '4rem' : '85px'}"
@@ -957,7 +890,7 @@
                                                         </customData>
                                                     </Button>
                                                     <Input
-                                                        value="{diferidosModel>pend}"
+                                                        value="{anticipadosModel>pend}"
                                                         editable="{= ${isGroup} !== true}"
                                                         textAlign="Center"
                                                         class="flatCellInput"

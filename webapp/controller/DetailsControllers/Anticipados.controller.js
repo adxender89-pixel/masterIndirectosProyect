@@ -15,19 +15,19 @@ sap.ui.define([
 ) {
     "use strict";
 
-    return BaseController.extend("masterindirectos.controller.DetailsControllers.Diferidos", {
+    return BaseController.extend("masterindirectos.controller.DetailsControllers.Anticipados", {
 
         /**
          * Inicializa la vista de Diferidos definiendo el estado de navegación y visibilidad.
          * Configura la tabla principal y prepara las columnas anuales iniciales.
          */
         getCustomTableId: function() {
-            return "TreeTableDiferidos";
+            return "TreeTableAnticipados";
         },
 
         onInit: function () {
 
-            this.initDiferidosModel();
+            this.initAnticipadosModel();
             this.getView().setModel(new JSONModel({
                 selectedKey: "Home"
             }), "state");
@@ -38,11 +38,11 @@ sap.ui.define([
             }), "viewModel");
 
             // Ejecuta la configuración base para la TreeTable.
-            this.setupDynamicTreeTable("TreeTableDiferidos");
+            this.setupDynamicTreeTable("TreeTableAnticipados");
 
             // Tras el renderizado, añade las columnas de los próximos 3 años.
             this.getView().attachEventOnce("afterRendering", function () {
-                this.createYearColumns(new Date().getFullYear(), 3, "TreeTableDiferidos");
+                this.createYearColumns(new Date().getFullYear(), 3, "TreeTableAnticipados");
                 this._attachHeaderToggleListener();
             }.bind(this));
 
@@ -69,7 +69,7 @@ sap.ui.define([
          * Forza el renderizado de la tabla una vez la vista está disponible en el DOM.
          */
         onAfterRendering: function(oEvent){
-            this.byId("TreeTableDiferidos").rerender(true);
+            this.byId("TreeTableAnticipados").rerender(true);
         },
       
         /**
@@ -118,7 +118,7 @@ sap.ui.define([
             }.bind(this), 0);
         },
 
-        initDiferidosModel: function(evt){
+        initAnticipadosModel: function(evt){
             this.post(
                 this.getGlobalModel("mainService"),
                 "/CambioPestIndirectosSet",
@@ -139,12 +139,12 @@ sap.ui.define([
                         bloqueado: "",
                         decimales: this.getGlobalModel("dashboardModel").getData().decimales,
                         ejercicio: "2026",
-                        pestana:"Diferidos"
+                        pestana:"Anticipados"
                     }
                 }
             ).then(function (response) {
                 let tree = this.buildTree(response.NavDatosIndirectos.results)
-                this.getView().setModel(new sap.ui.model.json.JSONModel(tree), "diferidosModel");
+                this.getView().setModel(new sap.ui.model.json.JSONModel(tree), "anticipadosModel");
         }.bind(this));
         },
 
