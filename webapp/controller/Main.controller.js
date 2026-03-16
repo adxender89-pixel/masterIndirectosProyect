@@ -10,15 +10,20 @@ sap.ui.define(
 
     return BaseController.extend("masterindirectos.controller.Main", {
 
-
       /**
-       * Inicializa el controlador principal de la aplicación.
+       * Se inicializa el controlador principal de la aplicación.
        * Se encarga de instanciar los modelos globales de alcance, tramos y estado de la interfaz.
        */
       onInit: async function () {
+
+        const oVisibleColumn = new sap.ui.model.json.JSONModel({
+          visible: false,
+        });
+        this.getView().setModel(oVisibleColumn, "visibleColumn");
+
         this._bNodeExpanded = false;
 
-        // Inicializa el modelo UI para controlar la visibilidad de cabeceras fijas y datos sticky.
+        // Se inicializa el modelo UI para controlar la visibilidad de cabeceras fijas y datos sticky.
         this.getView().setModel(
           new sap.ui.model.json.JSONModel({
             showStickyAgrupador: false,
@@ -60,9 +65,8 @@ sap.ui.define(
         );
         this.getView().getModel("ui").setProperty("/isEditMode", true);
 
-
-        // Modelo para los indicadores numéricos superiores.
-        var oModel = new sap.ui.model.json.JSONModel({
+        // Se crea el modelo para los indicadores numéricos superiores.
+        const oDataTitleModel = new sap.ui.model.json.JSONModel({
           data: [
             {
               title: "112.083,28",
@@ -72,31 +76,29 @@ sap.ui.define(
             },
           ],
         });
-        this.getView().setModel(oModel, "dataTitle");
+        this.getView().setModel(oDataTitleModel, "dataTitle");
 
-        // Carga el modelo de datos principal desde el JSON externo.
-        var oDataModel = new sap.ui.model.json.JSONModel("model/models.json");
+        // Se carga el modelo de datos principal desde el JSON externo.
+        const oDataModel = new sap.ui.model.json.JSONModel("model/models.json");
         this.getView().setModel(oDataModel, "data");
         this._mViews = {};
 
-
-        //Creo modelo de diferidos
-        //this.setGlobalModel(new sap.ui.model.json.JSONModel(), "diferidosModel");
-        // INICIAMOS LA CONFIGURACION BASICA DE LA APLICACION CARGANDO LOS DATOS DEL USUARIO, LOS TRAMOS Y EL ACCESO
-
-        const userConfig = await this.getUserConfig()
+        // Se inicia la configuración básica de la aplicación cargando los datos del usuario, los tramos y el acceso.
+        const userConfig = await this.getUserConfig();
         const userInsite = await this.getUserInsite(userConfig);
-        // delete userInsite.userData.userParameters;
+        
         const userData = {
           ...userInsite.userData,
           ...userConfig
-        }
+        };
         delete userData.userParameters;
+
         const appDataModel = new JSONModel({
           userData: userData,
           tramo: null
         });
         this.setGlobalModel(appDataModel, "appData");
+        
         const tramo = await this.getTramos(userData);
         delete tramo.__metadata;
         appDataModel.setProperty("/tramo", tramo);
@@ -104,7 +106,9 @@ sap.ui.define(
         this._showView("dashboard");
       },
 
-
+      /**
+       * Se obtiene la configuración del usuario desde el backend.
+       */
       getUserConfig: async function () {
         return this.post(this.getGlobalModel("mainService"), "/ConfigLoadSet", {
           NavEscenario1: [],
@@ -115,95 +119,113 @@ sap.ui.define(
           NavLoadLang: [],
           NavLoadUserConfig: []
         }).then(function (response) {
-
           if (response.NavLoadUserConfig.results.length > 0) {
-            const userConfig = response.NavLoadUserConfig.results[0];
-
-            return userConfig;
+            return response.NavLoadUserConfig.results[0];
           }
         }.bind(this));
-
       },
 
+      /**
+       * Se procesa el inicio de sesión del usuario en el sistema Insite.
+       */
       getUserInsite: async function (user) {
-        let url = this.getEndpointData().urlInsite;
-        return this.callExternalService(url + "/security/userLogin", "GET", {
+        const sUrl = this.getEndpointData().urlInsite;
+        return this.callExternalService(sUrl + "/security/userLogin", "GET", {
           loginUser: user.User,
           idLanguage: user.AplicationLangu
-        })
+        });
       },
 
-
+      /**
+       * Se obtienen los tramos disponibles para el usuario actual.
+       */
       getTramos: async function (userData) {
         return new Promise((resolve, reject) => {
-
           this.getTramosByObra(userData.initialNode).then((response) => {
-
-            if (response.NavTramosDatos.results.length > 0) {
-              const norm = response.NavTramosDatos.results[0].Norma;
+            const oDatosTramos = response.NavTramosDatos.results[0];
+            
+            if (!oDatosTramos.Error) {
+              const norm = oDatosTramos.Norma;
               const normModel = new JSONModel({
                 norma: norm
               });
               this.setGlobalModel(normModel, "normModel");
-            }
 
-            if (response.NavTramosProy.results.length > 1) {
-
-              this.openSelectorDialog({
-                title: "Selecciona un tramo",
-                columns: [
-                  { label: "Tramo", property: "ProyectoExt" },
-                  { label: "Descripción", property: "Descripcion" }
-                ],
-
-                onAccept: function (selectedItems) {
-                  resolve(selectedItems[0]);
-                }
-
-              }, response.NavTramosProy.results);
-
+              if (response.NavTramosProy.results.length > 1) {
+                this.openSelectorDialog({
+                  title: this.getTranslatedText("SELECCIONA_TRAMO"),
+                  columns: [
+                    { label: this.getTranslatedText("TRAMO"), property: "ProyectoExt" },
+                    { label: this.getTranslatedText("DESCRIPCION"), property: "Descripcion" }
+                  ],
+                  onAccept: function (selectedItems) {
+                    resolve(selectedItems[0]);
+                  }
+                }, response.NavTramosProy.results);
+              } else {
+                resolve(response.NavTramosProy.results[0]);
+              }
             } else {
-              resolve(response.NavTramosProy.results[0]);
+              this.createMessageDialog({
+                title: this.getTranslatedText("ERROR"),
+                textAccept: this.getTranslatedText("ACEPTAR"),
+                messages: [{
+                  text: oDatosTramos.Error,
+                  type: "Error",
+                  showIcon: false,
+                  onAccept: function () { },
+                }]
+              });
             }
-
           }).catch(err => {
             reject(err);
           });
-
         });
       },
 
-
-
       /**
-       * Alterna la visibilidad de la barra lateral de acciones.
+       * Se alterna la visibilidad de la barra lateral de acciones.
        */
       onToggleSideBar: function () {
-        var oSideBar = this.byId("sideActionToolbar");
+        const oSideBar = this.byId("sideActionToolbar");
         oSideBar.setVisible(!oSideBar.getVisible());
       },
 
       /**
-       * Maneja el evento de selección en las pestañas para cargar la vista correspondiente.
+       * Se propaga el estado de selección de la casilla de ejecutado hacia la vista activa.
+       */
+      onEjecutadoCheckBoxSelect: function (oEvent) {
+        const bSelected = oEvent.getParameter("selected");
+        const sCurrentKey = this._lastSelectedKey || this.byId("itb").getSelectedKey();
+        const oActiveView = this._mViews[sCurrentKey];
+        
+        if (!oActiveView) return;
+
+        // Se delega la ejecución al controlador hijo con el estado correcto
+        if (oActiveView.getController()._handleEjecutado) {
+            oActiveView.getController()._handleEjecutado(bSelected);
+        }
+      },
+
+      /**
+       * Se gestiona la navegación entre las diferentes pestañas del menú principal.
        */
       onTabSelect: function (oEvent) {
-        var sNewKey = oEvent.getParameter("key");
-        var oIconTabBar = this.byId("itb");
+        const sNewKey = oEvent.getParameter("key");
+        const oIconTabBar = this.byId("itb");
+        const sCurrentKey = this._lastSelectedKey || oIconTabBar.getSelectedKey();
 
-        var sCurrentKey = this._lastSelectedKey || oIconTabBar.getSelectedKey();
-
-        // Reinicia le columnas al salir de "corrientes"
+        // Se reinician las columnas al abandonar la vista de "corrientes"
         if (sCurrentKey === "corrientes" && sNewKey !== "corrientes") {
           this._resetCorrientesColumns();
         }
 
-        // Comprueba si se está abandonando la vista "corrientes"
+        // Se verifica si existen cambios sin guardar antes de abandonar la vista de "corrientes"
         if (sCurrentKey === "corrientes" && this._mViews["corrientes"]) {
-          var oCorrientesController = this._mViews["corrientes"].getController();
+          const oCorrientesController = this._mViews["corrientes"].getController();
 
           if (oCorrientesController.hasUnsavedChanges && oCorrientesController.hasUnsavedChanges()) {
-
-            MessageBox.confirm("Hay cambios sin guardar. ¿Está seguro de que desea descartarlos?", {
+            MessageBox.confirm(this.getTranslatedText("CAMBIOS_SIN_GUARDAR_DESCARTAR"), {
               actions: [MessageBox.Action.OK, MessageBox.Action.CANCEL],
               onClose: function (oAction) {
                 if (oAction === MessageBox.Action.OK) {
@@ -226,20 +248,22 @@ sap.ui.define(
         this._showView(sNewKey);
       },
 
-      // NUEVA FUNCIÓN POR AÑADIR
+      /**
+       * Se restablecen los elementos visuales específicos de la vista de corrientes.
+       */
       _resetCorrientesColumns: function () {
         if (this._mViews["corrientes"]) {
-          var oCorrientesController = this._mViews["corrientes"].getController();
+          const oCorrientesController = this._mViews["corrientes"].getController();
 
-          // Oculta las columnas
-          var oColMonths = oCorrientesController.byId("colMonths");
-          var oColNew = oCorrientesController.byId("colNew");
+          // Se ocultan las columnas dinámicas
+          const oColMonths = oCorrientesController.byId("colMonths");
+          const oColNew = oCorrientesController.byId("colNew");
 
           if (oColMonths) oColMonths.setVisible(false);
           if (oColNew) oColNew.setVisible(false);
 
-          // Restablece el modelo de IU si es necesario
-          var oUiModel = oCorrientesController.getView().getModel("ui");
+          // Se restablece el modelo de interfaz de usuario
+          const oUiModel = oCorrientesController.getView().getModel("ui");
           if (oUiModel) {
             oUiModel.setProperty("/showStickyParent", false);
             oUiModel.setProperty("/showStickyChild", false);
@@ -248,13 +272,13 @@ sap.ui.define(
       },
 
       /**
-       * Inyecta dinámicamente la vista seleccionada en el contenedor de contenido.
-       * Utiliza una caché interna (_mViews) para no volver a crear vistas ya instanciadas.
+       * Se inyecta dinámicamente la vista seleccionada en el contenedor de contenido.
+       * Se utiliza una caché interna (_mViews) para no volver a instanciar vistas ya creadas.
        */
       _showView: async function (sKey) {
-        var oContainer = this.byId("tabContent");
+        const oContainer = this.byId("tabContent");
         oContainer.removeAllItems();
-        var oComp = this.getOwnerComponent();
+        const oComp = this.getOwnerComponent();
 
         if (!this._mViews[sKey]) {
           this._mViews[sKey] = await oComp.runAsOwner(() =>
@@ -269,10 +293,19 @@ sap.ui.define(
         }
 
         oContainer.addItem(this._mViews[sKey]);
+
+        // Se sincroniza siempre el estado del checkbox con la vista activa al renderizar
+        const oCheckBox = this.byId("idEjecutadoCheckBox2");
+        const oActiveController = this._mViews[sKey].getController();
+        if (oCheckBox && oActiveController && oActiveController._handleEjecutado) {
+          setTimeout(function () {
+            oActiveController._handleEjecutado(oCheckBox.getSelected());
+          }, 100);
+        }
       },
 
       /**
-       * Mapea las claves de las pestañas con los nombres físicos de las vistas XML.
+       * Se mapean las claves de las pestañas con los nombres físicos de las vistas XML correspondientes.
        */
       _mapKeyToView: function (sKey) {
         return {
@@ -286,13 +319,13 @@ sap.ui.define(
       },
 
       /**
-       * Abre el diálogo de selección de alcance (Scope Selector) de manera asíncrona.
-       * Gestiona la actualización de los modelos globales tras la selección del usuario.
+       * Se recuperan los alcances (scopes) asignados al usuario de manera asíncrona.
        */
       getUserScopes: async function () {
         const appData = this.getGlobalModel("appData").getData();
-        let url = this.getEndpointData().urlInsite;
-        return this.callExternalService(url + "/security/userScopes", "GET", {
+        const sUrl = this.getEndpointData().urlInsite;
+        
+        return this.callExternalService(sUrl + "/security/userScopes", "GET", {
           loadAll: false,
           idUser: appData.userData.idUser,
           applicationCode: "FIDE",
@@ -302,11 +335,13 @@ sap.ui.define(
         }).then(async function (response) {
           return {
             children: response.userNodeList
-          }
-        }.bind(this))
-
+          };
+        }.bind(this));
       },
 
+      /**
+       * Se abre el diálogo de selección de alcance y se gestiona la actualización de los modelos globales.
+       */
       openScopeSelector: async function () {
         const userScopes = await this.getUserScopes();
         this.setGlobalModel(new JSONModel(userScopes), "scopeSelectorModel");
@@ -321,17 +356,19 @@ sap.ui.define(
               viewName: "masterindirectos.view.DialogsViews.ScopeSelector",
               viewData: {
                 callback: async function (oSelectedScope, tramoSelected) {
-                  // Actualiza el modelo de alcance global con la nueva selección.
+                  
+                  // Se actualiza el modelo de alcance global con la nueva selección.
                   if (oSelectedScope) {
                     this.getGlobalModel("appData").setProperty("/userData/initialNode", oSelectedScope.profitCenter);
                     this.getGlobalModel("appData").setProperty("/userData/descriptionNode", oSelectedScope.profitCenterDescription);
                   }
-                  // Actualiza el tramo seleccionado basándose en la selección del diálogo.
+                  
+                  // Se actualiza el tramo seleccionado basándose en la elección del usuario.
                   if (tramoSelected) {
                     delete tramoSelected.__metadata;
                     this.getGlobalModel("appData").setProperty("/tramo", tramoSelected);
                   } else {
-                    // Si no hay tramo específico, busca el tramo por defecto.
+                    // Si no existe un tramo específico, se busca el tramo por defecto.
                     const tramosModel = this.getGlobalModel("allTramosModel");
                     let defaultTramo = null;
                     defaultTramo = tramosModel
@@ -339,10 +376,13 @@ sap.ui.define(
                       .filter(
                         (tramo) => tramo.Prctr === oSelectedScope.profitCenter,
                       )[0];
-                    delete defaultTramo.__metadata;
-                    this.getGlobalModel("appData").setProperty("/tramo", defaultTramo);
+                    if (defaultTramo) {
+                        delete defaultTramo.__metadata;
+                        this.getGlobalModel("appData").setProperty("/tramo", defaultTramo);
+                    }
                   }
-                  // Si se ha seleccionado una obra específica, se actualiza el modelo de la aplicacion con la norma correspondiente a esa obra.
+                  
+                  // Si se ha seleccionado una obra específica, se actualiza la norma en el modelo correspondiente.
                   const tramosByObra = await this.getTramosByObra(oSelectedScope.profitCenter);
                   if (tramosByObra.NavTramosDatos.results.length > 0) {
                     const norm = tramosByObra.NavTramosDatos.results[0].Norma;
@@ -365,12 +405,15 @@ sap.ui.define(
         }
 
         this._oScopeSelectorDialog.open();
-
       },
 
+      /**
+       * Se configura la información de usuario y se actualizan los datos de la vista activa.
+       */
       setUserScopeData: function () {
         const appData = this.getGlobalModel("appData").getData();
         const userConfig = appData.userData;
+        
         this.callExternalService(this.getEndpointData().urlInsite + "/menu/mainMenu", "GET", {
           idUser: userConfig.idUser,
           loginUser: userConfig.User,
@@ -382,19 +425,26 @@ sap.ui.define(
           idHierarchy: "FERR",
           idApplication: "FIDE"
         }).then(function (response) {
-          //obtener la vista del icon tab bar para actualizar los datos
+          // Se obtiene la vista del IconTabBar para refrescar los datos internos.
           const oIconTabBar = this.getView().byId("itb");
           const currentKey = oIconTabBar.getSelectedKey();
           const currentView = this._mViews[currentKey];
+          
           if (currentView && currentView.getController().setInitData) {
             currentView.getController().setInitData();
           }
 
         }.bind(this));
+      },
+
+      /**
+       * Se actualiza el modelo que controla la visibilidad global de las columnas ejecutadas.
+       */
+      onMainEjecutadoToggle: function(oEvent) {
+        const bSelected = oEvent.getParameter("selected");
+        this.getView().getModel("visibleColumn").setProperty("/visible", bSelected);
       }
 
-
     });
-  },
+  }
 );
-

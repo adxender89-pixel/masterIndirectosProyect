@@ -56,6 +56,7 @@ sap.ui.define(
                     dialog.addButton(new sap.m.Button({
                         icon: "sap-icon://accept",
                         tooltip: data.textAccept,
+                        width: "70px",
                         text: data.textAccept,
                         press: function (evt) {
                             if (data.onAccept) {
@@ -71,6 +72,7 @@ sap.ui.define(
                         icon: "sap-icon://decline",
                         tooltip: data.textDecline,
                         text: data.textDecline,
+                        width: "70px",
                         press: function (evt) {
                             if (data.onDecline) {
                                 data.onDecline.apply(data.context);

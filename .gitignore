@@ -8,3 +8,10 @@ mta-*
 resources
 archive.zip
 .*_mta_build_tmp
+webapp/localService/mockserver.js
+webapp/test/flpSandbox.html
+webapp/test/flpSandboxMockServer.html
+webapp/model/Catalog.json
+webapp/model/CatalogExternos.json
+webapp/test/locate-reuse-libs.js
+

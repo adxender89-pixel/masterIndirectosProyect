@@ -5,9 +5,12 @@
     xmlns:t="sap.ui.table">
 
     <VBox width="100%" fitContainer="true">
-            <HBox width="100%" class="kpiBoxExternos sapUiSmallMarginTop" height="6rem" alignItems="Center" justifyContent="SpaceAround">
+        <HBox width="100%" class="kpiBoxExternos sapUiSmallMarginTop" height="6rem" alignItems="Center" justifyContent="SpaceAround">
 
             <t:Table class="sapUiSizeCompact smallHeaderTable" rows="{dataTitle>/data}" visibleRowCount="1" selectionMode="None">
+                <t:extension>
+
+                </t:extension>
                 <t:columns>
                     <t:Column hAlign="Center" class="operacionColumn">
                         <Label text="{i18n>cost}" design="Bold" />
@@ -36,11 +39,6 @@
                 <FlexItemData growFactor="15" />
             </layoutData>
             <t:TreeTable id="TreeTableExternos" rows="{ path: 'externos>/catalogExternos/models', parameters: { arrayNames: ['categories'] } }" toggleOpenState="onToggleOpenState" class="sapUiSizeCompact" visibleRowCount="{viewModel>/dynamicRowCount}" width="100%">
-                <t:extension>
-                    <OverflowToolbar height="100%">
-                    </OverflowToolbar>
-                </t:extension>
-
                 <t:columns>
                     <t:Column width="180px" hAlign="Center" class="operacionColumn">
                         <t:label>
@@ -79,7 +77,7 @@
                     <t:Column width="80px" hAlign="Center">
                         <t:label>
                             <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>type}" design="Bold" />
+                                <Label text="{i18n>tasa%}" design="Bold" />
                                 <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
                                     <Text text="{ui>/stickyHeaderData/parent/amount}" width="100%" textAlign="Center" wrapping="false" />
                                 </VBox>
@@ -129,22 +127,6 @@
                     <t:Column width="80px" hAlign="Center">
                         <t:label>
                             <VBox width="100%" class="fullWidthHeader">
-                                <Label text="{i18n>pendiente%}" design="Bold" />
-                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
-                                    <Text text="{ui>/stickyHeaderData/parent/pricetotal}" width="100%" textAlign="Center" wrapping="false" />
-                                </VBox>
-                                <VBox class="parentHeader">
-                                    <Text text="{ui>/stickyHeaderData/child/pricetotal}" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
-                                </VBox>
-                            </VBox>
-                        </t:label>
-                        <t:template>
-                            <Text text="{externos>porcpendiente}" wrapping="false" />
-                        </t:template>
-                    </t:Column>
-                    <t:Column width="80px" hAlign="Center">
-                        <t:label>
-                            <VBox width="100%" class="fullWidthHeader">
                                 <Label text="{i18n>total}" design="Bold" />
                                 <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
                                     <Text text="{ui>/stickyHeaderData/parent/pricetotal}" width="100%" textAlign="Center" wrapping="false" />
@@ -156,6 +138,22 @@
                         </t:label>
                         <t:template>
                             <Text text="{externos>pricetotal}" wrapping="false" />
+                        </t:template>
+                    </t:Column>
+                    <t:Column width="180px" hAlign="Center">
+                        <t:label>
+                            <VBox width="100%" class="fullWidthHeader">
+                                <Label text="{i18n>operacionDestino}" design="Bold" />
+                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                    <Text text="" width="100%" textAlign="Center" wrapping="false" />
+                                </VBox>
+                                <VBox class="parentHeader">
+                                    <Text text="" textAlign="Center" wrapping="false" class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                </VBox>
+                            </VBox>
+                        </t:label>
+                        <t:template>
+                            <Text text="" wrapping="false" />
                         </t:template>
                     </t:Column>
 
@@ -228,6 +226,28 @@
                         </t:template>
                     </t:Column>
                 </t:columns>
+                <t:extension>
+                    <OverflowToolbar height="100%">
+                        <Input width="180px" placeholder="Buscar" class="sapUiMediumMarginEnd"></Input>
+                        <Button text="Origen" width="100px" class="sapUiMediumMarginBeginEnd"></Button>
+                        <ToolbarSpacer />
+                        <Label text="Reales: 24/09/2026" class="sapUiMediumMarginBeginEnd" width="8rem" />
+                        <Label text="OEO: 12.500.000,00" class="sapUiMediumMarginBeginEnd" width="8rem" />
+                        <ToolbarSpacer />
+
+                        <Label text="FALSO Ver ajustes" />
+                        <ToolbarSpacer />
+                        <Label text="AÑO" />
+                        <Input id="" value="2026" change="" width="100px" class="" textAlign="Initial" type="Number" />
+
+                        <ToolbarSpacer />
+
+                        <Button icon="sap-icon://add" press="onAddPress" class="sapUiSizeCompact" />
+                        <Button icon="sap-icon://delete" press="onDeletePress" class="sapUiSizeCompact" />
+                        <Button icon="sap-icon://shortcut" press="onShortcutPress" class="sapUiSizeCompact" />
+                        <Button icon="sap-icon://arrow-bottom" press="onProcessPress" class="sapUiSizeCompact" />
+                    </OverflowToolbar>
+                </t:extension>
             </t:TreeTable>
         </VBox>
     </VBox>
