@@ -34,85 +34,11 @@
                 width="100%"
                 id="tablesContainer"
             >
-                <!-- Tablas de Inversión y Amortización -->
                 <HBox
                     width="100%"
-                    alignItems="Stretch"
-                    justifyContent="SpaceBetween"
+                    justifyContent="Center"
                 >
-                    <VBox
-                        width="49%"
-                        fitContainer="true"
-                    >
-                        <t:Table
-                            class="sapUiSizeCompact smallHeaderTable"
-                            rows="{dataTitle>/data}"
-                            visibleRowCount="1"
-                            width="100%"
-                            selectionMode="None"
-                        >
-                            <!-- <t:extension>
-                        <OverflowToolbar class="yellowToolbar" height="90%">
-                            <ToolbarSpacer />
-                            <Title text="{i18n>inversion}" class="testBold" />
-                            <ToolbarSpacer />
-                        </OverflowToolbar>
-                    </t:extension> -->
-                            <t:columns>
-                                <t:Column
-                                    hAlign="Center"
-                                    class="operacionColumn"
-                                >
-                                    <VBox
-                                        width="100%"
-                                        class="fullWidthHeader"
-                                        alignContent="Center"
-                                    >
-                                        <Label
-                                            text="{i18n>inversion} {i18n>ejecutado}"
-                                            design="Bold"
-                                        />
-                                    </VBox>
-                                    <t:template>
-                                        <Text text="{dataTitle>title}" />
-                                    </t:template>
-                                </t:Column>
-                                <t:Column hAlign="Center">
-                                    <VBox
-                                        width="100%"
-                                        class="fullWidthHeader"
-                                    >
-                                        <Label
-                                            text="{i18n>inversion} {i18n>pendiente}"
-                                            design="Bold"
-                                        />
-                                    </VBox>
-                                    <t:template>
-                                        <Text text="{dataTitle>title2}" />
-                                    </t:template>
-                                </t:Column>
-                                <t:Column hAlign="Center">
-                                    <VBox
-                                        width="100%"
-                                        class="fullWidthHeader"
-                                    >
-                                        <Label
-                                            text="{i18n>inversion} {i18n>total}"
-                                            design="Bold"
-                                        />
-                                    </VBox>
-                                    <t:template>
-                                        <Text text="{dataTitle>title}" />
-                                    </t:template>
-                                </t:Column>
-                            </t:columns>
-                        </t:Table>
-                    </VBox>
-
-                    <VBox
-                        width="49%"
-                        height="100%"
-                    >
+                    <VBox width="50%">
                         <t:Table
                             class="sapUiSizeCompact smallHeaderTable"
                             rows="{dataTitle>/data}"
@@ -121,17 +47,10 @@
                             width="100%"
                             selectionMode="None"
                         >
-                            <!-- <t:extension>
-                        <OverflowToolbar class="yellowToolbar" height="90%">
-                            <ToolbarSpacer />
-                            <Title text="{i18n>amortizacion}" class="testBold" />
-                            <ToolbarSpacer />
-                        </OverflowToolbar>
-                    </t:extension> -->
                             <t:columns>
                                 <t:Column hAlign="Center">
                                     <Label
-                                        text="{i18n>amortizacion} {i18n>ejecutado}"
+                                        text="{i18n>cost} {i18n>ejecutado}"
                                         design="Bold"
                                     />
                                     <t:template>
@@ -140,7 +59,7 @@
                                 </t:Column>
                                 <t:Column hAlign="Center">
                                     <Label
-                                        text="{i18n>amortizacion} {i18n>pendiente}"
+                                        text="{i18n>cost} {i18n>pendiente}"
                                         design="Bold"
                                     />
                                     <t:template>
@@ -149,7 +68,7 @@
                                 </t:Column>
                                 <t:Column hAlign="Center">
                                     <Label
-                                        text="{i18n>amortizacion} {i18n>total}"
+                                        text="{i18n>cost} {i18n>total}"
                                         design="Bold"
                                     />
                                     <t:template>
@@ -183,14 +102,15 @@
                                 <t:TreeTable
                                     id="TreeTableBasic"
                                     rows="{
-                                        path: '/catalog/models/categories',
+                                        path: 'corrientesModel>/',
                                         parameters: {
-                                            arrayNames: ['categories']
+                                            arrayNames: ['children']
                                         }
                                     }"
                                     toggleOpenState="onToggleOpenState"
                                     rowSelectionChange="onRowSelectionChange"
                                     class="sapUiSizeCompact"
+                                    fixedColumnCount="2"
                                     visibleRowCount="{viewModel>/dynamicRowCount}"
                                     filter="onTreeTableFilter"
                                     width="100%"
@@ -215,12 +135,30 @@
                                                 press="onOriginPress"
                                             />
                                             <Label
-                                                text="Reales:vacio"
-                                                width="8rem"
+                                                text="{i18n>reales}"
+                                                class="sapUiSmallMarginBegin"
+                                            />
+                                            <Label text="{
+                                                path: 'dashboardModel>/NavMasterLt/0/Freal',
+                                                type: 'sap.ui.model.type.Date',
+                                                formatOptions: {
+                                                    pattern: 'dd/MM/yyyy'
+                                                }
+                                            }" />
+                                            <Label
+                                                text="{i18n>OEO}"
+                                                class=" sapUiMediumMarginBegin"
                                             />
                                             <Label
-                                                text="OEO:vacio"
-                                                width="8rem"
+                                                text="{
+                                                    path: 'dashboardModel>/NavMasterLt/0/Oeo',
+                                                    type: 'sap.ui.model.type.Float',
+                                                    formatOptions: {
+                                                        decimals: 2,
+                                                        groupingEnabled: true
+                                                    }
+                                                }"
+                                                class="sapUiMediumMarginEnd"
                                             />
                                             <Label text="Inflación:" />
                                             <Input
@@ -235,13 +173,12 @@
                                             <Text text="%" />
                                             <ToolbarSpacer />
                                             <CheckBox
-                                                id="idEjecutadoCheckBox"
-                                                text="{i18n>cbEjecutado}"
+                                                id="idAjustesCheckBox"
+                                                text="{i18n>cbAjustes}"
                                                 class="alignTextCheckBox"
-                                                select="onEjecutadoCheckBoxSelect"
+                                                select="onAjustesCheckBox"
                                             />
                                             <Select
-                                                items="{yearsModel>/years}"
                                                 selectedKey="{yearsModel>/selectedYear}"
                                                 forceSelection="true"
                                                 width="100px"
@@ -253,30 +190,34 @@
                                                     text="{yearsModel>year}"
                                                 />
                                             </Select>
+                                            <!-- items="{yearsModel>/years}" -->
                                             <Button
                                                 icon="sap-icon://add"
                                                 press="onAddPress"
                                                 class="toolbarActionBtn"
+                                                tooltip="{i18n>anadir}"
                                             />
                                             <Button
                                                 icon="sap-icon://delete"
                                                 press="onDeletePress"
                                                 class="toolbarActionBtn"
+                                                tooltip="{i18n>eliminar}"
                                             />
                                             <Button
                                                 icon="sap-icon://shortcut"
                                                 press="onShortcutPress"
                                                 class="toolbarActionBtn"
+                                                tooltip="{i18n>repartir}"
                                             />
                                             <Button
                                                 icon="sap-icon://arrow-bottom"
                                                 press="onProcessPress"
                                                 class="toolbarActionBtn"
+                                                tooltip="{i18n>subirDesglose}"
                                             />
                                         </OverflowToolbar>
                                     </t:extension>
                                     <t:columns>
-                                        <!-- COLUMNA: Operacion / name -->
                                         <t:Column
                                             width="200px"
                                             hAlign="Center"
@@ -359,21 +300,21 @@
                                                         <customData>
                                                             <core:CustomData
                                                                 key="filterProp"
-                                                                value="name"
+                                                                value="PhPspnr"
                                                             />
                                                         </customData>
                                                     </Button>
                                                     <Input
+                                                        width="100%"
                                                         textAlign="Center"
                                                         editable="{= ${isGroup} !== true}"
-                                                        value="{name}"
+                                                        value="{corrientesModel>PhPspnr}"
                                                         showValueHelp="true"
                                                         class="flatCellInput yearCell"
                                                     />
                                                 </HBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLUMNA: Descripcion / currency -->
                                         <t:Column
                                             width="170px"
                                             hAlign="Center"
@@ -448,12 +389,13 @@
                                                         <customData>
                                                             <core:CustomData
                                                                 key="filterProp"
-                                                                value="currency"
+                                                                value="Post1"
                                                             />
                                                         </customData>
                                                     </Button>
                                                     <Input
-                                                        value="{currency}"
+                                                        width="100%"
+                                                        value="{corrientesModel>Post1}"
                                                         editable="{= ${isGroup} !== true}"
                                                         textAlign="Center"
                                                         class="flatCellInput"
@@ -461,7 +403,7 @@
                                                 </HBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLUMNA: Coste / amount -->
+                                        <!-- COLONNA: Coste / amount -->
                                         <t:Column
                                             width="80px"
                                             hAlign="Center"
@@ -536,21 +478,199 @@
                                                         <customData>
                                                             <core:CustomData
                                                                 key="filterProp"
-                                                                value="amount"
+                                                                value="AmoEje"
                                                             />
                                                         </customData>
                                                     </Button>
                                                     <Input
-                                                        width="4.2rem"
+                                                        width="100%"
                                                         textAlign="Center"
                                                         editable="{= ${isGroup} !== true}"
-                                                        value="{amount}"
+                                                        value="{corrientesModel>AmoEje}"
                                                         class="flatCellInput"
                                                     />
                                                 </HBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLUMNA: Coste pend / pricepending -->
+                                        <!-- COLONNA: Operacion -->
+                                        <t:Column
+                                            visible="{visibleColumn>/visible}"
+                                            width="90px"
+                                            hAlign="Center"
+                                            filterProperty="operacion"
+                                        >
+                                            <t:label>
+                                                <VBox
+                                                    width="100%"
+                                                    class="fullWidthHeader"
+                                                >
+                                                    <Label
+                                                        text="Operacion"
+                                                        class="titleGrande"
+                                                        design="Bold"
+                                                    />
+                                                    <VBox
+                                                        renderType="Bare"
+                                                        visible="{ui>/showStickyParent}"
+                                                        class="parentHeaderBox"
+                                                    >
+                                                        <Text
+                                                            text="{ui>/stickyHeaderData/parent/operacion}"
+                                                            wrapping="false"
+                                                            width="100%"
+                                                            textAlign="Center"
+                                                        />
+                                                    </VBox>
+                                                    <HBox
+                                                        class="parentHeader"
+                                                        renderType="Bare"
+                                                        alignContent="Start"
+                                                    >
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableCabecera"
+                                                            class="bottomFilter"
+                                                            width="0.9rem"
+                                                            visible="{ui>/showStickyChild}"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="operacion"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <Text
+                                                            text="{ui>/stickyHeaderData/child/operacion}"
+                                                            textAlign="Center"
+                                                            wrapping="false"
+                                                            class="secondStickyText"
+                                                            visible="{ui>/showStickyChild}"
+                                                            width="100%"
+                                                        />
+                                                    </HBox>
+                                                </VBox>
+                                            </t:label>
+                                            <t:template>
+                                                <HBox
+                                                    renderType="Bare"
+                                                    width="100%"
+                                                    alignItems="Center"
+                                                >
+                                                    <Button
+                                                        icon="sap-icon://filter"
+                                                        press="filterTableRow"
+                                                        class="bottomFilter"
+                                                        width="0.9rem"
+                                                        visible="{= ${cabecera} === true}"
+                                                    >
+                                                        <customData>
+                                                            <core:CustomData
+                                                                key="filterProp"
+                                                                value="operacion"
+                                                            />
+                                                        </customData>
+                                                    </Button>
+                                                    <Input
+                                                        value="{corrientesModel>operacion}"
+                                                        editable="{= ${isGroup} !== true}"
+                                                        textAlign="Center"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                    />
+                                                </HBox>
+                                            </t:template>
+                                        </t:Column>
+                                        <!-- COLONNA: Destino -->
+                                        <t:Column
+                                            visible="{visibleColumn>/visible}"
+                                            width="90px"
+                                            hAlign="Center"
+                                            filterProperty="destino"
+                                        >
+                                            <t:label>
+                                                <VBox
+                                                    width="100%"
+                                                    class="fullWidthHeader"
+                                                >
+                                                    <Label
+                                                        text="Destino"
+                                                        class="titleGrande"
+                                                        design="Bold"
+                                                    />
+                                                    <VBox
+                                                        renderType="Bare"
+                                                        visible="{ui>/showStickyParent}"
+                                                        class="parentHeaderBox"
+                                                    >
+                                                        <Text
+                                                            text="{ui>/stickyHeaderData/parent/destino}"
+                                                            wrapping="false"
+                                                            width="100%"
+                                                            textAlign="Center"
+                                                        />
+                                                    </VBox>
+                                                    <HBox
+                                                        class="parentHeader"
+                                                        renderType="Bare"
+                                                        alignContent="Start"
+                                                    >
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableCabecera"
+                                                            class="bottomFilter"
+                                                            width="0.9rem"
+                                                            visible="{ui>/showStickyChild}"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="destino"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <Text
+                                                            text="{ui>/stickyHeaderData/child/destino}"
+                                                            textAlign="Center"
+                                                            wrapping="false"
+                                                            class="secondStickyText"
+                                                            visible="{ui>/showStickyChild}"
+                                                            width="100%"
+                                                        />
+                                                    </HBox>
+                                                </VBox>
+                                            </t:label>
+                                            <t:template>
+                                                <HBox
+                                                    renderType="Bare"
+                                                    width="100%"
+                                                    alignItems="Center"
+                                                >
+                                                    <Button
+                                                        icon="sap-icon://filter"
+                                                        press="filterTableRow"
+                                                        class="bottomFilter"
+                                                        width="0.9rem"
+                                                        visible="{= ${cabecera} === true}"
+                                                    >
+                                                        <customData>
+                                                            <core:CustomData
+                                                                key="filterProp"
+                                                                value="destino"
+                                                            />
+                                                        </customData>
+                                                    </Button>
+                                                    <Input
+                                                        value="{corrientesModel>destino}"
+                                                        editable="{= ${isGroup} !== true}"
+                                                        textAlign="Center"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                    />
+                                                </HBox>
+                                            </t:template>
+                                        </t:Column>
+                                        <!-- COLONNA: Coste pend / pricepending -->
                                         <t:Column
                                             width="90px"
                                             hAlign="Center"
@@ -625,12 +745,12 @@
                                                         <customData>
                                                             <core:CustomData
                                                                 key="filterProp"
-                                                                value="pricepending"
+                                                                value="AmoPen"
                                                             />
                                                         </customData>
                                                     </Button>
                                                     <Input
-                                                        value="{pricepending}"
+                                                        value="{corrientesModel>AmoPen}"
                                                         width="100%"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
@@ -639,7 +759,7 @@
                                                 </HBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLUMNA: Coste total / pricetotal -->
+                                        <!-- COLONNA: Coste total / pricetotal -->
                                         <t:Column
                                             width="80px"
                                             hAlign="Center"
@@ -714,14 +834,14 @@
                                                         <customData>
                                                             <core:CustomData
                                                                 key="filterProp"
-                                                                value="pricetotal"
+                                                                value="AmoTot"
                                                             />
                                                         </customData>
                                                     </Button>
                                                     <Input
-                                                        value="{pricetotal}"
+                                                        value="{corrientesModel>AmoTot}"
                                                         editable="{= ${isGroup} !== true}"
-                                                        width="{= ${cabecera} === true ? '4rem' : '4.2rem'}"
+                                                        width="100%"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                     />
@@ -753,10 +873,7 @@
                                                         class="parentHeaderBox"
                                                     >
                                                         <Text
-                                                            text="{
-                                                                path: 'ui>/stickyHeaderData/parent/size2',
-                                                                formatter: '.formatSizeKey'
-                                                            }"
+                                                            text="{ui>/stickyHeaderData/parent/size}"
                                                             width="100%"
                                                             textAlign="Center"
                                                             wrapping="false"
@@ -808,20 +925,11 @@
                                                         <customData>
                                                             <core:CustomData
                                                                 key="filterProp"
-                                                                value="size"
+                                                                value="Tipo"
                                                             />
                                                         </customData>
                                                     </Button>
-                                                    <!-- Agrupador: mostra testo size -->
-                                                    <Input
-                                                        value="{size}"
-                                                        editable="{= ${isGroup} !== true}"
-                                                        class="flatCellInput"
-                                                        width="100%"
-                                                        textAlign="Center"
-                                                        visible="{= ${cabecera} === true}"
-                                                    />
-                                                    <!-- Righe normali: mostra Select con size2 -->
+                                                    <!-- Filas normales: muestra Select con size2 -->
                                                     <Select
                                                         selectedKey="{size2}"
                                                         visible="{= ${cabecera} !== true}"
@@ -929,15 +1037,15 @@
                                                         <customData>
                                                             <core:CustomData
                                                                 key="filterProp"
-                                                                value="last"
+                                                                value="PenPlan"
                                                             />
                                                         </customData>
                                                     </Button>
                                                     <Input
-                                                        value="{last}"
+                                                        value="{corrientesModel>PenPlan}"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
-                                                        width="{= ${cabecera} === true ? '4rem' : '5.5rem'}"
+                                                        width="100%"
                                                         textAlign="Center"
                                                     />
                                                 </HBox>
@@ -1016,10 +1124,10 @@
                                                         </customData>
                                                     </Button>
                                                     <Input
-                                                        value="{months}"
+                                                        value="{corrientesModel>months}"
                                                         editable="{= ${isGroup} !== true}"
                                                         class="flatCellInput"
-                                                        width="{= ${cabecera} === true ? '4rem' : '85px'}"
+                                                        width="100%"
                                                         textAlign="Center"
                                                     />
                                                 </HBox>
@@ -1102,11 +1210,11 @@
                                                         </customData>
                                                     </Button>
                                                     <Input
-                                                        value="{pend}"
+                                                        value="{corrientesModel>pend}"
                                                         editable="{= ${isGroup} !== true}"
                                                         textAlign="Center"
                                                         class="flatCellInput"
-                                                        width="{= ${cabecera} === true ? '3.5rem' : '70px'}"
+                                                        width="100%"
                                                     />
                                                 </HBox>
                                             </t:template>
@@ -1128,6 +1236,7 @@
                                                     />
                                                     <VBox
                                                         renderType="Bare"
+                                                        alignItems="Center"
                                                         visible="{ui>/showStickyParent}"
                                                         class="parentHeaderBox"
                                                         height="26px"
@@ -1139,21 +1248,29 @@
                                                             wrapping="false"
                                                         />
                                                     </VBox>
-                                                    <HBox
+                                                    <VBox
                                                         class="parentHeader"
-                                                        renderType="Bare"
-                                                        justifyContent="Center"
                                                         alignItems="Center"
+                                                        height="1.6rem"
+                                                        visible="{ui>/showStickyChild}"
+                                                        justifyContent="Center"
                                                     >
-                                                        <Text
-                                                            text="Auto"
-                                                            visible="{ui>/showStickyChild}"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                            class="secondStickyText checkboxStickyText"
-                                                            width="100%"
-                                                        />
-                                                    </HBox>
+                                                        <HBox
+                                                            class="parentHeader"
+                                                            renderType="Bare"
+                                                            justifyContent="Center"
+                                                            alignItems="Center"
+                                                        >
+                                                            <Text
+                                                                text="Auto"
+                                                                visible="{ui>/showStickyChild}"
+                                                                textAlign="Center"
+                                                                wrapping="false"
+                                                                class="secondStickyText autoInflaText"
+                                                                width="100%"
+                                                            />
+                                                        </HBox>
+                                                    </VBox>
                                                 </VBox>
                                             </t:label>
                                             <t:template>
@@ -1163,12 +1280,12 @@
                                                     alignContent="Center"
                                                 >
                                                     <Input
-                                                        value="{flag1Label}"
+                                                        value="{corrientesModel>flag1Label}"
                                                         editable="false"
                                                         class="flatCellInput sapUiSmallMarginBegin"
                                                         textAlign="Center"
                                                         visible="{= ${cabecera} === true }"
-                                                        width="50px"
+                                                        width="100%"
                                                     />
                                                     <CheckBox
                                                         selected="{flag1}"
@@ -1205,19 +1322,19 @@
                                                     <VBox
                                                         class="parentHeader"
                                                         alignItems="Center"
-                                                        height="1.7rem"
+                                                        height="1.6rem"
                                                         visible="{ui>/showStickyChild}"
                                                         justifyContent="Center"
                                                     >
                                                         <Text
                                                             text="Infla"
                                                             visible="{ui>/showStickyChild}"
+                                                            width="100%"
                                                             textAlign="Center"
                                                             wrapping="false"
-                                                            class="secondStickyText checkboxStickyText"
-                                                            width="100%"
+                                                            class="secondStickyText autoInflaText"
                                                         />
-                                                    </HBox>
+                                                    </VBox>
                                                 </VBox>
                                             </t:label>
                                             <t:template>
@@ -1228,10 +1345,10 @@
                                                     alignContent="Center"
                                                 >
                                                     <Input
-                                                        value="{flag2Label}"
+                                                        value="{corrientesModel>flag2Label}"
                                                         editable="false"
                                                         class="flatCellInput"
-                                                        width="50px"
+                                                        width="100%"
                                                         textAlign="Center"
                                                         visible="{= ${cabecera} === true }"
                                                     />

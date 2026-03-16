@@ -1,39 +1,254 @@
-.margin {
-    margin-bottom: 30px; 
-    margin-left: auto;
-}
+/* ==========================================================================
+   Utilidades Generales
+   ========================================================================== */
+.margin { margin: 0 auto 30px auto; } /* Simplificado en una línea */
 
 .grayBorder {
     border: 1px solid #d9d9d9;
     border-radius: 4px;
-    background-color:#4c4e51;
+    background-color: #4c4e51;
 }
 
-.tinyHomeTab {
-    font-size : 1.5rem;
-}
+.noMarginTop { margin: 0 !important; padding-top: 0 !important; }
+.noPaddingTop { padding-top: 0 !important; }
+.noMarginRight { margin-right: 0 !important; padding-right: 0 !important; }
+.nopadding { padding: 0 !important; }
 
-.testBold {
-  font-weight: 8500 !important;
-  font-size : 12px;
-  color: #1f1f1f;
-}
+.tinyHomeTab { font-size: 1.5rem; }
 
-
-/* Apunta directamente al texto interno del botón SAP UI5 */
+/* Agrupación de utilidades Bold */
+.testBold, 
+.sapMFlexItemAlignAuto,
 .testBold .sapMBtnContent, 
 .testBold .sapMBtnInnerText {
     font-weight: bold !important;
 }
 
-
-/* Por seguridad, se aplica también a la etiqueta si la propiedad design="Bold" no fuera suficiente */
 .testBold {
-    font-weight: bold !important;
+    font-size: 12px;
+    color: #1f1f1f;
+}
+
+/* Ocultar scrollbars vertical */
+#__xmlview1--objectPageLayout-vertSB,
+[id$="-vertSB"] {
+    display: none !important;
+}
+
+/* ==========================================================================
+   Inputs y Etiquetas (Compact Mode)
+   ========================================================================== */
+.sapUiSizeCompact .sapMInputBaseInner {
+    height: 1rem !important; 
+    line-height: 1rem !important;
+    font-size: 0.57rem !important;
+    padding: 0.20rem 1rem 0 0 !important; /* Simplificado top, right, bottom, left */
+    margin-left: -1rem;
+    box-sizing: border-box;
+}
+
+.sapUiSizeCompact .sapMInputBaseContentWrapper {
+    margin: 0.2rem 0 0 0 !important;
+    height: 1.2rem;
+    align-self: flex-end !important;
+}
+
+.sapUiSizeCompact .sapMInputBaseIcon {
+    width: 0.9rem !important;
+    min-width: 0.9rem !important;
+    line-height: 1rem !important;
+}
+
+.sapMInputBase:not(.sapMInputBaseHasEndIcons):not(.sapMInputBaseHasBeginIcons) .sapMInputBaseInner, 
+.sapMInputBaseNoWidth .sapMInputBaseInner {
+    width: 100%;
+    margin-left: 1rem;
+}
+
+.sapUiSizeCompact .sapMLabel {
+    height: 1.5rem !important;
+    line-height: 1.5rem !important;
+    font-size: 0.875rem; 
+}
+
+.sapUiSizeCompact .sapUiFormElement > .sapUiFormElementLbl,
+.sapUiSizeCompact .sapUiFormElement > .sapUiFormElementFld {
+    padding: 0.2rem 0 !important;
+}
+
+.alignTextCheckBox .sapMCbLabel {
+    margin-bottom: 0.10rem !important;
+    vertical-align: middle;
+}
+
+.checkboxStickyText {
+    height: 28.8px !important;
+    line-height: 23.5px !important;
+}
+
+/* ==========================================================================
+   Personalización de Tablas
+   ========================================================================== */
+#TreeTableBasic {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Agrupación de paddings en cero para celdas de tabla */
+.sapUiTableDataCell > .sapUiTableCellInner,
+.sapUiTableCreationRow .sapUiTableCreationRowForm .sapUiTableCell > .sapUiTableCellInner,
+.sapUiTableHeaderDataCell .sapUiTableCellInner {
+    padding: 0 !important;
+}
+
+.sapUiTableCCnt .sapUiTableTableCell { padding: 0 0.2rem !important; }
+
+/* Agrupación de fuentes pequeñas en tabla */
+.sapUiTable .sapMText, 
+.sapUiTable .sapMLabel,
+.sapUiTable .sapMInputBaseInner {
+    font-size: 10px !important;
+}
+
+.sapUiSizeCompact .sapUiTable .sapMInputBaseInner {
+    height: 1rem;
+    margin-left: 0.1rem;
+}
+
+.smallHeaderTable .sapUiTableHeaderRow { height: 24px !important; }
+
+.sapUiTableHeaderDataCell {
+    height: auto !important;
+    overflow: visible !important;
+}
+
+.sapUiTableHeaderDataCell .sapUiTableCellInner {
+    height: auto !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    overflow: visible !important;
+}
+
+.sapUiTableDataCell > .sapUiTableCellInner,
+.sapUiTableCreationRow .sapUiTableCreationRowForm .sapUiTableCell > .sapUiTableCellInner {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+/* Agrupación de Cabeceras de Color y Flat Inputs */
+.cabeceracolor, .monthHeaderGray, .parentHeader {
+    background-color: #9e9b9b !important;
+}
+
+.sapUiTableRow.cabeceracolor .sapMInputBaseInner { font-weight: 600 !important; }
+.cabeceracolor .flatCellInput .sapMInputBaseContentWrapper { border: none !important; }
+
+.cabeceracolor .sapMInputBaseContentWrapper,
+.cabeceracolor .sapMInputBaseInner,
+.flatCellInput .sapMInputBaseContentWrapper,
+.sapUiTableCell .flatCellInput .sapMInputBaseContentWrapper {
+    display: flex !important;
+    align-items: center !important;
+    height: 1.6rem !important;
+    background: transparent !important;
+}
+
+.cabeceracolor .sapMInputBaseContentWrapper,
+.cabeceracolor .sapMInputBaseInner {
+    padding: 0 !important;
+    margin-left: -0.4rem !important;
+}
+
+.flatCellInput .sapMInputBaseContentWrapper,
+.sapUiTableCell .flatCellInput .sapMInputBaseContentWrapper {
+    box-shadow: none !important;
+    margin-top: 0 !important;
+}
+
+/* Corrección del FlatCellInput para evitar redundancias */
+.flatCellInput .sapMInputBaseInner,
+.sapUiTableCell .flatCellInput .sapMInputBaseInner {
+    padding: 0 !important;
+    box-sizing: border-box !important;
+}
+
+.flatCellInput .sapMInputBaseInner { margin: 0.01rem !important; }
+
+.sapUiTableCell .flatCellInput { margin: 0.1rem 0.4rem !important; }
+.sapUiTableCell .flatCellInput .sapMInputBaseInner {
+    margin: 0 !important;
+    height: 1.6rem !important;
+    line-height: 1.6rem !important;
+    text-align: center !important;
+}
+
+.flatCellInput .sapMInputBaseIconContainer,
+.sapUiTableCell .flatCellInput .sapMInputBaseIconContainer {
+    display: none !important;
+}
+
+.cabeceracolor-Group td {
+    border-top: 1.5px solid #000000;
+    border-bottom: medium;
+    color: black !important;
+}
+
+/* Iconos de despliegue */
+.sapUiTableGroupIcon::before, .sapUiTableTreeIcon::before {
+    font-family: "SAP-icons";
+    font-size: 0.6rem;
+    color: #0854a0;
+}
+
+.sapUiTableTreeIcon {
+    display: flex;
+    flex: none;
+    justify-content: center;
+    align-items: center;
+    width: 1rem;
+    cursor: default;
+}
+
+.sapUiTableCellDummy,
+.sapUiTableCellDummy * {
+    border-top: none !important;
+    border-right: none !important;
+    border-left: none !important;
+    background: #f9f9f9;
+}
+
+.forceHScroll .sapUiTableCnt { overflow-x: auto !important; }
+.forceHScroll { min-width: 0; }
+
+/* ==========================================================================
+   Secciones de Cabeceras
+   ========================================================================== */
+
+/* Agrupación para fullWidthHeader y sus flex items */
+.fullWidthHeader,
+.fullWidthHeader .sapMFlexItem {
+    margin: 0 !important;
+    max-height: none !important;
+    min-height: 0 !important;
 }
 
 .fullWidthHeader {
     width: 100%;
+    overflow: visible !important;
+}
+
+.fullWidthHeader .sapMFlexItem:has(.parentHeaderBox) {
+    min-height: 22px !important;
+}
+
+.fullWidthHeader .sapMLabel {
+    line-height: 1 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 1px 0 !important; 
+    display: inline-block !important;
 }
 
 .headerHorizontalLine {
@@ -43,615 +258,139 @@
     margin: 0.4rem 0;
 }
 
-
-/* Introducción de estilos personalizados */
-/* Reduce la altura de los campos de entrada y el espacio de las etiquetas */
-.sapUiSizeCompact .sapMInputBaseInner {
-    height: 1.5rem !important; /* Por defecto es 2rem */
-    padding-top: 0.20rem !important;
-    padding-bottom: 0 !important;
-    margin-left: -1rem;
-    padding-right: 1rem;
-}
-
-.sapUiSizeCompact .sapMLabel {
-    height: 1.5rem !important;
-    line-height: 1.5rem !important;
-    font-size: 0.875rem; /* Letra un poco más pequeña */
-}
-
-
-/* Elimina el espacio inferior entre filas en formularios */
-.sapUiSizeCompact .sapUiFormElement > .sapUiFormElementLbl,
-.sapUiSizeCompact .sapUiFormElement > .sapUiFormElementFld {
-    padding-top: 0.2rem !important;
-    padding-bottom: 0.2rem !important;
-}
-
-
-/* Reduce el espacio en las celdas de la tabla */
-.sapUiTableCCnt .sapUiTableTableCell {
-    padding: 0 0.2rem !important;
-}
-
-
-/* Compacta los campos de entrada dentro de las tablas */
-.sapUiSizeCompact .sapUiTable .sapMInputBaseInner {
-    height: 1rem;
-    margin-left: 0.1rem;
-}
-
-
-/* Reduce los márgenes de HBox en etiquetas dinámicas */
-.sapUiSizeCompact .sapMHBox:not(.maxHeight) {
-    height: auto !important;
-}
-/* cabecera dentro TreeTable */
-.cabeceracolor {
-    background-color: #9e9b9b !important;
-}
-.sapUiTableRow.cabeceracolor .sapMInputBaseInner {
-    font-weight: 600 !important;
-}
-
-/* */
-.sapMFlexItemAlignAuto {
-    font-weight: bold !important;
-}
-
-.secondStickyText {  
-    font-size: 0.85rem;            
-    padding-top: 0.2rem;
-    padding-bottom: 0.2rem;
-    width: 100%;
-    display: block;
-    text-align: center;
-    color: #000000 !important;
-}
-.sapUiTable .sapMText.secondStickyText {
-    font-weight: 600 !important;
-}
-
-
-
-/* Margen inferior y alineación automática hacia la derecha */
-.textoaño {
-    font-size: 0.75rem !important; 
-    font-weight: 300 !important;    
-    color: #504f4f;                
-}
-/* .parentHeaderBox {
+.parentHeaderBox {
+    padding-top: 7px;
     background-color: #ffffff;
     font-weight: normal;
     width: 100%;
-    min-height: 2rem;  
-}*/
+    min-height: 22px !important;
+    height: 26px !important;
+}
 
-.childHeaderBox {
-    background-color:orange !important;
+/* Agrupación de cajas naranjas */
+.childHeaderBox,
+.principalHeaderBox {
+    background-color: orange !important;
     width: 100%;
 }
+.principalHeaderBox { align-items: center; }
 
-.parentHeaderText {
-    border-bottom: 1px solid #cfcfcf;
-    
+.parentHeaderText { border-bottom: 1px solid #cfcfcf; }
+
+.textoaño {
+    font-size: 0.75rem !important; 
+    font-weight: 300 !important;    
+    color: #504f4f;  
+    margin: 5px 0 2px 0 !important;
+    display: inline-block;
 }
 
-.principalHeaderBox {
-    background-color:orange !important;
-    align-items: center;
-    
-}
-
-.sapUiTableHeaderDataCell>.sapUiTableCellInner {
-    padding: 0rem !important;
-}
-
-.headerDarkBlue .sapMBarLeft{
-    display: flex !important;
-    justify-content: center !important;
-}
-
-.headerDarkBlue .ambitoIcon{
-    line-height: 0.8rem !important;
-}
-
-.sapMDialogScroll{
-    height: 100% !important;
-}
-
-
-/* Texto pequeño */
-.sapUiTable .sapMText, 
-.sapUiTable .sapMLabel,
-.sapUiTable .sapMInputBaseInner {
-    font-size: 10px !important;
-}
-
-
-/* Tabla más compacta */
-.sapUiTableHeaderDataCell {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
+.monthHeaderHBox {
+    position: relative;
     height: auto !important;
-}
-
-
-/* Ajusta el diseño interno de las celdas de cabecera */
-.sapUiTableHeaderDataCell .sapUiTableCellInner {
-    height: auto !important;
-    padding: 0 !important;
-    display: flex !important;
-    align-items: flex-start !important;
-    justify-content: center !important;
-}
-
-
-/* Elimina márgenes y alturas mínimas de las cabeceras */
-/* .fullWidthHeader, 
-.parentHeaderBox,
-.fullWidthHeader .sapMFlexItem {
-    margin: 0 !important;
-    padding: 0 !important;
-    max-height: 2.8rem;
     min-height: 0 !important;
-} */
-
-.fullWidthHeader,
-.fullWidthHeader .sapMFlexItem {
-  margin: 0 !important;
-  max-height: none !important;
-  min-height: 0 !important;
-}
-.parentHeaderBox {
-padding-top: 7px;
-  background-color: #ffffff;
-  font-weight: normal;
-  width: 100%;
-  min-height: 22px !important;
-  min-height: 22px !important;
-  height: 26px !important;
+    overflow: visible !important;  
+    padding: 2px 1.4rem 2px 0 !important; 
+    box-sizing: border-box;
 }
 
-
-/* Compacta las etiquetas dentro de las cabeceras completas */
-.fullWidthHeader .sapMLabel {
-    line-height: 1 !important;
-    height: auto !important;
+.monthHeaderHBox .sapMBtn {
+    position: absolute !important;
+    right: 0 !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    height: 1rem !important;
+    min-height: 1rem !important;
     margin: 0 !important;
-    padding: 1px 0 !important; 
+    overflow: visible !important;
+}
+
+.monthHeaderHBox .sapMBtnInner {
+    height: 1rem !important;
+    line-height: 1rem !important;
+    padding: 0 0.2rem !important;
+}
+
+.monthHeaderHBox .sapMLabel {
+    line-height: 1.2rem !important;
+    height: auto !important;
+    margin: 0 0 0 20px !important;
+    padding: 1px 0 !important;
     display: inline-block !important;
 }
 
+.monthHeaderGray {
+    min-height: 1rem;
+    padding: 0 !important;
+    margin: 0 !important;
+    line-height: 1rem !important;
+}
 
-/* Tercera cabecera */
-/* .parentHeader {
-    background-color: #9e9b9b;
+.fullWidthHeader .monthHeaderGray.sapMLabel {
+    margin: 0 !important;
+    height: 1rem !important;
+    line-height: 1rem !important;
+}
+
+.parentHeader {
     font-weight: normal;
     align-items: center;
     width: 100%;
-    min-height: 1rem; 
-} */
-
-
-/* Reduce la altura general de los botones */
-.sapMBtn {
-    height:1.8rem !important; 
-    margin: 1px !important;
+    min-height: 0.8rem;
 }
 
-.barras {
-    height: 100% !important;
-}
+.parentHeaderFirstMonth { height: 18.29px !important; }
 
-.sapMITBContent{
-    display: none !important;
-}
-
-
-.sapMBtnInner {
-    height: 100% !important;
-    min-width: 1.2rem !important;
-    padding: 0 0.3rem !important;
-    line-height: 1.2rem !important; 
-}
-
-
-/* Texto e icono más pequeño */
-.sapMBtnContent, .sapMBtnIcon {
-    font-size: 11px !important;
-    line-height: 1rem !important;
-}
-
-
-/* Ajusta la altura del control Select */
-.sapMSelect {
-    height: 1.3rem !important;
-    background: transparent !important;
-}
-
-
-/* Menor espacio en el área de texto */
-.sapMSelect .sapMSelectInner {
-    height: 100% !important;
-    line-height: 1.2rem !important;
-    font-size: 10px !important;
-    padding-left: 0.3rem !important;
-}
-
-
-/* Icono más pequeño en el botón derecho */
-.sapMSelect .sapMSelectArrow {
-    height: 100% !important;
-    width: 1.3rem !important;
-    line-height: 1.2rem !important;
-    font-size: 0.7rem !important;
-}
-
-
-/* Reduce el tamaño del texto de los elementos del Select */
-.sapMSelectListItemText {
-    font-size: 10px !important;
-}
-
-
-/* Ajusta la altura y el tamaño base de los elementos del Select */
-.sapMSelectListItemBase {
-    color: #32363a;
-    font-size: 0.6rem;
-    height: 2.5rem;
-}
-
-
-/* Reduce el relleno interno del campo de búsqueda */
-.sapUiSizeCompact .sapMSFF {
-    padding-left: 0.2rem !important;
-    padding-right: 1.2rem !important; 
-}
-
-
-/* Campos de entrada del buscador */
-.sapUiSizeCompact .sapMSFI {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    font-size: 9px !important;
-}
-
-
-/* Reduce el tamaño de letra del buscador */
-.sapMSFI[type='search']
- {
-    font-size: 0.65rem;
-}
-
-
-/* Ajusta el tamaño del botón de búsqueda */
-.sapUiSizeCompact .sapMSFB
- {
-    width: 1.2rem;
-    height: 1.1rem;
-    font-size: 0.6rem;
-     text-align: center;
-    margin: 0;
-    padding: 0;
-    line-height: 1.2rem;
-}
-
-
-/* Iconos del buscador */
-.sapUiSizeCompact .sapMSFB::before {
-    font-size: 0.45rem !important;
-}
-
-
-/* Reduce la altura de la fila de cabecera */
-.smallHeaderTable .sapUiTableHeaderRow {
-    height: 24px !important;
-}
-
-
-/* Reduce el texto de las pestañas pequeñas */
-.smallTabs .sapMITBText {
-    font-size: 0.70rem !important;  
-    line-height: 1rem !important;
-}
-
-
-/* Ajusta la altura de la barra azul */
-.headerDarkBlue.sapMBar {
+/* Cabeceras Superiores */
+.headerDarkBlue.sapMBar,
+.headerHeightCustom.sapMBar {
     height: 2.1rem !important;
     min-height: 2.1rem !important;
 }
 
-
-/* Ajusta el título en la cabecera azul */
-.headerDarkBlue .sapMTitle {
-    font-size: 0.8rem !important;
-    line-height: 1rem !important;
-    margin: 0 !important;
+.headerDarkBlue .sapMBarLeft {
+    display: flex !important;
+    justify-content: center !important;
 }
+.headerDarkBlue .ambitoIcon { line-height: 0.8rem !important; }
+.headerDarkBlue .sapMTitle { font-size: 0.8rem !important; line-height: 1rem !important; margin: 0 !important; }
+.headerDarkBlue .sapMLabel { font-size: 0.7rem !important; line-height: 0.9rem !important; }
 
+.headerHeightCustom.sapMBar { background-color: #ffffff !important; }
 
-/* Ajusta las etiquetas en la cabecera azul */
-.headerDarkBlue .sapMLabel {
-    font-size: 0.7rem !important;
-    line-height: 0.9rem !important;
-}
-
-
-/* Campos de entrada (INPUT) */
-.sapUiSizeCompact .sapMInputBaseInner {
-    height: 1rem !important;
-    line-height: 0.85rem !important;
-
-    padding-top: 0 !important;
-    padding-bottom: 0.1rem !important;
-
-    box-sizing: border-box;
-}
-
-
-/* Ajusta el contenedor del campo de entrada */
-.sapUiSizeCompact .sapMInputBaseContentWrapper {
-    margin-top: 0.2rem !important;
-    height: 1.2rem;
-    margin-bottom: 0 !important;
-    align-self: flex-end !important;
-}
-
-
-/* Reduce el tamaño del icono del campo de entrada */
-.sapUiSizeCompact .sapMInputBaseIcon {
-    width: 0.9rem !important;
-    min-width: 0.9rem !important;
-    line-height: 1rem !important;
-}
-
-
-/* Ajusta el tamaño del texto del campo de entrada */
-.sapUiSizeCompact .sapMInputBaseInner {
-    font-size: 0.57rem !important;
-    line-height: 1rem !important;
-}
-
-
-/* Ajusta el tamaño de los títulos de la lista */
-.sapUiSizeCompact .sapMSLITitle, .sapUiSizeCompact .sapMSLITitleOnly
- {
-    font-size: 0.65rem;
-}
-
-.sapUiSizeCompact .sapMInputBaseInner {
-    padding-top: 0.20rem !important;   
-    padding-bottom: 0 !important;
-}
-
-
-/* Fuerza el desplazamiento horizontal en la tabla */
-.forceHScroll .sapUiTableCnt {
-    overflow-x: auto !important;
-}
-
-
-/* Desbloquea el contenedor flexible */
-.forceHScroll {
-    min-width: 0;
-}
-
-
-/* Medidas de los botones */
-.sapMBtnInner {
-    height: 80% !important;
-    min-width: 0.1rem !important;
-    padding: 0 0.1rem !important;
-    line-height: 0.1rem !important;
-}
-
-
-/* Medidas del buscador */
-.sapUiSizeCompact .sapMSFF
- {
-    height: 1.2rem;
-    padding-left: 0.5rem;
-    padding-right: 4rem;
-}
-
-.sapUiSizeCompact .sapMSF
- {
-    height: 2rem;
-    padding: 0.40rem 0;
-    min-width: 6rem;
-}
-
-.sapUiSizeCompact .sapMSFR:not(.sapMSFNS)
- {
-    right: 1.2rem;
-}
-
-.sapUiSizeCompact .sapMSFI
- {
-    height: 1.2rem;
-}
-
-
-/* Medidas del control Select */
-.sapUiSizeCompact .sapMSlt
- {
-    height: 1.1rem;
-    margin-top: 0.1875rem;
-    margin-bottom: 0.1875rem;
-}
-
-/* Ajusta la alineación vertical del Select */
-.sapUiSizeCompact .sapMSlt>.sapMSltLabel, .sapUiSizeCompact .sapMSlt>.sapMSltArrow
- {
-    line-height: 0.9rem;
-}
-
-/* Ajusta el icono de flecha del Select */
-.sapMSltArrow {
+.headerHeightCustom .sapMBarLeft,
+.headerHeightCustom .sapMBarMiddle,
+.headerHeightCustom .sapMBarRight {
     position: absolute;
-    text-align: center;
-    width: 2.5rem;
-    line-height: 4rem;
-    top: 0;
-    right: 0;
-    color: #0854a0;
-    font-size: 0.6rem;
-}
-
-/* Reduce el ancho del icono de flecha */
-.sapUiSizeCompact .sapMSltArrow
- {
-    width: 1.3rem;
-}
-
-/* Icono de los botones de año */
-.sapMBtnInner.sapMBtnText .sapMBtnIcon:before {
-    width: 1rem;
-    text-align: start;
-    display: inline-block
-}
-
-/* Ajusta el tamaño y el relleno del icono del botón */
-.sapMBtnInner.sapMBtnText .sapMBtnIcon {
-    width: 0.7rem;
-    padding-left: 0.4rem;
-    padding-right: 0.375rem;
-    text-align: center
-}
-
-.cabeceracolor-Group td {
-    border-top: 1.5px solid #000000;
-     border-bottom: medium;
-    color: black !important;
-    
-}
-
-/* Icono de la tabla de árbol (TreeTable) */
-.sapUiTableGroupIcon::before, .sapUiTableTreeIcon::before {
-    font-family: "SAP-icons";
-    font-size: 0.6rem;
-    color: #0854a0;
-}
-
-/* Elimina el borde superior y ajusta el espacio derecho */
-.sapUiTableCellDummy,
-.sapUiTableCellDummy * {
-    border-top: none !important;
-    border-right: none !important;
-    border-left: none !important;
-    background: #f9f9f9;
-}
-
-/* Botón de la tercera cabecera */
-.childHeaderBtn.sapMBtn {
-    height: 1.1rem !important;
-    min-height: 1.1rem !important;
-}
-
-/* Contenido interno del botón de la tercera cabecera */
-.childHeaderBtn .sapMBtnInner {
-    height: 1rem !important;
-    line-height: 1.1rem !important;
-    padding: 0rem !important;
-    border: none;
-}
-
-/* Icono del botón de la tercera cabecera */
-.childHeaderBtn .sapMBtnIcon {
-    font-size: 0.7rem !important;
-    line-height: 1rem !important;
-    padding-left: 1.3rem;
-    padding-right: 1rem;
-    border:none;
-    background:#9e9b9b;
-}
-
-/* Textos de la segunda columna de cabecera */
-.sapUiTableHeaderCell .sapUiTableCellInner {
-  display: flex;
-  align-items: flex-start;
-}
-
-.sapUiTableCellInner .fullWidthHeader {
-    padding-top: 0.8rem;
-}
-
-.sapUiTableCellInner {
-    overflow: visible;
-}
-
-/* Ajuste de altura de la barra de pestañas de iconos */
-.customTabBar .sapMITH {
-    height: 35px !important;
-    line-height: 35px !important;
-}
-
-/* Permite alinear correctamente los elementos internos a la nueva altura */
-.customTabBar .sapMITBHead {
-    height: 35px !important;
-}
-
-/* Barra con altura compacta basada en headerDarkBlue */
-.headerHeightCustom.sapMBar {
-    height: 2.1rem !important; 
-    min-height: 2.1rem !important;
-    background-color: #ffffff !important;
-}
-
-/* Posicionamiento de cada sección en su lado correspondiente */
-.headerHeightCustom .sapMBarLeft {
-    position: absolute;
-    left: 0.5rem;
     height: 100%;
     display: flex !important;
     align-items: center !important;
 }
 
+.headerHeightCustom .sapMBarLeft { left: 0.5rem; }
+.headerHeightCustom .sapMBarRight { right: 0.5rem; }
 .headerHeightCustom .sapMBarMiddle {
-    position: absolute;
     left: 0;
     right: 0;
-    height: 100%;
-    display: flex !important;
-    align-items: center !important;
     justify-content: center !important;
     pointer-events: none;
 }
+.headerHeightCustom .sapMBarMiddle > * { pointer-events: auto; }
 
-.headerHeightCustom .sapMBarMiddle > * {
-    pointer-events: auto;
-}
-
-.headerHeightCustom .sapMBarRight {
-    position: absolute;
-    right: 0.5rem;
-    height: 100%;
-    display: flex !important;
-    align-items: center !important;
-}
-
-/* Elemento destacado de la parte izquierda */
 .headerHeightCustom .sapMTitle {
     font-size: 1.1rem !important;
     font-weight: bold !important;
 }
 
-/* Control de selección central (ComboBox) */
 .headerHeightCustom .sapMComboBox,
-.headerHeightCustom .sapMComboBox .sapMInputBaseContentWrapper {
+.headerHeightCustom .sapMComboBox .sapMInputBaseContentWrapper,
+.headerHeightCustom .sapMBtn {
     height: 1.2rem !important;
 }
 
 .headerHeightCustom .sapMComboBox .sapMInputBaseInner {
-    font-size: 9px !important;
+    font-size: 0.8rem !important;
     height: 100% !important;
-}
-
-/* Botones situados a la derecha */
-.headerHeightCustom .sapMBtn {
-    height: 1.2rem !important;
 }
 
 .headerHeightCustom .sapMBtnInner {
@@ -663,433 +402,133 @@ padding-top: 7px;
     justify-content: center !important;
 }
 
-.headerHeightCustom .sapMBtnIcon {
-    font-size: 9px !important;
-}
+.headerHeightCustom .sapMBtnIcon { font-size: 9px !important; }
 
-/* Ajuste del grosor del selector de pestañas */
-.customTabBar .sapMITBInLine.sapMITBTextOnly>.sapMITBVertical.sapMITBFilter>.sapMITBText + .sapMITBContentArrow {
-    height: 9px !important;
-}
 
-/* Ajuste del contenedor de desplazamiento para compensar márgenes */
-.customTabBar .sapMITH .sapMITBScrollContainer {
-    margin: -10px 1.75rem !important;
-}
+/* ==========================================================================
+   Layout Principal (ObjectPage / DynamicPage)
+   ========================================================================== */
 
-/* Ajuste del tamaño de fuente de los textos de las pestañas */
-.customTabBar .sapMITBTextOnly .sapMITBText {
-    font-size: 11px !important;
-}
-
-/* Espacio desde el borde superior de la celda */
-.textoaño {
-    margin-top: 5px !important;
-    margin-bottom: 2px !important;
-    display: inline-block;
-}
-
-/* Ajusta la alineación vertical de la etiqueta del checkbox */
-.alignTextCheckBox .sapMCbLabel {
-    margin-bottom: 0.10rem !important;
-    vertical-align: middle;
-}
-
-/* Elimina el padding del contenido del encabezado */
-.sapUxAPObjectPageHeaderContent {
-    padding-bottom: 0 !important;
-}
-
-/* Elimina el margen de las secciones */
-.sapUxAPObjectPageLayout .sapUxAPObjectPageSection {
-    margin-top: 0 !important;
-    padding-top: 0 !important;
-}
-
-/* Elimina el padding de las subsecciones */
-.sapUxAPObjectPageSubSection {
-    padding-top: 0 !important;
-    margin-top: 0 !important;
-}
-
-/* Elimina el margen de los bloques */
-.sapUxAPBlockBase {
-    margin-top: 0 !important;
-    padding-top: 0 !important;
-}
-
-/* Elimina el margen del VBox que contiene la TreeTable */
-.noMarginTop {
-    margin-top: 0 !important;
-    padding-top: 0 !important;
-}
-
-/* Elimina el espacio sobre la TreeTable */
-#TreeTableBasic {
-    margin-top: 0 !important;
-}
-
-/* Elimina el padding del contenedor de las tablas en el encabezado */
+/* Reseteo unificado de márgenes y rellenos para contenedores del Layout */
+.sapUxAPObjectPageHeaderContent,
+.sapUxAPObjectPageLayout .sapUxAPObjectPageSection,
+.sapUxAPObjectPageSubSection,
+.sapUxAPBlockBase,
+.sapUxAPObjectPageSectionContainer,
+.sapUxAPBlockContainer,
+.sapUiRespGrid,
+.sapUiRespGridSpanXL12,
+.sapUiRespGridSpanL12,
+.sapUiRespGridSpanM12,
+.sapUiRespGridSpanS12,
 #tablesContainer {
-    padding-bottom: 0 !important;
-    margin-bottom: 0 !important;
-}
-
-/* Elimina el margen superior de las tablas en el encabezado */
-#tablesContainer .sapUiSmallMarginTop {
-    margin-top: 0.5rem !important;
-}
-
-/* Elimina el espacio total entre encabezado y contenido */
-.sapUxAPObjectPageHeaderContent {
+    margin: 0 !important;
     padding: 0 !important;
 }
 
-.sapUxAPObjectPageLayout .sapUxAPObjectPageSectionContainer {
-    padding-top: 0 !important;
+#tablesContainer .sapUiSmallMarginTop { margin-top: 0 !important; }
+
+/* Títulos colapsados */
+.sapUxAPObjectPageHeaderTitle {
+    min-height: 0 !important;
+    padding: 0 !important;
 }
 
-#tablesContainer .sapUiSmallMarginTop {
-    margin-top: 0 !important;
-}
-
-/* Reduce el tamaño del título del encabezado */
 .sapUxAPObjectPageHeaderTitle > .sapMTitle,
 .sapUxAPObjectPageHeaderTitle > .sapMText,
 .compactTitle {
     font-size: 11px !important;
     font-weight: bolder !important;
     line-height: 0.5rem !important;
-    margin: 0px !important;
+    margin: 0 !important;
     padding-bottom: 10px !important;
 }
 
-/* Reduce únicamente el espacio superior del encabezado dinámico */
+/* Página Dinámica */
 .sapFDynamicPageHeader.sapFDynamicPageHeaderWithContent {
-    padding-top: 10px !important;
-    padding-right: 3rem !important;
-    padding-bottom: 1rem !important;
-    padding-left: 3rem !important;
+    padding: 10px 3rem 1rem 3rem !important; /* shorthand: top right bottom left */
 }
 
-/* Elimina el espacio bajo el título de la sección */
+.sapFDynamicPageTitleMainInner,
+.sapFDynamicPageTitle,
 .sapUxAPObjectPageSectionHeader {
-    height: 0 !important;
+    height: 0 !important; /* El padding 0 y overflow hidden de abajo cubren los requerimientos */
     min-height: 0 !important;
     padding: 0 !important;
     margin: 0 !important;
-    overflow: hidden;
 }
 
-/* Elimina el padding de la sección */
-.sapUxAPObjectPageSection {
-    padding-top: 0 !important;
-}
-
-/* Elimina el padding vertical y la altura mínima del título dinámico */
+.sapFDynamicPageTitleMainInner,
 .sapFDynamicPageTitle {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    min-height: 0 !important;
+    height: 10px !important;
+    min-height: 10px !important;
 }
 
-/* Botón de expandir/colapsar el encabezado */
+.sapUxAPObjectPageSectionHeader { overflow: hidden; }
+
+/* Indicador y Stickied */
 .sapFDynamicPageToggleHeaderIndicator {
     height: 1.5rem !important;
     width: 1.5rem !important;
     margin-top: 0.2rem !important;
 }
+.sapFDynamicPageToggleHeaderIndicator .sapMBtnIcon { font-size: 0.75rem !important; }
+.sapUxAPObjectPageHeaderStickied { padding-right: 0.5rem !important; }
 
-/* Icono del botón de expandir */
-.sapFDynamicPageToggleHeaderIndicator .sapMBtnIcon {
-    font-size: 0.75rem !important;
+/* ==========================================================================
+   Botones y Componentes Varios
+   ========================================================================== */
+
+/* Botones Base */
+.sapMBtn { height: 1.8rem !important; margin: 1px !important; }
+.sapMBtnInner {
+    height: 80% !important;
+    min-width: 0.1rem !important;
+    padding: 0 0.1rem !important;
+    line-height: 0.1rem !important;
 }
-
-/* Elimina el padding extra cuando el encabezado está fijo */
-.sapUxAPObjectPageHeaderStickied {
-    padding-right: 0.5rem !important;
-}
-
-/* Elimina el padding de la subsección que contiene la TreeTable */
-.sapUxAPObjectPageSubSection {
-    padding: 0 !important;
-    margin: 0 !important;
-}
-
-/* Elimina el padding del contenedor de bloques */
-.sapUxAPBlockContainer {
-    padding: 0 !important;
-    margin: 0 !important;
+.sapMBtnContent, .sapMBtnIcon {
+    font-size: 12px !important;
+    line-height: 18px !important;
 }
 
-/* Elimina el padding de la rejilla interna */
-.sapUiRespGrid {
-    padding: 0 !important;
-    margin: 0 !important;
+/* Footer Botones */
+.footerBtn.sapMBtn { height: 2rem !important; margin: 0 !important; }
+.footerBtn .sapMBtnInner {
+    padding: 0 1.5rem !important;
+    height: 100% !important;
+    border-radius: 0 !important;
+}
+.footerBtn .sapMBtnContent {
+    font-size: 13px !important;
+    line-height: 2rem !important;
 }
 
-/* Elimina el padding de las celdas de la rejilla */
-.sapUiRespGridSpanXL12,
-.sapUiRespGridSpanL12,
-.sapUiRespGridSpanM12,
-.sapUiRespGridSpanS12 {
-    padding: 0 !important;
+/* Iconos de Header y Toolbar (Agrupación) */
+.headerIconBtn.sapMBtn,
+.toolbarActionBtn.sapMBtn {
+    height: 1.5rem !important; /* Se sobreescribe abajo para toolbarActionBtn, pero comparten width y margin */
+    width: 1.5rem !important;
+    margin: 0 2px !important;
 }
+.toolbarActionBtn.sapMBtn { height: 1.6rem !important; width: 1.6rem !important; }
 
-/* Ajusta la TreeTable a los bordes */
-#TreeTableBasic {
-    margin: 0 !important;
-    padding: 0 !important;
-}
-/* Elimina márgenes del VBox que contiene la TreeTable */
-.noMarginTop {
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-
-.kpiBoxExternos .sapMFlexItem {
-    width: 50% !important;
-}
-/* no border input TreeTable */
-.flatCellInput .sapMInputBaseContentWrapper {
-    box-shadow: none !important;
-    height: 1.6rem
-;
-    background: transparent !important;
-    margin-top: 0rem !important;
-    display: flex !important;       
-    align-items: center !important;
-}
-.flatCellInput .sapMInputBaseInner {
-    padding: 0 !important;
-    margin: 0.01rem !important;
-    box-sizing: border-box !important;
-}
-.flatCellInput .sapMInputBaseIconContainer {
-    display: none !important;
-}
-.sapUiTableCell .flatCellInput {
-    margin: 0.1rem 0.4rem !important;
-}
-
-.sapUiTableCell .flatCellInput .sapMInputBaseContentWrapper {
-    box-shadow: none !important;
-    height: 1.6rem !important;
-    background: transparent !important;
-    display: flex !important;
-    align-items: center !important;
-}
-
-.sapUiTableCell .flatCellInput .sapMInputBaseInner {
-    padding: 0 !important;
-    margin: 0 !important;
-    height: 1.6rem !important;
-    line-height: 1.6rem !important;
-    text-align: center !important;
-}
-
-.sapUiTableCell .flatCellInput .sapMInputBaseIconContainer {
-    display: none !important;
-}
-
-/* para que la cabecera no coja el css de los input */
-.cabeceracolor .flatCellInput .sapMInputBaseContentWrapper {
-    border: none !important;
-}
-/* alinear cabecera con input */
-.cabeceracolor .sapMInputBaseContentWrapper,
-.cabeceracolor .sapMInputBaseInner {
-    display: flex !important;
-    align-items: center !important;
-    height: 1.6rem !important;
-    padding: 0 !important;
-    
-    background: transparent !important;
-}
-
-/* menor espacio primera columna TreeTable */
-.sapUiTableTreeIcon {
-    display: flex;
-    flex: none;
-    justify-content: center;
-    align-items: center;
-    width: 1rem;
-    cursor: default;
-}
-
-/* Oculta la barra de desplazamiento vertical del ObjectPageLayout por identificador específico */
-#__xmlview1--objectPageLayout-vertSB {
-    display: none !important;
-}
-
-/* Oculta la barra de desplazamiento vertical de cualquier ObjectPageLayout */
-[id$="-vertSB"] {
-    display: none !important;
-}
-
-/* Aplica Bold al texto del botón de año */
-
-.yearButton.sapMBtn {
-    height: 1.2rem !important;
-    padding: 0 0.5rem !important; /* ← añade padding horizontal */
-}
-
-.yearButton .sapMBtnContent {
-    line-height: 13px !important;
-    
-    padding: 0 !important;
-    margin: 0 !important;
-    margin-top: -2px !important;
-}
-/* Aplica Bold al texto del IconTabFilter */
-.sapMITBText {
-    font-weight: bold !important;
-}
-/* Aplica Bold al texto de los años en el Select */
-.yearSelect .sapMSltLabel {
-    font-weight: bold !important;
-}
-/* Colapsa el titulo */
-.sapUxAPObjectPageHeaderTitle {
-    min-height: 0 !important;
-    padding: 0 !important;
-}
-.sapFDynamicPageTitleMainInner {
-    height: 10px !important;
-    min-height: 10px !important;
-}
-.sapFDynamicPageTitle {
-    min-height: 10px !important;
-    padding: 0 !important;
-}
-.monthHeaderHBox {
-    position: relative;
-}
-.monthHeaderHBox .sapMBtn {
-    position: absolute;
-    right: 0;
-}
-.monthHeaderGray {
-    background-color: #9e9b9b !important;
-    min-height: 1rem;
-    padding: 0 !important;
-    margin: 0 !important;
-    line-height: 1rem !important;
-}
-.fullWidthHeader .monthHeaderGray.sapMLabel {
-    /* padding: 0 !important; */
-    margin: 0 !important;
-    height: 1rem !important;
-    line-height: 1rem !important;
-}
-.fullWidthHeader .sapMFlexItem {
-    margin: 0 !important;
-    /* padding: 0 !important; */
-    max-height: 2.8rem;
-    min-height: 0 !important;
-}
-.monthHeaderHBox {
-    position: relative;
-    padding-top: 2px !important;
-    padding-bottom: 2px !important;
-}
-.parentHeader {
-    background-color: #9e9b9b;
-    font-weight: normal;
-    align-items: center;
-    width: 100%;
-    min-height: 0.8rem; /* reducido */
-}
-/* Alinea la altura del primer mes con los demás*/
-.monthHeaderHBox {
-    position: relative;
-    height: auto !important;
-    min-height: 0 !important;
-    overflow: visible !important;  
-    padding-right: 1.4rem !important; 
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    box-sizing: border-box;
-}
-/* botón dentro del HBox*/
-.monthHeaderHBox .sapMBtn {
-    position: absolute !important;
-    right: 0 !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    height: 1rem !important;
-    min-height: 1rem !important;
-    margin: 0 !important;
-    overflow: visible !important;
-}
-.monthHeaderHBox .sapMBtnInner {
-    height: 1rem !important;
-    line-height: 1rem !important;
-    padding: 0 0.2rem !important;
-}
-
-.sapUiTableHeaderDataCell,
-.sapUiTableHeaderDataCell .sapUiTableCellInner,
-.fullWidthHeader {
-    overflow: visible !important;
-}
-
-/* Label dentro monthHeaderHBox*/
-.monthHeaderHBox .sapMLabel {
-    line-height: 1.2rem !important;
-    height: auto !important;
-    margin: 0 !important;
-    padding: 1px 0 !important;
-    display: inline-block !important;
-}
-.sapMInputBase:not(.sapMInputBaseHasEndIcons):not(.sapMInputBaseHasBeginIcons) .sapMInputBaseInner, .sapMInputBaseNoWidth .sapMInputBaseInner
- {
-    width: 100%;
-    margin-left: 1rem;
-}
-/* medida input Toolbar */
-.inflacionNoMargin .sapMInputBaseInner {
-    margin-left: 0 !important;
-    padding-right: 6px !important; 
-}
-/*medida Input de años y meses TreeTable creada en controllador*/
-.customYearInput .sapMInputBaseContentWrapper {
-    width: 7.6rem;
-    align-self: center !important;
-    height: 1.6rem !important;
-    margin-left: 0 !important;
-    margin-top: 0rem !important;
-}
-.customYearInput .sapMInputBaseInner {
-    text-align: center !important;     
-    line-height: 1.8rem !important;     
-    height: 1.5rem !important;
-    padding-right: 2.5rem;
-    padding-top: 0 !important;
-    padding-bottom: 0.3rem !important;
-    margin-left: 0 !important;
+.headerIconBtn .sapMBtnInner,
+.toolbarActionBtn .sapMBtnInner {
+    height: 100% !important;
+    width: 100% !important;
     padding: 0 !important;
 }
 
-.sapUiTableDataCell>.sapUiTableCellInner,
-.sapUiTableCreationRow .sapUiTableCreationRowForm .sapUiTableCell>.sapUiTableCellInner {
-    text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
-    padding: 0 !important; /* Rimuove il padding */
-}
-   
-.parentHeaderFirstMonth {
-    height: 18.29px !important;
-}
+.headerIconBtn .sapMBtnIcon { font-size: 1rem !important; }
+.toolbarActionBtn .sapMBtnIcon { font-size: 0.9rem !important; }
 
+/* Botón de solo Icono */
 .iconOnlyBtn.sapMBtn {
     height: 1rem !important;
     width: 1rem !important;
     margin: 0 0 0 4px !important;
 }
-
 .iconOnlyBtn .sapMBtnInner {
     padding: 0 !important;
     min-width: 0 !important;
@@ -1098,127 +537,201 @@ padding-top: 7px;
     box-shadow: none !important;
     outline: none !important;
 }
+.iconOnlyBtn .sapMBtnInner:hover { background: transparent !important; border: none !important; }
 
-.iconOnlyBtn .sapMBtnInner:hover {
-    background: transparent !important;
-    border: none !important;
+/* Botones de jerarquía y años */
+.childHeaderBtn.sapMBtn { height: 1.1rem !important; min-height: 1.1rem !important; }
+.childHeaderBtn .sapMBtnInner {
+    height: 1rem !important;
+    line-height: 1.1rem !important;
+    padding: 0 !important;
+    border: none;
 }
+.childHeaderBtn .sapMBtnIcon {
+    font-size: 0.7rem !important;
+    line-height: 1rem !important;
+    padding: 0 1rem 0 1.3rem; /* top right bottom left */
+    border: none;
+    background: #9e9b9b;
+}
+
+.yearButton.sapMBtn { height: 1.2rem !important; }
+
+/* Flex en botón Arrow */
+.lineHeightArrowIcon.sapMBtn,
+.lineHeightArrowIcon .sapMBtnInner,
+.lineHeightArrowIcon .sapMBtnIcon,
+.lineHeightArrowIcon .sapUiIcon {
+    display: flex !important;
+    align-items: center !important;
+}
+
+.lineHeightArrowIcon.sapMBtn { height: 1rem !important; margin-left: -4px !important; }
+.lineHeightArrowIcon .sapMBtnInner { justify-content: center !important; line-height: normal !important; }
+.lineHeightArrowIcon .sapMBtnIcon, .lineHeightArrowIcon .sapUiIcon { line-height: 7px !important; }
+
+.sapMBtnInner.sapMBtnText .sapMBtnIcon:before { width: 1rem; text-align: start; display: inline-block; }
+.sapMBtnInner.sapMBtnText .sapMBtnIcon {
+    width: 0.7rem;
+    padding-left: 0.4rem;
+    padding-right: 0.375rem;
+    text-align: center;
+}
+
+/* ==========================================================================
+   Buscadores y Selectores (Compact Mode)
+   ========================================================================== */
+
+/* Buscador (SearchField) */
+.sapUiSizeCompact .sapMSFF {
+    height: 1.2rem;
+    padding-left: 0.5rem;
+    padding-right: 4rem;
+}
+.sapUiSizeCompact .sapMSF {
+    height: 2rem;
+    padding: 0.40rem 0;
+    min-width: 6rem;
+}
+.sapUiSizeCompact .sapMSFR:not(.sapMSFNS) { right: 1.2rem; }
+
+.sapUiSizeCompact .sapMSFI {
+    height: 1.2rem;
+    padding: 0 !important; /* Simplificado padding-left y padding-right */
+    font-size: 9px !important;
+}
+.sapMSFI[type='search'] { font-size: 0.65rem; }
+
+.sapUiSizeCompact .sapMSFB {
+    width: 1.2rem;
+    height: 1.1rem;
+    font-size: 0.6rem;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+    line-height: 1.2rem;
+}
+.sapUiSizeCompact .sapMSFB::before { font-size: 0.45rem !important; }
+
+/* Selector (Select) */
+.sapMSelect { height: 1.3rem !important; background: transparent !important; }
+.sapMSelect .sapMSelectInner {
+    height: 100% !important;
+    line-height: 1.2rem !important;
+    font-size: 10px !important;
+    padding-left: 0.3rem !important;
+}
+.sapMSelect .sapMSelectArrow {
+    height: 100% !important;
+    width: 1.3rem !important;
+    line-height: 1.2rem !important;
+    font-size: 0.7rem !important;
+}
+
+.sapMSelectListItemText { font-size: 10px !important; }
+.sapMSelectListItemBase { color: #32363a; font-size: 0.6rem; height: 2.5rem; }
+
+/* Selector Compacto */
+.sapUiSizeCompact .sapMSlt {
+    height: 1.1rem;
+    margin: 0.1875rem 0;
+}
+.sapUiSizeCompact .sapMSlt > .sapMSltLabel, 
+.sapUiSizeCompact .sapMSlt > .sapMSltArrow {
+    line-height: 0.9rem;
+}
+.sapMSltArrow {
+    position: absolute;
+    text-align: center;
+    width: 2.5rem;
+    line-height: 4rem;
+    top: 0;
+    right: 0;
+    color: #0854a0;
+    font-size: 0.6rem;
+}
+.sapUiSizeCompact .sapMSltArrow { width: 1.3rem; }
+.yearSelect .sapMSltLabel { font-weight: bold !important; }
+
+/* ==========================================================================
+   Pestañas, Textos y Otros Elementos
+   ========================================================================== */
+
+/* Pestañas (IconTabBar) */
+.sapMITBContent { display: none !important; }
+
+.smallTabs .sapMITBText { font-size: 0.70rem !important; line-height: 1rem !important; }
+
+.customTabBar .sapMITH,
+.customTabBar .sapMITBHead {
+    height: 35px !important;
+    line-height: 35px !important;
+}
+.customTabBar .sapMITBInLine.sapMITBTextOnly > .sapMITBVertical.sapMITBFilter > .sapMITBText + .sapMITBContentArrow {
+    height: 9px !important;
+}
+.customTabBar .sapMITH .sapMITBScrollContainer { margin: -10px 1.75rem !important; }
+.customTabBar .sapMITBTextOnly .sapMITBText,
+.smallFont .sapMInputBaseInner,
 .sapUiTableHeaderDataCell .titleGrande {
     font-size: 11px !important;
 }
-.smallFont .sapMInputBaseInner {
-    font-size: 11px  !important;
-}
-.fullWidthHeader .sapMFlexItem:has(.parentHeaderBox) {
-  min-height: 22px !important;
-  max-height: none !important;
-}
-.smallPlaceholder .sapMSFI::-webkit-input-placeholder {
-    font-size: 11px !important;
-}
+.sapMITBText { font-weight: bold !important; }
 
-.smallPlaceholder .sapMSFI::-moz-placeholder {
-    font-size: 11px !important;
+/* Textos Pegajosos (Sticky) */
+.secondStickyText {  
+    font-size: 0.85rem;            
+    padding: 0.2rem 0;
+    width: 100%;
+    display: block;
+    text-align: center;
+    color: #000000 !important;
 }
+.sapUiTable .sapMText.secondStickyText { font-weight: 600 !important; }
+.secondStickyContainer { height: 2rem; }
 
-.smallPlaceholder .sapMSFI:-ms-input-placeholder {
-    font-size: 11px !important;
-}
+/* Elementos Varios (KPIs, Alturas, Inflación) */
+.barras, .sapMDialogScroll { height: 100% !important; }
+.sapUiSizeCompact .sapMHBox:not(.maxHeight) { height: auto !important; }
+.kpiBoxExternos .sapMFlexItem { width: 50% !important; }
 
-
-.sapUiSizeCompact .sapMBtnIcon {
-    margin-left: -2px;
-    margin-right: 0
-}
-.bottomFilter .sapMBtnInner {
-    height: 62% !important;
-    margin-left: 0.1rem;
-     padding-left: 0.1rem !important;
-}
-.bottomFilter .sapMBtnInner .sapMBtnIcon {
-   margin-left: -0.25rem
-;
-    position: relative;
-    top: -1px;
-}
-.bottomFilterInsideTable .sapMBtnInner {
-    height: 65% !important;
-    margin-left: 2rem;
-     padding-left: 0.1rem !important;
-}
-.bottomFilterInsideTable .sapMBtnIcon {
-   margin-left: -0.25rem
-;
-    position: relative;
-    top: -1px;
-}
-.secondStickyContainer {
-    height: 2rem;
-}
-
-/* agrandar botones */
-.footerBtn.sapMBtn {
-    height: 2rem !important;
-    margin: 0 !important;
-}
-
-.footerBtn .sapMBtnInner {
-    padding: 0 1.5rem !important;
-    height: 100% !important;
-    border-radius: 0 !important;
-}
-
-.footerBtn .sapMBtnContent {
-    font-size: 13px !important;
-    line-height: 2rem !important;
-}
-/* Botones de icono grandes en la cabecera (ajuste opciones y log) */
-.headerIconBtn.sapMBtn {
-    height: 2rem !important;
-    width: 2rem !important;
-    margin: 0 2px !important;
-}
-
-.headerIconBtn .sapMBtnInner {
-    height: 100% !important;
-    width: 100% !important;
-    padding: 0 !important;
-}
-
-.headerIconBtn .sapMBtnIcon {
-    font-size: 1.2rem !important;
-}
-
-
-/* Botones de acción en la toolbar de la TreeTable (añadir, suprimir, shortcut, arrow) */
-.toolbarActionBtn.sapMBtn {
-    height: 1.6rem !important;
-    width: 1.6rem !important;
-    margin: 0 2px !important;
-}
-
-.toolbarActionBtn .sapMBtnInner {
-    height: 100% !important;
-    width: 100% !important;
-    padding: 0 !important;
-}
-
-.toolbarActionBtn .sapMBtnIcon {
-    font-size: 0.9rem !important;
-}
-/* Subir texto dentro del input de inflación */
 .inflacionNoMargin .sapMInputBaseInner {
-    margin-left: 0 !important;
-    padding-right: 6px !important;
-    padding-top: 0 !important;
-   padding-bottom: 0.05rem !important;
+    margin: 0 !important; /* Simplificado */
+    padding: 0 6px 0.05rem 0 !important; /* top right bottom left */
     line-height: 1rem !important;
 }
 
-.checkboxStickyText {
-    height: 28.8px !important;
-    line-height: 23.5px !important;
+/* Custom Year Input */
+.customYearInput .sapMInputBaseContentWrapper {
+    width: 7.6rem;
+    align-self: center !important;
+    height: 1.6rem !important;
+    margin: 0 !important; /* Simplificado */
 }
-.cabeceracolor .sapMSlt {
-    margin-top: 6px !important;
+.customYearInput .sapMInputBaseInner {
+    text-align: center !important;     
+    line-height: 1.8rem !important;     
+    height: 1.5rem !important;
+    padding: 0!important; /* top right bottom left */
+    margin-left: 0 !important;
+}
+
+/* Placeholders (Mantenidos separados por directrices de CSS) */
+.smallPlaceholder .sapMSFI::-webkit-input-placeholder { font-size: 11px !important; }
+.smallPlaceholder .sapMSFI::-moz-placeholder { font-size: 11px !important; }
+.smallPlaceholder .sapMSFI:-ms-input-placeholder { font-size: 11px !important; }
+
+/* Botones de Filtros Inferiores */
+.bottomFilter .sapMBtnInner,
+.bottomFilterInsideTable .sapMBtnInner {
+    padding-left: 0.1rem !important;
+}
+.bottomFilter .sapMBtnInner { height: 62% !important; margin-left: 0.1rem; }
+.bottomFilterInsideTable .sapMBtnInner { height: 65% !important; margin-left: 2rem; }
+
+.bottomFilter .sapMBtnInner .sapMBtnIcon,
+.bottomFilterInsideTable .sapMBtnIcon {
+    margin-left: -0.25rem;
+    position: relative;
+    top: -1px;
 }
