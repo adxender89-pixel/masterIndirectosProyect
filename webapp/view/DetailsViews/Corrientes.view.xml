@@ -492,10 +492,10 @@
                                                 </HBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLONNA: Operacion -->
+                                       <!-- COLONNA: Operacion -->
                                         <t:Column
                                             visible="{visibleColumn>/visible}"
-                                            width="90px"
+                                            width="115px"
                                             hAlign="Center"
                                             filterProperty="operacion"
                                         >
@@ -505,7 +505,7 @@
                                                     class="fullWidthHeader"
                                                 >
                                                     <Label
-                                                        text="Operacion"
+                                                        text="{i18n>CostEjAjust}"
                                                         class="titleGrande"
                                                         design="Bold"
                                                     />
@@ -594,7 +594,7 @@
                                                     class="fullWidthHeader"
                                                 >
                                                     <Label
-                                                        text="Destino"
+                                                        text="{i18n>CostEjReal}"
                                                         class="titleGrande"
                                                         design="Bold"
                                                     />

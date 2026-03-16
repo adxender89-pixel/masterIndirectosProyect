@@ -83,8 +83,21 @@ onAfterRendering: function () {
                 const oRowContext = oTable.getContextByIndex(oTable.getFirstVisibleRow() + iRowIndex);
 
                 // Se valida que la fila tenga un contexto de datos definido antes de invocar la apertura del menú.
-                if (oRowContext) {
-                    // Se llama a la función interna encargada de procesar la lógica y mostrar el menú contextual en las coordenadas adecuadas.
+ if (oRowContext) {
+        const oRowData = oRowContext.getObject();
+
+        // VALIDACIÓN DINÁMICA: Solo si es un nodo raíz (padre)
+        if (!oRowData || oRowData.padre !== true) {
+            return; 
+        }
+
+        // VALIDACIÓN DE COLUMNA: Solo en las columnas de identificación
+        const oBindingInfo = oTargetControl && oTargetControl.getBindingInfo ? oTargetControl.getBindingInfo("value") : null;
+        const sBindingPath = oBindingInfo && oBindingInfo.parts && oBindingInfo.parts[0] ? oBindingInfo.parts[0].path : null;
+
+        if (sBindingPath !== "PhPspnr" && sBindingPath !== "name") {
+            return;
+        }   // Se llama a la función interna encargada de procesar la lógica y mostrar el menú contextual en las coordenadas adecuadas.
                     this.onContextMenu({
                         rowBindingContext: oRowContext,
                         cellControl: oTargetControl || oTable
@@ -242,106 +255,92 @@ onAfterRendering: function () {
          * Se crean masivamente nuevos registros en el catálogo.
          * Permite la creación tanto a nivel de raíz como dentro de agrupadores.
          */
-        onAddPress: function (oEvent) {
-            const oTable = this.byId("TreeTableBasic");
-            const oModel = this.getView().getModel();
-            const oBundle = this.getView().getModel("i18n").getResourceBundle();
+  onAddPress: function (oEvent) {
+    const oTable = this.byId("TreeTableBasic");
+    const oModel = this.getView().getModel("corrientesModel");
+    const oBundle = this.getView().getModel("i18n").getResourceBundle();
 
-            let iQuantity = 1;
-            const oInput = this.byId("itemQuantityInput");
-            if (oInput) {
-                iQuantity = parseInt(oInput.getValue()) || 1;
-                oInput.setValue(1);
-            }
+    // 1. Obtener la cantidad del input (itemQuantityInput)
+    let iQuantity = 1;
+    const oInput = this.byId("itemQuantityInput");
+    if (oInput) {
+        iQuantity = parseInt(oInput.getValue()) || 1;
+        oInput.setValue(1); // Resetear a 1
+    }
 
-            let oContext = this._oContextRecord || oTable.getContextByIndex(oTable.getSelectedIndex());
-            let aTargetArray;
-            let sParentName = "";
+    // 2. Determinar el contexto del padre (donde vamos a meter los hijos)
+    let oContext = this._oContextRecord || oTable.getContextByIndex(oTable.getSelectedIndex());
+    
+    if (!oContext) {
+        sap.m.MessageToast.show("Seleccione un nivel padre primero");
+        return;
+    }
 
-            if (!oContext) {
-                aTargetArray = oModel.getProperty("/catalog/models/categories");
-            } else {
-                const oParentData = oContext.getObject();
+    const oParentData = oContext.getObject();
+    const iCurrentYear = new Date().getFullYear();
 
-                if (oParentData.padre === true || oParentData.isGroup === true) {
-                    if (!oParentData.categories) { oParentData.categories = []; }
-                    aTargetArray = oParentData.categories;
-                    sParentName = oParentData.name;
-                } else {
-                    sap.m.MessageToast.show(oBundle.getText("msgOnlyRootAllowed"));
-                    return;
-                }
-            }
+    // 3. Validar que tenga la propiedad 'children' inicializada
+    if (!oParentData.children) {
+        oParentData.children = [];
+    }
 
-            const iCurrentYear = new Date().getFullYear();
-            const sNewItemDefaultName = oBundle.getText("labelNewOperation");
+    // 4. Bucle para crear la cantidad de filas solicitadas
+    for (let k = 0; k < iQuantity; k++) {
+        const oNew = {
+            PhPspnr: "", 
+            name: oParentData.padre === true ? oParentData.name + "." : "", 
+            ParentPath: oParentData.PhPspnr, // El ID del padre
+            padre: false,
+            isGroup: false,
+            children: [],
+            flag1: false,
+            flag2: false,
+            amount: "",
+            currency: oParentData.currency || "",
+            monthsData: {}
+        };
 
-            for (let k = 0; k < iQuantity; k++) {
-                let sFinalName = "";
+        this._fillMonths(oNew, iCurrentYear);
+        
+        // INSERTAR AL FINAL de los hijos del nodo seleccionado
+        oParentData.children.push(oNew);
+    }
 
-                if (!oContext) {
-                    sFinalName = sNewItemDefaultName + " " + (aTargetArray.length + 1);
-                } else {
-                    const oParentData = oContext.getObject();
+    // 5. Refrescar el modelo
+    oModel.refresh(true);
 
-                    /* Se asigna el prefijo correspondiente si el padre es de nivel Raíz. */
-                    if (oParentData.padre === true) {
-                        sFinalName = sParentName + ".";
-                    } else {
-                        sFinalName = "";
-                    }
-                }
+    // 6. Expandir el nodo para que el usuario vea las nuevas filas al final
+    const sPath = oContext.getPath();
+    setTimeout(function () {
+        const oBinding = oTable.getBinding("rows");
+        const iIndex = this._findIndexByPath(oTable, sPath);
+        if (iIndex !== -1) {
+            oTable.expand(iIndex);
+        }
+    }.bind(this), 150);
 
-                const oNew = {
-                    name: sFinalName, 
-                    isGroup: false,
-                    padre: false,
-                    flag1: false,           
-                    flag2: false,           
-                    categories: [],
-                    amount: "",
-                    currency: "",
-                    nMonths: "",
-                    pend: "",
-                    months: "",
-                    monthsData: {}
-                };
+    // Limpieza
+    if (this.byId("actionPopover")) {
+        this.byId("actionPopover").close();
+    }
+    this._oContextRecord = null;
+    
+    sap.m.MessageToast.show(oBundle.getText("msgItemsAdded", [iQuantity]));
+},
 
-                this._fillMonths(oNew, iCurrentYear);
-                aTargetArray.push(oNew);
-            }
-
-            /* Se refresca el modelo y se expande el nodo correspondiente para mostrar los nuevos elementos. */
-            oModel.refresh(true);
-
-            if (oContext) {
-                const sPath = oContext.getPath();
-                setTimeout(function () {
-                    const oBinding = oTable.getBinding("rows");
-                    oBinding.refresh(true);
-
-                    const aContexts = oBinding.getContexts(0, oBinding.getLength());
-                    let iIndex = -1;
-                    
-                    for (let i = 0; i < aContexts.length; i++) {
-                        if (aContexts[i].getPath() === sPath) {
-                            iIndex = i;
-                            break;
-                        }
-                    }
-
-                    if (iIndex !== -1) {
-                        oTable.expand(iIndex);
-                    }
-                }.bind(this), 100);
-            }
-
-            /* Se limpian los registros temporales y se cierra el menú contextual. */
-            if (this.onCloseContextMenu) { this.onCloseContextMenu(); }
-            this._oContextRecord = null;
-
-            sap.m.MessageToast.show(oBundle.getText("msgItemsAdded", [iQuantity]));
-        },
+/**
+ * Función auxiliar para encontrar el índice visual de una fila por su path
+ */
+_findIndexByPath: function (oTable, sPath) {
+    const oBinding = oTable.getBinding("rows");
+    const aContexts = oBinding.getContexts(0, oBinding.getLength());
+    for (let i = 0; i < aContexts.length; i++) {
+        if (aContexts[i].getPath() === sPath) {
+            return i;
+        }
+    }
+    return -1;
+},
 
         /**
          * Se inicializan las propiedades mensuales y anuales por defecto para un nuevo elemento.
@@ -529,6 +528,9 @@ onAfterRendering: function () {
             data.forEach(item => {
                 /* Se procesa el nodo raíz. */
                 if (item.ParentPath === "I") {
+
+                    // MARCAMOS QUE ES UN NODO RAÍZ
+            map[item.PhPspnr].padre = true;
                     if (!roots.some(root => root.PhPspnr === item.PhPspnr)) {
                         roots.push(map[item.PhPspnr]);
                     }
@@ -536,6 +538,8 @@ onAfterRendering: function () {
                     /* Se procesa el nodo hijo y se asocia con su padre correspondiente. */
                     const parent = map[item.ParentPath];
                     if (parent) {
+                        // MARCAMOS QUE ES UN HIJO
+                map[item.PhPspnr].padre = false;
                         parent.children.push(map[item.PhPspnr]);
                     }
                 }
