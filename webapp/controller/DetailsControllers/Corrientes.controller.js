@@ -38,7 +38,9 @@ sap.ui.define([
             await this.initCorrienteModel();
             this.tableModelName = "corrientesModel";
             this.firstTime = true;
-            
+
+
+
             this.getView().setModel(new JSONModel({
                 selectedKey: "Home"
             }), "state");
@@ -58,156 +60,156 @@ sap.ui.define([
             const oTable = this.byId("TreeTableBasic");
 
             oTable.addEventDelegate({
-onAfterRendering: function () {
-            // Se obtiene la referencia del Document Object Model (DOM) de la tabla principal.
-            const oTableDom = oTable.getDomRef();
-            // Se verifica que la tabla exista en el DOM antes de continuar para evitar errores de ejecución en el navegador.
-            if (!oTableDom) return;
-            
-            // Se encapsula el elemento DOM en un objeto jQuery para facilitar la manipulación de eventos estáticos.
-            const $table = $(oTableDom);
+                onAfterRendering: function () {
+                    // Se obtiene la referencia del Document Object Model (DOM) de la tabla principal.
+                    const oTableDom = oTable.getDomRef();
+                    // Se verifica que la tabla exista en el DOM antes de continuar para evitar errores de ejecución en el navegador.
+                    if (!oTableDom) return;
 
-            // Se gestiona el evento de clic derecho para desplegar el menú contextual personalizado de la aplicación.
-            // Se desvincula cualquier evento previo con el mismo nombre para evitar ejecuciones duplicadas y se adjunta el nuevo manejador.
-            $table.off("contextmenu").on("contextmenu", function (oNativeEvent) {
-                // Se previene la aparición del menú contextual nativo del sistema operativo o navegador web.
-                oNativeEvent.preventDefault();
-                
-                // Se identifica el elemento HTML exacto sobre el cual el usuario ha interactuado.
-                const $target = $(oNativeEvent.target);
-                // Se recupera el control de interfaz de usuario de SAPUI5 asociado a dicho elemento HTML de bajo nivel.
-                const oTargetControl = $target.control(0);
-                // Se calcula el índice visual de la fila seleccionada buscando el contenedor padre con la clase correspondiente a las filas.
-                const iRowIndex = $target.closest(".sapUiTableTr").index();
-                // Se obtiene el contexto de enlace de datos de la fila, sumando el índice visual al índice de la primera fila actualmente visible en pantalla.
-                const oRowContext = oTable.getContextByIndex(oTable.getFirstVisibleRow() + iRowIndex);
+                    // Se encapsula el elemento DOM en un objeto jQuery para facilitar la manipulación de eventos estáticos.
+                    const $table = $(oTableDom);
 
-                // Se valida que la fila tenga un contexto de datos definido antes de invocar la apertura del menú.
- if (oRowContext) {
-        const oRowData = oRowContext.getObject();
+                    // Se gestiona el evento de clic derecho para desplegar el menú contextual personalizado de la aplicación.
+                    // Se desvincula cualquier evento previo con el mismo nombre para evitar ejecuciones duplicadas y se adjunta el nuevo manejador.
+                    $table.off("contextmenu").on("contextmenu", function (oNativeEvent) {
+                        // Se previene la aparición del menú contextual nativo del sistema operativo o navegador web.
+                        oNativeEvent.preventDefault();
 
-        // VALIDACIÓN DINÁMICA: Solo si es un nodo raíz (padre)
-        if (!oRowData || oRowData.padre !== true) {
-            return; 
-        }
+                        // Se identifica el elemento HTML exacto sobre el cual el usuario ha interactuado.
+                        const $target = $(oNativeEvent.target);
+                        // Se recupera el control de interfaz de usuario de SAPUI5 asociado a dicho elemento HTML de bajo nivel.
+                        const oTargetControl = $target.control(0);
+                        // Se calcula el índice visual de la fila seleccionada buscando el contenedor padre con la clase correspondiente a las filas.
+                        const iRowIndex = $target.closest(".sapUiTableTr").index();
+                        // Se obtiene el contexto de enlace de datos de la fila, sumando el índice visual al índice de la primera fila actualmente visible en pantalla.
+                        const oRowContext = oTable.getContextByIndex(oTable.getFirstVisibleRow() + iRowIndex);
 
-        // VALIDACIÓN DE COLUMNA: Solo en las columnas de identificación
-        const oBindingInfo = oTargetControl && oTargetControl.getBindingInfo ? oTargetControl.getBindingInfo("value") : null;
-        const sBindingPath = oBindingInfo && oBindingInfo.parts && oBindingInfo.parts[0] ? oBindingInfo.parts[0].path : null;
+                        // Se valida que la fila tenga un contexto de datos definido antes de invocar la apertura del menú.
+                        if (oRowContext) {
+                            const oRowData = oRowContext.getObject();
 
-        if (sBindingPath !== "PhPspnr" && sBindingPath !== "name") {
-            return;
-        }   // Se llama a la función interna encargada de procesar la lógica y mostrar el menú contextual en las coordenadas adecuadas.
-                    this.onContextMenu({
-                        rowBindingContext: oRowContext,
-                        cellControl: oTargetControl || oTable
-                    });
-                }
-            }.bind(this));
-
-            // Se gestiona la navegación mediante el teclado dentro de los campos de entrada editables de la tabla.
-            $table.off("keydown", "input").on("keydown", "input", function (oNativeEvent) {
-                // Se captura el código numérico de la tecla pulsada por el usuario en el teclado físico.
-                const iKeyCode = oNativeEvent.keyCode;
-                // Se ignora cualquier pulsación que no corresponda estrictamente a las flechas de dirección (códigos del 37 al 40).
-                if (iKeyCode < 37 || iKeyCode > 40) return;
-
-                // Se extrae el identificador del control limpiando el sufijo interno autogenerado por el motor de SAPUI5.
-                const sControlId = oNativeEvent.target.id.replace("-inner", "");
-                // Se recupera la instancia del control mediante el gestor central de la estructura de la interfaz (Core).
-                const oInput = sap.ui.getCore().byId(sControlId);
-                
-                // Se confirma que el control recuperado es efectivamente un campo de entrada de texto válido.
-                if (oInput && oInput.isA("sap.m.Input")) {
-                    // Se delega el procesamiento del movimiento a una función especializada en administrar la navegación por teclado entre celdas.
-                    this._onInputKeyDown({
-                        srcControl: oInput,
-                        keyCode: iKeyCode,
-                        // Se proveen funciones de retrollamada para permitir la cancelación de la propagación del evento nativo si la lógica interna lo requiere.
-                        preventDefault: function () { oNativeEvent.preventDefault(); },
-                        stopImmediatePropagation: function () { oNativeEvent.stopImmediatePropagation(); }
-                    });
-                }
-            }.bind(this));
-
-            // Se configuran las fechas de referencia y se desencadena la generación de columnas dinámicas únicamente en el primer ciclo de renderizado.
-            if (this.firstTime) {
-                // Se desactiva la bandera booleana de primer renderizado para que este bloque de configuración no vuelva a ejecutarse en redibujados posteriores.
-                this.firstTime = false;
-
-                // Se extraen las propiedades de fecha real y fecha de sistema directamente desde el modelo de datos principal del panel de control.
-                const sFreal = this.getView().getModel("dashboardModel").getProperty("/NavMasterLt/0/Freal");
-                const sFrealsist = this.getView().getModel("dashboardModel").getProperty("/NavMasterLt/0/Frealsist");
-
-                // Se instancian objetos nativos de tipo Date a partir de las cadenas de texto recuperadas del modelo.
-                const oDateFreal = new Date(sFreal);
-                const oDateFrealsist = new Date(sFrealsist);
-
-                // Se evalúa mediante una comparación estricta si ambas fechas coinciden exactamente en el mismo día del mes calendario.
-                const bSameDay = oDateFreal.getDate() === oDateFrealsist.getDate();
-
-                // Se declara la variable destinada a resguardar el año base para la construcción de la tabla.
-                let iYear;
-
-                // Se establece la fecha efectiva de trabajo del controlador dependiendo del resultado de la coincidencia calculada previamente.
-                if (bSameDay) {
-                    // Si los días coinciden, se utiliza la fecha real tal cual fue entregada y se extrae su componente anual.
-                    this._effectiveDate = oDateFreal; 
-                    iYear = oDateFreal.getFullYear();
-                } else {
-                    // Si los días difieren, se genera un nuevo objeto de fecha y se le suma un día completo a la fecha real original.
-                    const oDatePlusOne = new Date(oDateFreal);
-                    oDatePlusOne.setDate(oDatePlusOne.getDate() + 1);
-                    this._effectiveDate = oDatePlusOne;
-                    iYear = oDatePlusOne.getFullYear();
-                }
-
-                // Se invoca la subrutina responsable de crear las columnas genéricas de los años (por defecto se configuran 3 columnas anuales), pasando el año base calculado.
-                this.createYearColumns(iYear, 3, "TreeTableBasic", this.getView().getModel("corrientesModel"));
-
-                // Se introduce un retraso programado para garantizar que la tabla ha completado el renderizado de las columnas anuales antes de proceder a la expansión de los meses.
-                setTimeout(function () {
-                    // Se obtiene la referencia del componente de la tabla jerárquica mediante su identificador en la vista.
-                    const oTableInst = this.byId("TreeTableBasic");
-                    if (!oTableInst) return;
-
-                    // Se busca secuencialmente la columna correspondiente al primer año generado, asegurándose de excluir la columna histórica de ejecutados.
-                    const oPrimerAnioCol = oTableInst.getColumns().find(function (c) {
-                        return c.data("dynamicYear") === true && !c.data("ejecutadosColumn");
-                    });
-
-                    // Se confirma que la columna del primer año ha sido localizada exitosamente en la estructura de la tabla.
-                    if (oPrimerAnioCol) {
-                        // Se extraen los datos y propiedades personalizadas embebidas en la columna, necesarios para inyectarlos en la función de apertura mensual.
-                        const sSubFijo = oPrimerAnioCol.data("subFijoYear");
-                        const sYearVal = oPrimerAnioCol.data("year");
-
-                        // Se simula un evento de pulsación de botón pasando un objeto artificial para poder reutilizar limpiamente la lógica estándar de despliegue mensual.
-                        this.onCreateMonthsTable({
-                            getSource: function () {
-                                return {
-                                    // Se simula el método de metadatos de un control de botón estándar de la librería SAPUI5.
-                                    getMetadata: function () {
-                                        return { getName: function () { return "sap.m.Button"; } };
-                                    },
-                                    // Se expone un método para la recuperación del texto del botón simulado, devolviendo el año procesado.
-                                    getText: function () { return String(sYearVal); },
-                                    // Se implementa un método de recuperación de datos asociados al control para responder a las solicitudes internas de la función objetivo.
-                                    data: function (sKey) {
-                                        if (sKey === "subFijoYear") return sSubFijo;
-                                        if (sKey === "year") return String(sYearVal);
-                                        return null;
-                                    }
-                                };
+                            // se VALIDA DINÁMICAmente: Solo si es un nodo raíz (padre)
+                            if (!oRowData || oRowData.padre !== true) {
+                                return;
                             }
-                        });
+
+                            // se VALIDA la COLUMNA: Solo en las columnas de identificación
+                            const oBindingInfo = oTargetControl && oTargetControl.getBindingInfo ? oTargetControl.getBindingInfo("value") : null;
+                            const sBindingPath = oBindingInfo && oBindingInfo.parts && oBindingInfo.parts[0] ? oBindingInfo.parts[0].path : null;
+
+                            if (sBindingPath !== "PhPspnr" && sBindingPath !== "name") {
+                                return;
+                            }   // Se llama a la función interna encargada de procesar la lógica y mostrar el menú contextual en las coordenadas adecuadas.
+                            this.onContextMenu({
+                                rowBindingContext: oRowContext,
+                                cellControl: oTargetControl || oTable
+                            });
+                        }
+                    }.bind(this));
+
+                    // Se gestiona la navegación mediante el teclado dentro de los campos de entrada editables de la tabla.
+                    $table.off("keydown", "input").on("keydown", "input", function (oNativeEvent) {
+                        // Se captura el código numérico de la tecla pulsada por el usuario en el teclado físico.
+                        const iKeyCode = oNativeEvent.keyCode;
+                        // Se ignora cualquier pulsación que no corresponda estrictamente a las flechas de dirección (códigos del 37 al 40).
+                        if (iKeyCode < 37 || iKeyCode > 40) return;
+
+                        // Se extrae el identificador del control limpiando el sufijo interno autogenerado por el motor de SAPUI5.
+                        const sControlId = oNativeEvent.target.id.replace("-inner", "");
+                        // Se recupera la instancia del control mediante el gestor central de la estructura de la interfaz (Core).
+                        const oInput = sap.ui.getCore().byId(sControlId);
+
+                        // Se confirma que el control recuperado es efectivamente un campo de entrada de texto válido.
+                        if (oInput && oInput.isA("sap.m.Input")) {
+                            // Se delega el procesamiento del movimiento a una función especializada en administrar la navegación por teclado entre celdas.
+                            this._onInputKeyDown({
+                                srcControl: oInput,
+                                keyCode: iKeyCode,
+                                // Se proveen funciones de retrollamada para permitir la cancelación de la propagación del evento nativo si la lógica interna lo requiere.
+                                preventDefault: function () { oNativeEvent.preventDefault(); },
+                                stopImmediatePropagation: function () { oNativeEvent.stopImmediatePropagation(); }
+                            });
+                        }
+                    }.bind(this));
+
+                    // Se configuran las fechas de referencia y se desencadena la generación de columnas dinámicas únicamente en el primer ciclo de renderizado.
+                    if (this.firstTime) {
+                        // Se desactiva la bandera booleana de primer renderizado para que este bloque de configuración no vuelva a ejecutarse en redibujados posteriores.
+                        this.firstTime = false;
+
+                        // Se extraen las propiedades de fecha real y fecha de sistema directamente desde el modelo de datos principal del panel de control.
+                        const sFreal = this.getView().getModel("dashboardModel").getProperty("/NavMasterLt/0/Freal");
+                        const sFrealsist = this.getView().getModel("dashboardModel").getProperty("/NavMasterLt/0/Frealsist");
+
+                        // Se instancian objetos nativos de tipo Date a partir de las cadenas de texto recuperadas del modelo.
+                        const oDateFreal = new Date(sFreal);
+                        const oDateFrealsist = new Date(sFrealsist);
+
+                        // Se evalúa mediante una comparación estricta si ambas fechas coinciden exactamente en el mismo día del mes calendario.
+                        const bSameDay = oDateFreal.getDate() === oDateFrealsist.getDate();
+
+                        // Se declara la variable destinada a resguardar el año base para la construcción de la tabla.
+                        let iYear;
+
+                        // Se establece la fecha efectiva de trabajo del controlador dependiendo del resultado de la coincidencia calculada previamente.
+                        if (bSameDay) {
+                            // Si los días coinciden, se utiliza la fecha real tal cual fue entregada y se extrae su componente anual.
+                            this._effectiveDate = oDateFreal;
+                            iYear = oDateFreal.getFullYear();
+                        } else {
+                            // Si los días difieren, se genera un nuevo objeto de fecha y se le suma un día completo a la fecha real original.
+                            const oDatePlusOne = new Date(oDateFreal);
+                            oDatePlusOne.setDate(oDatePlusOne.getDate() + 1);
+                            this._effectiveDate = oDatePlusOne;
+                            iYear = oDatePlusOne.getFullYear();
+                        }
+
+                        // Se invoca la subrutina responsable de crear las columnas genéricas de los años (por defecto se configuran 3 columnas anuales), pasando el año base calculado.
+                        this.createYearColumns(iYear, 3, "TreeTableBasic", this.getView().getModel("corrientesModel"));
+
+                        // Se introduce un retraso programado para garantizar que la tabla ha completado el renderizado de las columnas anuales antes de proceder a la expansión de los meses.
+                        setTimeout(function () {
+                            // Se obtiene la referencia del componente de la tabla jerárquica mediante su identificador en la vista.
+                            const oTableInst = this.byId("TreeTableBasic");
+                            if (!oTableInst) return;
+
+                            // Se busca secuencialmente la columna correspondiente al primer año generado, asegurándose de excluir la columna histórica de ejecutados.
+                            const oPrimerAnioCol = oTableInst.getColumns().find(function (c) {
+                                return c.data("dynamicYear") === true && !c.data("ejecutadosColumn");
+                            });
+
+                            // Se confirma que la columna del primer año ha sido localizada exitosamente en la estructura de la tabla.
+                            if (oPrimerAnioCol) {
+                                // Se extraen los datos y propiedades personalizadas embebidas en la columna, necesarios para inyectarlos en la función de apertura mensual.
+                                const sSubFijo = oPrimerAnioCol.data("subFijoYear");
+                                const sYearVal = oPrimerAnioCol.data("year");
+
+                                // Se simula un evento de pulsación de botón pasando un objeto artificial para poder reutilizar limpiamente la lógica estándar de despliegue mensual.
+                                this.onCreateMonthsTable({
+                                    getSource: function () {
+                                        return {
+                                            // Se simula el método de metadatos de un control de botón estándar de la librería SAPUI5.
+                                            getMetadata: function () {
+                                                return { getName: function () { return "sap.m.Button"; } };
+                                            },
+                                            // Se expone un método para la recuperación del texto del botón simulado, devolviendo el año procesado.
+                                            getText: function () { return String(sYearVal); },
+                                            // Se implementa un método de recuperación de datos asociados al control para responder a las solicitudes internas de la función objetivo.
+                                            data: function (sKey) {
+                                                if (sKey === "subFijoYear") return sSubFijo;
+                                                if (sKey === "year") return String(sYearVal);
+                                                return null;
+                                            }
+                                        };
+                                    }
+                                });
+                            }
+                        }.bind(this), 150);
                     }
-                }.bind(this), 150);
-            }
-            
-            // Se adjunta y activa el detector de eventos global para gestionar la visibilidad y el comportamiento dinámico de la cabecera fija de la tabla.
-            this._attachHeaderToggleListener();
-        }.bind(this)
+
+                    // Se adjunta y activa el detector de eventos global para gestionar la visibilidad y el comportamiento dinámico de la cabecera fija de la tabla.
+                    this._attachHeaderToggleListener();
+                }.bind(this)
             });
 
             const iActualYear = new Date().getFullYear();
@@ -215,7 +217,7 @@ onAfterRendering: function () {
             for (let i = 0; i < 10; i++) {
                 aSelectYears.push({ year: iActualYear + i });
             }
-            
+
             this.getView().setModel(new sap.ui.model.json.JSONModel({
                 years: aSelectYears,
                 selectedYear: iActualYear
@@ -255,92 +257,91 @@ onAfterRendering: function () {
          * Se crean masivamente nuevos registros en el catálogo.
          * Permite la creación tanto a nivel de raíz como dentro de agrupadores.
          */
-  onAddPress: function (oEvent) {
-    const oTable = this.byId("TreeTableBasic");
-    const oModel = this.getView().getModel("corrientesModel");
-    const oBundle = this.getView().getModel("i18n").getResourceBundle();
+        onAddPress: function (oEvent) {
+            const oTable = this.byId("TreeTableBasic");
+            const oModel = this.getView().getModel("corrientesModel");
+            const oBundle = this.getView().getModel("i18n").getResourceBundle();
 
-    // 1. Obtener la cantidad del input (itemQuantityInput)
-    let iQuantity = 1;
-    const oInput = this.byId("itemQuantityInput");
-    if (oInput) {
-        iQuantity = parseInt(oInput.getValue()) || 1;
-        oInput.setValue(1); // Resetear a 1
-    }
+            // se obtiene la cantidad de input(itemQuantityInput)
+            let iQuantity = 1;
+            const oInput = this.byId("itemQuantityInput");
+            if (oInput) {
+                iQuantity = parseInt(oInput.getValue()) || 1;
+                oInput.setValue(1); // Resetear a 1
+            }
 
-    // 2. Determinar el contexto del padre (donde vamos a meter los hijos)
-    let oContext = this._oContextRecord || oTable.getContextByIndex(oTable.getSelectedIndex());
-    
-    if (!oContext) {
-        sap.m.MessageToast.show("Seleccione un nivel padre primero");
-        return;
-    }
+            // se Determina el contexto del padre (donde vamos a meter los hijos)
+            let oContext = this._oContextRecord || oTable.getContextByIndex(oTable.getSelectedIndex());
 
-    const oParentData = oContext.getObject();
-    const iCurrentYear = new Date().getFullYear();
+            if (!oContext) {
+                sap.m.MessageToast.show("Seleccione un nivel padre primero");
+                return;
+            }
 
-    // 3. Validar que tenga la propiedad 'children' inicializada
-    if (!oParentData.children) {
-        oParentData.children = [];
-    }
+            const oParentData = oContext.getObject();
+            const iCurrentYear = new Date().getFullYear();
 
-    // 4. Bucle para crear la cantidad de filas solicitadas
-    for (let k = 0; k < iQuantity; k++) {
-        const oNew = {
-            PhPspnr: "", 
-            name: oParentData.padre === true ? oParentData.name + "." : "", 
-            ParentPath: oParentData.PhPspnr, // El ID del padre
-            padre: false,
-            isGroup: false,
-            children: [],
-            flag1: false,
-            flag2: false,
-            amount: "",
-            currency: oParentData.currency || "",
-            monthsData: {}
-        };
 
-        this._fillMonths(oNew, iCurrentYear);
-        
-        // INSERTAR AL FINAL de los hijos del nodo seleccionado
-        oParentData.children.push(oNew);
-    }
+            //  se Valida que tenga la propiedad 'children' inicializada
+            if (!oParentData.children) {
+                oParentData.children = [];
+            }
 
-    // 5. Refrescar el modelo
-    oModel.refresh(true);
+            // se hace un  Bucle para crear la cantidad de filas solicitadas
+            for (let k = 0; k < iQuantity; k++) {
+                const oNew = {
+                    PhPspnr: oParentData.PhPspnr,
+                    name: oParentData.padre === true ? oParentData.name + "." : "",
+                    ParentPath: oParentData.PhPspnr, // El ID del padre
+                    padre: false,
+                    isGroup: false,
+                    children: [],
+                    flag1: false,
+                    flag2: false,
+                    amount: "",
+                    currency: oParentData.currency || "",
+                    monthsData: {}
+                };
 
-    // 6. Expandir el nodo para que el usuario vea las nuevas filas al final
-    const sPath = oContext.getPath();
-    setTimeout(function () {
-        const oBinding = oTable.getBinding("rows");
-        const iIndex = this._findIndexByPath(oTable, sPath);
-        if (iIndex !== -1) {
-            oTable.expand(iIndex);
-        }
-    }.bind(this), 150);
+                this._fillMonths(oNew, iCurrentYear);
 
-    // Limpieza
-    if (this.byId("actionPopover")) {
-        this.byId("actionPopover").close();
-    }
-    this._oContextRecord = null;
-    
-    sap.m.MessageToast.show(oBundle.getText("msgItemsAdded", [iQuantity]));
-},
+                //  se INSERTA AL FINAL de los hijos del nodo seleccionado
+                oParentData.children.push(oNew);
+            }
 
-/**
- * Función auxiliar para encontrar el índice visual de una fila por su path
- */
-_findIndexByPath: function (oTable, sPath) {
-    const oBinding = oTable.getBinding("rows");
-    const aContexts = oBinding.getContexts(0, oBinding.getLength());
-    for (let i = 0; i < aContexts.length; i++) {
-        if (aContexts[i].getPath() === sPath) {
-            return i;
-        }
-    }
-    return -1;
-},
+            // se Refresca el modelo
+            oModel.refresh(true);
+
+            // se Expande el nodo para que el usuario vea las nuevas filas al final
+            const sPath = oContext.getPath();
+            setTimeout(function () {
+                const oBinding = oTable.getBinding("rows");
+                const iIndex = this._findIndexByPath(oTable, sPath);
+                if (iIndex !== -1) {
+                    oTable.expand(iIndex);
+                }
+            }.bind(this), 150);
+
+            // se  Limpia
+            this.onCloseContextMenu();
+            this._oContextRecord = null;
+
+            sap.m.MessageToast.show(oBundle.getText("msgItemsAdded", [iQuantity]));
+        },
+
+        /**
+         * Función auxiliar para encontrar el índice visual de una fila por su path
+         */
+        _findIndexByPath: function (oTable, sPath) {
+            const oBinding = oTable.getBinding("rows");
+            const aContexts = oBinding.getContexts(0, oBinding.getLength());
+            for (let i = 0; i < aContexts.length; i++) {
+                if (aContexts[i].getPath() === sPath) {
+                    return i;
+                }
+            }
+            return -1;
+        },
 
         /**
          * Se inicializan las propiedades mensuales y anuales por defecto para un nuevo elemento.
@@ -351,7 +352,7 @@ _findIndexByPath: function (oTable, sPath) {
             for (let i = 0; i < 3; i++) {
                 const iYear = iYearStart + i;
                 oItem["y" + iYear] = "";
-                
+
                 for (let m = 1; m <= 12; m++) {
                     const sMonthKey = "m" + iYear + "_" + (m < 10 ? "0" + m : m);
                     oItem.monthsData[sMonthKey] = "";
@@ -452,7 +453,7 @@ _findIndexByPath: function (oTable, sPath) {
                     oUiModel.setProperty("/showStickyChild", false);
                 }
             }
-            
+
             setTimeout(function () {
                 this._refreshAfterToggle(sTableId);
             }.bind(this));
@@ -486,7 +487,7 @@ _findIndexByPath: function (oTable, sPath) {
          */
         initCorrienteModel: async function (evt) {
             const sCurrentYear = new Date().getFullYear().toString();
-            
+
             await this.post(
                 this.getGlobalModel("mainService"),
                 "/CambioPestIndirectosSet",
@@ -530,7 +531,7 @@ _findIndexByPath: function (oTable, sPath) {
                 if (item.ParentPath === "I") {
 
                     // MARCAMOS QUE ES UN NODO RAÍZ
-            map[item.PhPspnr].padre = true;
+                    map[item.PhPspnr].padre = true;
                     if (!roots.some(root => root.PhPspnr === item.PhPspnr)) {
                         roots.push(map[item.PhPspnr]);
                     }
@@ -539,7 +540,7 @@ _findIndexByPath: function (oTable, sPath) {
                     const parent = map[item.ParentPath];
                     if (parent) {
                         // MARCAMOS QUE ES UN HIJO
-                map[item.PhPspnr].padre = false;
+                        map[item.PhPspnr].padre = false;
                         parent.children.push(map[item.PhPspnr]);
                     }
                 }
