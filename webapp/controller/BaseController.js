@@ -497,6 +497,7 @@ sap.ui.define([
             setTimeout(function () {
                 this.setupDynamicTreeTable();
             }.bind(this), 0);
+            
         },
 
         /**
