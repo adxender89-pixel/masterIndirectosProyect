@@ -497,6 +497,7 @@ sap.ui.define([
             setTimeout(function () {
                 this.setupDynamicTreeTable();
             }.bind(this), 0);
+            
         },
 
         /**
@@ -2800,151 +2801,178 @@ sap.ui.define([
          * Se intercepta y procesa el evento de filtrado nativo proveniente de las cabeceras estándar del TreeTable.
          * Ejecuta una evaluación de todo el árbol en crudo para asegurar que si un hijo cumple el filtro, su padre no desaparezca.
          */
-        onTreeTableFilter: function (oEvent) {
-            oEvent.preventDefault();
+onTreeTableFilter: function (oEvent) {
+    // Se previene el comportamiento nativo de filtrado del control para aplicar la lógica personalizada.
+    oEvent.preventDefault();
 
-            const sValue = oEvent.getParameter("value") || "";
-            const oModel = this.getView().getModel();
-            const oTable = this.getControlTable();
-            const oUiModel = this.getView().getModel("ui");
+    // Se recoge el valor introducido por el usuario en el campo de filtro de la cabecera.
+    const sValue = oEvent.getParameter("value") || "";
+    // Se obtiene el modelo de datos principal de la tabla de corrientes.
+    const oModel = this.getView().getModel("corrientesModel");
+    // Se obtiene la instancia de la tabla jerárquica.
+    const oTable = this.getControlTable();
+    // Se obtiene el modelo de interfaz para gestionar la visibilidad de elementos flotantes.
+    const oUiModel = this.getView().getModel("ui");
 
-            // Se identifica sobre qué columna se ha aplicado el filtro.
-            const oColumn = oEvent.getParameter("column");
-            const sFilterProperty = (oColumn && oColumn.getFilterProperty())
-                ? oColumn.getFilterProperty()
-                : "name";
+    // Se identifica la columna sobre la que se ha disparado el filtro.
+    const oColumn = oEvent.getParameter("column");
+    // Se extrae la propiedad de filtro de la columna o se usa "name" como valor de respaldo.
+    const sFilterProperty = (oColumn && oColumn.getFilterProperty())
+        ? oColumn.getFilterProperty()
+        : "name";
 
-            // Se inicializa o limpia la batería de filtros activos de la tabla general.
-            if (!this._aTreeActiveFilters) {
-                this._aTreeActiveFilters = {};
-            }
+    // Se inicializa el objeto de filtros activos si todavía no existe.
+    if (!this._aTreeActiveFilters) {
+        this._aTreeActiveFilters = {};
+    }
 
-            if (sValue) {
-                this._aTreeActiveFilters[sFilterProperty] = sValue.toLowerCase();
-                if (oColumn) oColumn.setFiltered(true);
-            } else {
-                delete this._aTreeActiveFilters[sFilterProperty];
-                if (oColumn) oColumn.setFiltered(false);
-            }
+    // Se registra o elimina el filtro activo según si el usuario ha escrito algo o ha borrado el campo.
+    if (sValue) {
+        this._aTreeActiveFilters[sFilterProperty] = sValue.toLowerCase();
+        if (oColumn) oColumn.setFiltered(true);
+    } else {
+        delete this._aTreeActiveFilters[sFilterProperty];
+        if (oColumn) oColumn.setFiltered(false);
+    }
 
-            // Se asegura de tener un respaldo inalterado de todo el catálogo.
-            if (!this._fullTreeBackup) {
-                this._fullTreeBackup = JSON.parse(JSON.stringify(oModel.getData()));
-            }
+    // Se obtienen los datos actuales del modelo para generar el respaldo si aún no existe.
+    const aCurrentData = oModel.getData();
 
-            // Función anónima de apoyo para blanquear columnas accesorias y elementos flotantes en la vista.
-            const fnResetUI = function () {
-                if (this.byId("colMonths")) this.byId("colMonths").setVisible(false);
-                if (this.byId("colNew")) this.byId("colNew").setVisible(false);
-                if (this.byId("colCheckBox1")) this.byId("colCheckBox1").setVisible(false);
-                if (this.byId("colCheckBox2")) this.byId("colCheckBox2").setVisible(false);
+    // Se determina si el modelo devuelve un array directo o un objeto envolvente.
+    const aRootArray = Array.isArray(aCurrentData) ? aCurrentData : (aCurrentData.results || Object.values(aCurrentData)[0]);
 
-                if (oUiModel) {
-                    oUiModel.setProperty("/showStickyParent", false);
-                    oUiModel.setProperty("/showStickyChild", false);
-                }
-                this._setStickyChild(false);
-            }.bind(this);
+    // Se genera el respaldo profundo del estado original de los datos únicamente la primera vez.
+    if (!this._fullTreeBackup) {
+        this._fullTreeBackup = JSON.parse(JSON.stringify(aRootArray));
+    }
 
-            const aFilterKeys = Object.keys(this._aTreeActiveFilters);
+    // Se define la función auxiliar que resetea la visibilidad de columnas y cabeceras flotantes.
+    const fnResetUI = function () {
+        if (this.byId("colMonths")) this.byId("colMonths").setVisible(false);
+        if (this.byId("colNew")) this.byId("colNew").setVisible(false);
+        if (this.byId("colCheckBox1")) this.byId("colCheckBox1").setVisible(false);
+        if (this.byId("colCheckBox2")) this.byId("colCheckBox2").setVisible(false);
+        if (oUiModel) {
+            oUiModel.setProperty("/showStickyParent", false);
+            oUiModel.setProperty("/showStickyChild", false);
+        }
+        this._setStickyChild(false);
+    }.bind(this);
 
-            // CASO 1: SE LIMPIARON TODOS LOS FILTROS
-            if (aFilterKeys.length === 0) {
-                // Se restablece la base de datos visual desde el backup profundo.
-                oModel.setProperty(
-                    "/catalog/models/categories",
-                    JSON.parse(JSON.stringify(this._fullTreeBackup.catalog.models.categories))
-                );
-                fnResetUI();
-                // Se retorna la tabla a un estado compactado (colapsado).
-                oTable.collapseAll();
-                this._buildGroupRanges();
-                this._applyCabeceraStyle();
-                return;
-            }
+    // Se recogen las claves de todos los filtros activos en este momento.
+    const aFilterKeys = Object.keys(this._aTreeActiveFilters);
 
-            const aActiveFilters = this._aTreeActiveFilters;
+    // CASO 1: El usuario ha vaciado todos los filtros activos.
+    if (aFilterKeys.length === 0) {
+        // Se restaura el array completo de datos desde el respaldo profundo.
+        const aRestored = JSON.parse(JSON.stringify(this._fullTreeBackup));
+        // Se reinyectan los datos originales al modelo de forma compatible con la estructura raíz.
+        if (Array.isArray(aCurrentData)) {
+            oModel.setData(aRestored);
+        } else {
+            const sRootKey = Object.keys(aCurrentData)[0];
+            const oRestored = {};
+            oRestored[sRootKey] = aRestored;
+            oModel.setData(oRestored);
+        }
+        fnResetUI();
+        // Se colapsa la tabla y se recalculan los rangos y estilos visuales.
+        oTable.collapseAll();
+        this._buildGroupRanges();
+        this._applyCabeceraStyle();
+        return;
+    }
 
-            // Función condicional: Evalúa si un nodo específico pasa exitosamente todos los criterios tipeados en la cabecera.
-            const fnMatchesAll = function (oNode) {
-                return aFilterKeys.every(function (sProp) {
-                    return oNode[sProp] != null &&
-                        String(oNode[sProp]).toLowerCase().includes(aActiveFilters[sProp]);
-                });
-            };
+    const aActiveFilters = this._aTreeActiveFilters;
 
-            const aFiltered = [];
-            let bCasoHijo = false;
-            let bDetalleExpanded = false;
+    // Se define la función que evalúa si un nodo satisface todos los criterios de filtrado activos.
+const fnMatchesAll = function (oNode) {
+    return aFilterKeys.every(function (sProp) {
+        return oNode[sProp] != null &&
+            String(oNode[sProp]).toLowerCase().includes(aActiveFilters[sProp]);
+    });
+};
 
-            // CASO 2: HAY FILTROS ACTIVOS. Se escanea el árbol desde el nivel superior (Padres).
-            this._fullTreeBackup.catalog.models.categories.forEach(function (oPadre) {
+    const aFiltered = [];
+    let bCasoHijo = false;
+    let bDetalleExpanded = false;
 
-                // Se filtran agrupadores falsos o nodos carentes de estructura.
-                const bEsNodoReal = oPadre.isGroup === true ||
-                    (Array.isArray(oPadre.categories) && oPadre.categories.length > 0);
+    // CASO 2: Hay filtros activos. Se recorre el árbol desde el nivel superior.
+    this._fullTreeBackup.forEach(function (oPadre) {
 
-                if (!bEsNodoReal) { return; }
+        // Se descarta el nodo si no es un nodo real con estructura jerárquica.
+        const bEsNodoReal = oPadre.isGroup === true ||
+            (Array.isArray(oPadre.children) && oPadre.children.length > 0);
 
-                // Sub-Caso A: El nodo PADRE cumple el texto buscado directamente.
-                if (fnMatchesAll(oPadre)) {
-                    // Se agrega el bloque entero y se omite la búsqueda interna, ya que el usuario quiere ver "esta operación".
-                    aFiltered.push(JSON.parse(JSON.stringify(oPadre)));
-                    return;
-                }
+        if (!bEsNodoReal) { return; }
 
-                // Sub-Caso B: El padre no coincide, se delega la búsqueda a los HIJOS internos.
-                const aHijosMatchados = [];
-                if (Array.isArray(oPadre.categories)) {
-                    oPadre.categories.forEach(function (oHijo) {
-                        // Si un hijo específico supera el filtro, se reserva.
-                        if (fnMatchesAll(oHijo)) {
-                            aHijosMatchados.push(JSON.parse(JSON.stringify(oHijo)));
+        // Sub-Caso A: El propio nodo padre satisface los criterios de búsqueda.
+        if (fnMatchesAll(oPadre)) {
+            aFiltered.push(JSON.parse(JSON.stringify(oPadre)));
+            return;
+        }
 
-                            // Se verifica si al extraer este hijo, se revela algún desglose de tercer nivel.
-                            if (Array.isArray(oHijo.categories) &&
-                                oHijo.categories.length > 0 &&
-                                oHijo.categories[0].isGroup === true) {
-                                bDetalleExpanded = true;
-                            }
-                        }
-                    });
-                }
+        // Sub-Caso B: Se busca en los nodos hijos directos del padre.
+        const aHijosMatchados = [];
+        if (Array.isArray(oPadre.children)) {
+            oPadre.children.forEach(function (oHijo) {
+                // Se verifica si el hijo cumple los criterios de filtrado.
+                if (fnMatchesAll(oHijo)) {
+                    aHijosMatchados.push(JSON.parse(JSON.stringify(oHijo)));
 
-                // Si la búsqueda interna arrojó resultados, se injertan en una copia del padre para no romper la jerarquía del TreeTable.
-                if (aHijosMatchados.length > 0) {
-                    const oPadreCopia = JSON.parse(JSON.stringify(oPadre));
-                    oPadreCopia.categories = aHijosMatchados;
-                    aFiltered.push(oPadreCopia);
-                    bCasoHijo = true;
+                    // Se comprueba si el hijo tiene subniveles de detalle expandibles.
+                    if (Array.isArray(oHijo.children) &&
+                        oHijo.children.length > 0 &&
+                        oHijo.children[0].isGroup === true) {
+                        bDetalleExpanded = true;
+                    }
                 }
             });
+        }
 
-            // Se inyecta la estructura depurada en el modelo reactivo.
-            fnResetUI();
-            oModel.setProperty("/catalog/models/categories", aFiltered);
+        // Si se encontraron hijos coincidentes, se construye una copia del padre con solo esos hijos.
+        if (aHijosMatchados.length > 0) {
+            const oPadreCopia = JSON.parse(JSON.stringify(oPadre));
+            oPadreCopia.children = aHijosMatchados;
+            aFiltered.push(oPadreCopia);
+            bCasoHijo = true;
+        }
+    });
 
-            const oBinding = oTable.getBinding("rows");
-            if (!oBinding) { return; }
+    // Se blanquea la interfaz y se inyectan los datos filtrados al modelo.
+    fnResetUI();
 
-            // Se ajusta la apertura de los niveles visuales.
-            if (bCasoHijo) {
-                // Si se encontraron hijos, se expande la tabla hasta el nivel 2 (nivel hijo) para mostrarlos inmediatamente.
-                oTable.expandToLevel(2);
-                if (this.byId("colMonths")) this.byId("colMonths").setVisible(bDetalleExpanded);
-                if (this.byId("colNew")) this.byId("colNew").setVisible(bDetalleExpanded);
-                if (this.byId("colCheckBox1")) this.byId("colCheckBox1").setVisible(bDetalleExpanded);
-                if (this.byId("colCheckBox2")) this.byId("colCheckBox2").setVisible(bDetalleExpanded);
-            } else {
-                // Si solo se encontraron padres, se mantiene contraído para mejorar la lectura.
-                oTable.collapseAll();
-                oTable.expandToLevel(1);
-            }
+    // Se aplican los datos filtrados al modelo respetando la estructura raíz original.
+    if (Array.isArray(aCurrentData)) {
+        oModel.setData(aFiltered);
+    } else {
+        const sRootKey = Object.keys(aCurrentData)[0];
+        const oFiltered = {};
+        oFiltered[sRootKey] = aFiltered;
+        oModel.setData(oFiltered);
+    }
 
-            // Se recalculan lógicas visuales de colores y scroll.
-            this._buildGroupRanges();
-            this._applyCabeceraStyle();
-        },
+    const oBinding = oTable.getBinding("rows");
+    if (!oBinding) { return; }
+
+    // Se ajusta la expansión de la tabla según el tipo de resultado obtenido.
+    if (bCasoHijo) {
+        // Se expande hasta el segundo nivel para mostrar los hijos coincidentes.
+        oTable.expandToLevel(2);
+        if (this.byId("colMonths")) this.byId("colMonths").setVisible(bDetalleExpanded);
+        if (this.byId("colNew")) this.byId("colNew").setVisible(bDetalleExpanded);
+        if (this.byId("colCheckBox1")) this.byId("colCheckBox1").setVisible(bDetalleExpanded);
+        if (this.byId("colCheckBox2")) this.byId("colCheckBox2").setVisible(bDetalleExpanded);
+    } else {
+        // Si solo se encontraron padres, se colapsa y se expande solo el primer nivel.
+        oTable.collapseAll();
+        oTable.expandToLevel(1);
+    }
+
+    // Se recalculan los rangos de grupos y los estilos de cabecera.
+    this._buildGroupRanges();
+    this._applyCabeceraStyle();
+},
 
         /**
          * Se formatea numéricamente una cadena de texto, dotándola de la cantidad exacta de decimales y del separador regional.

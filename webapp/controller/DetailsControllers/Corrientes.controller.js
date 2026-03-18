@@ -295,6 +295,7 @@ sap.ui.define([
                     ParentPath: oParentData.PhPspnr, // El ID del padre
                     padre: false,
                     isGroup: false,
+                    isNew: true, 
                     children: [],
                     flag1: false,
                     flag2: false,

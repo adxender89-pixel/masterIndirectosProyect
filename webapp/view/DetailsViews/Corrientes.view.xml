@@ -222,7 +222,7 @@
                                             width="200px"
                                             hAlign="Center"
                                             label="name"
-                                            filterProperty="name"
+                                            filterProperty="PhPspnr"
                                         >
                                             <t:label>
                                                 <VBox
@@ -307,7 +307,7 @@
                                                     <Input
                                                         width="100%"
                                                         textAlign="Center"
-                                                        editable="{= ${isGroup} !== true}"
+                                                       editable="{= ${corrientesModel>isNew} === true }"
                                                         value="{corrientesModel>PhPspnr}"
                                                         showValueHelp="true"
                                                         class="flatCellInput yearCell"
@@ -319,7 +319,8 @@
                                             width="170px"
                                             hAlign="Center"
                                             label="name"
-                                            filterProperty="currency"
+                                            filterProperty="Post1"
+
                                         >
                                             <t:label>
                                                 <VBox
@@ -396,7 +397,7 @@
                                                     <Input
                                                         width="100%"
                                                         value="{corrientesModel>Post1}"
-                                                        editable="{= ${isGroup} !== true}"
+                                                       editable="{= ${corrientesModel>isNew} === true }"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                     />
@@ -408,7 +409,8 @@
                                             width="80px"
                                             hAlign="Center"
                                             label="name"
-                                            filterProperty="amount"
+                                            filterProperty="AmoEje"
+
                                         >
                                             <t:label>
                                                 <VBox
@@ -485,7 +487,7 @@
                                                     <Input
                                                         width="100%"
                                                         textAlign="Center"
-                                                        editable="{= ${isGroup} !== true}"
+                                                         editable="false"
                                                         value="{corrientesModel>AmoEje}"
                                                         class="flatCellInput"
                                                     />
@@ -498,6 +500,7 @@
                                             width="90px"
                                             hAlign="Center"
                                             filterProperty="operacion"
+
                                         >
                                             <t:label>
                                                 <VBox
@@ -505,7 +508,7 @@
                                                     class="fullWidthHeader"
                                                 >
                                                     <Label
-                                                        text="Operacion"
+                                                        text="{i18n>CostEjAjust}"
                                                         class="titleGrande"
                                                         design="Bold"
                                                     />
@@ -515,7 +518,7 @@
                                                         class="parentHeaderBox"
                                                     >
                                                         <Text
-                                                            text="{ui>/stickyHeaderData/parent/operacion}"
+                                                            text="{ui>/stickyHeaderData/parent/CostEjAjust}"
                                                             wrapping="false"
                                                             width="100%"
                                                             textAlign="Center"
@@ -536,12 +539,12 @@
                                                             <customData>
                                                                 <core:CustomData
                                                                     key="filterProp"
-                                                                    value="operacion"
+                                                                    value="CostEjAjust"
                                                                 />
                                                             </customData>
                                                         </Button>
                                                         <Text
-                                                            text="{ui>/stickyHeaderData/child/operacion}"
+                                                            text="{ui>/stickyHeaderData/child/CostEjAjust}"
                                                             textAlign="Center"
                                                             wrapping="false"
                                                             class="secondStickyText"
@@ -567,13 +570,13 @@
                                                         <customData>
                                                             <core:CustomData
                                                                 key="filterProp"
-                                                                value="operacion"
+                                                                value="AmoEjeAjus"
                                                             />
                                                         </customData>
                                                     </Button>
                                                     <Input
-                                                        value="{corrientesModel>operacion}"
-                                                        editable="{= ${isGroup} !== true}"
+                                                        value="{corrientesModel>AmoEjeAjus}"
+                                                       editable="false"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                         width="100%"
@@ -587,6 +590,7 @@
                                             width="90px"
                                             hAlign="Center"
                                             filterProperty="destino"
+
                                         >
                                             <t:label>
                                                 <VBox
@@ -594,7 +598,7 @@
                                                     class="fullWidthHeader"
                                                 >
                                                     <Label
-                                                        text="Destino"
+                                                        text="{i18n>CostEjReal}"
                                                         class="titleGrande"
                                                         design="Bold"
                                                     />
@@ -604,7 +608,7 @@
                                                         class="parentHeaderBox"
                                                     >
                                                         <Text
-                                                            text="{ui>/stickyHeaderData/parent/destino}"
+                                                            text="{ui>/stickyHeaderData/parent/CostEjReal}"
                                                             wrapping="false"
                                                             width="100%"
                                                             textAlign="Center"
@@ -625,12 +629,12 @@
                                                             <customData>
                                                                 <core:CustomData
                                                                     key="filterProp"
-                                                                    value="destino"
+                                                                    value="CostEjReal"
                                                                 />
                                                             </customData>
                                                         </Button>
                                                         <Text
-                                                            text="{ui>/stickyHeaderData/child/destino}"
+                                                            text="{ui>/stickyHeaderData/child/CostEjReal}"
                                                             textAlign="Center"
                                                             wrapping="false"
                                                             class="secondStickyText"
@@ -656,13 +660,13 @@
                                                         <customData>
                                                             <core:CustomData
                                                                 key="filterProp"
-                                                                value="destino"
+                                                                value="AmoEjeReal"
                                                             />
                                                         </customData>
                                                     </Button>
                                                     <Input
-                                                        value="{corrientesModel>destino}"
-                                                        editable="{= ${isGroup} !== true}"
+                                                        value="{corrientesModel>AmoEjeReal}"
+                                                       editable="true"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                         width="100%"
@@ -675,7 +679,8 @@
                                             width="90px"
                                             hAlign="Center"
                                             label="name"
-                                            filterProperty="pricepending"
+                                           filterProperty="AmoPen"
+
                                         >
                                             <t:label>
                                                 <VBox
@@ -764,7 +769,8 @@
                                             width="80px"
                                             hAlign="Center"
                                             label="Name"
-                                            filterProperty="pricetotal"
+                                            filterProperty="AmoTot"
+
                                         >
                                             <t:label>
                                                 <VBox
@@ -854,7 +860,8 @@
                                             width="115px"
                                             hAlign="Center"
                                             label="Name"
-                                            filterProperty="size"
+                                            filterProperty="Tipo"
+
                                         >
                                             <t:label>
                                                 <VBox
@@ -966,7 +973,8 @@
                                             width="100px"
                                             hAlign="Center"
                                             label="Name"
-                                            filterProperty="last"
+                                            filterProperty="PenPlan"
+
                                         >
                                             <t:label>
                                                 <VBox
@@ -1046,7 +1054,7 @@
                                                     </Button>
                                                     <Input
                                                         value="{corrientesModel>PenPlan}"
-                                                        editable="{= ${isGroup} !== true}"
+                                                     editable="false"
                                                         class="flatCellInput"
                                                         width="100%"
                                                         textAlign="Center"
@@ -1330,7 +1338,7 @@
                                                         justifyContent="Center"
                                                     >
                                                         <Text
-                                                            text="Infla"
+                                                            text="CheckInfla"
                                                             visible="{ui>/showStickyChild}"
                                                             width="100%"
                                                             textAlign="Center"
@@ -1348,7 +1356,7 @@
                                                     alignContent="Center"
                                                 >
                                                     <Input
-                                                        value="{corrientesModel>flag2Label}"
+                                                        value="{corrientesModel>CheckInfla}"
                                                         editable="false"
                                                         class="flatCellInput"
                                                         width="100%"
@@ -1356,7 +1364,7 @@
                                                         visible="{= ${cabecera} === true }"
                                                     />
                                                     <CheckBox
-                                                        selected="{flag2}"
+                                                        selected="{corrientesModel>CheckInfla}"
                                                         select="onInflacionCheckBoxSelect"
                                                         visible="{= ${expandible} !== false &amp;&amp; !${isGroup} }"
                                                     />
