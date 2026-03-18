@@ -191,21 +191,31 @@ sap.ui.define(
         oSideBar.setVisible(!oSideBar.getVisible());
       },
 
-      /**
-       * Se propaga el estado de selección de la casilla de ejecutado hacia la vista activa.
-       */
-      onEjecutadoCheckBoxSelect: function (oEvent) {
-        const bSelected = oEvent.getParameter("selected");
-        const sCurrentKey = this._lastSelectedKey || this.byId("itb").getSelectedKey();
-        const oActiveView = this._mViews[sCurrentKey];
-        
-        if (!oActiveView) return;
+/**
+ * Se propaga el estado de seleccion de la casilla de ejecutado hacia la vista activa.
+ * Se marca ademas la variante activa como modificada en el controlador hijo para
+ * habilitar el guardado directo, de forma identica al comportamiento de idAjustesCheckBox.
+ */
+onEjecutadoCheckBoxSelect: function (oEvent) {
+    const bSelected = oEvent.getParameter("selected");
+    const sCurrentKey = this._lastSelectedKey || this.byId("itb").getSelectedKey();
+    const oActiveView = this._mViews[sCurrentKey];
 
-        // Se delega la ejecución al controlador hijo con el estado correcto
-        if (oActiveView.getController()._handleEjecutado) {
-            oActiveView.getController()._handleEjecutado(bSelected);
-        }
-      },
+    if (!oActiveView) return;
+
+    const oActiveController = oActiveView.getController();
+
+    // Se marca la variante activa como modificada en el controlador hijo activo
+    // para que aparezca el asterisco y se habilite el boton de guardado directo.
+    if (oActiveController._markVariantDirty) {
+        oActiveController._markVariantDirty();
+    }
+
+    // Se delega la logica de columnas al controlador hijo con el estado booleano correcto.
+    if (oActiveController._handleEjecutado) {
+        oActiveController._handleEjecutado(bSelected);
+    }
+},
 
       /**
        * Se gestiona la navegación entre las diferentes pestañas del menú principal.
@@ -270,39 +280,50 @@ sap.ui.define(
           }
         }
       },
+/**
+ * Se inyecta dinamicamente la vista seleccionada en el contenedor de contenido.
+ * Se utiliza una cache interna (_mViews) para no volver a instanciar vistas ya creadas.
+ * Se asigna ademas una retrollamada al controlador hijo para que pueda actualizar
+ * visualmente el checkbox idEjecutadoCheckBox2 que reside en la Main view.
+ */
+_showView: async function (sKey) {
+    const oContainer = this.byId("tabContent");
+    oContainer.removeAllItems();
+    const oComp = this.getOwnerComponent();
 
-      /**
-       * Se inyecta dinámicamente la vista seleccionada en el contenedor de contenido.
-       * Se utiliza una caché interna (_mViews) para no volver a instanciar vistas ya creadas.
-       */
-      _showView: async function (sKey) {
-        const oContainer = this.byId("tabContent");
-        oContainer.removeAllItems();
-        const oComp = this.getOwnerComponent();
-
-        if (!this._mViews[sKey]) {
-          this._mViews[sKey] = await oComp.runAsOwner(() =>
+    if (!this._mViews[sKey]) {
+        this._mViews[sKey] = await oComp.runAsOwner(() =>
             sap.ui.xmlview({
-              height: "100%",
-              layoutData: new sap.m.FlexItemData({
-                growFactor: 1
-              }),
-              viewName: "masterindirectos.view.DetailsViews." + this._mapKeyToView(sKey),
+                height: "100%",
+                layoutData: new sap.m.FlexItemData({ growFactor: 1 }),
+                viewName: "masterindirectos.view.DetailsViews." + this._mapKeyToView(sKey),
             })
-          );
-        }
+        );
+    }
 
-        oContainer.addItem(this._mViews[sKey]);
+    oContainer.addItem(this._mViews[sKey]);
 
-        // Se sincroniza siempre el estado del checkbox con la vista activa al renderizar
-        const oCheckBox = this.byId("idEjecutadoCheckBox2");
-        const oActiveController = this._mViews[sKey].getController();
-        if (oCheckBox && oActiveController && oActiveController._handleEjecutado) {
-          setTimeout(function () {
-            oActiveController._handleEjecutado(oCheckBox.getSelected());
-          }, 100);
-        }
-      },
+    const oActiveController = this._mViews[sKey].getController();
+
+    // Se asigna una retrollamada al controlador hijo para que pueda actualizar
+    // visualmente el checkbox idEjecutadoCheckBox2 que reside en la Main view,
+    // ya que el hijo no tiene acceso directo a los controles de esta vista padre.
+    const oCheckBoxRef = this.byId("idEjecutadoCheckBox2");
+    if (oActiveController) {
+        oActiveController._fnSetEjecutadoCheckBox = function (bSelected) {
+            if (oCheckBoxRef) {
+                oCheckBoxRef.setSelected(bSelected);
+            }
+        };
+    }
+
+    // Se sincroniza siempre el estado del checkbox con la vista activa al renderizar.
+    if (oCheckBoxRef && oActiveController && oActiveController._handleEjecutado) {
+        setTimeout(function () {
+            oActiveController._handleEjecutado(oCheckBoxRef.getSelected());
+        }, 100);
+    }
+},
 
       /**
        * Se mapean las claves de las pestañas con los nombres físicos de las vistas XML correspondientes.

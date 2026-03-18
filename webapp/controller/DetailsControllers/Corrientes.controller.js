@@ -39,8 +39,6 @@ sap.ui.define([
             this.tableModelName = "corrientesModel";
             this.firstTime = true;
 
-
-
             this.getView().setModel(new JSONModel({
                 selectedKey: "Home"
             }), "state");
@@ -51,8 +49,27 @@ sap.ui.define([
             }), "viewModel");
 
             this.setupDynamicTreeTable("TreeTableBasic");
-            const oModel = this.getView().getModel();
 
+            // Se inicializa la gestion de variantes con una clave exclusiva para esta vista.
+            this._initVariantManagement("masterindirectos_corrientes_variants");
+
+            // Se conecta el detector de cambios en los datos de la tabla para marcar
+            // la variante activa como modificada cuando el usuario edita una celda.
+            // Se usa un retardo para garantizar que el modelo este disponible en la tabla
+            // despues de que el binding haya completado su ciclo de inicializacion.
+            setTimeout(function () {
+                const oTableForVariant = this.byId("TreeTableBasic");
+                if (oTableForVariant) {
+                    const oCorrientesModel = oTableForVariant.getModel("corrientesModel");
+                    if (oCorrientesModel) {
+                        oCorrientesModel.attachPropertyChange(function () {
+                            this._markVariantDirty();
+                        }.bind(this));
+                    }
+                }
+            }.bind(this), 600);
+
+            const oModel = this.getView().getModel();
             if (oModel) {
                 this._editBackupData = JSON.parse(JSON.stringify(oModel.getData()));
             }
@@ -88,18 +105,20 @@ sap.ui.define([
                         if (oRowContext) {
                             const oRowData = oRowContext.getObject();
 
-                            // se VALIDA DINÁMICAmente: Solo si es un nodo raíz (padre)
+                            // Se valida dinámicamente que el nodo sea un nodo raíz (padre).
                             if (!oRowData || oRowData.padre !== true) {
                                 return;
                             }
 
-                            // se VALIDA la COLUMNA: Solo en las columnas de identificación
+                            // Se valida la columna: solo en las columnas de identificación.
                             const oBindingInfo = oTargetControl && oTargetControl.getBindingInfo ? oTargetControl.getBindingInfo("value") : null;
                             const sBindingPath = oBindingInfo && oBindingInfo.parts && oBindingInfo.parts[0] ? oBindingInfo.parts[0].path : null;
 
                             if (sBindingPath !== "PhPspnr" && sBindingPath !== "name") {
                                 return;
-                            }   // Se llama a la función interna encargada de procesar la lógica y mostrar el menú contextual en las coordenadas adecuadas.
+                            }
+
+                            // Se llama a la función interna encargada de procesar la lógica y mostrar el menú contextual en las coordenadas adecuadas.
                             this.onContextMenu({
                                 rowBindingContext: oRowContext,
                                 cellControl: oTargetControl || oTable
@@ -233,7 +252,7 @@ sap.ui.define([
         },
 
         /**
-         * Se escucha el evento de expansión o colapso de la cabecera principal 
+         * Se escucha el evento de expansión o colapso de la cabecera principal
          * para recalcular las filas de la tabla dinámicamente.
          */
         _attachHeaderToggleListener: function () {
@@ -262,15 +281,15 @@ sap.ui.define([
             const oModel = this.getView().getModel("corrientesModel");
             const oBundle = this.getView().getModel("i18n").getResourceBundle();
 
-            // se obtiene la cantidad de input(itemQuantityInput)
+            // Se obtiene la cantidad solicitada desde el campo de cantidad de elementos.
             let iQuantity = 1;
             const oInput = this.byId("itemQuantityInput");
             if (oInput) {
                 iQuantity = parseInt(oInput.getValue()) || 1;
-                oInput.setValue(1); // Resetear a 1
+                oInput.setValue(1);
             }
 
-            // se Determina el contexto del padre (donde vamos a meter los hijos)
+            // Se determina el contexto del padre donde se insertarán los nuevos hijos.
             let oContext = this._oContextRecord || oTable.getContextByIndex(oTable.getSelectedIndex());
 
             if (!oContext) {
@@ -281,18 +300,17 @@ sap.ui.define([
             const oParentData = oContext.getObject();
             const iCurrentYear = new Date().getFullYear();
 
-
-            //  se Valida que tenga la propiedad 'children' inicializada
+            // Se valida que el nodo padre tenga la propiedad 'children' inicializada.
             if (!oParentData.children) {
                 oParentData.children = [];
             }
 
-            // se hace un  Bucle para crear la cantidad de filas solicitadas
+            // Se ejecuta el bucle para crear la cantidad de filas solicitadas.
             for (let k = 0; k < iQuantity; k++) {
                 const oNew = {
                     PhPspnr: oParentData.PhPspnr,
                     name: oParentData.padre === true ? oParentData.name + "." : "",
-                    ParentPath: oParentData.PhPspnr, // El ID del padre
+                    ParentPath: oParentData.PhPspnr,
                     padre: false,
                     isGroup: false,
                     children: [],
@@ -305,14 +323,14 @@ sap.ui.define([
 
                 this._fillMonths(oNew, iCurrentYear);
 
-                //  se INSERTA AL FINAL de los hijos del nodo seleccionado
+                // Se inserta el nuevo nodo al final de los hijos del nodo seleccionado.
                 oParentData.children.push(oNew);
             }
 
-            // se Refresca el modelo
+            // Se refresca el modelo para propagar los cambios a la vista.
             oModel.refresh(true);
 
-            // se Expande el nodo para que el usuario vea las nuevas filas al final
+            // Se expande el nodo padre para que el usuario vea las nuevas filas al final.
             const sPath = oContext.getPath();
             setTimeout(function () {
                 const oBinding = oTable.getBinding("rows");
@@ -322,7 +340,7 @@ sap.ui.define([
                 }
             }.bind(this), 150);
 
-            // se  Limpia
+            // Se cierra el menú contextual y se limpia el registro de contexto activo.
             this.onCloseContextMenu();
             this._oContextRecord = null;
 
@@ -330,7 +348,7 @@ sap.ui.define([
         },
 
         /**
-         * Función auxiliar para encontrar el índice visual de una fila por su path
+         * Se busca el índice visual de una fila por su ruta de enlace de datos.
          */
         _findIndexByPath: function (oTable, sPath) {
             const oBinding = oTable.getBinding("rows");
@@ -368,8 +386,9 @@ sap.ui.define([
         },
 
         /**
-         * Se gestiona la visibilidad de las columnas extendidas (meses, checkboxes) 
+         * Se gestiona la visibilidad de las columnas extendidas (meses, checkboxes)
          * al expandir o contraer nodos en la TreeTable.
+         * Se marca además la variante activa como modificada al cambiar el estado del árbol.
          */
         onToggleOpenState: function (oEvent) {
             const oTable = oEvent.getSource();
@@ -377,6 +396,9 @@ sap.ui.define([
             const bExpanded = oEvent.getParameter("expanded");
             const iRowIndex = oEvent.getParameter("rowIndex");
             const oUiModel = this.getView().getModel("ui");
+
+            // Se marca la variante activa como modificada al expandir o contraer un nodo.
+            this._markVariantDirty();
 
             const oColMonths = this.byId("colMonths");
             const oColNew = this.byId("colNew");
@@ -516,6 +538,8 @@ sap.ui.define([
 
         /**
          * Se procesan los datos lineales obtenidos del servicio y se transforman en una estructura de árbol.
+         * Se guarda además una copia profunda de los datos originales del servidor para poder calcular
+         * el delta de cambios al guardar una variante sin necesidad de almacenar el modelo completo.
          */
         buildTree: function (data) {
             /* Se crea un mapa para el acceso rápido mediante identificadores. */
@@ -529,8 +553,7 @@ sap.ui.define([
             data.forEach(item => {
                 /* Se procesa el nodo raíz. */
                 if (item.ParentPath === "I") {
-
-                    // MARCAMOS QUE ES UN NODO RAÍZ
+                    // Se marca el nodo como raíz.
                     map[item.PhPspnr].padre = true;
                     if (!roots.some(root => root.PhPspnr === item.PhPspnr)) {
                         roots.push(map[item.PhPspnr]);
@@ -539,12 +562,17 @@ sap.ui.define([
                     /* Se procesa el nodo hijo y se asocia con su padre correspondiente. */
                     const parent = map[item.ParentPath];
                     if (parent) {
-                        // MARCAMOS QUE ES UN HIJO
+                        // Se marca el nodo como hijo.
                         map[item.PhPspnr].padre = false;
                         parent.children.push(map[item.PhPspnr]);
                     }
                 }
             });
+
+            // Se guarda una copia profunda e inmutable de los datos originales del servidor.
+            // Esta referencia se utiliza en el calculo del delta de variantes para comparar
+            // el estado actual contra el estado inicial sin necesidad de guardar el modelo entero.
+            this._originalServerData = JSON.parse(JSON.stringify(roots));
 
             return roots;
         }
