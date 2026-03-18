@@ -497,6 +497,7 @@ sap.ui.define([
             setTimeout(function () {
                 this.setupDynamicTreeTable();
             }.bind(this), 0);
+            
         },
 
         /**
@@ -912,14 +913,40 @@ sap.ui.define([
             }.bind(this), 50);
         },
 
-        /**
-         * Se ejecuta al interactuar con la casilla de verificación (CheckBox) de registros ejecutados.
-         */
-        onEjecutadoCheckBoxSelect: function (oEvent) {
-            // Se extrae el estado booleano de la casilla (marcada o desmarcada) desde los parámetros del evento.
-            // Inmediatamente se delega la lógica compleja al manejador interno, aislando el evento de la interfaz de la lógica de negocio.
-            this._handleEjecutado(oEvent.getParameter("selected"));
-        },
+/**
+ * Se busca un control por su identificador tanto en la vista activa como en el
+ * resto de elementos registrados en el nucleo de SAPUI5. Resulta necesario cuando
+ * el control pertenece a una vista distinta de la vista hija en uso, como ocurre
+ * con idEjecutadoCheckBox2 que reside en la Main view.
+ */
+_findControlGlobally: function (sId) {
+    // Se comprueba primero si el control existe en la vista activa para evitar
+    // una busqueda global innecesaria en el caso mas comun.
+    var oLocal = this.byId(sId);
+    if (oLocal) return oLocal;
+
+    // Se recorren todos los elementos registrados en el nucleo de SAPUI5 buscando
+    // aquel cuyo identificador coincida exactamente o termine con el sufijo indicado.
+    var mElements = sap.ui.getCore().mElements || {};
+    var aKeys = Object.keys(mElements);
+    for (var i = 0; i < aKeys.length; i++) {
+        var sKey = aKeys[i];
+        if (sKey === sId || sKey.endsWith("--" + sId)) {
+            return mElements[sKey];
+        }
+    }
+    return null;
+},
+
+/**
+ * Se ejecuta al interactuar con la casilla de verificacion de registros ejecutados.
+ * Se marca la variante activa como modificada para habilitar el guardado directo
+ * antes de delegar la logica de columnas al manejador interno correspondiente.
+ */
+onEjecutadoCheckBoxSelect: function (oEvent) {
+    this._markVariantDirty();
+    this._handleEjecutado(oEvent.getParameter("selected"));
+},
 
         /**
          * Se procesa la visualización u ocultación de la columna de elementos ejecutados históricos.
@@ -2044,7 +2071,965 @@ sap.ui.define([
             mergeRecursive(aBase, aModified);
             return aBase;
         },
+        /**
+ * Se compara el arbol actual del modelo con el arbol original del servidor
+ * y se devuelve unicamente la lista de valores que han cambiado respecto al origen.
+ * Cada entrada del delta contiene la ruta de acceso al nodo, la clave del
+ * campo modificado y el nuevo valor introducido por el usuario.
+ */
+        _computeModelDelta: function (aOriginal, aCurrent, sBasePath) {
+            const aDelta = [];
+            const sPath = sBasePath || "";
 
+            if (!Array.isArray(aCurrent) || !Array.isArray(aOriginal)) return aDelta;
+
+            const aStructuralKeys = [
+                "children", "padre", "isGroup", "expandible", "cabecera",
+                "ParentPath", "flag1", "flag2", "flag1Label", "flag2Label",
+                "monthsData", "size2"
+            ];
+
+            for (let i = 0; i < aCurrent.length; i++) {
+                const oCur = aCurrent[i];
+                const oOri = aOriginal[i] || {};
+                const sNode = sPath + "/" + i;
+
+                Object.keys(oCur).forEach(function (sKey) {
+                    if (aStructuralKeys.indexOf(sKey) !== -1) return;
+
+                    const vCur = (oCur[sKey] === undefined || oCur[sKey] === null) ? "" : String(oCur[sKey]);
+                    const vOri = (oOri[sKey] === undefined || oOri[sKey] === null) ? "" : String(oOri[sKey]);
+
+                    if (vCur !== vOri) {
+                        aDelta.push({ path: sNode, key: sKey, value: oCur[sKey] });
+                    }
+                });
+
+                if (Array.isArray(oCur.children)) {
+                    const aChildDelta = this._computeModelDelta(
+                        oOri.children || [],
+                        oCur.children,
+                        sNode + "/children"
+                    );
+                    aChildDelta.forEach(function (oEntry) { aDelta.push(oEntry); });
+                }
+            }
+
+            // Se registran en consola las modificaciones detectadas para facilitar el diagnostico.
+            // Se separan las entradas raiz de las entradas de hijos para mayor legibilidad.
+            if (sPath === "") {
+                if (aDelta.length === 0) {
+                    console.log("[VariantDelta] No se han detectado modificaciones respecto al estado original del servidor.");
+                } else {
+                    console.log("[VariantDelta] Se han detectado " + aDelta.length + " modificacion(es):");
+                    aDelta.forEach(function (oEntry, iIdx) {
+                        console.log(
+                            "  [" + iIdx + "] ruta: " + oEntry.path +
+                            " | campo: " + oEntry.key +
+                            " | valor nuevo: " + JSON.stringify(oEntry.value)
+                        );
+                    });
+                }
+            }
+
+            return aDelta;
+        },
+
+        /**
+         * Se aplica un delta de cambios sobre una copia fresca de los datos originales
+         * del servidor para reconstruir el estado exacto en que el usuario guardo
+         * la variante sin necesidad de almacenar el modelo completo.
+         */
+        _applyModelDelta: function (aDelta) {
+            const oModel = this.getView().getModel("corrientesModel");
+            if (!oModel) return;
+
+            // Se parte de una copia limpia de los datos del servidor para garantizar
+            // que no queden residuos de sesiones anteriores antes de aplicar el delta.
+            if (this._originalServerData) {
+                const aFresh = JSON.parse(JSON.stringify(this._originalServerData));
+                oModel.setData(aFresh);
+                oModel.refresh(true);
+            }
+
+            // Si el delta esta vacio no hay nada que aplicar: la tabla ya muestra
+            // los datos originales del servidor despues del setData anterior.
+            if (!Array.isArray(aDelta) || aDelta.length === 0) return;
+
+            // Se aplica cada entrada del delta directamente sobre el modelo recien inicializado.
+            aDelta.forEach(function (oEntry) {
+                oModel.setProperty(oEntry.path + "/" + oEntry.key, oEntry.value);
+            });
+        },
+        /**
+         * Se inicializa el sistema de gestion de variantes.
+         * Se captura el estado inicial de la tabla como variante estandar y se
+         * carga cualquier variante adicional persistida en el navegador.
+         */
+        _initVariantManagement: function (sStorageKey) {
+            this._variantStorageKey = sStorageKey || "ui5_variants_default";
+            this._bVariantDirty = false;
+
+            this._aVariants = this._loadVariantsFromStorage();
+
+            // Se recupera el nombre de la variante marcada como por defecto.
+            // Si no hay ninguna guardada se usa la estandar.
+            const sDefaultName = localStorage.getItem(this._variantStorageKey + "_default") || "Estándar";
+            const oDefaultVariant = this._aVariants.find(function (v) {
+                return v.name === sDefaultName;
+            }) || this._aVariants[0];
+
+            // Se marca en el array cual es la por defecto.
+            this._aVariants.forEach(function (v) { v.isPorDefecto = false; });
+            oDefaultVariant.isPorDefecto = true;
+
+            this.getView().setModel(new sap.ui.model.json.JSONModel({
+                currentName: oDefaultVariant.name,
+                displayLabel: oDefaultVariant.name
+            }), "variantModel");
+
+            // Se captura el estado inicial y se aplica la variante por defecto
+            // una vez que la tabla esta completamente renderizada.
+            setTimeout(function () {
+                this._aVariants[0].state = this._getCurrentTableState();
+
+                // Se aplica automaticamente la variante por defecto al arrancar
+                // solo si no es la estandar, ya que la estandar es el estado inicial.
+                if (oDefaultVariant.name !== "Estándar" && oDefaultVariant.state) {
+                    this._bSuppressDirtyFlag = true;
+                    this._applyVariantState(oDefaultVariant.state);
+                    this.getView().getModel("variantModel").setProperty("/currentName", oDefaultVariant.name);
+                    this.getView().getModel("variantModel").setProperty("/displayLabel", oDefaultVariant.name);
+                }
+            }.bind(this), 500);
+
+            const oTable = this.getControlTable();
+            if (oTable && !oTable._variantColumnMoveAttached) {
+                oTable.attachColumnMove(function () {
+                    this._markVariantDirty();
+                }.bind(this));
+                oTable._variantColumnMoveAttached = true;
+            }
+        },
+
+        /**
+         * Se marca la variante activa como modificada y se actualiza el indicador
+         * visual anadiendo un asterisco al nombre mostrado en el boton selector.
+         * Se omite la marca si el sistema ha suspendido temporalmente la deteccion
+         * de cambios durante la restauracion de una variante.
+         */
+        _markVariantDirty: function () {
+            // Se ignora la llamada si la supresion temporal esta activa, lo que ocurre
+            // durante la restauracion interna de datos al cambiar de variante.
+            if (this._bSuppressDirtyFlag) return;
+            if (this._bVariantDirty) return;
+
+            this._bVariantDirty = true;
+
+            const oVModel = this.getView().getModel("variantModel");
+            if (!oVModel) return;
+
+            // Se anade el asterisco al nombre visible para indicar cambios pendientes.
+            const sName = oVModel.getProperty("/currentName");
+            oVModel.setProperty("/displayLabel", sName + " *");
+        },
+
+        /**
+         * Se elimina el indicador de cambios pendientes y se restaura el nombre limpio.
+         */
+        _clearVariantDirty: function () {
+            this._bVariantDirty = false;
+            const oVModel = this.getView().getModel("variantModel");
+            if (!oVModel) return;
+            oVModel.setProperty("/displayLabel", oVModel.getProperty("/currentName"));
+        },
+
+        /**
+         * Se gestiona el redimensionamiento de columnas realizado por el usuario.
+         * Se persiste el nuevo ancho y se marca la variante activa como modificada.
+         */
+        onColumnResize: function (oEvt) {
+            this._markVariantDirty();
+        },
+
+/**
+ * Se captura el estado completo de la tabla incluyendo el orden de las columnas
+ * estaticas, sus anchos, su visibilidad, las filas expandidas, las seleccionadas,
+ * el delta de cambios realizados por el usuario en las celdas editables y el estado
+ * de los controles auxiliares de ejercicios anteriores y ajustes.
+ * El estado de idEjecutadoCheckBox2 se lee desde la variable interna _bEjecutadoSelected
+ * ya que dicho control reside en la Main view y no es accesible directamente desde aqui.
+ */
+_getCurrentTableState: function () {
+    const oTable = this.getControlTable();
+    if (!oTable) return null;
+
+    // Se capturan las columnas estaticas en el orden actual de la tabla.
+    const aColStates = [];
+    oTable.getColumns().forEach(function (oCol) {
+        if (oCol.data("dynamicYear") || oCol.data("dynamicMonth") || oCol.data("ejecutadosColumn")) {
+            return;
+        }
+        aColStates.push({
+            key:     this._getVariantColumnKey(oCol),
+            width:   oCol.getWidth(),
+            visible: oCol.getVisible()
+        });
+    }.bind(this));
+
+    // Se capturan las rutas de las filas expandidas.
+    const aExpandedPaths = [];
+    const oBinding = oTable.getBinding("rows");
+    if (oBinding) {
+        const iLength = oBinding.getLength();
+        for (let i = 0; i < iLength; i++) {
+            if (oTable.isExpanded(i)) {
+                const oCtx = oTable.getContextByIndex(i);
+                if (oCtx) aExpandedPaths.push(oCtx.getPath());
+            }
+        }
+    }
+
+    // Se capturan las rutas de las filas seleccionadas.
+    const aSelectedPaths = [];
+    oTable.getSelectedIndices().forEach(function (iIdx) {
+        const oCtx = oTable.getContextByIndex(iIdx);
+        if (oCtx) aSelectedPaths.push(oCtx.getPath());
+    });
+
+    // Se calcula el delta de cambios en las celdas respecto a los datos originales del servidor.
+    let aModelDelta = [];
+    try {
+        const oModel = this.getView().getModel("corrientesModel");
+        if (oModel && this._originalServerData) {
+            aModelDelta = this._computeModelDelta(
+                this._originalServerData,
+                oModel.getData()
+            );
+        }
+    } catch (e) {
+        sap.base.Log.warning("No se pudo calcular el delta del modelo: " + e);
+    }
+
+    // Se lee el estado de idEjecutadoCheckBox2 desde la variable interna _bEjecutadoSelected
+    // ya que esta variable se mantiene siempre sincronizada con el checkbox por _handleEjecutado
+    // y no requiere acceso directo al control que reside en la Main view.
+    const bEjecutadoSelected = this._bEjecutadoSelected || false;
+
+    // Se captura el estado de idAjustesCheckBox que pertenece a la vista hija activa.
+    const oAjustesCheckBox = this.byId("idAjustesCheckBox");
+    const bAjustesSelected = oAjustesCheckBox
+        ? oAjustesCheckBox.getSelected()
+        : false;
+
+    return {
+        columns:            aColStates,
+        expandedPaths:      aExpandedPaths,
+        selectedPaths:      aSelectedPaths,
+        modelDelta:         aModelDelta,
+        bEjecutadoSelected: bEjecutadoSelected,
+        bAjustesSelected:   bAjustesSelected
+    };
+},
+
+/**
+ * Se aplica un estado de variante guardado a la tabla restaurando el orden,
+ * anchos y visibilidad de columnas, los datos editados en las celdas mediante
+ * el delta, las filas expandidas y seleccionadas y el estado de los controles
+ * auxiliares de ejercicios anteriores y ajustes.
+ * Para actualizar visualmente idEjecutadoCheckBox2 se utiliza la retrollamada
+ * _fnSetEjecutadoCheckBox inyectada por la Main view al cargar esta vista hija.
+ */
+_applyVariantState: function (oState) {
+    if (!oState) return;
+    const oTable = this.getControlTable();
+    if (!oTable) return;
+
+    // Se restauran los datos editados en las celdas aplicando el delta sobre
+    // los datos originales del servidor.
+    if (Array.isArray(oState.modelDelta)) {
+        try {
+            this._applyModelDelta(oState.modelDelta);
+        } catch (e) {
+            sap.base.Log.warning("No se pudo restaurar el delta del modelo: " + e);
+        }
+    }
+
+    // Se restaura el estado de idAjustesCheckBox actualizando el modelo de
+    // visibilidad de columnas que controla su visualizacion en la tabla.
+    // Este control pertenece a la vista hija activa y se localiza directamente.
+    if (typeof oState.bAjustesSelected === "boolean") {
+        const oAjustesCheckBox = this.byId("idAjustesCheckBox");
+        if (oAjustesCheckBox) {
+            oAjustesCheckBox.setSelected(oState.bAjustesSelected);
+        }
+        const oVisibleModel = this.getView().getModel("visibleColumn");
+        if (oVisibleModel) {
+            oVisibleModel.setProperty("/visible", oState.bAjustesSelected);
+        }
+    }
+
+    // Se restaura el estado de idEjecutadoCheckBox2 utilizando la retrollamada
+    // inyectada por la Main view, ya que ese control reside en ella y no en esta
+    // vista hija. Se ejecuta antes de restaurar las columnas estaticas para que
+    // _handleEjecutado reconstruya correctamente las columnas dinamicas de ejecutados.
+    if (typeof oState.bEjecutadoSelected === "boolean") {
+        if (this._fnSetEjecutadoCheckBox) {
+            this._fnSetEjecutadoCheckBox(oState.bEjecutadoSelected);
+        }
+        this._bEjecutadoSelected = oState.bEjecutadoSelected;
+        this._handleEjecutado(oState.bEjecutadoSelected);
+    }
+
+    // Se restauran orden, ancho y visibilidad de las columnas estaticas.
+    if (oState.columns && oState.columns.length > 0) {
+        const aStaticCols = oTable.getColumns().filter(function (oCol) {
+            return !oCol.data("dynamicYear") && !oCol.data("dynamicMonth") && !oCol.data("ejecutadosColumn");
+        });
+
+        const oKeyToCol = {};
+        aStaticCols.forEach(function (oCol) {
+            oKeyToCol[this._getVariantColumnKey(oCol)] = oCol;
+        }.bind(this));
+
+        aStaticCols.forEach(function (oCol) {
+            oTable.removeColumn(oCol);
+        });
+
+        oState.columns.forEach(function (oSaved, iPos) {
+            const oCol = oKeyToCol[oSaved.key];
+            if (oCol) {
+                oCol.setWidth(oSaved.width);
+                oCol.setVisible(oSaved.visible);
+                oTable.insertColumn(oCol, iPos);
+            }
+        });
+    }
+
+    // Se restauran las expansiones y selecciones una vez que el DOM se ha estabilizado.
+    // La supresion del indicador de cambios se mantiene activa durante todo el proceso
+    // asincrono para evitar que las operaciones internas activen el marcador de
+    // variante modificada de forma involuntaria.
+    const fnRestoreTreeState = function () {
+        const oBinding = oTable.getBinding("rows");
+        if (!oBinding) return;
+
+        const iLength = oBinding.getLength();
+        oTable.collapseAll();
+        oTable.clearSelection();
+
+        const oPathToIndex = {};
+        for (let i = 0; i < iLength; i++) {
+            const oCtx = oTable.getContextByIndex(i);
+            if (oCtx) oPathToIndex[oCtx.getPath()] = i;
+        }
+
+        // Se expanden las filas que estaban abiertas en el momento del guardado.
+        if (Array.isArray(oState.expandedPaths)) {
+            oState.expandedPaths.forEach(function (sPath) {
+                const iIdx = oPathToIndex[sPath];
+                if (iIdx !== undefined) oTable.expand(iIdx);
+            });
+        }
+
+        // Se restauran las filas seleccionadas tras un ciclo adicional para garantizar
+        // que las expansiones anteriores hayan actualizado el indice de filas visibles.
+        if (Array.isArray(oState.selectedPaths) && oState.selectedPaths.length > 0) {
+            setTimeout(function () {
+                const iLengthAfterExpand = oBinding.getLength();
+                for (let i = 0; i < iLengthAfterExpand; i++) {
+                    const oCtx = oTable.getContextByIndex(i);
+                    if (oCtx && oState.selectedPaths.indexOf(oCtx.getPath()) !== -1) {
+                        oTable.addSelectionInterval(i, i);
+                    }
+                }
+                // Se reactiva el detector de cambios una vez que todas las operaciones
+                // asincronas de restauracion han concluido, incluidas las selecciones.
+                this._bSuppressDirtyFlag = false;
+            }.bind(this), 150);
+        } else {
+            // Si no existen filas seleccionadas que restaurar, se reactiva el detector
+            // de cambios inmediatamente despues de procesar las expansiones.
+            this._bSuppressDirtyFlag = false;
+        }
+    }.bind(this);
+
+    setTimeout(fnRestoreTreeState, 100);
+},
+
+        /**
+         * Se construye una clave estable para identificar una columna dentro de una variante.
+         */
+        _getVariantColumnKey: function (oCol) {
+            const sFilter = oCol.getFilterProperty && oCol.getFilterProperty();
+            if (sFilter) return sFilter;
+            const sId = oCol.getId() || "";
+            return sId.split("--").pop() || sId;
+        },
+
+        /**
+         * Se abre el popover de seleccion de variantes.
+         * Cuando la variante activa no es la estandar y tiene cambios pendientes
+         * se muestra un boton adicional para guardar directamente sin pedir nombre.
+         */
+        onOpenVariantPopover: function (oEvt) {
+            const oSource = oEvt.getSource();
+            const oVModel = this.getView().getModel("variantModel");
+            const that = this;
+
+            if (this._oVariantPopover) {
+                this._oVariantPopover.destroy();
+                this._oVariantPopover = null;
+            }
+
+            const oList = new sap.m.List({ showSeparators: "None" });
+
+            this._aVariants.forEach(function (oVar) {
+                const bActiva = oVar.name === oVModel.getProperty("/currentName");
+                const oItem = new sap.m.StandardListItem({
+                    title: oVar.name,
+                    type: "Active",
+                    highlight: bActiva ? "Information" : "None"
+                });
+                oItem.attachPress(function () {
+                    that._oVariantPopover.close();
+                    that._switchToVariant(oVar);
+                });
+                oList.addItem(oItem);
+            });
+
+            // Se determina si la variante activa es la estandar para decidir si
+            // se muestra el boton de guardado directo.
+            const sCurrentName = oVModel.getProperty("/currentName");
+            const oCurrentVariant = this._aVariants.find(function (v) { return v.name === sCurrentName; });
+            const bIsDefault = oCurrentVariant && oCurrentVariant.isDefault;
+            const bShowSave = !bIsDefault && this._bVariantDirty;
+
+            const aFooterContent = [];
+
+            // Se anade el boton de guardado directo solo cuando procede.
+            if (bShowSave) {
+                aFooterContent.push(new sap.m.Button({
+                    text: "Guardar",
+                    type: "Emphasized",
+                    press: function () {
+                        that._oVariantPopover.close();
+
+                        // Se sobreescribe el estado de la variante activa con la configuracion actual.
+                        const oCurrentState = that._getCurrentTableState();
+                        if (oCurrentVariant) {
+                            oCurrentVariant.state = oCurrentState;
+                        }
+                        that._saveVariantsToStorage();
+                        oVModel.setProperty("/displayLabel", sCurrentName);
+                        that._bVariantDirty = false;
+                    }
+                }));
+            }
+
+            aFooterContent.push(new sap.m.Button({
+                text: "Guardar con nombre",
+                type: bShowSave ? "Default" : "Emphasized",
+                press: function () {
+                    that._oVariantPopover.close();
+                    that.onSaveVariantAs();
+                }
+            }));
+
+            aFooterContent.push(new sap.m.ToolbarSpacer());
+
+            aFooterContent.push(new sap.m.Button({
+                text: "Gestionar",
+                press: function () {
+                    that._oVariantPopover.close();
+                    that.onManageVariants();
+                }
+            }));
+
+            const oFooter = new sap.m.Toolbar({ content: aFooterContent });
+
+            this._oVariantPopover = new sap.m.Popover({
+                title: "Mis vistas",
+                contentWidth: "300px",
+                content: [oList],
+                footer: oFooter,
+                afterClose: function () {
+                    if (that._oVariantPopover) {
+                        that._oVariantPopover.destroy();
+                        that._oVariantPopover = null;
+                    }
+                }
+            });
+
+            this.getView().addDependent(this._oVariantPopover);
+            this._oVariantPopover.openBy(oSource);
+        },
+
+        /**
+         * Se cambia a la variante seleccionada aplicando su estado guardado a la tabla.
+         * Si hay cambios pendientes sin guardar se solicita confirmacion al usuario
+         * antes de proceder para evitar la perdida accidental de modificaciones.
+         */
+        _switchToVariant: function (oVar) {
+            const oVModel = this.getView().getModel("variantModel");
+            const that = this;
+
+            // Se verifica si la variante destino es la misma que la activa para evitar
+            // operaciones innecesarias al pulsar sobre la variante ya seleccionada.
+            if (oVar.name === oVModel.getProperty("/currentName") && !this._bVariantDirty) {
+                return;
+            }
+
+            // Se muestra un dialogo de confirmacion si hay cambios pendientes sin guardar.
+            if (this._bVariantDirty) {
+                sap.m.MessageBox.confirm(
+                    "Existen cambios sin guardar en la vista actual. Si continua, se perderan las modificaciones no guardadas.",
+                    {
+                        title: "Cambios sin guardar",
+                        actions: [sap.m.MessageBox.Action.OK, sap.m.MessageBox.Action.CANCEL],
+                        emphasizedAction: sap.m.MessageBox.Action.CANCEL,
+                        onClose: function (sAction) {
+                            if (sAction !== sap.m.MessageBox.Action.OK) return;
+                            that._doSwitchToVariant(oVar);
+                        }
+                    }
+                );
+                return;
+            }
+
+            // Si no hay cambios pendientes se aplica el cambio directamente.
+            this._doSwitchToVariant(oVar);
+        },
+
+/**
+ * Se ejecuta el cambio efectivo de variante una vez confirmado por el usuario.
+ * Se suspende temporalmente el detector de cambios del modelo para evitar que
+ * la restauracion de datos dispare el indicador de modificaciones pendientes.
+ * Al volver a la variante estandar sin estado guardado se resetean ambos controles
+ * utilizando la retrollamada _fnSetEjecutadoCheckBox para el checkbox de la Main view.
+ */
+_doSwitchToVariant: function (oVar) {
+    const oVModel = this.getView().getModel("variantModel");
+
+    // Se desactiva el indicador de cambios pendientes y se activa la supresion
+    // para que ninguna operacion interna de restauracion lo vuelva a encender.
+    this._bVariantDirty      = false;
+    this._bSuppressDirtyFlag = true;
+
+    if (oVar.state) {
+        this._applyVariantState(oVar.state);
+    } else if (this._originalServerData) {
+        // Se restauran los datos originales del servidor si la variante no
+        // tiene estado guardado, como ocurre con la variante estandar inicial.
+        const oModel = this.getView().getModel("corrientesModel");
+        if (oModel) {
+            oModel.setData(JSON.parse(JSON.stringify(this._originalServerData)));
+            oModel.refresh(true);
+        }
+
+        // Se resetea idEjecutadoCheckBox2 mediante la retrollamada inyectada por
+        // la Main view, ya que ese control reside en ella y no en esta vista hija.
+        if (this._bEjecutadoSelected) {
+            if (this._fnSetEjecutadoCheckBox) {
+                this._fnSetEjecutadoCheckBox(false);
+            }
+            this._bEjecutadoSelected = false;
+            this._handleEjecutado(false);
+        }
+
+        // Se resetea idAjustesCheckBox que pertenece a la vista hija activa
+        // y se actualiza el modelo de visibilidad de columnas correspondiente.
+        const oAjustesCheckBox = this.byId("idAjustesCheckBox");
+        if (oAjustesCheckBox && oAjustesCheckBox.getSelected()) {
+            oAjustesCheckBox.setSelected(false);
+            const oVisibleModel = this.getView().getModel("visibleColumn");
+            if (oVisibleModel) {
+                oVisibleModel.setProperty("/visible", false);
+            }
+        }
+
+        // Se libera la supresion tras un ciclo minimo de renderizado ya que
+        // en este caso no existen operaciones asincronas adicionales pendientes.
+        setTimeout(function () {
+            this._bSuppressDirtyFlag = false;
+        }.bind(this), 100);
+    }
+
+    // Se actualiza el nombre activo en el modelo de variantes y se elimina
+    // el asterisco de cambios pendientes del boton selector.
+    oVModel.setProperty("/currentName",  oVar.name);
+    oVModel.setProperty("/displayLabel", oVar.name);
+},
+
+/**
+ * Se abre el dialogo para guardar la configuracion actual con un nombre personalizado.
+ * Incluye la opcion para definir la variante como estandar al guardar.
+ */
+onSaveVariantAs: function () {
+    const oVModel = this.getView().getModel("variantModel");
+    const that = this;
+
+    const oInput = new sap.m.Input({
+        value: oVModel.getProperty("/currentName"),
+        placeholder: "Nombre de la vista",
+        width: "100%"
+    });
+
+    // Se crea la casilla para definir la variante como estandar al guardar.
+    const oCheckDefault = new sap.m.CheckBox({
+        text: "Definir como estándar",
+        selected: false
+    });
+
+    const oDialog = new sap.m.Dialog({
+        title: "Guardar vista",
+        contentWidth: "320px",
+        content: [
+            new sap.m.VBox({
+                renderType: "Bare",
+                items: [
+                    new sap.m.Label({ text: "Vista", labelFor: oInput }),
+                    oInput,
+                    oCheckDefault
+                ]
+            }).addStyleClass("sapUiSmallMargin")
+        ],
+        beginButton: new sap.m.Button({
+            text: "Guardar",
+            type: "Emphasized",
+            press: function () {
+                const sName = (oInput.getValue() || "").trim();
+                if (!sName) return;
+
+                // Se captura el estado actual de la tabla en el momento del guardado.
+                const oCurrentState = that._getCurrentTableState();
+
+                // Se sobreescribe si ya existe una variante con el mismo nombre.
+                const iExisting = that._aVariants.findIndex(function (v) {
+                    return v.name === sName;
+                });
+                if (iExisting >= 0) {
+                    that._aVariants[iExisting].state = oCurrentState;
+                } else {
+                    that._aVariants.push({
+                        name: sName,
+                        state: oCurrentState
+                    });
+                }
+
+                // Si el usuario marco la casilla de estandar se actualiza el por defecto.
+                if (oCheckDefault.getSelected()) {
+                    that._aVariants.forEach(function (v) { v.isPorDefecto = false; });
+                    const oNewVar = that._aVariants.find(function (v) {
+                        return v.name === sName;
+                    });
+                    if (oNewVar) oNewVar.isPorDefecto = true;
+                }
+
+                that._saveVariantsToStorage();
+
+                // Se actualiza el nombre activo y se elimina el indicador de cambios.
+                oVModel.setProperty("/currentName", sName);
+                oVModel.setProperty("/displayLabel", sName);
+                that._bVariantDirty = false;
+
+                oDialog.close();
+            }
+        }),
+        endButton: new sap.m.Button({
+            text: "Cancelar",
+            press: function () { oDialog.close(); }
+        }),
+        afterClose: function () { oDialog.destroy(); }
+    });
+
+    this.getView().addDependent(oDialog);
+    oDialog.open();
+},
+
+
+/**
+ * Se abre el dialogo de gestion de variantes con estructura de tabla
+ * similar al componente nativo de SAP, incluyendo busqueda, columnas
+ * de por defecto y creado por, con posibilidad de eliminar las variantes
+ * propias y establecer una como predeterminada.
+ */
+onManageVariants: function () {
+    const oVModel = this.getView().getModel("variantModel");
+    const that = this;
+
+    // Se crea el modelo interno del dialogo con una copia de las variantes actuales
+    // para poder editar sin afectar el estado real hasta que el usuario confirme.
+    const aDialogData = this._aVariants.map(function (oVar) {
+        return {
+            name: oVar.name,
+            isDefault: oVar.isDefault || false,
+            isPorDefecto: oVar.isPorDefecto || false,
+            createdBy: oVar.isDefault ? "SAP" : "Usted",
+            ref: oVar
+        };
+    });
+
+    // Se construye la cabecera de columnas de la tabla de gestion sin la columna
+    // de compartimiento ya que la visibilidad publica o privada no es necesaria.
+    const oTable = new sap.m.Table({
+        showSeparators: "All",
+        mode: "None",
+        columns: [
+            new sap.m.Column({ width: "2rem" }),
+            new sap.m.Column({
+                header: new sap.m.Label({ text: "Vista" })
+            }),
+            new sap.m.Column({
+                header: new sap.m.Label({ text: "Por defecto" }),
+                width: "6rem",
+                hAlign: "Center"
+            }),
+            new sap.m.Column({
+                header: new sap.m.Label({ text: "Creado por" }),
+                width: "6rem"
+            }),
+            new sap.m.Column({ width: "2rem" })
+        ]
+    });
+
+    // Se define la funcion auxiliar que construye el icono de estrella para cada fila.
+    const fnBuildStarIcon = function (oItemRef) {
+        const oIcon = new sap.ui.core.Icon({
+            src: "sap-icon://favorite",
+            color: oItemRef.isPorDefecto ? "#0070f2" : "#c0c0c0"
+        }).addStyleClass("sapUiTinyMarginTop");
+
+        // Se asigna el handler de pulsacion solo si la variante no es ya la por defecto.
+        if (!oItemRef.isPorDefecto) {
+            oIcon.attachPress(function () {
+                aDialogData.forEach(function (v) { v.isPorDefecto = false; });
+                oItemRef.isPorDefecto = true;
+                fnRefreshStarsAndRadios();
+            });
+            oIcon.addStyleClass("sapUiPointer");
+        }
+
+        return oIcon;
+    };
+
+    // Se define la funcion que actualiza unicamente el color de las estrellas y el
+    // estado de los radio buttons sin destruir ni recrear ninguna fila de la tabla.
+    const fnRefreshStarsAndRadios = function () {
+        oTable.getItems().forEach(function (oRow) {
+            const oItemRef = oRow.data("itemRef");
+            if (!oItemRef) return;
+
+            const oCells = oRow.getCells();
+
+            // Se actualiza el color de la estrella y su capacidad de pulsacion.
+            const oStar = oCells[0];
+            if (oStar && oStar.isA("sap.ui.core.Icon")) {
+                oStar.setColor(oItemRef.isPorDefecto ? "#0070f2" : "#c0c0c0");
+                if (oItemRef.isPorDefecto) {
+                    oStar.removeStyleClass("sapUiPointer");
+                    oStar.detachPress(oStar._fnStarPress);
+                    oStar._fnStarPress = null;
+                } else if (!oStar._fnStarPress) {
+                    oStar._fnStarPress = function () {
+                        aDialogData.forEach(function (v) { v.isPorDefecto = false; });
+                        oItemRef.isPorDefecto = true;
+                        fnRefreshStarsAndRadios();
+                    };
+                    oStar.attachPress(oStar._fnStarPress);
+                    oStar.addStyleClass("sapUiPointer");
+                }
+            }
+
+            // Se actualiza el radio button sin recrear la fila.
+            // La columna de por defecto es ahora el indice 2 al haberse eliminado
+            // la columna de compartimiento que ocupaba ese puesto anteriormente.
+            const oRadio = oCells[2];
+            if (oRadio && oRadio.isA("sap.m.RadioButton")) {
+                oRadio.setSelected(oItemRef.isPorDefecto);
+            }
+        });
+    };
+
+    // Se define la funcion que construye y anade una sola fila a la tabla.
+    const fnBuildRow = function (oItem) {
+        const oRow = new sap.m.ColumnListItem({
+            cells: [
+                // Se construye la estrella mediante la funcion auxiliar.
+                fnBuildStarIcon(oItem),
+
+                // Se muestra el nombre de la variante, editable si no es estandar.
+                oItem.isDefault
+                    ? new sap.m.Text({ text: oItem.name }).addStyleClass("sapMTextBold")
+                    : new sap.m.Input({
+                        value: oItem.name,
+                        width: "100%",
+                        change: function (oEvt) {
+                            // Se actualiza el nombre directamente en el objeto de datos
+                            // de esta fila sin afectar a las demas filas de la tabla.
+                            oItem.name = oEvt.getParameter("value");
+                        }
+                    }),
+
+                // Se muestra el radio button de por defecto.
+                new sap.m.RadioButton({
+                    selected: oItem.isPorDefecto,
+                    groupName: "variantDefault",
+                    select: function () {
+                        aDialogData.forEach(function (v) { v.isPorDefecto = false; });
+                        oItem.isPorDefecto = true;
+                        fnRefreshStarsAndRadios();
+                    }
+                }),
+
+                new sap.m.Text({ text: oItem.createdBy }),
+
+                // Se muestra el icono de eliminacion solo para las variantes propias.
+                oItem.isDefault
+                    ? new sap.m.Text({ text: "" })
+                    : new sap.ui.core.Icon({
+                        src: "sap-icon://delete",
+                        color: "#0070f2",
+                        press: function () {
+                            // Se elimina el item del array de datos.
+                            const iIdx = aDialogData.indexOf(oItem);
+                            if (iIdx >= 0) aDialogData.splice(iIdx, 1);
+
+                            // Se elimina unicamente esta fila de la tabla
+                            // sin recrear ni tocar ninguna otra fila.
+                            oTable.removeItem(oRow);
+                            oRow.destroy();
+                        }
+                    }).addStyleClass("sapUiTinyMarginTop sapUiPointer")
+            ]
+        });
+
+        // Se almacena una referencia directa al objeto de datos en la fila.
+        oRow.data("itemRef", oItem);
+
+        return oRow;
+    };
+
+    // Se define la funcion que filtra las filas visibles segun la busqueda.
+    const fnApplyFilter = function (sQuery) {
+        oTable.getItems().forEach(function (oRow) {
+            const oItemRef = oRow.data("itemRef");
+            if (!oItemRef) return;
+            const bVisible = !sQuery ||
+                oItemRef.name.toLowerCase().indexOf(sQuery.toLowerCase()) !== -1;
+            oRow.setVisible(bVisible);
+        });
+    };
+
+    // Se pintan todas las filas una sola vez al abrir el dialogo.
+    aDialogData.forEach(function (oItem) {
+        oTable.addItem(fnBuildRow(oItem));
+    });
+
+    // Se construye la barra de busqueda superior del dialogo.
+    const oSearchField = new sap.m.SearchField({
+        placeholder: "Buscar",
+        width: "100%",
+        search: function (oEvt) {
+            fnApplyFilter(oEvt.getParameter("query") || "");
+        },
+        liveChange: function (oEvt) {
+            fnApplyFilter(oEvt.getParameter("newValue") || "");
+        }
+    });
+
+    const oDialog = new sap.m.Dialog({
+        title: "Gestionar vistas",
+        resizable: true,
+        draggable: true,
+        contentWidth: "500px",
+        contentHeight: "350px",
+        content: [
+            new sap.m.VBox({
+                items: [oSearchField, oTable]
+            })
+        ],
+        beginButton: new sap.m.Button({
+            text: "Guardar",
+            type: "Emphasized",
+            press: function () {
+                // Se aplican los cambios de nombre y por defecto al array real de variantes.
+                aDialogData.forEach(function (oItem) {
+                    const oReal = oItem.ref;
+                    if (oReal) {
+                        oReal.name = oItem.name;
+                        oReal.isPorDefecto = oItem.isPorDefecto;
+                    }
+                });
+
+                // Se eliminan del array real las variantes que el usuario borro en el dialogo.
+                that._aVariants = that._aVariants.filter(function (oVar) {
+                    return aDialogData.some(function (oItem) { return oItem.ref === oVar; });
+                });
+
+                // Se verifica si la variante activa fue eliminada y en ese caso
+                // se cambia automaticamente a la estandar para evitar un estado inconsistente.
+                const sCurrentName = oVModel.getProperty("/currentName");
+                const bCurrentStillExists = that._aVariants.some(function (v) {
+                    return v.name === sCurrentName;
+                });
+                if (!bCurrentStillExists) {
+                    that._doSwitchToVariant(that._aVariants[0]);
+                }
+
+                that._saveVariantsToStorage();
+                oDialog.close();
+            }
+        }),
+        endButton: new sap.m.Button({
+            text: "Cancelar",
+            press: function () { oDialog.close(); }
+        }),
+        afterClose: function () { oDialog.destroy(); }
+    });
+
+    this.getView().addDependent(oDialog);
+    oDialog.open();
+},
+
+        /**
+         * Se persisten en el almacenamiento local las variantes no estandar.
+         */
+        _saveVariantsToStorage: function () {
+            try {
+                const aToSave = this._aVariants.filter(function (v) { return !v.isDefault; });
+                // Se guarda tambien el nombre de la variante marcada como por defecto
+                // para poder restaurarla automaticamente al recargar la pagina.
+                const sDefaultVariant = (this._aVariants.find(function (v) {
+                    return v.isPorDefecto;
+                }) || {}).name || "Estándar";
+
+                localStorage.setItem(this._variantStorageKey, JSON.stringify(aToSave));
+                localStorage.setItem(this._variantStorageKey + "_default", sDefaultVariant);
+            } catch (e) {
+                sap.base.Log.warning("No se pudo guardar la variante: " + e);
+            }
+        },
+
+        /**
+         * Se recuperan del almacenamiento local las variantes guardadas.
+         * Se devuelve siempre la variante estandar en primera posicion.
+         */
+        _loadVariantsFromStorage: function () {
+            const aResult = [{ name: "Estándar", state: null, isDefault: true }];
+            try {
+                const sRaw = localStorage.getItem(this._variantStorageKey);
+                if (sRaw) {
+                    const aParsed = JSON.parse(sRaw);
+                    if (Array.isArray(aParsed)) {
+                        aParsed.forEach(function (v) { aResult.push(v); });
+                    }
+                }
+            } catch (e) {
+                sap.base.Log.warning("No se pudieron cargar las variantes: " + e);
+            }
+            return aResult;
+        },
         /**
          * Se instancia un diálogo de mensajes global y se ancla al ciclo de vida de la vista actual.
          */
@@ -2131,6 +3116,8 @@ sap.ui.define([
             // se evita que los cambios programáticos re-disparen este mismo evento provocando bucles infinitos (Stack Overflow).
             if (this._lock) return;
             this._lock = true;
+            // Se marca la variante activa como modificada al cambiar la seleccion.
+            this._markVariantDirty();
 
             const oTable = oEvent.getSource();
             // Se captura el listado de índices afectados por la acción reciente del usuario.
@@ -2800,178 +3787,178 @@ sap.ui.define([
          * Se intercepta y procesa el evento de filtrado nativo proveniente de las cabeceras estándar del TreeTable.
          * Ejecuta una evaluación de todo el árbol en crudo para asegurar que si un hijo cumple el filtro, su padre no desaparezca.
          */
-onTreeTableFilter: function (oEvent) {
-    // Se previene el comportamiento nativo de filtrado del control para aplicar la lógica personalizada.
-    oEvent.preventDefault();
+        onTreeTableFilter: function (oEvent) {
+            // Se previene el comportamiento nativo de filtrado del control para aplicar la lógica personalizada.
+            oEvent.preventDefault();
 
-    // Se recoge el valor introducido por el usuario en el campo de filtro de la cabecera.
-    const sValue = oEvent.getParameter("value") || "";
-    // Se obtiene el modelo de datos principal de la tabla de corrientes.
-    const oModel = this.getView().getModel("corrientesModel");
-    // Se obtiene la instancia de la tabla jerárquica.
-    const oTable = this.getControlTable();
-    // Se obtiene el modelo de interfaz para gestionar la visibilidad de elementos flotantes.
-    const oUiModel = this.getView().getModel("ui");
+            // Se recoge el valor introducido por el usuario en el campo de filtro de la cabecera.
+            const sValue = oEvent.getParameter("value") || "";
+            // Se obtiene el modelo de datos principal de la tabla de corrientes.
+            const oModel = this.getView().getModel("corrientesModel");
+            // Se obtiene la instancia de la tabla jerárquica.
+            const oTable = this.getControlTable();
+            // Se obtiene el modelo de interfaz para gestionar la visibilidad de elementos flotantes.
+            const oUiModel = this.getView().getModel("ui");
 
-    // Se identifica la columna sobre la que se ha disparado el filtro.
-    const oColumn = oEvent.getParameter("column");
-    // Se extrae la propiedad de filtro de la columna o se usa "name" como valor de respaldo.
-    const sFilterProperty = (oColumn && oColumn.getFilterProperty())
-        ? oColumn.getFilterProperty()
-        : "name";
+            // Se identifica la columna sobre la que se ha disparado el filtro.
+            const oColumn = oEvent.getParameter("column");
+            // Se extrae la propiedad de filtro de la columna o se usa "name" como valor de respaldo.
+            const sFilterProperty = (oColumn && oColumn.getFilterProperty())
+                ? oColumn.getFilterProperty()
+                : "name";
 
-    // Se inicializa el objeto de filtros activos si todavía no existe.
-    if (!this._aTreeActiveFilters) {
-        this._aTreeActiveFilters = {};
-    }
+            // Se inicializa el objeto de filtros activos si todavía no existe.
+            if (!this._aTreeActiveFilters) {
+                this._aTreeActiveFilters = {};
+            }
 
-    // Se registra o elimina el filtro activo según si el usuario ha escrito algo o ha borrado el campo.
-    if (sValue) {
-        this._aTreeActiveFilters[sFilterProperty] = sValue.toLowerCase();
-        if (oColumn) oColumn.setFiltered(true);
-    } else {
-        delete this._aTreeActiveFilters[sFilterProperty];
-        if (oColumn) oColumn.setFiltered(false);
-    }
+            // Se registra o elimina el filtro activo según si el usuario ha escrito algo o ha borrado el campo.
+            if (sValue) {
+                this._aTreeActiveFilters[sFilterProperty] = sValue.toLowerCase();
+                if (oColumn) oColumn.setFiltered(true);
+            } else {
+                delete this._aTreeActiveFilters[sFilterProperty];
+                if (oColumn) oColumn.setFiltered(false);
+            }
 
-    // Se obtienen los datos actuales del modelo para generar el respaldo si aún no existe.
-    const aCurrentData = oModel.getData();
+            // Se obtienen los datos actuales del modelo para generar el respaldo si aún no existe.
+            const aCurrentData = oModel.getData();
 
-    // Se determina si el modelo devuelve un array directo o un objeto envolvente.
-    const aRootArray = Array.isArray(aCurrentData) ? aCurrentData : (aCurrentData.results || Object.values(aCurrentData)[0]);
+            // Se determina si el modelo devuelve un array directo o un objeto envolvente.
+            const aRootArray = Array.isArray(aCurrentData) ? aCurrentData : (aCurrentData.results || Object.values(aCurrentData)[0]);
 
-    // Se genera el respaldo profundo del estado original de los datos únicamente la primera vez.
-    if (!this._fullTreeBackup) {
-        this._fullTreeBackup = JSON.parse(JSON.stringify(aRootArray));
-    }
+            // Se genera el respaldo profundo del estado original de los datos únicamente la primera vez.
+            if (!this._fullTreeBackup) {
+                this._fullTreeBackup = JSON.parse(JSON.stringify(aRootArray));
+            }
 
-    // Se define la función auxiliar que resetea la visibilidad de columnas y cabeceras flotantes.
-    const fnResetUI = function () {
-        if (this.byId("colMonths")) this.byId("colMonths").setVisible(false);
-        if (this.byId("colNew")) this.byId("colNew").setVisible(false);
-        if (this.byId("colCheckBox1")) this.byId("colCheckBox1").setVisible(false);
-        if (this.byId("colCheckBox2")) this.byId("colCheckBox2").setVisible(false);
-        if (oUiModel) {
-            oUiModel.setProperty("/showStickyParent", false);
-            oUiModel.setProperty("/showStickyChild", false);
-        }
-        this._setStickyChild(false);
-    }.bind(this);
+            // Se define la función auxiliar que resetea la visibilidad de columnas y cabeceras flotantes.
+            const fnResetUI = function () {
+                if (this.byId("colMonths")) this.byId("colMonths").setVisible(false);
+                if (this.byId("colNew")) this.byId("colNew").setVisible(false);
+                if (this.byId("colCheckBox1")) this.byId("colCheckBox1").setVisible(false);
+                if (this.byId("colCheckBox2")) this.byId("colCheckBox2").setVisible(false);
+                if (oUiModel) {
+                    oUiModel.setProperty("/showStickyParent", false);
+                    oUiModel.setProperty("/showStickyChild", false);
+                }
+                this._setStickyChild(false);
+            }.bind(this);
 
-    // Se recogen las claves de todos los filtros activos en este momento.
-    const aFilterKeys = Object.keys(this._aTreeActiveFilters);
+            // Se recogen las claves de todos los filtros activos en este momento.
+            const aFilterKeys = Object.keys(this._aTreeActiveFilters);
 
-    // CASO 1: El usuario ha vaciado todos los filtros activos.
-    if (aFilterKeys.length === 0) {
-        // Se restaura el array completo de datos desde el respaldo profundo.
-        const aRestored = JSON.parse(JSON.stringify(this._fullTreeBackup));
-        // Se reinyectan los datos originales al modelo de forma compatible con la estructura raíz.
-        if (Array.isArray(aCurrentData)) {
-            oModel.setData(aRestored);
-        } else {
-            const sRootKey = Object.keys(aCurrentData)[0];
-            const oRestored = {};
-            oRestored[sRootKey] = aRestored;
-            oModel.setData(oRestored);
-        }
-        fnResetUI();
-        // Se colapsa la tabla y se recalculan los rangos y estilos visuales.
-        oTable.collapseAll();
-        this._buildGroupRanges();
-        this._applyCabeceraStyle();
-        return;
-    }
+            // CASO 1: El usuario ha vaciado todos los filtros activos.
+            if (aFilterKeys.length === 0) {
+                // Se restaura el array completo de datos desde el respaldo profundo.
+                const aRestored = JSON.parse(JSON.stringify(this._fullTreeBackup));
+                // Se reinyectan los datos originales al modelo de forma compatible con la estructura raíz.
+                if (Array.isArray(aCurrentData)) {
+                    oModel.setData(aRestored);
+                } else {
+                    const sRootKey = Object.keys(aCurrentData)[0];
+                    const oRestored = {};
+                    oRestored[sRootKey] = aRestored;
+                    oModel.setData(oRestored);
+                }
+                fnResetUI();
+                // Se colapsa la tabla y se recalculan los rangos y estilos visuales.
+                oTable.collapseAll();
+                this._buildGroupRanges();
+                this._applyCabeceraStyle();
+                return;
+            }
 
-    const aActiveFilters = this._aTreeActiveFilters;
+            const aActiveFilters = this._aTreeActiveFilters;
 
-    // Se define la función que evalúa si un nodo satisface todos los criterios de filtrado activos.
-const fnMatchesAll = function (oNode) {
-    return aFilterKeys.every(function (sProp) {
-        return oNode[sProp] != null &&
-            String(oNode[sProp]).toLowerCase().includes(aActiveFilters[sProp]);
-    });
-};
+            // Se define la función que evalúa si un nodo satisface todos los criterios de filtrado activos.
+            const fnMatchesAll = function (oNode) {
+                return aFilterKeys.every(function (sProp) {
+                    return oNode[sProp] != null &&
+                        String(oNode[sProp]).toLowerCase().includes(aActiveFilters[sProp]);
+                });
+            };
 
-    const aFiltered = [];
-    let bCasoHijo = false;
-    let bDetalleExpanded = false;
+            const aFiltered = [];
+            let bCasoHijo = false;
+            let bDetalleExpanded = false;
 
-    // CASO 2: Hay filtros activos. Se recorre el árbol desde el nivel superior.
-    this._fullTreeBackup.forEach(function (oPadre) {
+            // CASO 2: Hay filtros activos. Se recorre el árbol desde el nivel superior.
+            this._fullTreeBackup.forEach(function (oPadre) {
 
-        // Se descarta el nodo si no es un nodo real con estructura jerárquica.
-        const bEsNodoReal = oPadre.isGroup === true ||
-            (Array.isArray(oPadre.children) && oPadre.children.length > 0);
+                // Se descarta el nodo si no es un nodo real con estructura jerárquica.
+                const bEsNodoReal = oPadre.isGroup === true ||
+                    (Array.isArray(oPadre.children) && oPadre.children.length > 0);
 
-        if (!bEsNodoReal) { return; }
+                if (!bEsNodoReal) { return; }
 
-        // Sub-Caso A: El propio nodo padre satisface los criterios de búsqueda.
-        if (fnMatchesAll(oPadre)) {
-            aFiltered.push(JSON.parse(JSON.stringify(oPadre)));
-            return;
-        }
+                // Sub-Caso A: El propio nodo padre satisface los criterios de búsqueda.
+                if (fnMatchesAll(oPadre)) {
+                    aFiltered.push(JSON.parse(JSON.stringify(oPadre)));
+                    return;
+                }
 
-        // Sub-Caso B: Se busca en los nodos hijos directos del padre.
-        const aHijosMatchados = [];
-        if (Array.isArray(oPadre.children)) {
-            oPadre.children.forEach(function (oHijo) {
-                // Se verifica si el hijo cumple los criterios de filtrado.
-                if (fnMatchesAll(oHijo)) {
-                    aHijosMatchados.push(JSON.parse(JSON.stringify(oHijo)));
+                // Sub-Caso B: Se busca en los nodos hijos directos del padre.
+                const aHijosMatchados = [];
+                if (Array.isArray(oPadre.children)) {
+                    oPadre.children.forEach(function (oHijo) {
+                        // Se verifica si el hijo cumple los criterios de filtrado.
+                        if (fnMatchesAll(oHijo)) {
+                            aHijosMatchados.push(JSON.parse(JSON.stringify(oHijo)));
 
-                    // Se comprueba si el hijo tiene subniveles de detalle expandibles.
-                    if (Array.isArray(oHijo.children) &&
-                        oHijo.children.length > 0 &&
-                        oHijo.children[0].isGroup === true) {
-                        bDetalleExpanded = true;
-                    }
+                            // Se comprueba si el hijo tiene subniveles de detalle expandibles.
+                            if (Array.isArray(oHijo.children) &&
+                                oHijo.children.length > 0 &&
+                                oHijo.children[0].isGroup === true) {
+                                bDetalleExpanded = true;
+                            }
+                        }
+                    });
+                }
+
+                // Si se encontraron hijos coincidentes, se construye una copia del padre con solo esos hijos.
+                if (aHijosMatchados.length > 0) {
+                    const oPadreCopia = JSON.parse(JSON.stringify(oPadre));
+                    oPadreCopia.children = aHijosMatchados;
+                    aFiltered.push(oPadreCopia);
+                    bCasoHijo = true;
                 }
             });
-        }
 
-        // Si se encontraron hijos coincidentes, se construye una copia del padre con solo esos hijos.
-        if (aHijosMatchados.length > 0) {
-            const oPadreCopia = JSON.parse(JSON.stringify(oPadre));
-            oPadreCopia.children = aHijosMatchados;
-            aFiltered.push(oPadreCopia);
-            bCasoHijo = true;
-        }
-    });
+            // Se blanquea la interfaz y se inyectan los datos filtrados al modelo.
+            fnResetUI();
 
-    // Se blanquea la interfaz y se inyectan los datos filtrados al modelo.
-    fnResetUI();
+            // Se aplican los datos filtrados al modelo respetando la estructura raíz original.
+            if (Array.isArray(aCurrentData)) {
+                oModel.setData(aFiltered);
+            } else {
+                const sRootKey = Object.keys(aCurrentData)[0];
+                const oFiltered = {};
+                oFiltered[sRootKey] = aFiltered;
+                oModel.setData(oFiltered);
+            }
 
-    // Se aplican los datos filtrados al modelo respetando la estructura raíz original.
-    if (Array.isArray(aCurrentData)) {
-        oModel.setData(aFiltered);
-    } else {
-        const sRootKey = Object.keys(aCurrentData)[0];
-        const oFiltered = {};
-        oFiltered[sRootKey] = aFiltered;
-        oModel.setData(oFiltered);
-    }
+            const oBinding = oTable.getBinding("rows");
+            if (!oBinding) { return; }
 
-    const oBinding = oTable.getBinding("rows");
-    if (!oBinding) { return; }
+            // Se ajusta la expansión de la tabla según el tipo de resultado obtenido.
+            if (bCasoHijo) {
+                // Se expande hasta el segundo nivel para mostrar los hijos coincidentes.
+                oTable.expandToLevel(2);
+                if (this.byId("colMonths")) this.byId("colMonths").setVisible(bDetalleExpanded);
+                if (this.byId("colNew")) this.byId("colNew").setVisible(bDetalleExpanded);
+                if (this.byId("colCheckBox1")) this.byId("colCheckBox1").setVisible(bDetalleExpanded);
+                if (this.byId("colCheckBox2")) this.byId("colCheckBox2").setVisible(bDetalleExpanded);
+            } else {
+                // Si solo se encontraron padres, se colapsa y se expande solo el primer nivel.
+                oTable.collapseAll();
+                oTable.expandToLevel(1);
+            }
 
-    // Se ajusta la expansión de la tabla según el tipo de resultado obtenido.
-    if (bCasoHijo) {
-        // Se expande hasta el segundo nivel para mostrar los hijos coincidentes.
-        oTable.expandToLevel(2);
-        if (this.byId("colMonths")) this.byId("colMonths").setVisible(bDetalleExpanded);
-        if (this.byId("colNew")) this.byId("colNew").setVisible(bDetalleExpanded);
-        if (this.byId("colCheckBox1")) this.byId("colCheckBox1").setVisible(bDetalleExpanded);
-        if (this.byId("colCheckBox2")) this.byId("colCheckBox2").setVisible(bDetalleExpanded);
-    } else {
-        // Si solo se encontraron padres, se colapsa y se expande solo el primer nivel.
-        oTable.collapseAll();
-        oTable.expandToLevel(1);
-    }
-
-    // Se recalculan los rangos de grupos y los estilos de cabecera.
-    this._buildGroupRanges();
-    this._applyCabeceraStyle();
-},
+            // Se recalculan los rangos de grupos y los estilos de cabecera.
+            this._buildGroupRanges();
+            this._applyCabeceraStyle();
+        },
 
         /**
          * Se formatea numéricamente una cadena de texto, dotándola de la cantidad exacta de decimales y del separador regional.
@@ -3000,18 +3987,15 @@ const fnMatchesAll = function (oNode) {
         },
 
         /**
-         * Se controla el estado de visibilidad general de la columna oculta de "Ajustes", modificando el modelo visual asíncrono de la vista.
+         * Se controla el estado de visibilidad de la columna de ajustes actualizando
+         * el modelo de visibilidad con el valor booleano recibido directamente del evento.
+         * Se marca ademas la variante activa como modificada para habilitar el guardado directo.
          */
         onAjustesCheckBox: function (oEvent) {
-            const tablaVisible = this.getView().getModel("visibleColumn").getProperty("/visible");
-
-            // Funciona como un conmutador (Toggle): Si es falso lo vuelve verdadero, y si es verdadero lo oculta.
-            if (tablaVisible !== true) {
-                this.getView().getModel("visibleColumn").setProperty("/visible", true);
-            } else {
-                this.getView().getModel("visibleColumn").setProperty("/visible", false);
-            }
-        }
+            var bSelected = oEvent.getParameter("selected");
+            this.getView().getModel("visibleColumn").setProperty("/visible", bSelected);
+            this._markVariantDirty();
+        },
 
     });
 });
