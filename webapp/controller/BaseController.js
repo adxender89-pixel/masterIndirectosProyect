@@ -498,6 +498,93 @@ sap.ui.define([
 
             }.bind(this));
 
+                // ▼▼▼ AÑADIR AQUÍ LA COLUMNA "RESTO" ▼▼▼
+    
+    // Se elimina la columna Resto previa si existía para evitar duplicados
+    const aExistingCols = oTable.getColumns();
+    for (let i = aExistingCols.length - 1; i >= 0; i--) {
+        if (aExistingCols[i].data("restoColumn") === true) {
+            oTable.removeColumn(aExistingCols[i]);
+        }
+    }
+
+    const oRestoLabel = new sap.m.VBox({
+        width: "100%",
+        renderType: "Bare",
+        items: [
+            new sap.m.Label({
+                text: "Resto",
+                design: "Bold",
+                textAlign: "Center",
+                width: "100%"
+            }).addStyleClass("titleGrande"),
+            new sap.m.VBox({
+                renderType: "Bare",
+                width: "100%",
+                visible: "{ui>/showStickyParent}",
+                items: [
+                    new sap.m.Text({
+                        text: "{ui>/stickyHeaderData/parent/Resto}",
+                        wrapping: false,
+                        width: "100%",
+                        textAlign: "Center"
+                    })
+                ]
+            }).addStyleClass("parentHeaderBox"),
+            new sap.m.HBox({
+                renderType: "Bare",
+                alignContent: "Start",
+                items: [
+                    new sap.m.Text({
+                        text: "{ui>/stickyHeaderData/child/Resto}",
+                        textAlign: "Center",
+                        wrapping: false,
+                        visible: "{ui>/showStickyChild}",
+                        width: "100%"
+                    }).addStyleClass("secondStickyText")
+                ]
+            }).addStyleClass("parentHeader")
+        ]
+    }).addStyleClass("fullWidthHeader");
+
+    const oRestoTemplate = new sap.m.HBox({
+        renderType: "Bare",
+        width: "100%",
+        alignItems: "Center",
+        visible: "{= ${" + this.tableModelName + ">cabecera} !== true }",
+        items: [
+            new sap.m.Text({
+                width: "100%",
+                textAlign: "Center",
+                wrapping: false,
+                text: "{" + this.tableModelName + ">Resto}",
+                visible: "{= ${" + this.tableModelName + ">expandible} === false || ${" + this.tableModelName + ">isGroup} === true }"
+            }),
+            new sap.m.Input({
+                width: "100%",
+                textAlign: "Center",
+                 editable: "{= ${" + this.tableModelName + ">expandible} !== false && !${" + this.tableModelName + ">isGroup} }",
+                value: "{" + this.tableModelName + ">Resto}",
+                visible: "{= ${" + this.tableModelName + ">expandible} !== false && !${" + this.tableModelName + ">isGroup} }"
+            }).addStyleClass("customYearInput sapUiSizeCompact")
+        ]
+    }).addStyleClass("yearCell");
+
+    const oRestoCol = new sap.ui.table.Column({
+        width: "8rem",
+        minWidth: 60,
+        autoResizable: true,
+        hAlign: "Center",
+        label: oRestoLabel,
+        template: oRestoTemplate
+    });
+
+    oRestoCol.data("restoColumn", true);
+
+    oTable.addColumn(oRestoCol);
+
+    // ▲▲▲ FIN COLUMNA RESTO ▲▲▲
+
             // Se envía a la cola del procesador la función de reactivar la lógica interna del scroll y los grupos en la TreeTable.
             setTimeout(function () {
                 this.setupDynamicTreeTable();
