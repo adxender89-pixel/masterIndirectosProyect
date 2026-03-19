@@ -184,7 +184,7 @@ sap.ui.define([
                         }
 
                         // Se invoca la subrutina responsable de crear las columnas genéricas de los años (por defecto se configuran 3 columnas anuales), pasando el año base calculado.
-                        this.createYearColumns(iYear, 3, "TreeTableBasic", this.getView().getModel("corrientesModel"));
+                        this.createYearColumns(iYear, 2, "TreeTableBasic", this.getView().getModel("corrientesModel"));
 
                         // Se introduce un retraso programado para garantizar que la tabla ha completado el renderizado de las columnas anuales antes de proceder a la expansión de los meses.
                         setTimeout(function () {
@@ -231,7 +231,8 @@ sap.ui.define([
                 }.bind(this)
             });
 
-            const iActualYear = new Date().getFullYear();
+            const sFreal = this.getGlobalModel("dashboardModel").getProperty("/NavMasterLt/0/Freal");
+            const iActualYear = sFreal ? new Date(sFreal).getFullYear() : new Date().getFullYear();
             const aSelectYears = [];
             for (let i = 0; i < 10; i++) {
                 aSelectYears.push({ year: iActualYear + i });
@@ -313,7 +314,7 @@ sap.ui.define([
                     ParentPath: oParentData.PhPspnr,
                     padre: false,
                     isGroup: false,
-                    isNew: true, 
+                    isNew: true,
                     children: [],
                     flag1: false,
                     flag2: false,

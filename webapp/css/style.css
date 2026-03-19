@@ -42,9 +42,14 @@
     height: 1rem !important; 
     line-height: 1rem !important;
     font-size: 0.57rem !important;
-    padding: 0.20rem 1rem 0 0 !important; /* Simplificado top, right, bottom, left */
+    padding: 0 0 0 0 !important; /* Simplificado top, right, bottom, left */
     margin-left: -1rem;
     box-sizing: border-box;
+}
+.sapUiSizeCompact .noLabelOverride .sapMLabel {
+    height: unset !important;
+    line-height: unset !important;
+    font-size: unset !important;
 }
 
 .sapUiSizeCompact .sapMInputBaseContentWrapper {
