@@ -30,7 +30,8 @@ sap.ui.define([
                     kpi: dashBoardData.NavKpisIndirectos.results,
                     resumen: dashBoardData.NavResumenIndirectos.results,
                     decimales: dashBoardData.EvDecimales,
-                    NavMasterLt: dashBoardData.NavMasterLt.results
+                    NavMasterLt: dashBoardData.NavMasterLt.results,
+                    NavLsObra: dashBoardData.NavLsObra.results,
                 });
 
                 this.setGlobalModel(dashboardModel, "dashboardModel");
@@ -117,7 +118,8 @@ sap.ui.define([
                     NavMensajes: [],
                     NavKpisIndirectos: [],
                     NavResumenIndirectos: [],
-                    NavMasterLt: []
+                    NavMasterLt: [],
+                    NavLsObra: []
                 }, {
                     headers: {
                         ambito: this.getGlobalModel("appData").getData().userData.initialNode,

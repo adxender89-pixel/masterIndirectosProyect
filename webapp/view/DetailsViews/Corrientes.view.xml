@@ -115,7 +115,6 @@
                                     visibleRowCount="{viewModel>/dynamicRowCount}"
                                     filter="onTreeTableFilter"
                                     width="100%"
-                                   
                                 >
                                     <t:extension>
                                         <OverflowToolbar height="100%">
@@ -123,7 +122,6 @@
                                             <Button
                                                 id="btnVariantSelector"
                                                 text="{variantModel>/displayLabel}"
-                                                
                                                 iconFirst="false"
                                                 type="Transparent"
                                                 press="onOpenVariantPopover"
@@ -179,6 +177,7 @@
                                                 select="onAjustesCheckBox"
                                             />
                                             <Select
+                                                items="{yearsModel>/years}"
                                                 selectedKey="{yearsModel>/selectedYear}"
                                                 forceSelection="true"
                                                 width="100px"
@@ -307,7 +306,7 @@
                                                     <Input
                                                         width="100%"
                                                         textAlign="Center"
-                                                       editable="{= ${corrientesModel>isNew} === true }"
+                                                        editable="{= ${corrientesModel>isNew} === true }"
                                                         value="{corrientesModel>PhPspnr}"
                                                         showValueHelp="true"
                                                         class="flatCellInput yearCell"
@@ -396,7 +395,7 @@
                                                     <Input
                                                         width="100%"
                                                         value="{corrientesModel>Post1}"
-                                                       editable="{= ${corrientesModel>isNew} === true }"
+                                                        editable="{= ${corrientesModel>isNew} === true }"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                     />
@@ -485,7 +484,7 @@
                                                     <Input
                                                         width="100%"
                                                         textAlign="Center"
-                                                         editable="false"
+                                                        editable="false"
                                                         value="{corrientesModel>AmoEje}"
                                                         class="flatCellInput"
                                                     />
@@ -573,7 +572,7 @@
                                                     </Button>
                                                     <Input
                                                         value="{corrientesModel>AmoEjeAjus}"
-                                                       editable="false"
+                                                        editable="false"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                         width="100%"
@@ -662,7 +661,7 @@
                                                     </Button>
                                                     <Input
                                                         value="{corrientesModel>AmoEjeReal}"
-                                                       editable="true"
+                                                        editable="true"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                         width="100%"
@@ -1045,7 +1044,7 @@
                                                     </Button>
                                                     <Input
                                                         value="{corrientesModel>PenPlan}"
-                                                     editable="false"
+                                                        editable="false"
                                                         class="flatCellInput"
                                                         width="100%"
                                                         textAlign="Center"
