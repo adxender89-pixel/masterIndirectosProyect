@@ -101,6 +101,7 @@
                             >
                                 <t:TreeTable
                                     id="TreeTableBasic"
+                                    columnResize="onColumnResize"
                                     rows="{
                                         path: 'corrientesModel>/',
                                         parameters: {
@@ -117,18 +118,15 @@
                                 >
                                     <t:extension>
                                         <OverflowToolbar height="100%">
-                                            <ComboBox
-                                                width="180px"
-                                                class="sapUiSizeCompact"
-                                                selectionChange="onOperacionChange"
-                                                showClearIcon="true"
-                                                items="{operacionesModel>/items}"
-                                            >
-                                                <core:Item
-                                                    key="{operacionesModel>key}"
-                                                    text="{operacionesModel>text}"
-                                                />
-                                            </ComboBox>
+                                            <!-- Se sustituye el ComboBox de operacion por el selector de variantes de la tabla. -->
+                                            <Button
+                                                id="btnVariantSelector"
+                                                text="{variantModel>/displayLabel}"
+                                                iconFirst="false"
+                                                type="Transparent"
+                                                press="onOpenVariantPopover"
+                                            />
+                                            <ToolbarSeparator />
                                             <Button
                                                 width="8%"
                                                 text="{i18n>TBorigen}"
@@ -179,6 +177,7 @@
                                                 select="onAjustesCheckBox"
                                             />
                                             <Select
+                                                items="{yearsModel>/years}"
                                                 selectedKey="{yearsModel>/selectedYear}"
                                                 forceSelection="true"
                                                 width="100px"
@@ -307,7 +306,7 @@
                                                     <Input
                                                         width="100%"
                                                         textAlign="Center"
-                                                       editable="{= ${corrientesModel>isNew} === true }"
+                                                        editable="{= ${corrientesModel>isNew} === true }"
                                                         value="{corrientesModel>PhPspnr}"
                                                         showValueHelp="true"
                                                         class="flatCellInput yearCell"
@@ -320,7 +319,6 @@
                                             hAlign="Center"
                                             label="name"
                                             filterProperty="Post1"
-
                                         >
                                             <t:label>
                                                 <VBox
@@ -397,7 +395,7 @@
                                                     <Input
                                                         width="100%"
                                                         value="{corrientesModel>Post1}"
-                                                       editable="{= ${corrientesModel>isNew} === true }"
+                                                        editable="{= ${corrientesModel>isNew} === true }"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                     />
@@ -410,7 +408,6 @@
                                             hAlign="Center"
                                             label="name"
                                             filterProperty="AmoEje"
-
                                         >
                                             <t:label>
                                                 <VBox
@@ -487,7 +484,7 @@
                                                     <Input
                                                         width="100%"
                                                         textAlign="Center"
-                                                         editable="false"
+                                                        editable="false"
                                                         value="{corrientesModel>AmoEje}"
                                                         class="flatCellInput"
                                                     />
@@ -500,7 +497,6 @@
                                             width="90px"
                                             hAlign="Center"
                                             filterProperty="operacion"
-
                                         >
                                             <t:label>
                                                 <VBox
@@ -576,7 +572,7 @@
                                                     </Button>
                                                     <Input
                                                         value="{corrientesModel>AmoEjeAjus}"
-                                                       editable="false"
+                                                        editable="false"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                         width="100%"
@@ -590,7 +586,6 @@
                                             width="90px"
                                             hAlign="Center"
                                             filterProperty="destino"
-
                                         >
                                             <t:label>
                                                 <VBox
@@ -666,7 +661,7 @@
                                                     </Button>
                                                     <Input
                                                         value="{corrientesModel>AmoEjeReal}"
-                                                       editable="true"
+                                                        editable="true"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                         width="100%"
@@ -679,8 +674,7 @@
                                             width="90px"
                                             hAlign="Center"
                                             label="name"
-                                           filterProperty="AmoPen"
-
+                                            filterProperty="AmoPen"
                                         >
                                             <t:label>
                                                 <VBox
@@ -770,7 +764,6 @@
                                             hAlign="Center"
                                             label="Name"
                                             filterProperty="AmoTot"
-
                                         >
                                             <t:label>
                                                 <VBox
@@ -861,7 +854,6 @@
                                             hAlign="Center"
                                             label="Name"
                                             filterProperty="Tipo"
-
                                         >
                                             <t:label>
                                                 <VBox
@@ -974,7 +966,6 @@
                                             hAlign="Center"
                                             label="Name"
                                             filterProperty="PenPlan"
-
                                         >
                                             <t:label>
                                                 <VBox
@@ -1036,7 +1027,6 @@
                                                     alignContent="Center"
                                                     renderType="Bare"
                                                     class="borderRightPend"
-
                                                 >
                                                     <Button
                                                         icon="sap-icon://filter"
@@ -1054,7 +1044,7 @@
                                                     </Button>
                                                     <Input
                                                         value="{corrientesModel>PenPlan}"
-                                                     editable="false"
+                                                        editable="false"
                                                         class="flatCellInput"
                                                         width="100%"
                                                         textAlign="Center"
