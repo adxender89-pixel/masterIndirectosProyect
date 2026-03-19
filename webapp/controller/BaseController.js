@@ -1473,294 +1473,300 @@ onEjecutadoCheckBoxSelect: function (oEvent) {
         /**
          * Se maneja la navegación direccional con las teclas de flecha entre los campos de entrada de la tabla.
          */
-        _onInputKeyDown: function (oEvent) {
-            const oInput = oEvent.srcControl;
-            const iKeyCode = oEvent.keyCode;
+   _onInputKeyDown: function (oEvent) {
+    const oInput = oEvent.srcControl;
+    const iKeyCode = oEvent.keyCode;
 
-            // Se definen constantes booleanas para identificar claramente qué flecha fue presionada.
-            const bDown = iKeyCode === 40;
-            const bUp = iKeyCode === 38;
-            const bRight = iKeyCode === 39;
-            const bLeft = iKeyCode === 37;
+    // Se definen constantes booleanas para identificar claramente qué flecha fue presionada.
+    const bDown = iKeyCode === 40;
+    const bUp = iKeyCode === 38;
+    const bRight = iKeyCode === 39;
+    const bLeft = iKeyCode === 37;
 
-            // Si la tecla pulsada no es una flecha de navegación, se ignora el evento y se permite el comportamiento por defecto.
-            if (!bDown && !bUp && !bRight && !bLeft) return;
+    // Si la tecla pulsada no es una flecha de navegación, se ignora el evento y se permite el comportamiento por defecto.
+    if (!bDown && !bUp && !bRight && !bLeft) return;
 
-            // Se recupera la referencia del DOM (HTML nativo) del Input para leer su valor exacto antes de que el framework lo procese.
-            const oDomRef = oInput.getFocusDomRef();
-            if (!oDomRef) return;
+    // Se recupera la referencia del DOM (HTML nativo) del Input para leer su valor exacto antes de que el framework lo procese.
+    const oDomRef = oInput.getFocusDomRef();
+    if (!oDomRef) return;
 
-            // Si se navega horizontalmente, se previene el salto nativo del cursor de texto para que podamos cambiar de celda en su lugar.
-            if (bLeft || bRight) {
-                oEvent.preventDefault();
+    // Si se navega horizontalmente, se previene el salto nativo del cursor de texto para que podamos cambiar de celda en su lugar.
+    if (bLeft || bRight) oEvent.preventDefault();
+
+    // Se sincroniza el valor del DOM con el control SAPUI5 para evitar la pérdida de datos introducidos parcialmente antes de cambiar de celda.
+    const sCurrentDomValue = oDomRef.value;
+    oInput.setValue(sCurrentDomValue);
+    if (oInput.updateModelProperty) oInput.updateModelProperty(sCurrentDomValue);
+
+    // Se detiene la propagación del evento para que no interfiera con otras funcionalidades nativas del navegador.
+    oEvent.preventDefault();
+    oEvent.stopImmediatePropagation();
+
+    const oTable = this.getControlTable();
+    if (!oTable) return;
+
+    const oBinding = oTable.getBinding("rows");
+    if (!oBinding) return;
+
+    // Se navega hacia arriba en la jerarquía de controles de UI5 buscando el padre que sea estrictamente una fila.
+    let oParent = oInput.getParent();
+    while (oParent && !oParent.isA("sap.ui.table.Row")) {
+        oParent = oParent.getParent();
+    }
+
+    // Si no se logra ubicar la fila, se cancela la operación.
+    if (!oParent) return;
+
+    // Se obtiene el índice actual de la fila y el contexto de datos vinculado a ella mediante el modelo nombrado.
+    const iCurrentRowIndex = oParent.getIndex();
+    const oCurrentContext = oParent.getBindingContext("corrientesModel");
+    if (!oCurrentContext) return;
+
+    // Se recorren las celdas de la fila actual para averiguar en qué índice de columna se encuentra el Input enfocado.
+    const aCells = oParent.getCells();
+    let iTargetColIndex = -1;
+    for (let i = 0; i < aCells.length; i++) {
+        // Se utiliza una búsqueda recursiva para confirmar si la celda iterada contiene el Input enfocado.
+        if (this._cellContainsInput(aCells[i], oInput)) {
+            iTargetColIndex = i;
+            break;
+        }
+    }
+    if (iTargetColIndex === -1) return;
+
+    // ── LÓGICA DE NAVEGACIÓN HORIZONTAL (DERECHA / IZQUIERDA) ─────────────────────────────
+    if (bLeft || bRight) {
+        // Se traduce el índice absoluto de fila a índice relativo a la vista actual para acceder al elemento renderizado.
+        const iFirstVisible = oTable.getFirstVisibleRow();
+        const iVisibleRowIndex = iCurrentRowIndex - iFirstVisible;
+
+        // Se valida que la fila calculada sea visible en el viewport actual.
+        if (iVisibleRowIndex < 0 || iVisibleRowIndex >= oTable.getRows().length) {
+            setTimeout(function () { oInput.focus(); if (oInput.select) oInput.select(); }, 10);
+            return;
+        }
+
+        const oRow = oTable.getRows()[iVisibleRowIndex];
+        if (!oRow) {
+            setTimeout(function () { oInput.focus(); if (oInput.select) oInput.select(); }, 10);
+            return;
+        }
+
+        // Se inicializa el índice de búsqueda horizontal y la referencia al input destino.
+        let iNewColIndex = iTargetColIndex;
+        let oTargetInput = null;
+        const iTotalCols = oTable.getColumns().length;
+
+        // Se itera en la dirección indicada saltando celdas sin input o con inputs no editables.
+        while (true) {
+            iNewColIndex = bRight ? iNewColIndex + 1 : iNewColIndex - 1;
+
+            // Si se alcanza el límite lateral de la tabla, se mantiene el foco en el input actual.
+            if (iNewColIndex < 0 || iNewColIndex >= iTotalCols) {
+                setTimeout(function () { oInput.focus(); if (oInput.select) oInput.select(); }, 10);
+                return;
             }
 
-            // Se sincroniza el valor del DOM con el control SAPUI5 para evitar la pérdida de datos introducidos parcialmente antes de cambiar de celda.
-            const sCurrentDomValue = oDomRef.value;
-            oInput.setValue(sCurrentDomValue);
-            if (oInput.updateModelProperty) {
-                oInput.updateModelProperty(sCurrentDomValue);
+            const oCell = oRow.getCells()[iNewColIndex];
+            if (!oCell) continue;
+
+            // Se busca cualquier input visible en la celda ignorando la restricción de editable para detectar su existencia.
+            const oCandidato = this._recursiveGetInput(oCell, true);
+            if (!oCandidato) continue; // La celda no contiene ningún input, se continúa la búsqueda.
+
+            // Si el input existe y es editable, se establece como destino y se detiene la búsqueda.
+            if (oCandidato.getEditable()) {
+                oTargetInput = oCandidato;
+                break;
             }
+            // Si el input existe pero no es editable, se salta y se continúa en la misma dirección.
+        }
 
-            // Se detiene la propagación del evento para que no interfiera con otras funcionalidades nativas del navegador.
-            oEvent.preventDefault();
-            oEvent.stopImmediatePropagation();
+        // Se transfiere el foco al input destino encontrado o se devuelve al original si no se halló ninguno.
+        if (oTargetInput) {
+            setTimeout(function () {
+                oTargetInput.focus();
+                if (oTargetInput.select) oTargetInput.select();
+            }, 10);
+        } else {
+            setTimeout(function () { oInput.focus(); if (oInput.select) oInput.select(); }, 10);
+        }
+        return;
+    }
 
-            const oTable = this.getControlTable();
-            if (!oTable) return;
+    // ── LÓGICA DE NAVEGACIÓN VERTICAL (ARRIBA / ABAJO) ────────────────────────────────────
+    let iTargetRowIndex = null;
+    let sTargetPath = null;
+    let iSearchIndex = iCurrentRowIndex;
+    let iSearchSteps = 0;
 
-            const oBinding = oTable.getBinding("rows");
-            if (!oBinding) return;
+    // Se busca de forma iterativa la próxima fila válida saltando nodos padre y celdas no editables.
+    while (true) {
+        // Se incrementa o decrementa el índice lógico en base a la dirección de la flecha.
+        iSearchIndex = bDown ? iSearchIndex + 1 : iSearchIndex - 1;
+        iSearchSteps++;
 
-            // Se navega hacia arriba en la jerarquía de controles de UI5 buscando el padre que sea estrictamente una "Fila" (Row).
-            let oParent = oInput.getParent();
-            while (oParent && !oParent.isA("sap.ui.table.Row")) {
-                oParent = oParent.getParent();
+        // Si se alcanza el límite superior o inferior absoluto de la tabla, se cancela el movimiento.
+        if (iSearchIndex < 0 || iSearchIndex >= oBinding.getLength()) {
+            setTimeout(function () { oInput.focus(); if (oInput.select) oInput.select(); }, 10);
+            return;
+        }
+
+        // Se evita un posible bucle infinito limitando la búsqueda a doscientas iteraciones.
+        if (iSearchSteps > 200) {
+            setTimeout(function () { oInput.focus(); if (oInput.select) oInput.select(); }, 10);
+            return;
+        }
+
+        // Se extrae el contexto de la nueva fila candidata.
+        const oCtx = oTable.getContextByIndex(iSearchIndex);
+        if (!oCtx) continue;
+
+        const oData = oCtx.getObject();
+        if (!oData) continue;
+
+        // Se descartan los nodos raíz marcados como padre ya que no contienen inputs editables.
+        if (oData.padre === true) continue;
+
+        // Se verifica si la fila candidata es visible en el viewport actual para poder inspeccionar su input.
+        const iFirstVisCheck = oTable.getFirstVisibleRow();
+        const iVisIdxCheck = iSearchIndex - iFirstVisCheck;
+
+        if (iVisIdxCheck >= 0 && iVisIdxCheck < oTable.getRows().length) {
+            // La fila es visible en pantalla, se inspecciona directamente si su celda contiene un input editable.
+            const oRowCheck = oTable.getRows()[iVisIdxCheck];
+            if (oRowCheck) {
+                const oCellCheck = oRowCheck.getCells()[iTargetColIndex];
+                // Se busca cualquier input visible ignorando editable para detectar su existencia.
+                const oInputCheck = this._recursiveGetInput(oCellCheck, true);
+                // Si no hay input o no es editable, se salta esta fila y se continúa la búsqueda.
+                if (!oInputCheck || !oInputCheck.getEditable()) continue;
             }
+        }
+        // Si la fila no es visible aún porque requiere scroll, se acepta directamente como destino
+        // ya que no es posible inspeccionar inputs de filas no renderizadas en el DOM.
 
-            // Si no se logra ubicar la fila, se cancela la operación.
-            if (!oParent) return;
+        // Se fija el índice y la ruta de la fila destino y se detiene la búsqueda.
+        iTargetRowIndex = iSearchIndex;
+        sTargetPath = oCtx.getPath();
+        break;
+    }
 
-            // Se obtiene el índice actual de la fila y el contexto de datos vinculado a ella.
-            const iCurrentRowIndex = oParent.getIndex();
-            const oCurrentContext = oParent.getBindingContext();
-            if (!oCurrentContext) return;
+    // ── LÓGICA DE SCROLL AUTOMÁTICO ───────────────────────────────────────────────────────
+    const iFirstVisible = oTable.getFirstVisibleRow();
+    const iVisibleCount = oTable.getVisibleRowCount();
+    const iLastVisible = iFirstVisible + iVisibleCount - 1;
 
-            // Se recorren las celdas de la fila actual para averiguar en qué índice de columna estamos posicionados.
-            const aCells = oParent.getCells();
-            let iTargetColIndex = -1;
+    let bNeedsScroll = false;
+    let iNewFirstVisible = iFirstVisible;
 
-            for (let i = 0; i < aCells.length; i++) {
-                // Se utiliza una búsqueda recursiva para confirmar si la celda iterada es la que contiene el Input enfocado.
-                if (this._cellContainsInput(aCells[i], oInput)) {
-                    iTargetColIndex = i;
+    // Se determina si la fila de destino se encuentra por debajo de la zona visible.
+    if (iTargetRowIndex > iLastVisible) {
+        // Se ajusta la posición de inicio para que la fila objetivo aparezca al final de la pantalla.
+        iNewFirstVisible = iTargetRowIndex - iVisibleCount + 1;
+        bNeedsScroll = true;
+    }
+    // Se determina si la fila de destino se encuentra por encima de la zona visible.
+    else if (iTargetRowIndex < iFirstVisible) {
+        // Se ajusta la posición de inicio para que la fila objetivo aparezca en la parte superior.
+        iNewFirstVisible = iTargetRowIndex;
+        bNeedsScroll = true;
+    }
+
+    // ── ASIGNACIÓN DE FOCO CON SCROLL ─────────────────────────────────────────────────────
+    if (bNeedsScroll) {
+        const that = this;
+        let bFocused = false;
+
+        // Se define una función de cierre que ejecutará el enfoque una vez que la tabla termine de desplazarse.
+        const fnFocus = function () {
+            // Se utiliza una bandera para evitar que el evento rowsUpdated dispare el enfoque múltiples veces.
+            if (bFocused) return;
+            bFocused = true;
+
+            const aRows = oTable.getRows();
+            let oTargetRow = null;
+
+            // Se escanean las filas recién dibujadas buscando aquella cuyo contexto coincida con la ruta de destino.
+            for (let i = 0; i < aRows.length; i++) {
+                const oRowContext = aRows[i].getBindingContext("corrientesModel");
+                if (oRowContext && oRowContext.getPath() === sTargetPath) {
+                    oTargetRow = aRows[i];
                     break;
                 }
             }
 
-            if (iTargetColIndex === -1) return;
-
-            // LÓGICA DE NAVEGACIÓN HORIZONTAL (DERECHA / IZQUIERDA)
-            if (bLeft || bRight) {
-                // Se calcula el nuevo índice de columna sumando o restando 1 según la dirección.
-                const iNewColIndex = bRight ? iTargetColIndex + 1 : iTargetColIndex - 1;
-
-                // Si el movimiento excede los límites laterales de la tabla, se cancela y se retorna el foco al Input original.
-                if (iNewColIndex < 0 || iNewColIndex >= oTable.getColumns().length) {
-                    setTimeout(function () {
-                        oInput.focus();
-                        if (oInput.select) oInput.select();
-                    }, 10);
-                    return;
-                }
-
-                // Se traduce el índice absoluto de fila a índice relativo a la vista actual (para acceder al elemento renderizado).
-                const iFirstVisible = oTable.getFirstVisibleRow();
-                const iVisibleRowIndex = iCurrentRowIndex - iFirstVisible;
-
-                // Validación de seguridad por si la fila calculada no es visible.
-                if (iVisibleRowIndex < 0 || iVisibleRowIndex >= oTable.getRows().length) {
-                    setTimeout(function () {
-                        oInput.focus();
-                        if (oInput.select) oInput.select();
-                    }, 10);
-                    return;
-                }
-
-                const oRow = oTable.getRows()[iVisibleRowIndex];
-                if (!oRow) {
-                    setTimeout(function () {
-                        oInput.focus();
-                        if (oInput.select) oInput.select();
-                    }, 10);
-                    return;
-                }
-
-                // Se localiza la celda de destino y se extrae su Input interno.
-                const oCell = oRow.getCells()[iNewColIndex];
-                const oTargetInput = this._recursiveGetInput(oCell);
-
-                // Si se encuentra un Input de destino que sea visible y editable, se le asigna el foco.
-                if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
-                    setTimeout(function () {
-                        oTargetInput.focus();
-                        if (oTargetInput.select) {
-                            oTargetInput.select();
-                        }
-                    }, 10);
-                } else {
-                    // Si la celda de destino no tiene Input operable (ej: es un campo bloqueado), se devuelve el foco al original.
-                    setTimeout(function () {
-                        oInput.focus();
-                        if (oInput.select) oInput.select();
-                    }, 10);
-                }
+            // Si no se encuentra la fila tras el scroll, se devuelve el foco a la posición inicial como salvaguarda.
+            if (!oTargetRow) {
+                oInput.focus();
+                if (oInput.select) oInput.select();
                 return;
             }
 
-            // LÓGICA DE NAVEGACIÓN VERTICAL (ARRIBA / ABAJO)
-            let iTargetRowIndex = null;
-            let sTargetPath = null;
-            let iSearchIndex = iCurrentRowIndex;
-            let iSearchSteps = 0;
+            // Se ubica el input dentro de la celda pertinente y se le transfiere el foco.
+            const oCell = oTargetRow.getCells()[iTargetColIndex];
+            const oTargetInput = that._recursiveGetInput(oCell);
 
-            // Se busca de forma iterativa la próxima fila válida saltando las filas vacías, no editables o agrupadores fijos.
-            while (true) {
-                // Se incrementa o decrementa el índice lógico en base a la dirección de la flecha.
-                iSearchIndex = bDown ? iSearchIndex + 1 : iSearchIndex - 1;
-                iSearchSteps++;
-
-                // Si se alcanza el límite superior o inferior absoluto de la tabla, se cancela el movimiento.
-                if (iSearchIndex < 0 || iSearchIndex >= oBinding.getLength()) {
-                    setTimeout(function () {
-                        oInput.focus();
-                        if (oInput.select) oInput.select();
-                    }, 10);
-                    return;
-                }
-
-                // Cortafuegos: Se evita un posible bucle infinito limitando la búsqueda a 100 filas de salto.
-                if (iSearchSteps > 100) {
-                    setTimeout(function () {
-                        oInput.focus();
-                        if (oInput.select) oInput.select();
-                    }, 10);
-                    return;
-                }
-
-                // Se extrae el contexto de la nueva fila candidata.
-                const oCtx = oTable.getContextByIndex(iSearchIndex);
-                if (!oCtx) continue;
-
-                const oData = oCtx.getObject();
-                if (!oData) continue;
-
-                // Se descartan deliberadamente las filas destinadas a agrupar datos (cabeceras) o que carezcan de nombre/contenido.
-                if (oData.name === "Agrupador" || oData.name === "" || oData.name === undefined) {
-                    continue;
-                }
-
-                // Si supera todas las exclusiones, se fija como el índice de destino y se guarda su ruta.
-                iTargetRowIndex = iSearchIndex;
-                sTargetPath = oCtx.getPath();
-                break;
-            }
-
-            // LÓGICA DE SCROLL AUTOMÁTICO (AUTOSCROLL)
-            const iFirstVisible = oTable.getFirstVisibleRow();
-            const iVisibleCount = oTable.getVisibleRowCount();
-            const iLastVisible = iFirstVisible + iVisibleCount - 1;
-
-            let bNeedsScroll = false;
-            let iNewFirstVisible = iFirstVisible;
-
-            // Se determina si la fila de destino se encuentra por debajo de la zona visible.
-            if (iTargetRowIndex > iLastVisible) {
-                // Se ajusta la posición de inicio para que la fila objetivo aparezca exactamente al final de la pantalla.
-                iNewFirstVisible = iTargetRowIndex - iVisibleCount + 1;
-                bNeedsScroll = true;
-            }
-            // Se determina si la fila de destino se encuentra por encima de la zona visible.
-            else if (iTargetRowIndex < iFirstVisible) {
-                // Se ajusta la posición de inicio para que la fila objetivo aparezca exactamente en la parte superior.
-                iNewFirstVisible = iTargetRowIndex;
-                bNeedsScroll = true;
-            }
-
-            // Lógica asíncrona de asignación de foco, contemplando si hubo desplazamiento o no.
-            if (bNeedsScroll) {
-                const that = this;
-                let bFocused = false;
-
-                // Se define una función de cierre (closure) que ejecutará el enfoque una vez que la tabla termine de hacer scroll.
-                const fnFocus = function () {
-                    // Se utiliza una bandera para evitar que el evento 'rowsUpdated' dispare el enfoque múltiples veces.
-                    if (bFocused) return;
-                    bFocused = true;
-
-                    const aRows = oTable.getRows();
-                    let oTargetRow = null;
-
-                    // Se escanean las filas recién dibujadas buscando aquella cuyo contexto coincida con la ruta de destino.
-                    for (let i = 0; i < aRows.length; i++) {
-                        const oRowContext = aRows[i].getBindingContext();
-                        if (oRowContext && oRowContext.getPath() === sTargetPath) {
-                            oTargetRow = aRows[i];
-                            break;
-                        }
-                    }
-
-                    // Si no se encuentra tras el scroll, se devuelve el foco a la posición inicial como salvaguarda.
-                    if (!oTargetRow) {
-                        oInput.focus();
-                        if (oInput.select) oInput.select();
-                        return;
-                    }
-
-                    // Se ubica el input dentro de la celda pertinente y se le transfiere el foco.
-                    const oCell = oTargetRow.getCells()[iTargetColIndex];
-                    const oTargetInput = that._recursiveGetInput(oCell);
-
-                    if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
-                        oTargetInput.focus();
-                        if (oTargetInput.select) {
-                            oTargetInput.select();
-                        }
-                    } else {
-                        oInput.focus();
-                        if (oInput.select) oInput.select();
-                    }
-                };
-
-                // Se ata el evento para ejecutar el enfoque en el mismo instante en que la tabla comunica que terminó de pintar el desplazamiento.
-                oTable.attachEventOnce("rowsUpdated", function () {
-                    setTimeout(fnFocus, 50);
-                });
-
-                // Se instruye físicamente a la tabla para que se mueva a la nueva fila inicial calculada.
-                oTable.setFirstVisibleRow(iNewFirstVisible);
-
-                // Se establece un temporizador de respaldo en caso de que el evento 'rowsUpdated' falle o se pierda.
-                setTimeout(fnFocus, 300);
-
+            if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
+                oTargetInput.focus();
+                if (oTargetInput.select) oTargetInput.select();
             } else {
-                // Si la fila de destino ya estaba visible (no necesitó scroll), se le asigna el foco de manera directa e inmediata.
-                setTimeout(function () {
-                    const aRows = oTable.getRows();
-                    let oTargetRow = null;
-
-                    // Se busca la fila objetivo por su ruta de binding.
-                    for (let i = 0; i < aRows.length; i++) {
-                        const oRowContext = aRows[i].getBindingContext();
-                        if (oRowContext && oRowContext.getPath() === sTargetPath) {
-                            oTargetRow = aRows[i];
-                            break;
-                        }
-                    }
-
-                    // Fallback de seguridad.
-                    if (!oTargetRow) {
-                        oInput.focus();
-                        if (oInput.select) oInput.select();
-                        return;
-                    }
-
-                    // Extracción del input y transferencia del foco.
-                    const oCell = oTargetRow.getCells()[iTargetColIndex];
-                    const oTargetInput = this._recursiveGetInput(oCell);
-
-                    if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
-                        oTargetInput.focus();
-                        if (oTargetInput.select) {
-                            oTargetInput.select();
-                        }
-                    } else {
-                        oInput.focus();
-                        if (oInput.select) oInput.select();
-                    }
-                }.bind(this), 10);
+                oInput.focus();
+                if (oInput.select) oInput.select();
             }
-        },
+        };
+
+        // Se ata el evento para ejecutar el enfoque en el momento en que la tabla comunica que terminó de renderizar el desplazamiento.
+        oTable.attachEventOnce("rowsUpdated", function () {
+            setTimeout(fnFocus, 50);
+        });
+
+        // Se instruye físicamente a la tabla para que se mueva a la nueva fila inicial calculada.
+        oTable.setFirstVisibleRow(iNewFirstVisible);
+
+        // Se establece un temporizador de respaldo en caso de que el evento rowsUpdated falle o se pierda.
+        setTimeout(fnFocus, 300);
+
+    } else {
+        // ── ASIGNACIÓN DE FOCO SIN SCROLL ─────────────────────────────────────────────────
+        // Se capturan las variables necesarias en el ámbito del closure para evitar pérdidas de referencia.
+        const sPath = sTargetPath;
+        const iColIdx = iTargetColIndex;
+
+        setTimeout(function () {
+            const aRows = oTable.getRows();
+            let oTargetRow = null;
+
+            // Se busca la fila objetivo por su ruta de binding utilizando el nombre del modelo correcto.
+            for (let i = 0; i < aRows.length; i++) {
+                const oRowContext = aRows[i].getBindingContext("corrientesModel");
+                if (oRowContext && oRowContext.getPath() === sPath) {
+                    oTargetRow = aRows[i];
+                    break;
+                }
+            }
+
+            // Se devuelve el foco al input original si no se localiza la fila destino.
+            if (!oTargetRow) {
+                oInput.focus();
+                if (oInput.select) oInput.select();
+                return;
+            }
+
+            // Se extrae el input de la celda destino y se le transfiere el foco.
+            const oCell = oTargetRow.getCells()[iColIdx];
+            const oTargetInput = this._recursiveGetInput(oCell);
+
+            if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
+                oTargetInput.focus();
+                if (oTargetInput.select) oTargetInput.select();
+            } else {
+                oInput.focus();
+                if (oInput.select) oInput.select();
+            }
+        }.bind(this), 10);
+    }
+},
 
         /**
          * Se verifica recursivamente si un contenedor (celda u otro layout) contiene un determinado campo de entrada.
