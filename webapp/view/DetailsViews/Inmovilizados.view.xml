@@ -7,6 +7,7 @@
     xmlns="sap.m"
     xmlns:t="sap.ui.table"
     xmlns:uxap="sap.uxap"
+    xmlns:vn="masterindirectos.control"
 >
     <uxap:ObjectPageLayout
         id="objectPageInmovilizados"
@@ -493,12 +494,21 @@
                                                             />
                                                         </customData>
                                                     </Button>
-                                                    <Input
+                                                     <vn:DecimalesInput
                                                         width="4.2rem"
+                                                        decimalNumbers="{dashboardModel>/decimales}"
                                                         textAlign="Center"
                                                         editable="{= ${isGroup} !== true}"
-                                                        value="{inmovilizadosModel>AmoEje}"
+                                                        value="{
+                                                            parts: [
+                                                                'inmovilizadosModel>AmoEje',
+                                                                'dashboardModel>/decimales',
+                                                                'appData>/userData/CurrencyFormat'
+                                                            ],
+                                                            formatter: '.formatter.formatDecimales'
+                                                        }"
                                                         class="flatCellInput"
+
                                                     />
                                                 </HBox>
                                             </t:template>
@@ -560,12 +570,21 @@
                                                             />
                                                         </customData>
                                                     </Button>
-                                                    <Input
-                                                        value="{inmovilizadosModel>AmoPen}"
-                                                        width="100%"
-                                                        editable="{= ${isGroup} !== true}"
-                                                        class="flatCellInput"
+                                                  <vn:DecimalesInput
+                                                        width="4.2rem"
+                                                        decimalNumbers="{dashboardModel>/decimales}"
                                                         textAlign="Center"
+                                                        editable="{= ${isGroup} !== true}"
+                                                        value="{
+                                                            parts: [
+                                                                'inmovilizadosModel>AmoPen',
+                                                                'dashboardModel>/decimales',
+                                                                'appData>/userData/CurrencyFormat'
+                                                            ],
+                                                            formatter: '.formatter.formatDecimales'
+                                                        }"
+                                                        class="flatCellInput"
+
                                                     />
                                                 </HBox>
                                             </t:template>
@@ -628,12 +647,21 @@
                                                             />
                                                         </customData>
                                                     </Button>
-                                                    <Input
-                                                        value="{inmovilizadosModel>AmoTot}"
-                                                        width="100%"
-                                                        editable="{= ${isGroup} !== true}"
-                                                        class="flatCellInput"
+                                                <vn:DecimalesInput
+                                                        width="4.2rem"
+                                                        decimalNumbers="{dashboardModel>/decimales}"
                                                         textAlign="Center"
+                                                        editable="{= ${isGroup} !== true}"
+                                                        value="{
+                                                            parts: [
+                                                                'inmovilizadosModel>AmoTot',
+                                                                'dashboardModel>/decimales',
+                                                                'appData>/userData/CurrencyFormat'
+                                                            ],
+                                                            formatter: '.formatter.formatDecimales'
+                                                        }"
+                                                        class="flatCellInput"
+
                                                     />
                                                 </HBox>
                                             </t:template>

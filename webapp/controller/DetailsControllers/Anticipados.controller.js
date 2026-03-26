@@ -4,18 +4,22 @@ sap.ui.define([
     "sap/m/Input",
     "sap/m/Button",
     "sap/m/Label",
-    "masterindirectos/controller/BaseController"
+    "masterindirectos/controller/BaseController",
+    "masterindirectos/model/formatter"
 ], function (
     JSONModel,
     Column,
     Input,
     Button,
     Label,
-    BaseController
+    BaseController,
+     formatter
 ) {
     "use strict";
 
     return BaseController.extend("masterindirectos.controller.DetailsControllers.Anticipados", {
+        
+        formatter: formatter,
 
         /**
          * Inicializa la vista de Diferidos definiendo el estado de navegación y visibilidad.

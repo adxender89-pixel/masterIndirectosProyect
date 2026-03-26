@@ -498,92 +498,92 @@ sap.ui.define([
 
             }.bind(this));
 
-                // ▼▼▼ AÑADIR AQUÍ LA COLUMNA "RESTO" ▼▼▼
-    
-    // Se elimina la columna Resto previa si existía para evitar duplicados
-    const aExistingCols = oTable.getColumns();
-    for (let i = aExistingCols.length - 1; i >= 0; i--) {
-        if (aExistingCols[i].data("restoColumn") === true) {
-            oTable.removeColumn(aExistingCols[i]);
-        }
-    }
+            // ▼▼▼ AÑADIR AQUÍ LA COLUMNA "RESTO" ▼▼▼
 
-    const oRestoLabel = new sap.m.VBox({
-        width: "100%",
-        renderType: "Bare",
-        items: [
-            new sap.m.Label({
-                text: "Resto",
-                design: "Bold",
-                textAlign: "Center",
-                width: "100%"
-            }).addStyleClass("titleGrande"),
-            new sap.m.VBox({
+            // Se elimina la columna Resto previa si existía para evitar duplicados
+            const aExistingCols = oTable.getColumns();
+            for (let i = aExistingCols.length - 1; i >= 0; i--) {
+                if (aExistingCols[i].data("restoColumn") === true) {
+                    oTable.removeColumn(aExistingCols[i]);
+                }
+            }
+
+            const oRestoLabel = new sap.m.VBox({
+                width: "100%",
+                renderType: "Bare",
+                items: [
+                    new sap.m.Label({
+                        text: "Resto",
+                        design: "Bold",
+                        textAlign: "Center",
+                        width: "100%"
+                    }).addStyleClass("titleGrande"),
+                    new sap.m.VBox({
+                        renderType: "Bare",
+                        width: "100%",
+                        visible: "{ui>/showStickyParent}",
+                        items: [
+                            new sap.m.Text({
+                                text: "{ui>/stickyHeaderData/parent/Resto}",
+                                wrapping: false,
+                                width: "100%",
+                                textAlign: "Center"
+                            })
+                        ]
+                    }).addStyleClass("parentHeaderBox"),
+                    new sap.m.HBox({
+                        renderType: "Bare",
+                        alignContent: "Start",
+                        items: [
+                            new sap.m.Text({
+                                text: "{ui>/stickyHeaderData/child/Resto}",
+                                textAlign: "Center",
+                                wrapping: false,
+                                visible: "{ui>/showStickyChild}",
+                                width: "100%"
+                            }).addStyleClass("secondStickyText")
+                        ]
+                    }).addStyleClass("parentHeader")
+                ]
+            }).addStyleClass("fullWidthHeader");
+
+            const oRestoTemplate = new sap.m.HBox({
                 renderType: "Bare",
                 width: "100%",
-                visible: "{ui>/showStickyParent}",
+                alignItems: "Center",
+                visible: "{= ${" + this.tableModelName + ">cabecera} !== true }",
                 items: [
                     new sap.m.Text({
-                        text: "{ui>/stickyHeaderData/parent/Resto}",
-                        wrapping: false,
                         width: "100%",
-                        textAlign: "Center"
-                    })
-                ]
-            }).addStyleClass("parentHeaderBox"),
-            new sap.m.HBox({
-                renderType: "Bare",
-                alignContent: "Start",
-                items: [
-                    new sap.m.Text({
-                        text: "{ui>/stickyHeaderData/child/Resto}",
                         textAlign: "Center",
                         wrapping: false,
-                        visible: "{ui>/showStickyChild}",
-                        width: "100%"
-                    }).addStyleClass("secondStickyText")
+                        text: "{" + this.tableModelName + ">Resto}",
+                        visible: "{= ${" + this.tableModelName + ">expandible} === false || ${" + this.tableModelName + ">isGroup} === true }"
+                    }),
+                    new sap.m.Input({
+                        width: "100%",
+                        textAlign: "Center",
+                        editable: "{= ${" + this.tableModelName + ">expandible} !== false && !${" + this.tableModelName + ">isGroup} }",
+                        value: "{" + this.tableModelName + ">Resto}",
+                        visible: "{= ${" + this.tableModelName + ">expandible} !== false && !${" + this.tableModelName + ">isGroup} }"
+                    }).addStyleClass("customYearInput sapUiSizeCompact")
                 ]
-            }).addStyleClass("parentHeader")
-        ]
-    }).addStyleClass("fullWidthHeader");
+            }).addStyleClass("yearCell");
 
-    const oRestoTemplate = new sap.m.HBox({
-        renderType: "Bare",
-        width: "100%",
-        alignItems: "Center",
-        visible: "{= ${" + this.tableModelName + ">cabecera} !== true }",
-        items: [
-            new sap.m.Text({
-                width: "100%",
-                textAlign: "Center",
-                wrapping: false,
-                text: "{" + this.tableModelName + ">Resto}",
-                visible: "{= ${" + this.tableModelName + ">expandible} === false || ${" + this.tableModelName + ">isGroup} === true }"
-            }),
-            new sap.m.Input({
-                width: "100%",
-                textAlign: "Center",
-                 editable: "{= ${" + this.tableModelName + ">expandible} !== false && !${" + this.tableModelName + ">isGroup} }",
-                value: "{" + this.tableModelName + ">Resto}",
-                visible: "{= ${" + this.tableModelName + ">expandible} !== false && !${" + this.tableModelName + ">isGroup} }"
-            }).addStyleClass("customYearInput sapUiSizeCompact")
-        ]
-    }).addStyleClass("yearCell");
+            const oRestoCol = new sap.ui.table.Column({
+                width: "8rem",
+                minWidth: 60,
+                autoResizable: true,
+                hAlign: "Center",
+                label: oRestoLabel,
+                template: oRestoTemplate
+            });
 
-    const oRestoCol = new sap.ui.table.Column({
-        width: "8rem",
-        minWidth: 60,
-        autoResizable: true,
-        hAlign: "Center",
-        label: oRestoLabel,
-        template: oRestoTemplate
-    });
+            oRestoCol.data("restoColumn", true);
 
-    oRestoCol.data("restoColumn", true);
+            oTable.addColumn(oRestoCol);
 
-    oTable.addColumn(oRestoCol);
-
-    // ▲▲▲ FIN COLUMNA RESTO ▲▲▲
+            // ▲▲▲ FIN COLUMNA RESTO ▲▲▲
 
             // Se envía a la cola del procesador la función de reactivar la lógica interna del scroll y los grupos en la TreeTable.
             setTimeout(function () {
@@ -595,72 +595,154 @@ sap.ui.define([
         /**
          * Se reajusta toda la estructura de columnas cuando el usuario selecciona un año diferente en el control desplegable (Select).
          */
+        /* onYearChange: function (oEvent) {
+             // Se recupera la instancia del selector desplegable.
+             const oSelect = oEvent.getSource();
+             // Se toman los elementos de la lista desplegable.
+             const aItems = oSelect.getItems();
+             // Se parsea a número entero el año elegido por el usuario.
+             const sSelectedYear = parseInt(oEvent.getParameter("selectedItem").getKey(), 10);
+             // Se determina cuál es el año máximo cargado en las opciones para evitar desbordes.
+             const iMaxYearInSelect = parseInt(aItems[aItems.length - 1].getKey(), 10);
+ 
+             // Se establece el límite estricto de columnas anuales visibles de forma simultánea.
+             const iNumColumns = 2;
+             // Se calcula qué año de inicio renderizar asegurando que siempre se muestren las columnas necesarias (incluso si se elige el final del rango).
+             const iYearToPass = Math.min(sSelectedYear, iMaxYearInSelect - (iNumColumns - 1));
+             const oTable = this.getControlTable();
+             // Se verifica si al momento del cambio, un mes estaba expandido.
+             const bWasYearOpen = !!this._openedYear;
+             const bShowEjecutado = this._bEjecutadoSelected || false;
+ 
+             // Si hay un nivel de detalle mensual abierto, se procede a desmantelarlo temporalmente.
+             if (this._openedYear && oTable) {
+                 // Se buscan las columnas de meses y ejercicios pasados.
+                 const monthColsToRemove = oTable.getColumns().filter(function (c) {
+                     return c.data("dynamicMonth") || c.data("ejecutadosColumn");
+                 });
+                 // Se suprimen una a una de la tabla en el DOM.
+                 monthColsToRemove.forEach(function (c) { oTable.removeColumn(c); });
+ 
+                 // Se evalúa si es necesario reinserter la columna general de ejercicios consolidados.
+                 if (bShowEjecutado) {
+                     const iInsertIndex = oTable.getColumns().findIndex(function (c) {
+                         return c.data("dynamicYear") === true;
+                     });
+                     if (iInsertIndex !== -1) {
+                         oTable.insertColumn(
+                             this._buildEjecutadosColumn(false, new Date().getFullYear()),
+                             iInsertIndex
+                         );
+                     }
+                 }
+                 // Se libera la marca de año abierto.
+                 this._openedYear = null;
+             }
+ 
+             // Se realiza la llamada a la construcción masiva de años con el nuevo cálculo base.
+             this.createYearColumns(iYearToPass, iNumColumns);
+ 
+             // Si originalmente el año estaba desgajado en meses, se intenta replicar ese estado simulando el click del usuario en el nuevo año.
+             if (bWasYearOpen) {
+                 setTimeout(function () {
+                     // Se ubica la columna concreta del año objetivo basándose en el texto de su etiqueta.
+                     const oYearCol = oTable.getColumns().find(function (c) {
+                         const lab = c.getLabel();
+                         const txt = lab.getText ? lab.getText() : (lab.getItems ? lab.getItems()[0].getText() : "");
+                         return txt === String(sSelectedYear);
+                     });
+ 
+                     if (oYearCol) {
+                         // Se simula un objeto evento apuntando a la etiqueta del año para invocar el despliegue mensual de forma automatizada.
+                         const oButton = oYearCol.getLabel();
+                         this.onCreateMonthsTable({
+                             getSource: function () { return oButton; }
+                         });
+                     }
+                 }.bind(this), 100);
+             }
+         },*/
+        /**
+ * Se gestiona el cambio de año en el selector de ejercicio.
+ * Se actualizan las columnas visibles y se abren los meses del año seleccionado.
+ */
         onYearChange: function (oEvent) {
-            // Se recupera la instancia del selector desplegable.
-            const oSelect = oEvent.getSource();
-            // Se toman los elementos de la lista desplegable.
-            const aItems = oSelect.getItems();
-            // Se parsea a número entero el año elegido por el usuario.
-            const sSelectedYear = parseInt(oEvent.getParameter("selectedItem").getKey(), 10);
-            // Se determina cuál es el año máximo cargado en las opciones para evitar desbordes.
-            const iMaxYearInSelect = parseInt(aItems[aItems.length - 1].getKey(), 10);
+            var sSelectedYear = oEvent.getParameter("selectedItem").getKey();
+            var iSelectedYear = parseInt(sSelectedYear, 10);
+            var oTable = this.byId("TreeTableBasic");
 
-            // Se establece el límite estricto de columnas anuales visibles de forma simultánea.
-            const iNumColumns = 2;
-            // Se calcula qué año de inicio renderizar asegurando que siempre se muestren las columnas necesarias (incluso si se elige el final del rango).
-            const iYearToPass = Math.min(sSelectedYear, iMaxYearInSelect - (iNumColumns - 1));
-            const oTable = this.getControlTable();
-            // Se verifica si al momento del cambio, un mes estaba expandido.
-            const bWasYearOpen = !!this._openedYear;
-            const bShowEjecutado = this._bEjecutadoSelected || false;
+            if (!oTable) return;
 
-            // Si hay un nivel de detalle mensual abierto, se procede a desmantelarlo temporalmente.
-            if (this._openedYear && oTable) {
-                // Se buscan las columnas de meses y ejercicios pasados.
-                const monthColsToRemove = oTable.getColumns().filter(function (c) {
-                    return c.data("dynamicMonth") || c.data("ejecutadosColumn");
-                });
-                // Se suprimen una a una de la tabla en el DOM.
-                monthColsToRemove.forEach(function (c) { oTable.removeColumn(c); });
+            // Se actualizan las columnas visibles según el año seleccionado.
+            this._showYearColumns(iSelectedYear);
 
-                // Se evalúa si es necesario reinserter la columna general de ejercicios consolidados.
-                if (bShowEjecutado) {
-                    const iInsertIndex = oTable.getColumns().findIndex(function (c) {
-                        return c.data("dynamicYear") === true;
-                    });
-                    if (iInsertIndex !== -1) {
-                        oTable.insertColumn(
-                            this._buildEjecutadosColumn(false, new Date().getFullYear()),
-                            iInsertIndex
-                        );
-                    }
+            // Se busca la columna dinámica del año seleccionado para obtener su subFijo.
+            var oYearCol = oTable.getColumns().find(function (oCol) {
+                return oCol.data("dynamicYear") === true &&
+                    parseInt(oCol.data("year"), 10) === iSelectedYear &&
+                    !oCol.data("ejecutadosColumn");
+            });
+
+            if (!oYearCol) {
+                console.warn("[onYearChange] No se encontró columna dinámica para el año:", iSelectedYear);
+                return;
+            }
+
+            var sSubFijo = oYearCol.data("subFijoYear");
+            var sYearVal = oYearCol.data("year");
+
+            console.log("[onYearChange] Abriendo meses para el año:", sYearVal);
+
+            // Se abren los meses del año seleccionado reutilizando el método existente.
+            this.onCreateMonthsTable({
+                getSource: function () {
+                    return {
+                        getMetadata: function () {
+                            return { getName: function () { return "sap.m.Button"; } };
+                        },
+                        getText: function () { return String(sYearVal); },
+                        data: function (sKey) {
+                            if (sKey === "subFijoYear") return sSubFijo;
+                            if (sKey === "year") return String(sYearVal);
+                            return null;
+                        }
+                    };
                 }
-                // Se libera la marca de año abierto.
-                this._openedYear = null;
+            });
+        },
+        /**
+         * Se muestran únicamente las dos columnas dinámicas correspondientes a la ventana
+         * del año seleccionado. Si el año seleccionado es el último del rango, se muestran
+         * el penúltimo y el último año juntos. En caso contrario, se muestran el año
+         * seleccionado y el inmediatamente siguiente.
+         */
+        _showYearColumns: function (iSelectedYear) {
+            var oTable = this.byId("TreeTableBasic");
+            if (!oTable) return;
+
+            var iYearEnd = this._iYearEnd || iSelectedYear;
+
+            // Se determina la ventana de dos columnas a mostrar según el año seleccionado.
+            var iYearLeft, iYearRight;
+            if (iSelectedYear >= iYearEnd) {
+                // Se está en el último año: se muestran el penúltimo y el último.
+                iYearLeft = iYearEnd - 1;
+                iYearRight = iYearEnd;
+            } else {
+                // Se muestran el año seleccionado y el siguiente.
+                iYearLeft = iSelectedYear;
+                iYearRight = iSelectedYear + 1;
             }
 
-            // Se realiza la llamada a la construcción masiva de años con el nuevo cálculo base.
-            this.createYearColumns(iYearToPass, iNumColumns);
+            console.log("[_showYearColumns] Mostrando columnas:", iYearLeft, "y", iYearRight);
 
-            // Si originalmente el año estaba desgajado en meses, se intenta replicar ese estado simulando el click del usuario en el nuevo año.
-            if (bWasYearOpen) {
-                setTimeout(function () {
-                    // Se ubica la columna concreta del año objetivo basándose en el texto de su etiqueta.
-                    const oYearCol = oTable.getColumns().find(function (c) {
-                        const lab = c.getLabel();
-                        const txt = lab.getText ? lab.getText() : (lab.getItems ? lab.getItems()[0].getText() : "");
-                        return txt === String(sSelectedYear);
-                    });
+            oTable.getColumns().forEach(function (oCol) {
+                if (!oCol.data("dynamicYear")) return;
+                if (oCol.data("ejecutadosColumn") === true) return;
 
-                    if (oYearCol) {
-                        // Se simula un objeto evento apuntando a la etiqueta del año para invocar el despliegue mensual de forma automatizada.
-                        const oButton = oYearCol.getLabel();
-                        this.onCreateMonthsTable({
-                            getSource: function () { return oButton; }
-                        });
-                    }
-                }.bind(this), 100);
-            }
+                var iColYear = parseInt(oCol.data("year"), 10);
+                oCol.setVisible(iColYear === iYearLeft || iColYear === iYearRight);
+            });
         },
 
         /**
@@ -1610,300 +1692,300 @@ sap.ui.define([
         /**
          * Se maneja la navegación direccional con las teclas de flecha entre los campos de entrada de la tabla.
          */
-   _onInputKeyDown: function (oEvent) {
-    const oInput = oEvent.srcControl;
-    const iKeyCode = oEvent.keyCode;
+        _onInputKeyDown: function (oEvent) {
+            const oInput = oEvent.srcControl;
+            const iKeyCode = oEvent.keyCode;
 
-    // Se definen constantes booleanas para identificar claramente qué flecha fue presionada.
-    const bDown = iKeyCode === 40;
-    const bUp = iKeyCode === 38;
-    const bRight = iKeyCode === 39;
-    const bLeft = iKeyCode === 37;
+            // Se definen constantes booleanas para identificar claramente qué flecha fue presionada.
+            const bDown = iKeyCode === 40;
+            const bUp = iKeyCode === 38;
+            const bRight = iKeyCode === 39;
+            const bLeft = iKeyCode === 37;
 
-    // Si la tecla pulsada no es una flecha de navegación, se ignora el evento y se permite el comportamiento por defecto.
-    if (!bDown && !bUp && !bRight && !bLeft) return;
+            // Si la tecla pulsada no es una flecha de navegación, se ignora el evento y se permite el comportamiento por defecto.
+            if (!bDown && !bUp && !bRight && !bLeft) return;
 
-    // Se recupera la referencia del DOM (HTML nativo) del Input para leer su valor exacto antes de que el framework lo procese.
-    const oDomRef = oInput.getFocusDomRef();
-    if (!oDomRef) return;
+            // Se recupera la referencia del DOM (HTML nativo) del Input para leer su valor exacto antes de que el framework lo procese.
+            const oDomRef = oInput.getFocusDomRef();
+            if (!oDomRef) return;
 
-    // Si se navega horizontalmente, se previene el salto nativo del cursor de texto para que podamos cambiar de celda en su lugar.
-    if (bLeft || bRight) oEvent.preventDefault();
+            // Si se navega horizontalmente, se previene el salto nativo del cursor de texto para que podamos cambiar de celda en su lugar.
+            if (bLeft || bRight) oEvent.preventDefault();
 
-    // Se sincroniza el valor del DOM con el control SAPUI5 para evitar la pérdida de datos introducidos parcialmente antes de cambiar de celda.
-    const sCurrentDomValue = oDomRef.value;
-    oInput.setValue(sCurrentDomValue);
-    if (oInput.updateModelProperty) oInput.updateModelProperty(sCurrentDomValue);
+            // Se sincroniza el valor del DOM con el control SAPUI5 para evitar la pérdida de datos introducidos parcialmente antes de cambiar de celda.
+            const sCurrentDomValue = oDomRef.value;
+            oInput.setValue(sCurrentDomValue);
+            if (oInput.updateModelProperty) oInput.updateModelProperty(sCurrentDomValue);
 
-    // Se detiene la propagación del evento para que no interfiera con otras funcionalidades nativas del navegador.
-    oEvent.preventDefault();
-    oEvent.stopImmediatePropagation();
+            // Se detiene la propagación del evento para que no interfiera con otras funcionalidades nativas del navegador.
+            oEvent.preventDefault();
+            oEvent.stopImmediatePropagation();
 
-    const oTable = this.getControlTable();
-    if (!oTable) return;
+            const oTable = this.getControlTable();
+            if (!oTable) return;
 
-    const oBinding = oTable.getBinding("rows");
-    if (!oBinding) return;
+            const oBinding = oTable.getBinding("rows");
+            if (!oBinding) return;
 
-    // Se navega hacia arriba en la jerarquía de controles de UI5 buscando el padre que sea estrictamente una fila.
-    let oParent = oInput.getParent();
-    while (oParent && !oParent.isA("sap.ui.table.Row")) {
-        oParent = oParent.getParent();
-    }
+            // Se navega hacia arriba en la jerarquía de controles de UI5 buscando el padre que sea estrictamente una fila.
+            let oParent = oInput.getParent();
+            while (oParent && !oParent.isA("sap.ui.table.Row")) {
+                oParent = oParent.getParent();
+            }
 
-    // Si no se logra ubicar la fila, se cancela la operación.
-    if (!oParent) return;
+            // Si no se logra ubicar la fila, se cancela la operación.
+            if (!oParent) return;
 
-    // Se obtiene el índice actual de la fila y el contexto de datos vinculado a ella mediante el modelo nombrado.
-    const iCurrentRowIndex = oParent.getIndex();
-    const oCurrentContext = oParent.getBindingContext("corrientesModel");
-    if (!oCurrentContext) return;
+            // Se obtiene el índice actual de la fila y el contexto de datos vinculado a ella mediante el modelo nombrado.
+            const iCurrentRowIndex = oParent.getIndex();
+            const oCurrentContext = oParent.getBindingContext("corrientesModel");
+            if (!oCurrentContext) return;
 
-    // Se recorren las celdas de la fila actual para averiguar en qué índice de columna se encuentra el Input enfocado.
-    const aCells = oParent.getCells();
-    let iTargetColIndex = -1;
-    for (let i = 0; i < aCells.length; i++) {
-        // Se utiliza una búsqueda recursiva para confirmar si la celda iterada contiene el Input enfocado.
-        if (this._cellContainsInput(aCells[i], oInput)) {
-            iTargetColIndex = i;
-            break;
-        }
-    }
-    if (iTargetColIndex === -1) return;
+            // Se recorren las celdas de la fila actual para averiguar en qué índice de columna se encuentra el Input enfocado.
+            const aCells = oParent.getCells();
+            let iTargetColIndex = -1;
+            for (let i = 0; i < aCells.length; i++) {
+                // Se utiliza una búsqueda recursiva para confirmar si la celda iterada contiene el Input enfocado.
+                if (this._cellContainsInput(aCells[i], oInput)) {
+                    iTargetColIndex = i;
+                    break;
+                }
+            }
+            if (iTargetColIndex === -1) return;
 
-    // ── LÓGICA DE NAVEGACIÓN HORIZONTAL (DERECHA / IZQUIERDA) ─────────────────────────────
-    if (bLeft || bRight) {
-        // Se traduce el índice absoluto de fila a índice relativo a la vista actual para acceder al elemento renderizado.
-        const iFirstVisible = oTable.getFirstVisibleRow();
-        const iVisibleRowIndex = iCurrentRowIndex - iFirstVisible;
+            // ── LÓGICA DE NAVEGACIÓN HORIZONTAL (DERECHA / IZQUIERDA) ─────────────────────────────
+            if (bLeft || bRight) {
+                // Se traduce el índice absoluto de fila a índice relativo a la vista actual para acceder al elemento renderizado.
+                const iFirstVisible = oTable.getFirstVisibleRow();
+                const iVisibleRowIndex = iCurrentRowIndex - iFirstVisible;
 
-        // Se valida que la fila calculada sea visible en el viewport actual.
-        if (iVisibleRowIndex < 0 || iVisibleRowIndex >= oTable.getRows().length) {
-            setTimeout(function () { oInput.focus(); if (oInput.select) oInput.select(); }, 10);
-            return;
-        }
+                // Se valida que la fila calculada sea visible en el viewport actual.
+                if (iVisibleRowIndex < 0 || iVisibleRowIndex >= oTable.getRows().length) {
+                    setTimeout(function () { oInput.focus(); if (oInput.select) oInput.select(); }, 10);
+                    return;
+                }
 
-        const oRow = oTable.getRows()[iVisibleRowIndex];
-        if (!oRow) {
-            setTimeout(function () { oInput.focus(); if (oInput.select) oInput.select(); }, 10);
-            return;
-        }
+                const oRow = oTable.getRows()[iVisibleRowIndex];
+                if (!oRow) {
+                    setTimeout(function () { oInput.focus(); if (oInput.select) oInput.select(); }, 10);
+                    return;
+                }
 
-        // Se inicializa el índice de búsqueda horizontal y la referencia al input destino.
-        let iNewColIndex = iTargetColIndex;
-        let oTargetInput = null;
-        const iTotalCols = oTable.getColumns().length;
+                // Se inicializa el índice de búsqueda horizontal y la referencia al input destino.
+                let iNewColIndex = iTargetColIndex;
+                let oTargetInput = null;
+                const iTotalCols = oTable.getColumns().length;
 
-        // Se itera en la dirección indicada saltando celdas sin input o con inputs no editables.
-        while (true) {
-            iNewColIndex = bRight ? iNewColIndex + 1 : iNewColIndex - 1;
+                // Se itera en la dirección indicada saltando celdas sin input o con inputs no editables.
+                while (true) {
+                    iNewColIndex = bRight ? iNewColIndex + 1 : iNewColIndex - 1;
 
-            // Si se alcanza el límite lateral de la tabla, se mantiene el foco en el input actual.
-            if (iNewColIndex < 0 || iNewColIndex >= iTotalCols) {
-                setTimeout(function () { oInput.focus(); if (oInput.select) oInput.select(); }, 10);
+                    // Si se alcanza el límite lateral de la tabla, se mantiene el foco en el input actual.
+                    if (iNewColIndex < 0 || iNewColIndex >= iTotalCols) {
+                        setTimeout(function () { oInput.focus(); if (oInput.select) oInput.select(); }, 10);
+                        return;
+                    }
+
+                    const oCell = oRow.getCells()[iNewColIndex];
+                    if (!oCell) continue;
+
+                    // Se busca cualquier input visible en la celda ignorando la restricción de editable para detectar su existencia.
+                    const oCandidato = this._recursiveGetInput(oCell, true);
+                    if (!oCandidato) continue; // La celda no contiene ningún input, se continúa la búsqueda.
+
+                    // Si el input existe y es editable, se establece como destino y se detiene la búsqueda.
+                    if (oCandidato.getEditable()) {
+                        oTargetInput = oCandidato;
+                        break;
+                    }
+                    // Si el input existe pero no es editable, se salta y se continúa en la misma dirección.
+                }
+
+                // Se transfiere el foco al input destino encontrado o se devuelve al original si no se halló ninguno.
+                if (oTargetInput) {
+                    setTimeout(function () {
+                        oTargetInput.focus();
+                        if (oTargetInput.select) oTargetInput.select();
+                    }, 10);
+                } else {
+                    setTimeout(function () { oInput.focus(); if (oInput.select) oInput.select(); }, 10);
+                }
                 return;
             }
 
-            const oCell = oRow.getCells()[iNewColIndex];
-            if (!oCell) continue;
+            // ── LÓGICA DE NAVEGACIÓN VERTICAL (ARRIBA / ABAJO) ────────────────────────────────────
+            let iTargetRowIndex = null;
+            let sTargetPath = null;
+            let iSearchIndex = iCurrentRowIndex;
+            let iSearchSteps = 0;
 
-            // Se busca cualquier input visible en la celda ignorando la restricción de editable para detectar su existencia.
-            const oCandidato = this._recursiveGetInput(oCell, true);
-            if (!oCandidato) continue; // La celda no contiene ningún input, se continúa la búsqueda.
+            // Se busca de forma iterativa la próxima fila válida saltando nodos padre y celdas no editables.
+            while (true) {
+                // Se incrementa o decrementa el índice lógico en base a la dirección de la flecha.
+                iSearchIndex = bDown ? iSearchIndex + 1 : iSearchIndex - 1;
+                iSearchSteps++;
 
-            // Si el input existe y es editable, se establece como destino y se detiene la búsqueda.
-            if (oCandidato.getEditable()) {
-                oTargetInput = oCandidato;
+                // Si se alcanza el límite superior o inferior absoluto de la tabla, se cancela el movimiento.
+                if (iSearchIndex < 0 || iSearchIndex >= oBinding.getLength()) {
+                    setTimeout(function () { oInput.focus(); if (oInput.select) oInput.select(); }, 10);
+                    return;
+                }
+
+                // Se evita un posible bucle infinito limitando la búsqueda a doscientas iteraciones.
+                if (iSearchSteps > 200) {
+                    setTimeout(function () { oInput.focus(); if (oInput.select) oInput.select(); }, 10);
+                    return;
+                }
+
+                // Se extrae el contexto de la nueva fila candidata.
+                const oCtx = oTable.getContextByIndex(iSearchIndex);
+                if (!oCtx) continue;
+
+                const oData = oCtx.getObject();
+                if (!oData) continue;
+
+                // Se descartan los nodos raíz marcados como padre ya que no contienen inputs editables.
+                if (oData.padre === true) continue;
+
+                // Se verifica si la fila candidata es visible en el viewport actual para poder inspeccionar su input.
+                const iFirstVisCheck = oTable.getFirstVisibleRow();
+                const iVisIdxCheck = iSearchIndex - iFirstVisCheck;
+
+                if (iVisIdxCheck >= 0 && iVisIdxCheck < oTable.getRows().length) {
+                    // La fila es visible en pantalla, se inspecciona directamente si su celda contiene un input editable.
+                    const oRowCheck = oTable.getRows()[iVisIdxCheck];
+                    if (oRowCheck) {
+                        const oCellCheck = oRowCheck.getCells()[iTargetColIndex];
+                        // Se busca cualquier input visible ignorando editable para detectar su existencia.
+                        const oInputCheck = this._recursiveGetInput(oCellCheck, true);
+                        // Si no hay input o no es editable, se salta esta fila y se continúa la búsqueda.
+                        if (!oInputCheck || !oInputCheck.getEditable()) continue;
+                    }
+                }
+                // Si la fila no es visible aún porque requiere scroll, se acepta directamente como destino
+                // ya que no es posible inspeccionar inputs de filas no renderizadas en el DOM.
+
+                // Se fija el índice y la ruta de la fila destino y se detiene la búsqueda.
+                iTargetRowIndex = iSearchIndex;
+                sTargetPath = oCtx.getPath();
                 break;
             }
-            // Si el input existe pero no es editable, se salta y se continúa en la misma dirección.
-        }
 
-        // Se transfiere el foco al input destino encontrado o se devuelve al original si no se halló ninguno.
-        if (oTargetInput) {
-            setTimeout(function () {
-                oTargetInput.focus();
-                if (oTargetInput.select) oTargetInput.select();
-            }, 10);
-        } else {
-            setTimeout(function () { oInput.focus(); if (oInput.select) oInput.select(); }, 10);
-        }
-        return;
-    }
+            // ── LÓGICA DE SCROLL AUTOMÁTICO ───────────────────────────────────────────────────────
+            const iFirstVisible = oTable.getFirstVisibleRow();
+            const iVisibleCount = oTable.getVisibleRowCount();
+            const iLastVisible = iFirstVisible + iVisibleCount - 1;
 
-    // ── LÓGICA DE NAVEGACIÓN VERTICAL (ARRIBA / ABAJO) ────────────────────────────────────
-    let iTargetRowIndex = null;
-    let sTargetPath = null;
-    let iSearchIndex = iCurrentRowIndex;
-    let iSearchSteps = 0;
+            let bNeedsScroll = false;
+            let iNewFirstVisible = iFirstVisible;
 
-    // Se busca de forma iterativa la próxima fila válida saltando nodos padre y celdas no editables.
-    while (true) {
-        // Se incrementa o decrementa el índice lógico en base a la dirección de la flecha.
-        iSearchIndex = bDown ? iSearchIndex + 1 : iSearchIndex - 1;
-        iSearchSteps++;
-
-        // Si se alcanza el límite superior o inferior absoluto de la tabla, se cancela el movimiento.
-        if (iSearchIndex < 0 || iSearchIndex >= oBinding.getLength()) {
-            setTimeout(function () { oInput.focus(); if (oInput.select) oInput.select(); }, 10);
-            return;
-        }
-
-        // Se evita un posible bucle infinito limitando la búsqueda a doscientas iteraciones.
-        if (iSearchSteps > 200) {
-            setTimeout(function () { oInput.focus(); if (oInput.select) oInput.select(); }, 10);
-            return;
-        }
-
-        // Se extrae el contexto de la nueva fila candidata.
-        const oCtx = oTable.getContextByIndex(iSearchIndex);
-        if (!oCtx) continue;
-
-        const oData = oCtx.getObject();
-        if (!oData) continue;
-
-        // Se descartan los nodos raíz marcados como padre ya que no contienen inputs editables.
-        if (oData.padre === true) continue;
-
-        // Se verifica si la fila candidata es visible en el viewport actual para poder inspeccionar su input.
-        const iFirstVisCheck = oTable.getFirstVisibleRow();
-        const iVisIdxCheck = iSearchIndex - iFirstVisCheck;
-
-        if (iVisIdxCheck >= 0 && iVisIdxCheck < oTable.getRows().length) {
-            // La fila es visible en pantalla, se inspecciona directamente si su celda contiene un input editable.
-            const oRowCheck = oTable.getRows()[iVisIdxCheck];
-            if (oRowCheck) {
-                const oCellCheck = oRowCheck.getCells()[iTargetColIndex];
-                // Se busca cualquier input visible ignorando editable para detectar su existencia.
-                const oInputCheck = this._recursiveGetInput(oCellCheck, true);
-                // Si no hay input o no es editable, se salta esta fila y se continúa la búsqueda.
-                if (!oInputCheck || !oInputCheck.getEditable()) continue;
+            // Se determina si la fila de destino se encuentra por debajo de la zona visible.
+            if (iTargetRowIndex > iLastVisible) {
+                // Se ajusta la posición de inicio para que la fila objetivo aparezca al final de la pantalla.
+                iNewFirstVisible = iTargetRowIndex - iVisibleCount + 1;
+                bNeedsScroll = true;
             }
-        }
-        // Si la fila no es visible aún porque requiere scroll, se acepta directamente como destino
-        // ya que no es posible inspeccionar inputs de filas no renderizadas en el DOM.
-
-        // Se fija el índice y la ruta de la fila destino y se detiene la búsqueda.
-        iTargetRowIndex = iSearchIndex;
-        sTargetPath = oCtx.getPath();
-        break;
-    }
-
-    // ── LÓGICA DE SCROLL AUTOMÁTICO ───────────────────────────────────────────────────────
-    const iFirstVisible = oTable.getFirstVisibleRow();
-    const iVisibleCount = oTable.getVisibleRowCount();
-    const iLastVisible = iFirstVisible + iVisibleCount - 1;
-
-    let bNeedsScroll = false;
-    let iNewFirstVisible = iFirstVisible;
-
-    // Se determina si la fila de destino se encuentra por debajo de la zona visible.
-    if (iTargetRowIndex > iLastVisible) {
-        // Se ajusta la posición de inicio para que la fila objetivo aparezca al final de la pantalla.
-        iNewFirstVisible = iTargetRowIndex - iVisibleCount + 1;
-        bNeedsScroll = true;
-    }
-    // Se determina si la fila de destino se encuentra por encima de la zona visible.
-    else if (iTargetRowIndex < iFirstVisible) {
-        // Se ajusta la posición de inicio para que la fila objetivo aparezca en la parte superior.
-        iNewFirstVisible = iTargetRowIndex;
-        bNeedsScroll = true;
-    }
-
-    // ── ASIGNACIÓN DE FOCO CON SCROLL ─────────────────────────────────────────────────────
-    if (bNeedsScroll) {
-        const that = this;
-        let bFocused = false;
-
-        // Se define una función de cierre que ejecutará el enfoque una vez que la tabla termine de desplazarse.
-        const fnFocus = function () {
-            // Se utiliza una bandera para evitar que el evento rowsUpdated dispare el enfoque múltiples veces.
-            if (bFocused) return;
-            bFocused = true;
-
-            const aRows = oTable.getRows();
-            let oTargetRow = null;
-
-            // Se escanean las filas recién dibujadas buscando aquella cuyo contexto coincida con la ruta de destino.
-            for (let i = 0; i < aRows.length; i++) {
-                const oRowContext = aRows[i].getBindingContext("corrientesModel");
-                if (oRowContext && oRowContext.getPath() === sTargetPath) {
-                    oTargetRow = aRows[i];
-                    break;
-                }
+            // Se determina si la fila de destino se encuentra por encima de la zona visible.
+            else if (iTargetRowIndex < iFirstVisible) {
+                // Se ajusta la posición de inicio para que la fila objetivo aparezca en la parte superior.
+                iNewFirstVisible = iTargetRowIndex;
+                bNeedsScroll = true;
             }
 
-            // Si no se encuentra la fila tras el scroll, se devuelve el foco a la posición inicial como salvaguarda.
-            if (!oTargetRow) {
-                oInput.focus();
-                if (oInput.select) oInput.select();
-                return;
-            }
+            // ── ASIGNACIÓN DE FOCO CON SCROLL ─────────────────────────────────────────────────────
+            if (bNeedsScroll) {
+                const that = this;
+                let bFocused = false;
 
-            // Se ubica el input dentro de la celda pertinente y se le transfiere el foco.
-            const oCell = oTargetRow.getCells()[iTargetColIndex];
-            const oTargetInput = that._recursiveGetInput(oCell);
+                // Se define una función de cierre que ejecutará el enfoque una vez que la tabla termine de desplazarse.
+                const fnFocus = function () {
+                    // Se utiliza una bandera para evitar que el evento rowsUpdated dispare el enfoque múltiples veces.
+                    if (bFocused) return;
+                    bFocused = true;
 
-            if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
-                oTargetInput.focus();
-                if (oTargetInput.select) oTargetInput.select();
+                    const aRows = oTable.getRows();
+                    let oTargetRow = null;
+
+                    // Se escanean las filas recién dibujadas buscando aquella cuyo contexto coincida con la ruta de destino.
+                    for (let i = 0; i < aRows.length; i++) {
+                        const oRowContext = aRows[i].getBindingContext("corrientesModel");
+                        if (oRowContext && oRowContext.getPath() === sTargetPath) {
+                            oTargetRow = aRows[i];
+                            break;
+                        }
+                    }
+
+                    // Si no se encuentra la fila tras el scroll, se devuelve el foco a la posición inicial como salvaguarda.
+                    if (!oTargetRow) {
+                        oInput.focus();
+                        if (oInput.select) oInput.select();
+                        return;
+                    }
+
+                    // Se ubica el input dentro de la celda pertinente y se le transfiere el foco.
+                    const oCell = oTargetRow.getCells()[iTargetColIndex];
+                    const oTargetInput = that._recursiveGetInput(oCell);
+
+                    if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
+                        oTargetInput.focus();
+                        if (oTargetInput.select) oTargetInput.select();
+                    } else {
+                        oInput.focus();
+                        if (oInput.select) oInput.select();
+                    }
+                };
+
+                // Se ata el evento para ejecutar el enfoque en el momento en que la tabla comunica que terminó de renderizar el desplazamiento.
+                oTable.attachEventOnce("rowsUpdated", function () {
+                    setTimeout(fnFocus, 50);
+                });
+
+                // Se instruye físicamente a la tabla para que se mueva a la nueva fila inicial calculada.
+                oTable.setFirstVisibleRow(iNewFirstVisible);
+
+                // Se establece un temporizador de respaldo en caso de que el evento rowsUpdated falle o se pierda.
+                setTimeout(fnFocus, 300);
+
             } else {
-                oInput.focus();
-                if (oInput.select) oInput.select();
+                // ── ASIGNACIÓN DE FOCO SIN SCROLL ─────────────────────────────────────────────────
+                // Se capturan las variables necesarias en el ámbito del closure para evitar pérdidas de referencia.
+                const sPath = sTargetPath;
+                const iColIdx = iTargetColIndex;
+
+                setTimeout(function () {
+                    const aRows = oTable.getRows();
+                    let oTargetRow = null;
+
+                    // Se busca la fila objetivo por su ruta de binding utilizando el nombre del modelo correcto.
+                    for (let i = 0; i < aRows.length; i++) {
+                        const oRowContext = aRows[i].getBindingContext("corrientesModel");
+                        if (oRowContext && oRowContext.getPath() === sPath) {
+                            oTargetRow = aRows[i];
+                            break;
+                        }
+                    }
+
+                    // Se devuelve el foco al input original si no se localiza la fila destino.
+                    if (!oTargetRow) {
+                        oInput.focus();
+                        if (oInput.select) oInput.select();
+                        return;
+                    }
+
+                    // Se extrae el input de la celda destino y se le transfiere el foco.
+                    const oCell = oTargetRow.getCells()[iColIdx];
+                    const oTargetInput = this._recursiveGetInput(oCell);
+
+                    if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
+                        oTargetInput.focus();
+                        if (oTargetInput.select) oTargetInput.select();
+                    } else {
+                        oInput.focus();
+                        if (oInput.select) oInput.select();
+                    }
+                }.bind(this), 10);
             }
-        };
-
-        // Se ata el evento para ejecutar el enfoque en el momento en que la tabla comunica que terminó de renderizar el desplazamiento.
-        oTable.attachEventOnce("rowsUpdated", function () {
-            setTimeout(fnFocus, 50);
-        });
-
-        // Se instruye físicamente a la tabla para que se mueva a la nueva fila inicial calculada.
-        oTable.setFirstVisibleRow(iNewFirstVisible);
-
-        // Se establece un temporizador de respaldo en caso de que el evento rowsUpdated falle o se pierda.
-        setTimeout(fnFocus, 300);
-
-    } else {
-        // ── ASIGNACIÓN DE FOCO SIN SCROLL ─────────────────────────────────────────────────
-        // Se capturan las variables necesarias en el ámbito del closure para evitar pérdidas de referencia.
-        const sPath = sTargetPath;
-        const iColIdx = iTargetColIndex;
-
-        setTimeout(function () {
-            const aRows = oTable.getRows();
-            let oTargetRow = null;
-
-            // Se busca la fila objetivo por su ruta de binding utilizando el nombre del modelo correcto.
-            for (let i = 0; i < aRows.length; i++) {
-                const oRowContext = aRows[i].getBindingContext("corrientesModel");
-                if (oRowContext && oRowContext.getPath() === sPath) {
-                    oTargetRow = aRows[i];
-                    break;
-                }
-            }
-
-            // Se devuelve el foco al input original si no se localiza la fila destino.
-            if (!oTargetRow) {
-                oInput.focus();
-                if (oInput.select) oInput.select();
-                return;
-            }
-
-            // Se extrae el input de la celda destino y se le transfiere el foco.
-            const oCell = oTargetRow.getCells()[iColIdx];
-            const oTargetInput = this._recursiveGetInput(oCell);
-
-            if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
-                oTargetInput.focus();
-                if (oTargetInput.select) oTargetInput.select();
-            } else {
-                oInput.focus();
-                if (oInput.select) oInput.select();
-            }
-        }.bind(this), 10);
-    }
-},
+        },
 
         /**
          * Se verifica recursivamente si un contenedor (celda u otro layout) contiene un determinado campo de entrada.
@@ -2486,168 +2568,168 @@ sap.ui.define([
          * Para actualizar visualmente idEjecutadoCheckBox2 se utiliza la retrollamada
          * _fnSetEjecutadoCheckBox inyectada por la Main view al cargar esta vista hija.
          */
-_applyVariantState: function (oState) {
-    if (!oState) return;
-    const oTable = this.getControlTable();
-    if (!oTable) return;
+        _applyVariantState: function (oState) {
+            if (!oState) return;
+            const oTable = this.getControlTable();
+            if (!oTable) return;
 
-    // Se restauran los anchos de las columnas dinámicas guardados en la variante.
-    if (oState.dynamicColWidths && typeof oState.dynamicColWidths === "object") {
-        this._savedColWidths = JSON.parse(JSON.stringify(oState.dynamicColWidths));
-    } else {
-        this._savedColWidths = {};
-    }
-
-    // CORRECCIÓN CLAVE: Se resetean SIEMPRE las columnas dinámicas a sus anchos
-    // predeterminados antes de aplicar los valores guardados de la variante.
-    // Sin este reset, las columnas conservan el ancho de la variante anterior
-    // aunque la nueva variante no tenga anchos guardados (ej: Estándar).
-    oTable.getColumns().forEach(function (oCol) {
-        if (oCol.data("dynamicYear") && !oCol.data("ejecutadosColumn")) {
-            oCol.setWidth("8rem");
-        } else if (oCol.data("ejecutadosColumn")) {
-            oCol.setWidth("130px");
-        }
-    }.bind(this));
-
-    // Sobre el reset anterior, se aplican los anchos específicos de la variante.
-    if (this._savedColWidths && typeof this._savedColWidths === "object") {
-        oTable.getColumns().forEach(function (oCol) {
-            if (!oCol.data("dynamicYear") && !oCol.data("ejecutadosColumn")) return;
-            const sKey = this._getColKey(oCol);
-            if (this._savedColWidths[sKey]) {
-                oCol.setWidth(this._savedColWidths[sKey]);
+            // Se restauran los anchos de las columnas dinámicas guardados en la variante.
+            if (oState.dynamicColWidths && typeof oState.dynamicColWidths === "object") {
+                this._savedColWidths = JSON.parse(JSON.stringify(oState.dynamicColWidths));
+            } else {
+                this._savedColWidths = {};
             }
-        }.bind(this));
-    }
 
-    // Se aplican los datos editados en las celdas aplicando el delta sobre
-    // los datos originales del servidor.
-    if (Array.isArray(oState.modelDelta)) {
-        try {
-            this._applyModelDelta(oState.modelDelta);
-        } catch (e) {
-            sap.base.Log.warning("No se pudo restaurar el delta del modelo: " + e);
-        }
-    }
-
-    // Se restaura el estado de idAjustesCheckBox.
-    if (typeof oState.bAjustesSelected === "boolean") {
-        const oAjustesCheckBox = this.byId("idAjustesCheckBox");
-        if (oAjustesCheckBox) {
-            oAjustesCheckBox.setSelected(oState.bAjustesSelected);
-        }
-        const oVisibleModel = this.getView().getModel("visibleColumn");
-        if (oVisibleModel) {
-            oVisibleModel.setProperty("/visible", oState.bAjustesSelected);
-        }
-    }
-
-    // Se restaura el estado de idEjecutadoCheckBox2.
-    if (typeof oState.bEjecutadoSelected === "boolean") {
-        if (this._fnSetEjecutadoCheckBox) {
-            this._fnSetEjecutadoCheckBox(oState.bEjecutadoSelected);
-        }
-        this._bEjecutadoSelected = oState.bEjecutadoSelected;
-        this._handleEjecutado(oState.bEjecutadoSelected);
-    }
-
-    // Se restauran orden, ancho y visibilidad de las columnas estáticas.
-    if (oState.columns && oState.columns.length > 0) {
-        const aStaticCols = oTable.getColumns().filter(function (oCol) {
-            return !oCol.data("dynamicYear") && !oCol.data("dynamicMonth") && !oCol.data("ejecutadosColumn");
-        });
-
-        const oKeyToCol = {};
-        aStaticCols.forEach(function (oCol) {
-            oKeyToCol[this._getVariantColumnKey(oCol)] = oCol;
-        }.bind(this));
-
-        aStaticCols.forEach(function (oCol) {
-            oTable.removeColumn(oCol);
-        });
-
-        oState.columns.forEach(function (oSaved, iPos) {
-            const oCol = oKeyToCol[oSaved.key];
-            if (oCol) {
-                oCol.setWidth(oSaved.width);
-                oCol.setVisible(oSaved.visible);
-                oTable.insertColumn(oCol, iPos);
-            }
-        });
-    }
-
-    // Se restauran las expansiones y selecciones.
-    const fnRestoreTreeState = function () {
-        const oBinding = oTable.getBinding("rows");
-        if (!oBinding) return;
-
-        const iLength = oBinding.getLength();
-        oTable.collapseAll();
-        oTable.clearSelection();
-
-        const oPathToIndex = {};
-        for (let i = 0; i < iLength; i++) {
-            const oCtx = oTable.getContextByIndex(i);
-            if (oCtx) oPathToIndex[oCtx.getPath()] = i;
-        }
-
-        if (Array.isArray(oState.expandedPaths)) {
-            oState.expandedPaths.forEach(function (sPath) {
-                const iIdx = oPathToIndex[sPath];
-                if (iIdx !== undefined) oTable.expand(iIdx);
-            });
-        }
-
-        if (Array.isArray(oState.selectedPaths) && oState.selectedPaths.length > 0) {
-            setTimeout(function () {
-                const iLengthAfterExpand = oBinding.getLength();
-                for (let i = 0; i < iLengthAfterExpand; i++) {
-                    const oCtx = oTable.getContextByIndex(i);
-                    if (oCtx && oState.selectedPaths.indexOf(oCtx.getPath()) !== -1) {
-                        oTable.addSelectionInterval(i, i);
-                    }
+            // CORRECCIÓN CLAVE: Se resetean SIEMPRE las columnas dinámicas a sus anchos
+            // predeterminados antes de aplicar los valores guardados de la variante.
+            // Sin este reset, las columnas conservan el ancho de la variante anterior
+            // aunque la nueva variante no tenga anchos guardados (ej: Estándar).
+            oTable.getColumns().forEach(function (oCol) {
+                if (oCol.data("dynamicYear") && !oCol.data("ejecutadosColumn")) {
+                    oCol.setWidth("8rem");
+                } else if (oCol.data("ejecutadosColumn")) {
+                    oCol.setWidth("130px");
                 }
-                this._bSuppressDirtyFlag = false;
-            }.bind(this), 150);
-        } else {
-            this._bSuppressDirtyFlag = false;
-        }
-    }.bind(this);
+            }.bind(this));
 
-    setTimeout(fnRestoreTreeState, 100);
-
-    // Se abre automáticamente el primer año con sus meses.
-    setTimeout(function () {
-        const oTable = this.getControlTable();
-        if (!oTable) return;
-        if (this._openedYear) return;
-
-        const oPrimerAnioCol = oTable.getColumns().find(function (c) {
-            return c.data("dynamicYear") === true && !c.data("ejecutadosColumn");
-        });
-        if (!oPrimerAnioCol) return;
-
-        const sSubFijo = oPrimerAnioCol.data("subFijoYear");
-        const sYearVal = oPrimerAnioCol.data("year");
-
-        this.onCreateMonthsTable({
-            getSource: function () {
-                return {
-                    getMetadata: function () {
-                        return { getName: function () { return "sap.m.Button"; } };
-                    },
-                    getText: function () { return String(sYearVal); },
-                    data: function (sKey) {
-                        if (sKey === "subFijoYear") return sSubFijo;
-                        if (sKey === "year") return String(sYearVal);
-                        return null;
+            // Sobre el reset anterior, se aplican los anchos específicos de la variante.
+            if (this._savedColWidths && typeof this._savedColWidths === "object") {
+                oTable.getColumns().forEach(function (oCol) {
+                    if (!oCol.data("dynamicYear") && !oCol.data("ejecutadosColumn")) return;
+                    const sKey = this._getColKey(oCol);
+                    if (this._savedColWidths[sKey]) {
+                        oCol.setWidth(this._savedColWidths[sKey]);
                     }
-                };
+                }.bind(this));
             }
-        });
-    }.bind(this), 300);
-},
+
+            // Se aplican los datos editados en las celdas aplicando el delta sobre
+            // los datos originales del servidor.
+            if (Array.isArray(oState.modelDelta)) {
+                try {
+                    this._applyModelDelta(oState.modelDelta);
+                } catch (e) {
+                    sap.base.Log.warning("No se pudo restaurar el delta del modelo: " + e);
+                }
+            }
+
+            // Se restaura el estado de idAjustesCheckBox.
+            if (typeof oState.bAjustesSelected === "boolean") {
+                const oAjustesCheckBox = this.byId("idAjustesCheckBox");
+                if (oAjustesCheckBox) {
+                    oAjustesCheckBox.setSelected(oState.bAjustesSelected);
+                }
+                const oVisibleModel = this.getView().getModel("visibleColumn");
+                if (oVisibleModel) {
+                    oVisibleModel.setProperty("/visible", oState.bAjustesSelected);
+                }
+            }
+
+            // Se restaura el estado de idEjecutadoCheckBox2.
+            if (typeof oState.bEjecutadoSelected === "boolean") {
+                if (this._fnSetEjecutadoCheckBox) {
+                    this._fnSetEjecutadoCheckBox(oState.bEjecutadoSelected);
+                }
+                this._bEjecutadoSelected = oState.bEjecutadoSelected;
+                this._handleEjecutado(oState.bEjecutadoSelected);
+            }
+
+            // Se restauran orden, ancho y visibilidad de las columnas estáticas.
+            if (oState.columns && oState.columns.length > 0) {
+                const aStaticCols = oTable.getColumns().filter(function (oCol) {
+                    return !oCol.data("dynamicYear") && !oCol.data("dynamicMonth") && !oCol.data("ejecutadosColumn");
+                });
+
+                const oKeyToCol = {};
+                aStaticCols.forEach(function (oCol) {
+                    oKeyToCol[this._getVariantColumnKey(oCol)] = oCol;
+                }.bind(this));
+
+                aStaticCols.forEach(function (oCol) {
+                    oTable.removeColumn(oCol);
+                });
+
+                oState.columns.forEach(function (oSaved, iPos) {
+                    const oCol = oKeyToCol[oSaved.key];
+                    if (oCol) {
+                        oCol.setWidth(oSaved.width);
+                        oCol.setVisible(oSaved.visible);
+                        oTable.insertColumn(oCol, iPos);
+                    }
+                });
+            }
+
+            // Se restauran las expansiones y selecciones.
+            const fnRestoreTreeState = function () {
+                const oBinding = oTable.getBinding("rows");
+                if (!oBinding) return;
+
+                const iLength = oBinding.getLength();
+                oTable.collapseAll();
+                oTable.clearSelection();
+
+                const oPathToIndex = {};
+                for (let i = 0; i < iLength; i++) {
+                    const oCtx = oTable.getContextByIndex(i);
+                    if (oCtx) oPathToIndex[oCtx.getPath()] = i;
+                }
+
+                if (Array.isArray(oState.expandedPaths)) {
+                    oState.expandedPaths.forEach(function (sPath) {
+                        const iIdx = oPathToIndex[sPath];
+                        if (iIdx !== undefined) oTable.expand(iIdx);
+                    });
+                }
+
+                if (Array.isArray(oState.selectedPaths) && oState.selectedPaths.length > 0) {
+                    setTimeout(function () {
+                        const iLengthAfterExpand = oBinding.getLength();
+                        for (let i = 0; i < iLengthAfterExpand; i++) {
+                            const oCtx = oTable.getContextByIndex(i);
+                            if (oCtx && oState.selectedPaths.indexOf(oCtx.getPath()) !== -1) {
+                                oTable.addSelectionInterval(i, i);
+                            }
+                        }
+                        this._bSuppressDirtyFlag = false;
+                    }.bind(this), 150);
+                } else {
+                    this._bSuppressDirtyFlag = false;
+                }
+            }.bind(this);
+
+            setTimeout(fnRestoreTreeState, 100);
+
+            // Se abre automáticamente el primer año con sus meses.
+            setTimeout(function () {
+                const oTable = this.getControlTable();
+                if (!oTable) return;
+                if (this._openedYear) return;
+
+                const oPrimerAnioCol = oTable.getColumns().find(function (c) {
+                    return c.data("dynamicYear") === true && !c.data("ejecutadosColumn");
+                });
+                if (!oPrimerAnioCol) return;
+
+                const sSubFijo = oPrimerAnioCol.data("subFijoYear");
+                const sYearVal = oPrimerAnioCol.data("year");
+
+                this.onCreateMonthsTable({
+                    getSource: function () {
+                        return {
+                            getMetadata: function () {
+                                return { getName: function () { return "sap.m.Button"; } };
+                            },
+                            getText: function () { return String(sYearVal); },
+                            data: function (sKey) {
+                                if (sKey === "subFijoYear") return sSubFijo;
+                                if (sKey === "year") return String(sYearVal);
+                                return null;
+                            }
+                        };
+                    }
+                });
+            }.bind(this), 300);
+        },
 
         /**
          * Se construye una clave estable para identificar una columna dentro de una variante.
@@ -2800,143 +2882,143 @@ _applyVariantState: function (oState) {
          * Al volver a la variante estandar sin estado guardado se resetean ambos controles
          * utilizando la retrollamada _fnSetEjecutadoCheckBox para el checkbox de la Main view.
          */
-_doSwitchToVariant: function (oVar) {
-    const oVModel = this.getView().getModel("variantModel");
+        _doSwitchToVariant: function (oVar) {
+            const oVModel = this.getView().getModel("variantModel");
 
-    // Se desactiva el indicador de cambios pendientes y se activa la supresion
-    // para que ninguna operacion interna de restauracion lo vuelva a encender.
-    this._bVariantDirty = false;
-    this._bSuppressDirtyFlag = true;
+            // Se desactiva el indicador de cambios pendientes y se activa la supresion
+            // para que ninguna operacion interna de restauracion lo vuelva a encender.
+            this._bVariantDirty = false;
+            this._bSuppressDirtyFlag = true;
 
-    if (oVar.state) {
-        this._applyVariantState(oVar.state);
-    } else if (this._originalServerData) {
-        // Se limpian primero los estados internos para garantizar que cualquier
-        // operacion asincrona desencadenada por el refresco del modelo lea valores
-        // limpios y no aplique anchos de variantes anteriores al recrear columnas.
-        this._savedColWidths = {};
-        this._openedYear = null;
+            if (oVar.state) {
+                this._applyVariantState(oVar.state);
+            } else if (this._originalServerData) {
+                // Se limpian primero los estados internos para garantizar que cualquier
+                // operacion asincrona desencadenada por el refresco del modelo lea valores
+                // limpios y no aplique anchos de variantes anteriores al recrear columnas.
+                this._savedColWidths = {};
+                this._openedYear = null;
 
-        const oModel = this.getView().getModel("corrientesModel");
-        if (oModel) {
-            oModel.setData(JSON.parse(JSON.stringify(this._originalServerData)));
-            oModel.refresh(true);
-        }
-
-        // Se cierran las columnas de meses y ejecutados residuales.
-        const oTableForClose = this.getControlTable();
-        if (oTableForClose) {
-            oTableForClose.getColumns()
-                .filter(function (c) {
-                    return c.data("dynamicMonth") || c.data("ejecutadosColumn");
-                })
-                .forEach(function (c) { oTableForClose.removeColumn(c); });
-        }
-
-        // Se aplican los anchos predeterminados a las columnas de años presentes.
-        const oTableForReset = this.getControlTable();
-        if (oTableForReset) {
-            oTableForReset.getColumns().forEach(function (oCol) {
-                if (oCol.data("dynamicYear") && !oCol.data("ejecutadosColumn")) {
-                    oCol.setWidth("8rem");
-                } else if (oCol.data("ejecutadosColumn")) {
-                    oCol.setWidth("130px");
+                const oModel = this.getView().getModel("corrientesModel");
+                if (oModel) {
+                    oModel.setData(JSON.parse(JSON.stringify(this._originalServerData)));
+                    oModel.refresh(true);
                 }
-            });
-        }
 
-        // Se restauran los anchos originales de las columnas estáticas usando
-        // el estado capturado durante la inicialización.
-        const oInitialState = this._aVariants[0] && this._aVariants[0].state;
-        if (oInitialState && oInitialState.columns && oInitialState.columns.length > 0 && oTableForReset) {
-            const aStaticCols = oTableForReset.getColumns().filter(function (oCol) {
-                return !oCol.data("dynamicYear") && !oCol.data("dynamicMonth") && !oCol.data("ejecutadosColumn");
-            });
-            const oKeyToCol = {};
-            aStaticCols.forEach(function (oCol) {
-                oKeyToCol[this._getVariantColumnKey(oCol)] = oCol;
-            }.bind(this));
-            aStaticCols.forEach(function (oCol) { oTableForReset.removeColumn(oCol); });
-            oInitialState.columns.forEach(function (oSaved, iPos) {
-                const oCol = oKeyToCol[oSaved.key];
-                if (oCol) {
-                    oCol.setWidth(oSaved.width);
-                    oCol.setVisible(oSaved.visible);
-                    oTableForReset.insertColumn(oCol, iPos);
+                // Se cierran las columnas de meses y ejecutados residuales.
+                const oTableForClose = this.getControlTable();
+                if (oTableForClose) {
+                    oTableForClose.getColumns()
+                        .filter(function (c) {
+                            return c.data("dynamicMonth") || c.data("ejecutadosColumn");
+                        })
+                        .forEach(function (c) { oTableForClose.removeColumn(c); });
                 }
-            });
-        }
 
-        // Se abre automáticamente el primer año con sus meses, igual que al cargar la app.
-        // Se vuelven a aplicar los anchos predeterminados por si alguna operacion
-        // asincrona anterior los hubiera sobreescrito (doble proteccion).
-        setTimeout(function () {
-            const oTbl = this.getControlTable();
-            if (!oTbl || this._openedYear) return;
-
-            oTbl.getColumns().forEach(function (oCol) {
-                if (oCol.data("dynamicYear") && !oCol.data("ejecutadosColumn")) {
-                    oCol.setWidth("8rem");
-                }
-            });
-
-            const oPrimerAnioCol = oTbl.getColumns().find(function (c) {
-                return c.data("dynamicYear") === true && !c.data("ejecutadosColumn");
-            });
-            if (!oPrimerAnioCol) return;
-
-            const sSubFijo = oPrimerAnioCol.data("subFijoYear");
-            const sYearVal = oPrimerAnioCol.data("year");
-
-            this.onCreateMonthsTable({
-                getSource: function () {
-                    return {
-                        getMetadata: function () {
-                            return { getName: function () { return "sap.m.Button"; } };
-                        },
-                        getText: function () { return String(sYearVal); },
-                        data: function (sKey) {
-                            if (sKey === "subFijoYear") return sSubFijo;
-                            if (sKey === "year") return String(sYearVal);
-                            return null;
+                // Se aplican los anchos predeterminados a las columnas de años presentes.
+                const oTableForReset = this.getControlTable();
+                if (oTableForReset) {
+                    oTableForReset.getColumns().forEach(function (oCol) {
+                        if (oCol.data("dynamicYear") && !oCol.data("ejecutadosColumn")) {
+                            oCol.setWidth("8rem");
+                        } else if (oCol.data("ejecutadosColumn")) {
+                            oCol.setWidth("130px");
                         }
-                    };
+                    });
                 }
-            });
-        }.bind(this), 200);
 
-        // Se resetea idEjecutadoCheckBox2 mediante la retrollamada inyectada por
-        // la Main view, ya que ese control reside en ella y no en esta vista hija.
-        if (this._bEjecutadoSelected) {
-            if (this._fnSetEjecutadoCheckBox) {
-                this._fnSetEjecutadoCheckBox(false);
+                // Se restauran los anchos originales de las columnas estáticas usando
+                // el estado capturado durante la inicialización.
+                const oInitialState = this._aVariants[0] && this._aVariants[0].state;
+                if (oInitialState && oInitialState.columns && oInitialState.columns.length > 0 && oTableForReset) {
+                    const aStaticCols = oTableForReset.getColumns().filter(function (oCol) {
+                        return !oCol.data("dynamicYear") && !oCol.data("dynamicMonth") && !oCol.data("ejecutadosColumn");
+                    });
+                    const oKeyToCol = {};
+                    aStaticCols.forEach(function (oCol) {
+                        oKeyToCol[this._getVariantColumnKey(oCol)] = oCol;
+                    }.bind(this));
+                    aStaticCols.forEach(function (oCol) { oTableForReset.removeColumn(oCol); });
+                    oInitialState.columns.forEach(function (oSaved, iPos) {
+                        const oCol = oKeyToCol[oSaved.key];
+                        if (oCol) {
+                            oCol.setWidth(oSaved.width);
+                            oCol.setVisible(oSaved.visible);
+                            oTableForReset.insertColumn(oCol, iPos);
+                        }
+                    });
+                }
+
+                // Se abre automáticamente el primer año con sus meses, igual que al cargar la app.
+                // Se vuelven a aplicar los anchos predeterminados por si alguna operacion
+                // asincrona anterior los hubiera sobreescrito (doble proteccion).
+                setTimeout(function () {
+                    const oTbl = this.getControlTable();
+                    if (!oTbl || this._openedYear) return;
+
+                    oTbl.getColumns().forEach(function (oCol) {
+                        if (oCol.data("dynamicYear") && !oCol.data("ejecutadosColumn")) {
+                            oCol.setWidth("8rem");
+                        }
+                    });
+
+                    const oPrimerAnioCol = oTbl.getColumns().find(function (c) {
+                        return c.data("dynamicYear") === true && !c.data("ejecutadosColumn");
+                    });
+                    if (!oPrimerAnioCol) return;
+
+                    const sSubFijo = oPrimerAnioCol.data("subFijoYear");
+                    const sYearVal = oPrimerAnioCol.data("year");
+
+                    this.onCreateMonthsTable({
+                        getSource: function () {
+                            return {
+                                getMetadata: function () {
+                                    return { getName: function () { return "sap.m.Button"; } };
+                                },
+                                getText: function () { return String(sYearVal); },
+                                data: function (sKey) {
+                                    if (sKey === "subFijoYear") return sSubFijo;
+                                    if (sKey === "year") return String(sYearVal);
+                                    return null;
+                                }
+                            };
+                        }
+                    });
+                }.bind(this), 200);
+
+                // Se resetea idEjecutadoCheckBox2 mediante la retrollamada inyectada por
+                // la Main view, ya que ese control reside en ella y no en esta vista hija.
+                if (this._bEjecutadoSelected) {
+                    if (this._fnSetEjecutadoCheckBox) {
+                        this._fnSetEjecutadoCheckBox(false);
+                    }
+                    this._bEjecutadoSelected = false;
+                    this._handleEjecutado(false);
+                }
+
+                // Se resetea idAjustesCheckBox que pertenece a la vista hija activa
+                // y se actualiza el modelo de visibilidad de columnas correspondiente.
+                const oAjustesCheckBox = this.byId("idAjustesCheckBox");
+                if (oAjustesCheckBox && oAjustesCheckBox.getSelected()) {
+                    oAjustesCheckBox.setSelected(false);
+                    const oVisibleModel = this.getView().getModel("visibleColumn");
+                    if (oVisibleModel) {
+                        oVisibleModel.setProperty("/visible", false);
+                    }
+                }
+
+                // Se libera la supresion tras un ciclo minimo de renderizado.
+                setTimeout(function () {
+                    this._bSuppressDirtyFlag = false;
+                }.bind(this), 100);
             }
-            this._bEjecutadoSelected = false;
-            this._handleEjecutado(false);
-        }
 
-        // Se resetea idAjustesCheckBox que pertenece a la vista hija activa
-        // y se actualiza el modelo de visibilidad de columnas correspondiente.
-        const oAjustesCheckBox = this.byId("idAjustesCheckBox");
-        if (oAjustesCheckBox && oAjustesCheckBox.getSelected()) {
-            oAjustesCheckBox.setSelected(false);
-            const oVisibleModel = this.getView().getModel("visibleColumn");
-            if (oVisibleModel) {
-                oVisibleModel.setProperty("/visible", false);
-            }
-        }
-
-        // Se libera la supresion tras un ciclo minimo de renderizado.
-        setTimeout(function () {
-            this._bSuppressDirtyFlag = false;
-        }.bind(this), 100);
-    }
-
-    // Se actualiza el nombre activo en el modelo de variantes y se elimina
-    // el asterisco de cambios pendientes del boton selector.
-    oVModel.setProperty("/currentName", oVar.name);
-    oVModel.setProperty("/displayLabel", oVar.name);
-},
+            // Se actualiza el nombre activo en el modelo de variantes y se elimina
+            // el asterisco de cambios pendientes del boton selector.
+            oVModel.setProperty("/currentName", oVar.name);
+            oVModel.setProperty("/displayLabel", oVar.name);
+        },
 
         /**
          * Se abre el dialogo para guardar la configuracion actual con un nombre personalizado.
@@ -3368,21 +3450,51 @@ _doSwitchToVariant: function (oVar) {
             );
         },
 
-        /**
+/**
          * Se recuperan los datos de accesos indirectos correspondientes al entorno de la obra.
+         * Se garantiza que las cabeceras de ambito y norma siempre tengan un valor valido,
+         * recuperandolos del modelo global si el parametro de entrada es nulo.
          */
         getAccesoIndirectos: async function (obra) {
+            const oAppData = this.getGlobalModel("appData").getData();
+            const oNormModel = this.getGlobalModel("normModel");
+            
+            /* Se determina el valor del ambito priorizando el parametro, seguido del tramo seleccionado o el nodo inicial. */
+            let sAmbitoFinal = obra;
+            if (!sAmbitoFinal) {
+                if (oAppData.tramo && oAppData.tramo.Prctr) {
+                    sAmbitoFinal = oAppData.tramo.Prctr;
+                } else if (oAppData.userData && oAppData.userData.initialNode) {
+                    sAmbitoFinal = oAppData.userData.initialNode;
+                } else {
+                    sAmbitoFinal = "";
+                }
+            }
+
+            /* Se extrae la norma tecnica del modelo global para incluirla en la peticion. */
+            let sNormaFinal = "";
+            if (oNormModel && oNormModel.getData() && oNormModel.getData().norma) {
+                sNormaFinal = oNormModel.getData().norma;
+            }
+            
             return this.post(
-                this.getGlobalModel("mainService"),
-                "/AccesoIndirectosSet",
+                this.getGlobalModel("mainService"), 
+                "/AccesoIndirectosSet", 
                 {
+                    /* Se envian las estructuras necesarias para la respuesta de SAP. */
+                    "NavSelProyecto": [ oAppData.tramo ],
+                    "NavMensajes": [],
+                    "NavKpisIndirectos": [],
+                    "NavResumenIndirectos": [],
                     "NavMasterLt": [],
-                    "NavLsObra": [],
-                },
+                    "NavLsObra": []
+                }, 
                 {
                     headers: {
-                        ambito: obra,
-                        lang: this.getGlobalModel("appData").getData().userData.AplicationLangu,
+                        /* Se asignan las cabeceras requeridas para el filtrado en el backend. */
+                        ambito: sAmbitoFinal,
+                        lang: oAppData.userData.AplicationLangu,
+                        norma: sNormaFinal
                     }
                 }
             );
