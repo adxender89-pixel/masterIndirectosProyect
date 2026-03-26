@@ -33,6 +33,31 @@ sap.ui.define([], function () {
                 return "Warning"; // Naranja
             }
             return "Success"; // Verde
-        }
+        },
+            formatDecimales: function (numStr,decStr,sepStr) {
+            let decimalSep = sepStr[0];
+            let groupSep = sepStr[1];
+
+            if(numStr){
+                let num = parseFloat(numStr.replace(decimalSep, "."));
+            let dec = parseInt(decStr, 10);
+
+            if (isNaN(num) || isNaN(dec)) {
+                return "";
+            }
+
+            var oNumberFormat = sap.ui.core.format.NumberFormat.getFloatInstance({
+                minFractionDigits: dec,
+                maxFractionDigits: dec,
+                decimalSeparator: decimalSep,
+                groupingSeparator: groupSep || "",
+                groupingEnabled: !!groupSep
+            });
+
+            return oNumberFormat.format(num);
+            }
+            else return ""
+            
+        },
     };
 });

@@ -4,18 +4,21 @@ sap.ui.define([
     "sap/m/Input",
     "sap/m/Button",
     "sap/m/Label",
-    "masterindirectos/controller/BaseController"
+    "masterindirectos/controller/BaseController",
+     "masterindirectos/model/formatter"
 ], function (
     JSONModel,
     Column,
     Input,
     Button,
     Label,
-    BaseController
+    BaseController,
+    formatter
 ) {
     "use strict";
 
     return BaseController.extend("masterindirectos.controller.DetailsControllers.Externos", {
+         formatter: formatter,
         /**
          * Esta función le dice al BaseController qué ID de tabla buscar 
          * en esta vista específica.
@@ -25,6 +28,9 @@ sap.ui.define([
         },
 
         onInit: function () {
+
+            
+            this.initExternosModel();
             this.getView().setModel(new JSONModel({
                 selectedKey: "Externos"
             }), "state");
@@ -129,6 +135,36 @@ sap.ui.define([
                 this._refreshAfterToggle(sTableId);
             }.bind(this), 0);
         },
+          initExternosModel: function(evt){
+            this.post(
+                this.getGlobalModel("mainService"),
+                "/CambioPestIndirectosSet",
+                {
+                    "NavSelProyecto": [this.getGlobalModel("appData").getData().tramo],
+                    "NavChanges": [],
+                    "NavDatosIndirectos": [],
+                    "EvBloqueados" : "",
+                    "NavMensajes" : [],
+                    "NavDatosIndirectos" : []
+
+
+                },
+                {
+                    headers: {
+                        ambito: this.getGlobalModel("appData").getData().userData.initialNode,
+                        lang: this.getGlobalModel("appData").getData().userData.AplicationLangu,
+                        bloqueado: "",
+                        decimales: this.getGlobalModel("dashboardModel").getData().decimales,
+                        ejercicio: "2026",
+                        pestana:"Externos"
+                    }
+                }
+            ).then(function (response) {
+                let tree = this.buildTree(response.NavDatosIndirectos.results)
+                this.getView().setModel(new sap.ui.model.json.JSONModel(tree), "externosModel");
+        }.bind(this));
+        },
+
 
         /** 
          * Crea una copia profunda del modelo "externos" para comparaciones futuras

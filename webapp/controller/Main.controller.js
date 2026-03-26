@@ -131,7 +131,7 @@ sap.ui.define(
       getUserInsite: async function (user) {
         const sUrl = this.getEndpointData().urlInsite;
         return this.callExternalService(sUrl + "/security/userLogin", "GET", {
-          loginUser: user.User,
+          loginUser: "Z02KB",//user.User,
           idLanguage: user.AplicationLangu
         });
       },

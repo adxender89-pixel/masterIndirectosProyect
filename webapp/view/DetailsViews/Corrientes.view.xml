@@ -7,6 +7,7 @@
     xmlns="sap.m"
     xmlns:t="sap.ui.table"
     xmlns:uxap="sap.uxap"
+    xmlns:vn="masterindirectos.control"
 >
     <uxap:ObjectPageLayout
         id="objectPageLayout"
@@ -136,13 +137,15 @@
                                                 text="{i18n>reales}"
                                                 class="sapUiSmallMarginBegin"
                                             />
-                                            <Label text="{
+                                            <Label
+                                                text="{
                                                 path: 'dashboardModel>/NavMasterLt/0/Freal',
                                                 type: 'sap.ui.model.type.Date',
                                                 formatOptions: {
                                                     pattern: 'dd/MM/yyyy'
                                                 }
-                                            }" />
+                                            }"
+                                            />
                                             <Label
                                                 text="{i18n>OEO}"
                                                 class=" sapUiMediumMarginBegin"
@@ -306,7 +309,7 @@
                                                     <Input
                                                         width="100%"
                                                         textAlign="Center"
-                                                        editable="{= ${corrientesModel>isNew} === true }"
+                                                        editable="{corrientesModel>isEditable}"
                                                         value="{corrientesModel>PhPspnr}"
                                                         showValueHelp="true"
                                                         class="flatCellInput yearCell"
@@ -395,7 +398,7 @@
                                                     <Input
                                                         width="100%"
                                                         value="{corrientesModel>Post1}"
-                                                        editable="{= ${corrientesModel>isNew} === true }"
+                                                        editable="{corrientesModel>isEditable}"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                     />
@@ -481,11 +484,27 @@
                                                             />
                                                         </customData>
                                                     </Button>
-                                                    <Input
+                                                    <!--Input
                                                         width="100%"
                                                         textAlign="Center"
-                                                        editable="false"
+                                                        editable="{corrientesModel>isEditable}"
+
                                                         value="{corrientesModel>AmoEje}"
+                                                        class="flatCellInput"
+                                                    /-->
+                                                    <vn:DecimalesInput
+                                                        width="4.2rem"
+                                                        decimalNumbers="{dashboardModel>/decimales}"
+                                                        textAlign="Center"
+                                                        editable="{= ${isGroup} !== true}"
+                                                        value="{
+                                                            parts: [
+                                                                'corrientesModel>AmoEje',
+                                                                'dashboardModel>/decimales',
+                                                                'appData>/userData/CurrencyFormat'
+                                                            ],
+                                                            formatter: '.formatter.formatDecimales'
+                                                        }"
                                                         class="flatCellInput"
                                                     />
                                                 </HBox>
@@ -572,7 +591,7 @@
                                                     </Button>
                                                     <Input
                                                         value="{corrientesModel>AmoEjeAjus}"
-                                                        editable="false"
+                                                        editable="{corrientesModel>isEditable}"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                         width="100%"
@@ -661,7 +680,7 @@
                                                     </Button>
                                                     <Input
                                                         value="{corrientesModel>AmoEjeReal}"
-                                                        editable="true"
+                                                        editable="{corrientesModel>isEditable}"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                         width="100%"
@@ -748,12 +767,27 @@
                                                             />
                                                         </customData>
                                                     </Button>
-                                                    <Input
+                                                    <!--Input
                                                         value="{corrientesModel>AmoPen}"
                                                         width="100%"
-                                                        editable="{= ${isGroup} !== true}"
+                                                        editable="{corrientesModel>isEditable}"
                                                         class="flatCellInput"
                                                         textAlign="Center"
+                                                    /-->
+                                                    <vn:DecimalesInput
+                                                        width="4.2rem"
+                                                        decimalNumbers="{dashboardModel>/decimales}"
+                                                        textAlign="Center"
+                                                        editable="{= ${isGroup} !== true}"
+                                                        value="{
+                                                            parts: [
+                                                                'corrientesModel>AmoPen',
+                                                                'dashboardModel>/decimales',
+                                                                'appData>/userData/CurrencyFormat'
+                                                            ],
+                                                            formatter: '.formatter.formatDecimales'
+                                                        }"
+                                                        class="flatCellInput"
                                                     />
                                                 </HBox>
                                             </t:template>
@@ -837,11 +871,27 @@
                                                             />
                                                         </customData>
                                                     </Button>
-                                                    <Input
+                                                    <!--Input
                                                         value="{corrientesModel>AmoTot}"
-                                                        editable="{= ${isGroup} !== true}"
+                                                        editable="{corrientesModel>isEditable}"
+
                                                         width="100%"
                                                         textAlign="Center"
+                                                        class="flatCellInput"
+                                                    /-->
+                                                    <vn:DecimalesInput
+                                                        width="4.2rem"
+                                                        decimalNumbers="{dashboardModel>/decimales}"
+                                                        textAlign="Center"
+                                                        editable="{= ${isGroup} !== true}"
+                                                        value="{
+                                                            parts: [
+                                                                'corrientesModel>AmoTot',
+                                                                'dashboardModel>/decimales',
+                                                                'appData>/userData/CurrencyFormat'
+                                                            ],
+                                                            formatter: '.formatter.formatDecimales'
+                                                        }"
                                                         class="flatCellInput"
                                                     />
                                                 </HBox>
@@ -1044,7 +1094,7 @@
                                                     </Button>
                                                     <Input
                                                         value="{corrientesModel>PenPlan}"
-                                                        editable="false"
+                                                        editable="{corrientesModel>isEditable}"
                                                         class="flatCellInput"
                                                         width="100%"
                                                         textAlign="Center"
@@ -1126,7 +1176,7 @@
                                                     </Button>
                                                     <Input
                                                         value="{corrientesModel>months}"
-                                                        editable="{= ${isGroup} !== true}"
+                                                        editable="{corrientesModel>isEditable}"
                                                         class="flatCellInput"
                                                         width="100%"
                                                         textAlign="Center"
@@ -1212,7 +1262,7 @@
                                                     </Button>
                                                     <Input
                                                         value="{corrientesModel>pend}"
-                                                        editable="{= ${isGroup} !== true}"
+                                                        editable="{corrientesModel>isEditable}"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                         width="100%"
