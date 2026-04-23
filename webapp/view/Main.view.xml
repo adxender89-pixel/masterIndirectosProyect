@@ -59,32 +59,18 @@
                             class="sapUiTinyMarginBegin"
                             text="{i18n>Escenario}:"
                         />
-                        <ComboBox
-                            class="sapUiTinyMarginBegin "
-                            selectedKey="all"
-                            width="180px"
-                        >
-                            <items>
-                                <core:Item
-                                    text="{i18n>btnPossible1}"
-                                    key="all"
-                                />
-                                <core:Item
-                                    text="{i18n>btnPossible2}"
-                                    key="ana"
-                                />
-                                <core:Item
-                                    text="{i18n>btnPosible3}"
-                                    key="ana"
-                                />
-                            </items>
+                        <ComboBox 
+                        selectedKey="{appData>/sVersionActiva}"
+                            change="onSelectVersion"
+                            items="{appData>/NavLtVersiones}">
+                            <core:Item 
+                                key="{appData>Version}" 
+                                text="{
+                                    path: 'appData>Version',
+                                    formatter: '.formatTextoVersion' 
+                                }" />
                         </ComboBox>
-                        <CheckBox
-                            id="idEjecutadoCheckBox2"
-                            text="{i18n>cbEjecutado}"
-                            class="alignTextCheckBox"
-                            select="onEjecutadoCheckBoxSelect"
-                        />
+                      
                     </HBox>
                 </contentMiddle>
                 <!-- Acciones rápidas en la cabecera -->

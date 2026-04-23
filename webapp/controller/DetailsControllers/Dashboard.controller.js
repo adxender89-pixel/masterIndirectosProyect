@@ -1,143 +1,230 @@
 sap.ui.define([
-    "masterindirectos/controller/BaseController",
     "sap/ui/model/json/JSONModel",
-    'sap/m/MessageToast'
+    "sap/ui/table/Column",
+    "sap/m/Input",
+    "sap/m/Button",
+    "sap/m/Label",
+    "masterindirectos/controller/BaseController",
+    "masterindirectos/model/formatter"
+], function (
+    JSONModel,
+    Column,
+    Input,
+    Button,
+    Label,
+    BaseController,
+    formatter
+) {
+    "use strict";
 
-],
-    function (BaseController, JSONModel, MessageToast) {
-        "use strict";
+    return BaseController.extend("masterindirectos.controller.DetailsControllers.Dashboard", {
+        /**
+                  * Se inicializa el controlador del Dashboard y se invoca la carga inicial de datos.
+                  */
+        onInit: function () {
+            // Se obtiene y configura el modelo global del dashboard.
+            this.setInitData();
+        },
 
-        return BaseController.extend("masterindirectos.controller.DetailsControllers.Dashboard", {
-
-            onInit: function () {
-                //obtenemos el modelo global de dashboard
-                this.setInitData();
-            },
-
-            setInitData: async function () {
-                const dashBoardData = await this.getDashboardData();
-                Object.keys(dashBoardData.NavKpisIndirectos.results[0]).forEach(key => {
-                    if (!isNaN(parseFloat(dashBoardData.NavKpisIndirectos.results[0][key])) && isFinite(dashBoardData.NavKpisIndirectos.results[0][key])) {
-                        dashBoardData.NavKpisIndirectos.results[0][key] = this.formatDecimales(dashBoardData.NavKpisIndirectos.results[0][key], dashBoardData.EvDecimales, ",", ".");
-                    }
-                });
-                dashBoardData.NavResumenIndirectos.results.map(el=>{
-                    el.ImpEje = this.formatDecimales(el.ImpEje, dashBoardData.EvDecimales, ",", ".")
-                    el.ImpPen = this.formatDecimales(el.ImpPen, dashBoardData.EvDecimales, ",", ".")
-                    el.ImpTot = this.formatDecimales(el.ImpTot, dashBoardData.EvDecimales, ",", ".")
-                })
-                const dashboardModel = new JSONModel({
-                    kpi: dashBoardData.NavKpisIndirectos.results,
-                    resumen: dashBoardData.NavResumenIndirectos.results,
-                    decimales: dashBoardData.EvDecimales,
-                    NavMasterLt: dashBoardData.NavMasterLt.results,
-                    NavLsObra: dashBoardData.NavLsObra.results,
-                });
-
-                this.setGlobalModel(dashboardModel, "dashboardModel");
-
-                const kpi = dashboardModel.getProperty("/kpi")[0];
-
-                // 1. COSTE TOTAL
-                var oDataCosteTotal = [
-                    {
-                        ejecutado: kpi.CtotEje,
-                        pendiente: kpi.CtotPen,
-                        total: kpi.Ctot
-                    }
-                ];
-
-                // 2. OBRA EJECUTADA NETA
-                var oDataObraNeta = [
-                    {
-                        ejecutado: kpi.OenEje,
-                        pendiente: kpi.OenPen,
-                        total: kpi.OenTot
-                    }
-                ];
-
-                // 3. COSTE DIRECTO
-                var oDataCosteDirecto = [
-                    {
-                        ejecutado: kpi.CdirEje,
-                        pendiente: kpi.CdirPen,
-                        total: kpi.CdirTot
-                    }
-                ];
-
-                // Creamos un modelo para las los graficos de tartas con los datos obtenidos
-                const tartasModel = {
-                    labels: ["Ejecutado", "Pendiente"],
-                    datasets: [oDataCosteTotal[0], oDataObraNeta[0], oDataCosteDirecto[0]].map(item => ({
-                        data: [parseFloat(item.ejecutado), parseFloat(item.pendiente)]
-                    }))
+        /**
+         * Se inicializa el modelo del dashboard realizando la llamada al backend.
+         * Se formatean los valores, se gestiona la versión activa y se construyen
+         * los modelos de gráficos con los datos obtenidos.
+         */
+        setInitData: async function () {
+            const dashBoardData = await this.getDashboardData();
+            // Se formatean los valores numéricos de los KPIs aplicando los decimales configurados en el sistema.
+            Object.keys(dashBoardData.NavKpisIndirectos.results[0]).forEach(key => {
+                if (!isNaN(parseFloat(dashBoardData.NavKpisIndirectos.results[0][key])) && isFinite(dashBoardData.NavKpisIndirectos.results[0][key])) {
+                    dashBoardData.NavKpisIndirectos.results[0][key] = this.formatDecimales(dashBoardData.NavKpisIndirectos.results[0][key], dashBoardData.EvDecimales, ",", ".");
                 }
+            });
+            // Se formatean los importes del resumen aplicando la misma lógica de decimales.
+            dashBoardData.NavResumenIndirectos.results.map(el => {
+                el.ImpEje = this.formatDecimales(el.ImpEje, dashBoardData.EvDecimales, ",", ".");
+                el.ImpPen = this.formatDecimales(el.ImpPen, dashBoardData.EvDecimales, ",", ".");
+                el.ImpTot = this.formatDecimales(el.ImpTot, dashBoardData.EvDecimales, ",", ".");
+            });
 
-                // Creamos un modelo para el grafico de barras con los datos obtenidos
-                let dataGraphicBar = dashboardModel.getProperty("/resumen");
-                dataGraphicBar = dataGraphicBar.filter(item => item.Post1 && item.Post1 !== "RESULTADO");
+            // Se determina cuál es la versión activa dentro de los datos obtenidos antes de crear el modelo.
+            let sVersionActiva = "";
+            const aVersiones = dashBoardData.NavLtVersiones.results;
 
-                const oGraphicBarData = {
-                    labelsData: dataGraphicBar.map(item => item.Post1),
-                    labelsBar: [
-                        "Importe Ejecutado",
-                        "Importe Pendiente",
-                        "Importe Total"
-                    ],
-                    datasetsData: [
-                        [
-                            dataGraphicBar.map(item => parseFloat(item.ImpEje))
-                        ], [
-                            dataGraphicBar.map(item => parseFloat(item.ImpPen))
-                        ], [
-                            dataGraphicBar.map(item => parseFloat(item.ImpTot))
-                        ]
+            // Se verifica que el arreglo de versiones exista y contenga elementos.
+            if (aVersiones && aVersiones.length > 0) {
+                // Se identifica la versión marcada activamente con el indicador "X".
+                const oVersionX = aVersiones.find(v => v.Activo === "X");
+                if (oVersionX) {
+                    sVersionActiva = oVersionX.Version;
+                }
+            }
+
+            // Se persiste el listado de versiones y la clave activa en el modelo global de la aplicación.
+            this.getGlobalModel("appData").setProperty("/NavLtVersiones", aVersiones);
+            let sCurrent = this.getGlobalModel("appData").getProperty("/sVersionActiva");
+
+            if (!sCurrent) {
+                this.getGlobalModel("appData").setProperty("/sVersionActiva", sVersionActiva);
+            }
+            // Se construye el modelo global del dashboard con todos los datos procesados.
+            const dashboardModel = new JSONModel({
+                kpi: dashBoardData.NavKpisIndirectos.results,
+                resumen: dashBoardData.NavResumenIndirectos.results.sort((a, b) => {
+                    const valA = a.PhPspnr;
+                    const valB = b.PhPspnr;
+
+                    if (!valA && !valB) return 0;
+                    if (!valA) return 1;
+                    if (!valB) return -1;
+
+                    // const numA = parseInt(valA.split('.')[1], 10);
+                    // const numB = parseInt(valB.split('.')[1], 10);
+
+                    return a - b;
+                }),
+                decimales: dashBoardData.EvDecimales,
+                NavMasterLt: dashBoardData.NavMasterLt.results,
+                NavLsObra: dashBoardData.NavLsObra.results,
+            });
+            // Se registra el modelo como global para habilitar su acceso desde otras vistas.
+            this.setGlobalModel(dashboardModel, "dashboardModel");
+
+            // (MV) Se persisten las fechas clave del tramo activo en appData para que otras vistas
+            // (MV) como Corrientes puedan leerlas sin depender del dashboardModel.
+            var sFreal = (dashBoardData.NavMasterLt.results[0] || {}).Freal || "";
+            var sFrealfinobra = (dashBoardData.NavLsObra.results[0] || {}).Frealfinobra || "";
+            var sFrealsist = (dashBoardData.NavMasterLt.results[0] || {}).Frealsist || "";
+
+
+            this.getGlobalModel("appData").setProperty("/Freal", sFreal);
+            this.getGlobalModel("appData").setProperty("/Frealfinobra", sFrealfinobra);
+            this.getGlobalModel("appData").setProperty("/Frealsist", sFrealsist);
+
+            const kpi = dashboardModel.getProperty("/kpi")[0];
+
+            // 1. Se preparan los datos para el gráfico de Coste Total.
+            var oDataCosteTotal = [{
+                ejecutado: kpi.CtotEje,
+                pendiente: kpi.CtotPen,
+                total: kpi.Ctot
+            }];
+
+            // 2. Se preparan los datos para el gráfico de Obra Ejecutada Neta.
+            var oDataObraNeta = [{
+                ejecutado: kpi.OenEje,
+                pendiente: kpi.OenPen,
+                total: kpi.OenTot
+            }];
+
+            // 3. Se preparan los datos para el gráfico de Coste Directo.
+            var oDataCosteDirecto = [{
+                ejecutado: kpi.CdirEje,
+                pendiente: kpi.CdirPen,
+                total: kpi.CdirTot
+            }];
+
+            // Se instancia el modelo para los gráficos de tipo tarta (Pie Charts).
+            const tartasModel = {
+                labels: ["Ejecutado", "Pendiente"],
+                datasets: [oDataCosteTotal[0], oDataObraNeta[0], oDataCosteDirecto[0]].map(item => ({
+                    data: [parseFloat(item.ejecutado), parseFloat(item.pendiente)]
+                }))
+            };
+            let modelUser = this.getGlobalModel("appData").getData().userData;
+            let currencyFormat = modelUser.CurrencyFormat;
+            let thousandSeparator = currencyFormat.charAt(0)
+            let decimalSeparator = currencyFormat.charAt(1)
+
+            // Se filtra la información del resumen para construir el modelo del gráfico de barras.
+            let dataGraphicBar = dashboardModel.getProperty("/resumen");
+            // dataGraphicBar = dataGraphicBar.filter(item => item.Post1 && item.Post1 !== "RESULTADO");
+            dataGraphicBar = dataGraphicBar.filter(item => !!parseFloat(item.Psphi));
+
+            const oGraphicBarData = {
+                labelsData: dataGraphicBar.map(item => item.Post1),
+                labelsBar: [
+                    "Importe Ejecutado",
+                    "Importe Pendiente",
+                    "Importe Total"
+                ],
+                datasetsData: [
+                    [
+                        dataGraphicBar.map(item => parseFloat(item.ImpEje.replaceAll(thousandSeparator, "").replace(decimalSeparator, ".")))
+                    ], [
+                        dataGraphicBar.map(item => parseFloat(item.ImpPen.replaceAll(thousandSeparator, "").replace(decimalSeparator, ".")))
+                    ], [
+                        dataGraphicBar.map(item => parseFloat(item.ImpTot.replaceAll(thousandSeparator, "").replace(decimalSeparator, ".")))
                     ]
-                }
+                ]
+            }
+            // Se asignan los modelos de datos gráficos a la vista para habilitar su renderizado.
+            this.getView().setModel(new JSONModel(tartasModel), "oModelTartas");
+            this.getView().setModel(new JSONModel(oGraphicBarData), "oModelGraphicBar");
 
-                this.getView().setModel(
-                    new JSONModel(tartasModel),
-                    "oModelTartas"
-                );
+            // Se fuerza la actualización y dibujado de los gráficos en la interfaz.
+            this.renderGraphics();
+        },
+        /**
+                   * Se realiza la petición POST al servicio OData para obtener los datos integrales del Dashboard.
+                   * @returns {Promise} Promesa con la respuesta del servidor.
+                   */
+        getDashboardData: async function () {
+            var oAppData = this.getGlobalModel("appData");
+            var aVersiones = oAppData.getProperty("/NavLtVersiones") || [];
+            var sVersion = oAppData.getProperty("/sVersionActiva");
 
-                this.getView().setModel(
-                    new JSONModel(oGraphicBarData),
-                    "oModelGraphicBar"
-                );
+            var oVersionSeleccion = aVersiones.find(v => v.Version === sVersion);
 
-                this.renderGraphics();
-            
+            return this.post(this.getGlobalModel("mainService"), "/AccesoIndirectosSet", {
+                NavSelProyecto: [
+                    oAppData.getData().tramo
+                ],
+                NavMensajes: [],
+                NavKpisIndirectos: [],
+                NavResumenIndirectos: [],
+                NavMasterLt: [],
+                NavLsObra: [],
+                NavLtVersiones: oVersionSeleccion ? [oVersionSeleccion] : []
             },
-
-
-            getDashboardData: async function () {
-                return this.post(this.getGlobalModel("mainService"), "/AccesoIndirectosSet", {
-                    NavSelProyecto: [
-                        this.getGlobalModel("appData").getData().tramo
-                    ],
-                    NavMensajes: [],
-                    NavKpisIndirectos: [],
-                    NavResumenIndirectos: [],
-                    NavMasterLt: [],
-                    NavLsObra: []
-                }, {
+                {
                     headers: {
                         ambito: this.getGlobalModel("appData").getData().userData.initialNode,
                         lang: this.getGlobalModel("appData").getData().userData.AplicationLangu,
                         norma: this.getGlobalModel("normModel").getData().norma || "",
                     }
                 }).then(function (response) {
+                    // Verificar si hay mensajes de error en la respuesta
+                    var aMensajes = response.NavMensajes?.results || [];
+                    var aMensajesError = aMensajes.filter(function(mensaje) {
+                        return mensaje.Tipo === "E";
+                    });
+
+                    if (aMensajesError.length > 0) {
+                        this.createMessageDialog({
+                            title: this.getTranslatedText("ERROR"),
+                            textAccept: this.getTranslatedText("ACEPTAR"),
+                            messages: aMensajesError
+                        });
+                    }
+                    // 1. Extraemos los KPIs de la respuesta 
+                    const token = response?.EvToken;
+                    oAppData.setProperty("/EvToken", token);
+                    var aKpis = response.NavKpisIndirectos.results[0] || [];
+
+                    // 2. Lo guardamos en el modelo global appData
+                    oAppData.setProperty("/NavKpisIndirectos", aKpis);
                     return response;
                 }.bind(this));
-            },
-
-            renderGraphics: function () {
-                //los graficos son un poco especialitos y necesitan un pequeño delay para renderizarse correctamente, si no se renderizan con los datos actualizados
-                setTimeout(() => {
-                    this.getView().invalidate();
-                }, 500);
-            }
-
-
-        });
+        },
+        /**
+            * Se fuerza el redibujado de la vista para asegurar la correcta visualización de los gráficos.
+            */
+        renderGraphics: function () {
+            // Se aplica un retraso mínimo mediante temporizador para garantizar que los gráficos 
+            // se rendericen con el modelo de datos completamente actualizado.
+            setTimeout(() => {
+                this.getView().invalidate();
+            }, 500);
+        }
     });
+});

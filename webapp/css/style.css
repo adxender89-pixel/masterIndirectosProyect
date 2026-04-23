@@ -103,7 +103,7 @@
 .sapUiTableDataCell > .sapUiTableCellInner,
 .sapUiTableCreationRow .sapUiTableCreationRowForm .sapUiTableCell > .sapUiTableCellInner,
 .sapUiTableHeaderDataCell .sapUiTableCellInner {
-    padding: 0 !important;
+    padding: 0rem 0.2rem !important;
 }
 
 .sapUiTableCCnt .sapUiTableTableCell { padding: 0 0.2rem !important; }
@@ -142,7 +142,7 @@
     white-space: nowrap;
 }
 
-/* Agrupación de Cabeceras de Color y Flat Inputs */
+/* Agrupación de Cabeceras de Color y Flat Inputs
 .cabeceracolor, .monthHeaderGray, .parentHeader {
     background-color: #9e9b9b !important;
 }
@@ -164,7 +164,7 @@
 .cabeceracolor .sapMInputBaseInner {
     padding: 0 !important;
     margin-left: -0.4rem !important;
-}
+} */
 
 .flatCellInput .sapMInputBaseContentWrapper,
 .sapUiTableCell .flatCellInput .sapMInputBaseContentWrapper {
@@ -181,7 +181,7 @@
 
 .flatCellInput .sapMInputBaseInner { margin: 0.01rem !important; }
 
-.sapUiTableCell .flatCellInput { margin: 0.1rem 0.4rem !important; }
+/*.sapUiTableCell .flatCellInput { margin: 0.1rem 0.4rem !important; }*/
 .sapUiTableCell .flatCellInput .sapMInputBaseInner {
     margin: 0 !important;
     height: 1.6rem !important;
@@ -193,12 +193,12 @@
 .sapUiTableCell .flatCellInput .sapMInputBaseIconContainer {
     display: none !important;
 }
-
+/* 
 .cabeceracolor-Group td {
     border-top: 1.5px solid #000000;
     border-bottom: medium;
     color: black !important;
-}
+} */
 
 /* Iconos de despliegue */
 .sapUiTableGroupIcon::before, .sapUiTableTreeIcon::before {
@@ -740,7 +740,177 @@
     position: relative;
     top: -1px;
 }
+/* Fondo azul para filas de versión B*/
+.sapUiTableCtrlFixed tr.rowVersionB,
+.sapUiTableCtrlScroll tr.rowVersionB {
+    background-color: #E8F0FE !important;
+}
+
+tr.rowVersionB td {
+    background-color: #E8F0FE !important;
+}
+
+tr.rowVersionB .flatCellInput .sapMInputBaseInner {
+    background-color: #E8F0FE !important;
+}
+
+/* ========================================
+   OCULTAR Operación y Descripción en filas B
+   ======================================== */
+.sapUiTableCtrlScroll tr.rowVersionB td:nth-child(1) .flatCellInput,
+.sapUiTableCtrlScroll tr.rowVersionB td:nth-child(2) .flatCellInput {
+    visibility: hidden;
+}
+
+.sapUiTableCtrlFixed tr.rowVersionB td:nth-child(1) .flatCellInput,
+.sapUiTableCtrlFixed tr.rowVersionB td:nth-child(2) .flatCellInput {
+    visibility: hidden;
+}
+
+/* ========================================
+   FUSIONAR VISUALMENTE P + B (quitar borde entre ambas)
+   ======================================== */
+.sapUiTableCtrlFixed tr.rowVersionP td,
+.sapUiTableCtrlScroll tr.rowVersionP td {
+    border-bottom: none !important;
+}
+
+.sapUiTableCtrlFixed tr.rowVersionB td,
+.sapUiTableCtrlScroll tr.rowVersionB td {
+    border-top: none !important;
+    border-bottom: 1px solid #c4c4c4 !important;
+}
+
+/* También quitar borde en el row header */
+.sapUiTableRowHdr.rowVersionP {
+    border-bottom: none !important;
+}
+
+.sapUiTableRowHdr.rowVersionB {
+    border-top: none !important;
+    border-bottom: 1px solid #c4c4c4 !important;
+}
+
+/* ========================================
+   OCULTAR CHECKBOX en filas P
+   ======================================== */
+.sapUiTableRowSelectionCell.hideCheckbox::after {
+    display: none !important;
+}
 .sapUiTableDataCell:has(.borderRightPend),
 .sapUiTableHeaderDataCell:has(.borderRightPend) {
     border-right: 2px solid #f3984e !important;
+}
+
+.sapUiTable.KpiTable td{
+    padding-right: 10px !important;
+}
+/* Quitar border a AmoEje, y margin */
+.noBorderInput .sapMInputBaseContentWrapper,
+.noBorderInput.sapMInputBase .sapMInputBaseContentWrapper {
+    border: none !important;
+    background-color: white !important;
+}
+
+.noBorderInput input.sapMInputBaseInner {
+    border: none !important;
+    background-color: white !important;
+    box-shadow: none !important;
+}
+.noBorderInput .sapMInputBaseInner {
+    margin-left: 0 !important;
+    text-align: center !important;
+}
+
+.borderColYears .sapMInputBaseContentWrapper {
+    border: none !important;
+    box-shadow: none !important;
+    background: #fff !important;
+
+    width: 7.6rem;
+    align-self: center !important;
+    height: 1.6rem !important;
+    margin: 0 !important; /* Simplificado */
+}
+
+.borderColYears.sapMInput {
+    background: #fff !important;
+}
+
+.borderColYears .sapMInputBaseInner {
+    text-align: center !important;     
+    line-height: 1.8rem !important;     
+    height: 1.7rem !important;
+    padding: 0!important; /* top right bottom left */
+    margin-left: 0 !important;
+}
+
+.placeholderLike input {
+    font-weight: bold !important;
+}
+.sapUiTableCell .sapMInputBase.sapMInputBaseReadonly .sapMInputBaseContentWrapper,
+.sapUiTableCell .sapMInputBase.sapMInputBaseDisabled .sapMInputBaseContentWrapper {
+    border: none !important;
+    box-shadow: none !important;
+    margin-top: 0 !important;
+    background: transparent !important;
+}
+
+.sapUiTableCell .sapMInputBase.sapMInputBaseReadonly .sapMInputBaseInner,
+.sapUiTableCell .sapMInputBase.sapMInputBaseDisabled .sapMInputBaseInner {
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    text-align: center !important;
+    background: transparent !important;
+    height: 1.6rem !important;
+    line-height: 1.6rem !important;
+}
+
+.sapUiTableCell .sapMInputBase.sapMInputBaseReadonly .sapMInputBaseIconContainer,
+.sapUiTableCell .sapMInputBase.sapMInputBaseDisabled .sapMInputBaseIconContainer {
+    display: none !important;
+}
+tr.cabeceracolor-Group > td {
+    border-top: 2px solid #000000 !important;
+}
+.sapUiTableTr.sinProveedorRow td,
+.sapUiTableTr.sinProveedorRow input {
+    background-color: #FFD700 !important;
+    font-weight: bold;
+    color: #000000;
+}
+.sapUiTableTr.sinProveedorRow td {
+    background-color: #FFD700 !important;
+}
+.sapUiTableTr.sinProveedorRow input {
+    background-color: #FFD700 !important;
+    font-weight: bold;
+    color: #000000;
+}
+.sapUiTableTr.headerGrayRow td {
+    background-color: #9e9b9b !important;
+}
+.sapUiTableTr.headerGrayRow input {
+    background-color: #9e9b9b !important;
+    font-weight: bold;
+    color: #000000;
+}
+/* Colora la riga, la cella e i wrapper degli input SAP */
+.sinProveedorRow, 
+.sinProveedorRow td, 
+.sinProveedorRow .sapMInputBaseContentWrapper, 
+.sinProveedorRow .sapMInputBaseInner {
+    background-color: #FFD700 !important;
+    color: #000 !important;
+    font-weight: bold !important;
+}
+
+.headerGrayRow, 
+.headerGrayRow td, 
+.headerGrayRow .sapMInputBaseContentWrapper, 
+.headerGrayRow .sapMInputBaseInner {
+    background-color: #9e9b9b !important;
+    color: #000 !important;
+    font-weight: bold !important;
 }

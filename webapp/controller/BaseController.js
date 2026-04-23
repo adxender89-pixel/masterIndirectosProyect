@@ -247,29 +247,20 @@ sap.ui.define([
         _buildEjecutadosColumn: function (bAsDynamicMonth, iYear) {
             let oLabel;
 
-            // Se calcula el año actual para formar la cabecera (Ej: "2024-") de forma dinámica y evitar hardcodeos.
-            // const sCurrentYearText = new Date().getFullYear().toString() + "-";
-            // Se extrae la cadena de texto traducida o se aplica un valor de respaldo por seguridad.
+            // MV: testo traducibile per la cabecera
             const sEjerciciosAnterioresText = this.getResourceBundle().getText("EJERCICIOS_ANTERIORES") || "Ejercicios anteriores";
 
-            // Se construye la cabecera compleja si la columna debe comportarse con desglose mensual.
             if (bAsDynamicMonth) {
-                // Se anidan VBoxes para soportar los títulos principales, subtítulos y los elementos sticky headers.
                 oLabel = new sap.m.VBox({
                     width: "100%",
                     items: [
-                        // Primera línea de la cabecera (Ej: "2024-2025")
-                        // new sap.m.Text({
-                        //     text: sCurrentYearText + iYear
-                        // }).addStyleClass("sapUiTinyFontSize textoaño"),
-                        // Segunda línea: Título principal en negrita.
                         new sap.m.Label({
                             text: sEjerciciosAnterioresText,
                             design: "Bold",
                             textAlign: "Center",
                             width: "100%"
                         }).addStyleClass("testBold titleGrande"),
-                        // Tercera línea: Contenedor para la etiqueta fija (sticky parent) que se muestra al hacer scroll.
+
                         new sap.m.VBox({
                             renderType: "Bare",
                             width: "100%",
@@ -283,7 +274,7 @@ sap.ui.define([
                                 })
                             ]
                         }).addStyleClass("parentHeaderBox"),
-                        // Cuarta línea: Contenedor para el subnivel stick, normalmente invisible para este tipo específico de columna.
+
                         new sap.m.VBox({
                             width: "100%",
                             items: [
@@ -297,15 +288,11 @@ sap.ui.define([
                     ]
                 }).addStyleClass("fullWidthHeader").addStyleClass("noPaddingTop").addStyleClass("borderLeftEjecutado");
             } else {
-                // Se construye una cabecera simplificada si solo representa un año cerrado sin meses.
                 oLabel = new sap.m.VBox({
                     alignItems: "Center",
                     renderType: "Bare",
                     width: "100%",
                     items: [
-                        // new sap.m.Text({
-                        //     text: sCurrentYearText + iYear
-                        // }).addStyleClass("sapUiTinyFontSize textoaño"),
                         new sap.m.Label({
                             text: sEjerciciosAnterioresText,
                             design: "Bold",
@@ -316,39 +303,50 @@ sap.ui.define([
                 }).addStyleClass("borderLeftEjecutado");
             }
 
-            // Se instancia finalmente la columna de SAPUI5 acoplando el Label creado y su template de celdas de datos.
+            // MV: columna con formatter aplicado en el Text (sin convertir a Input)
             const oCol = new sap.ui.table.Column({
                 width: "130px",
                 hAlign: "Center",
                 label: oLabel,
-                // Se mapea la celda interna contra la propiedad "InvEjeReal" del modelo base.
                 template: new sap.m.HBox({
                     renderType: "Bare",
                     justifyContent: "Center",
                     alignItems: "Center",
                     width: "100%",
-                    items: [new sap.m.Text({
-                        text: this.getBind("InvEjeReal"),
-                        textAlign: "Center",
-                        width: "100%"
-                    })]
+                    items: [
+                        new sap.m.Text({
+                            width: "100%",
+                            textAlign: "Center",
+                            wrapping: false,
+                            text: {
+                                parts: [
+                                    this.tableModelName + ">InvEjeReal", // MV: campo original
+                                    "dashboardModel>/decimales",         // MV: nº decimales
+                                    "appData>/userData/CurrencyFormat"   // MV: formato moneda
+                                ],
+                                formatter: this.formatter.formatDecimales // MV: formatter aplicado
+                            }
+                        })
+                    ]
                 }).addStyleClass("borderLeftEjecutado")
             });
 
-            // Se etiquetan datos customizados en la columna (CustomData) para que el controlador pueda identificarlas fácilmente durante la limpieza o búsquedas.
+            // MV: metadata para identificación
             if (bAsDynamicMonth) {
                 oCol.data("dynamicMonth", true);
             } else {
                 oCol.data("dynamicYear", true);
             }
+
             oCol.data("ejecutadosColumn", true);
 
             return oCol;
         },
 
+
         /**
-         * Se crean masivamente y dinámicamente las columnas base de cada año.
-         */
+           * Se crean masivamente y dinámicamente las columnas base de cada año.
+           */
         createYearColumns: function (iStartYear, iHowMany, _pTable) {
             // Se recupera la tabla a manipular.
             const oTable = this.getControlTable();
@@ -379,7 +377,6 @@ sap.ui.define([
             for (let i = 0; i < iHowMany; i++) {
                 aYears.push(iStartYear + i);
             }
-
             // Se procesa de forma individual cada año solicitado para ensamblar su columna.
             aYears.forEach(function (iYear, index) {
                 // Se prepara el sufijo del modelo (Ej: "a1", "a2") para relacionar la columna lógica con la clave de la base de datos.
@@ -446,13 +443,42 @@ sap.ui.define([
                     visible: "{= " + sCabeceraBinding + " !== true }",
                     items: [
                         // Campo editable para introducir datos manuales. Se oculta automáticamente si la fila no es de detalle puro.
+                        //   Se sustituye el binding de cadena por un objeto de binding con tipo
+                        //   sap.ui.model.type.Float construido mediante la funcion auxiliar
+                        //   _buildNumericBinding. El tipo gestiona la formateacion en la vista y
+                        //   el parseo del valor introducido por el usuario de forma bidireccional,
+                        //   eliminando la necesidad de manejar la conversion manualmente.
+                        //   Se sustituye el Input anónimo de la columna año por uno que incluye el handler
+                        //   centralizado onRowInputChange y los atributos custom necesarios para que dicho
+                        //   método identifique el control como perteneciente a una columna dinámica de año.
+                        // prueba editabilidad"{= ${" + this.tableModelName + ">/EvBloqueados} !== 'X' }"
                         new sap.m.Input({
                             width: "100%",
+                            editable: "{= !${" + this.tableModelName + ">__isSinProveedor} && ${" + this.tableModelName + ">padre} !== true }",
                             textAlign: "Center",
-                            value: "{" + this.tableModelName + ">Totala" + (parseInt(index) + 1) + "}",
-                            visible: "{= ${" + this.tableModelName + ">expandible} !== false && !${" + this.tableModelName + ">isGroup} && ${" + this.tableModelName + ">cabecera} !== true }",
+                            value: this._buildNumericBinding(
+                                this.tableModelName + ">Totala" + (parseInt(index) + 1)
+                            ),
+                            visible: "{= ${" + this.tableModelName + ">expandible} !== false && !${" +
+                                this.tableModelName + ">isGroup} && ${" +
+                                this.tableModelName + ">cabecera} !== true }",
+
+                            //   Se registra el handler centralizado de cambio de celda. Este método
+                            //   gestiona el formateo, parseo y envío al backend de forma unificada
+                            //   para todos los inputs editables de la tabla, incluyendo los de año.
+                            change: this.onRowInputChange.bind(this),
+
                             liveChange: function () { }
-                        }).addStyleClass("customYearInput sapUiSizeCompact"),
+
+                            //   Se almacena el año real de la columna como atributo custom para que
+                            //   onRowInputChange pueda identificar este input como perteneciente a una
+                            //   columna de año dinámico y actualizar la clave y{año} del sticky header.
+                        }).data("yearColYear", iYear)
+                            //   Se almacena también el sufijo del modelo (a1, a2...) para poder
+                            //   construir la clave de payload correcta (Totala1, Totala2...) dentro
+                            //   de onRowInputChange sin necesidad de inferirlo desde el binding.
+                            .data("yearColSubFijo", sSubFijo)
+                            .addStyleClass("borderColYears sapUiSizeCompact"),
 
                         // Texto de solo lectura para los nodos padres (agrupadores) donde los totales no son editables directamente.
                         new sap.m.Text({
@@ -489,17 +515,14 @@ sap.ui.define([
                 oCol.data("subFijoYear", "a" + (parseInt(index) + 1));
                 // Se recupera el ancho previamente guardado para esta columna de año y se aplica
                 // si existe, de modo que el usuario recupere la disposición que había configurado.
-                if (this._savedColWidths && this._savedColWidths["year_" + iYear]) {
-                    oCol.setWidth(this._savedColWidths["year_" + iYear]);
+                if (this.savedColWidths && this._savedColWidths["year" + iYear]) {
+                    oCol.setWidth(this.savedColWidths["year" + iYear]);
                 }
 
                 // Se adjunta la nueva columna al final del array de columnas de la tabla principal.
                 oTable.addColumn(oCol);
 
             }.bind(this));
-
-            // ▼▼▼ AÑADIR AQUÍ LA COLUMNA "RESTO" ▼▼▼
-
             // Se elimina la columna Resto previa si existía para evitar duplicados
             const aExistingCols = oTable.getColumns();
             for (let i = aExistingCols.length - 1; i >= 0; i--) {
@@ -560,13 +583,32 @@ sap.ui.define([
                         text: "{" + this.tableModelName + ">Resto}",
                         visible: "{= ${" + this.tableModelName + ">expandible} === false || ${" + this.tableModelName + ">isGroup} === true }"
                     }),
-                    new sap.m.Input({
+                    new masterindirectos.control.DecimalesInput({
                         width: "100%",
                         textAlign: "Center",
-                        editable: "{= ${" + this.tableModelName + ">expandible} !== false && !${" + this.tableModelName + ">isGroup} }",
-                        value: "{" + this.tableModelName + ">Resto}",
-                        visible: "{= ${" + this.tableModelName + ">expandible} !== false && !${" + this.tableModelName + ">isGroup} }"
-                    }).addStyleClass("customYearInput sapUiSizeCompact")
+                        decimalNumbers: "{dashboardModel>/decimales}",
+                        editable: "{= !${" + this.tableModelName + ">__isSinProveedor} && ${" + this.tableModelName + ">padre} !== true && (${" + this.tableModelName + ">Tipo} === 'MAN' || ${" + this.tableModelName + ">Tipo} === 'PCT' || ${" + this.tableModelName + ">Tipo} === '') }",
+                        visible: "{= ${" + this.tableModelName + ">expandible} !== false && !${" + this.tableModelName + ">isGroup} }",
+                        value: {
+                            parts: [
+                                this.tableModelName + ">Resto",
+                                "dashboardModel>/decimales",
+                                "appData>/userData/CurrencyFormat"
+                            ],
+                            formatter: this.formatter.formatDecimales
+                        },
+
+                        //   Se registra el handler centralizado de cambio de celda para la columna
+                        //   Resto, de forma que el envío al backend se gestione por el mismo flujo
+                        //   que el resto de inputs editables de la tabla sin duplicar lógica.
+                        change: this.onRowInputChange.bind(this)
+
+                        //   Se marca el control como perteneciente a la columna Resto mediante un
+                        //   atributo custom para que onRowInputChange active la rama de sincronización
+                        //   del sticky header con la clave /stickyHeaderData/parent/Resto.
+                    }).data("restoInput", true)
+                        .addStyleClass("borderColYears sapUiSizeCompact"),
+
                 ]
             }).addStyleClass("yearCell");
 
@@ -583,7 +625,7 @@ sap.ui.define([
 
             oTable.addColumn(oRestoCol);
 
-            // ▲▲▲ FIN COLUMNA RESTO ▲▲▲
+            //FIN COLUMNA RESTO 
 
             // Se envía a la cola del procesador la función de reactivar la lógica interna del scroll y los grupos en la TreeTable.
             setTimeout(function () {
@@ -591,163 +633,116 @@ sap.ui.define([
             }.bind(this), 0);
 
         },
-
         /**
-         * Se reajusta toda la estructura de columnas cuando el usuario selecciona un año diferente en el control desplegable (Select).
+*  Se crean las columnas de años utilizando el rango dinámico definido
+*  en _initYearsModel (Freal → Frealfinobra).
+*  Este método centraliza la lógica para que cualquier controlador hijo
+* pueda reutilizarla sin depender de valores hardcodeados.
+*/
+        /**Se aplica también la lógica de visibilidad (2 años o 1 si es el último)
+         *  y se abre automáticamente el detalle mensual del año seleccionado.
          */
-        /* onYearChange: function (oEvent) {
-             // Se recupera la instancia del selector desplegable.
-             const oSelect = oEvent.getSource();
-             // Se toman los elementos de la lista desplegable.
-             const aItems = oSelect.getItems();
-             // Se parsea a número entero el año elegido por el usuario.
-             const sSelectedYear = parseInt(oEvent.getParameter("selectedItem").getKey(), 10);
-             // Se determina cuál es el año máximo cargado en las opciones para evitar desbordes.
-             const iMaxYearInSelect = parseInt(aItems[aItems.length - 1].getKey(), 10);
- 
-             // Se establece el límite estricto de columnas anuales visibles de forma simultánea.
-             const iNumColumns = 2;
-             // Se calcula qué año de inicio renderizar asegurando que siempre se muestren las columnas necesarias (incluso si se elige el final del rango).
-             const iYearToPass = Math.min(sSelectedYear, iMaxYearInSelect - (iNumColumns - 1));
-             const oTable = this.getControlTable();
-             // Se verifica si al momento del cambio, un mes estaba expandido.
-             const bWasYearOpen = !!this._openedYear;
-             const bShowEjecutado = this._bEjecutadoSelected || false;
- 
-             // Si hay un nivel de detalle mensual abierto, se procede a desmantelarlo temporalmente.
-             if (this._openedYear && oTable) {
-                 // Se buscan las columnas de meses y ejercicios pasados.
-                 const monthColsToRemove = oTable.getColumns().filter(function (c) {
-                     return c.data("dynamicMonth") || c.data("ejecutadosColumn");
-                 });
-                 // Se suprimen una a una de la tabla en el DOM.
-                 monthColsToRemove.forEach(function (c) { oTable.removeColumn(c); });
- 
-                 // Se evalúa si es necesario reinserter la columna general de ejercicios consolidados.
-                 if (bShowEjecutado) {
-                     const iInsertIndex = oTable.getColumns().findIndex(function (c) {
-                         return c.data("dynamicYear") === true;
-                     });
-                     if (iInsertIndex !== -1) {
-                         oTable.insertColumn(
-                             this._buildEjecutadosColumn(false, new Date().getFullYear()),
-                             iInsertIndex
-                         );
-                     }
-                 }
-                 // Se libera la marca de año abierto.
-                 this._openedYear = null;
-             }
- 
-             // Se realiza la llamada a la construcción masiva de años con el nuevo cálculo base.
-             this.createYearColumns(iYearToPass, iNumColumns);
- 
-             // Si originalmente el año estaba desgajado en meses, se intenta replicar ese estado simulando el click del usuario en el nuevo año.
-             if (bWasYearOpen) {
-                 setTimeout(function () {
-                     // Se ubica la columna concreta del año objetivo basándose en el texto de su etiqueta.
-                     const oYearCol = oTable.getColumns().find(function (c) {
-                         const lab = c.getLabel();
-                         const txt = lab.getText ? lab.getText() : (lab.getItems ? lab.getItems()[0].getText() : "");
-                         return txt === String(sSelectedYear);
-                     });
- 
-                     if (oYearCol) {
-                         // Se simula un objeto evento apuntando a la etiqueta del año para invocar el despliegue mensual de forma automatizada.
-                         const oButton = oYearCol.getLabel();
-                         this.onCreateMonthsTable({
-                             getSource: function () { return oButton; }
-                         });
-                     }
-                 }.bind(this), 100);
-             }
-         },*/
-        /**
- * Se gestiona el cambio de año en el selector de ejercicio.
- * Se actualizan las columnas visibles y se abren los meses del año seleccionado.
- */
-        onYearChange: function (oEvent) {
-            var sSelectedYear = oEvent.getParameter("selectedItem").getKey();
-            var iSelectedYear = parseInt(sSelectedYear, 10);
-            var oTable = this.byId("TreeTableBasic");
+        createDynamicYearColumns: function (sTableId) {
 
-            if (!oTable) return;
-
-            // Se actualizan las columnas visibles según el año seleccionado.
-            this._showYearColumns(iSelectedYear);
-
-            // Se busca la columna dinámica del año seleccionado para obtener su subFijo.
-            var oYearCol = oTable.getColumns().find(function (oCol) {
-                return oCol.data("dynamicYear") === true &&
-                    parseInt(oCol.data("year"), 10) === iSelectedYear &&
-                    !oCol.data("ejecutadosColumn");
-            });
-
-            if (!oYearCol) {
-                console.warn("[onYearChange] No se encontró columna dinámica para el año:", iSelectedYear);
+            //  Se verifica que los años hayan sido inicializados previamente.
+            if (!this._iYearStart || !this._iYearEnd) {
+                //  Si aún no están disponibles, se reintenta tras un breve delay.
+                setTimeout(function () {
+                    this.createDynamicYearColumns(sTableId);
+                }.bind(this), 200);
                 return;
             }
 
-            var sSubFijo = oYearCol.data("subFijoYear");
-            var sYearVal = oYearCol.data("year");
+            //    Se calcula el número total de años del rango dinámico.
+            var iHowMany = this._iYearEnd - this._iYearStart + 1;
 
-            console.log("[onYearChange] Abriendo meses para el año:", sYearVal);
+            //    Se crean las columnas dinámicas de años.
+            this.createYearColumns(this._iYearStart, iHowMany, sTableId);
 
-            // Se abren los meses del año seleccionado reutilizando el método existente.
-            this.onCreateMonthsTable({
-                getSource: function () {
-                    return {
-                        getMetadata: function () {
-                            return { getName: function () { return "sap.m.Button"; } };
-                        },
-                        getText: function () { return String(sYearVal); },
-                        data: function (sKey) {
-                            if (sKey === "subFijoYear") return sSubFijo;
-                            if (sKey === "year") return String(sYearVal);
-                            return null;
-                        }
-                    };
-                }
-            });
+            //    Se obtiene el año seleccionado actualmente desde el modelo yearsModel.
+            var oYearsModel = this.getView().getModel("yearsModel");
+
+            if (!oYearsModel) return;
+
+            var sSelectedYear = oYearsModel.getProperty("/selectedYear");
+            var iSelectedYear = parseInt(sSelectedYear, 10);
+
+            if (!iSelectedYear) return;
+
+            //  Se aplica la lógica de visibilidad de columnas (2 años o 1 si es el último).
+            this._showYearColumns(iSelectedYear);
+
+            // Se abre automáticamente el detalle mensual del año seleccionado,
+            //  replicando el comportamiento de Corrientes.
+            setTimeout(function () {
+
+                var oTable = this.getControlTable();
+                if (!oTable) return;
+
+                //    Se busca la columna dinámica correspondiente al año seleccionado.
+                var oYearCol = oTable.getColumns().find(function (oCol) {
+                    return oCol.data("dynamicYear") === true &&
+                        parseInt(oCol.data("year"), 10) === iSelectedYear &&
+                        !oCol.data("ejecutadosColumn");
+                });
+
+                if (!oYearCol) return;
+
+                var sSubFijo = oYearCol.data("subFijoYear");
+
+                //    Se simula el evento de pulsación del botón de año para abrir los meses.
+                this.onCreateMonthsTable({
+                    getSource: function () {
+                        return {
+                            getMetadata: function () {
+                                return {
+                                    getName: function () {
+                                        return "sap.m.Button";
+                                    }
+                                };
+                            },
+                            getText: function () {
+                                return String(iSelectedYear);
+                            },
+                            data: function (sKey) {
+                                if (sKey === "subFijoYear") return sSubFijo;
+                                if (sKey === "year") return String(iSelectedYear);
+                                return null;
+                            }
+                        };
+                    }
+                });
+
+            }.bind(this), 0);
         },
-        /**
-         * Se muestran únicamente las dos columnas dinámicas correspondientes a la ventana
-         * del año seleccionado. Si el año seleccionado es el último del rango, se muestran
-         * el penúltimo y el último año juntos. En caso contrario, se muestran el año
-         * seleccionado y el inmediatamente siguiente.
+        /* Se muestran únicamente las dos columnas dinámicas correspondientes a la ventana del año seleccionado. Si el año seleccionado es el último del rango, se muestran
+         * el penúltimo y el último año juntos. En caso contrario, se muestran el año seleccionado y el inmediatamente siguiente.
          */
         _showYearColumns: function (iSelectedYear) {
-            var oTable = this.byId("TreeTableBasic");
+            //  Se obtiene dinámicamente el ID de la tabla desde el controlador hijo,
+            //  permitiendo reutilizar la lógica en múltiples vistas.
+            var sTableId = this.getCustomTableId ? this.getCustomTableId() : "TreeTableBasic";
+            var oTable = this.byId(sTableId);
             if (!oTable) return;
 
             var iYearEnd = this._iYearEnd || iSelectedYear;
-
-            // Se determina la ventana de dos columnas a mostrar según el año seleccionado.
-            var iYearLeft, iYearRight;
-            if (iSelectedYear >= iYearEnd) {
-                // Se está en el último año: se muestran el penúltimo y el último.
-                iYearLeft = iYearEnd - 1;
-                iYearRight = iYearEnd;
-            } else {
-                // Se muestran el año seleccionado y el siguiente.
-                iYearLeft = iSelectedYear;
-                iYearRight = iSelectedYear + 1;
-            }
-
-            console.log("[_showYearColumns] Mostrando columnas:", iYearLeft, "y", iYearRight);
+            //  Se verifica si el año seleccionado es el último del rango.
+            var bIsLastYear = iSelectedYear >= iYearEnd;
 
             oTable.getColumns().forEach(function (oCol) {
                 if (!oCol.data("dynamicYear")) return;
                 if (oCol.data("ejecutadosColumn") === true) return;
-
                 var iColYear = parseInt(oCol.data("year"), 10);
-                oCol.setVisible(iColYear === iYearLeft || iColYear === iYearRight);
+                if (bIsLastYear) {
+                    //  Último año: solo 1 columna visible.
+                    oCol.setVisible(iColYear === iYearEnd);
+                } else {
+                    // Resto de años: año seleccionado + siguiente (2 columnas).
+                    oCol.setVisible(iColYear === iSelectedYear || iColYear === iSelectedYear + 1);
+                }
             });
         },
-
-        /**
-         * Se fuerzan los recálculos visuales de grupos y scroll después de modificar la topología de la tabla (abrir o cerrar un nodo).
-         */
+        /** Se fuerzan los recálculos visuales de grupos y scroll después de modificar la topología de la tabla (abrir o cerrar un nodo).*/
         _refreshAfterToggle: function (sTableId) {
             // Se obtiene la instancia específica de la tabla mediante su ID.
             const oTable = this.byId(sTableId);
@@ -772,42 +767,33 @@ sap.ui.define([
          */
         _applyCabeceraStyle: function () {
             const oTable = this.getControlTable();
-            // Se recoge la posición de la primera fila renderizada en el canvas actual de la tabla.
             const iFirst = oTable.getFirstVisibleRow();
-            // Se recogen los objetos de las filas visuales actuales (elementos DOM de UI5, no los datos del modelo).
             const aRows = oTable.getRows();
 
-            // Se itera sobre todas las filas que el navegador está pintando en ese momento.
             for (let i = 0; i < aRows.length; i++) {
                 const oRow = aRows[i];
-                // Se limpian los estilos de la iteración anterior para evitar que filas recicladas mantengan colores erróneos.
                 oRow.removeStyleClass("cabeceracolor");
                 oRow.removeStyleClass("cabeceracolor-Group");
 
-                // Se extrae el contexto de datos vinculado a la fila real sumando el índice base (iFirst) más el índice del bucle.
                 const oCtx = oTable.getContextByIndex(iFirst + i);
                 if (!oCtx) continue;
-
-                // Se obtiene el objeto JavaScript subyacente de la fila.
                 const oObj = oCtx.getObject();
 
-                // Si el objeto contiene la bandera de ser una "cabecera" estructural, se pinta su fondo gris oscuro.
                 if (oObj && oObj.cabecera === true) {
                     oRow.addStyleClass("cabeceracolor");
-                    // Se quita la apariencia plana de los inputs para mantener el formato estricto del diseño.
                     oRow.removeStyleClass("flatCellInput");
                 }
 
-                // Si la fila pertenece a un nivel superior pero con capacidad de desplegarse, se pinta con los estilos de grupo secundario (bordes y colores).
                 if (oObj && oObj.expandible === true) {
                     oRow.addStyleClass("cabeceracolor-Group");
                 }
             }
-        },
 
-        /**
-                 * Se gestiona la apertura global del menú contextual (Popover).
-                 */
+            // Colori e bordi gestiti separatamente
+            this._highlightSinProveedor(oTable);
+            this._applyBlockBorder(oTable);
+        },
+        /* Se gestiona la apertura global del menú contextual (Popover). */
         onContextMenu: function (oParams) {
             // Se extrae el contexto de datos de la fila sobre la que se ha hecho clic derecho.
             const oRowContext = oParams.rowBindingContext;
@@ -844,9 +830,7 @@ sap.ui.define([
                 }, 50);
             });
         },
-
-        /**
-         * Se cierra el popover de forma global.
+        /*Se cierra el popover de forma global.
          */
         onCloseContextMenu: function () {
             // Se comprueba que la promesa del popover exista.
@@ -857,17 +841,17 @@ sap.ui.define([
                 });
             }
         },
-
-        /**
-                 * Se generan las columnas mensuales correspondientes al año seleccionado en la cabecera.
-                 * Se garantiza que el mes en curso mantenga su campo de entrada (Input) incluso con ejecutados activos.
-                 */
+        /** Se generan las columnas mensuales correspondientes al año seleccionado en la cabecera.
+                  * Se garantiza que el mes en curso mantenga su campo de entrada (Input) incluso con ejecutados activos.
+                  */
         onCreateMonthsTable: function (oEvent) {
+            // Se obtiene la fuente del evento y el sufijo del año correspondiente.
             const oSource = oEvent.getSource();
             const subFijoYear = oSource.data("subFijoYear");
             const oTable = this.getControlTable();
             const bShowEjecutado = this._bEjecutadoSelected || false;
 
+            // Se conserva la posicion actual del scroll horizontal para restaurarla al finalizar.
             let iCurrentScrollLeft = 0;
             try {
                 const oScrollExt = oTable._getScrollExtension();
@@ -876,6 +860,7 @@ sap.ui.define([
                 }
             } catch (e) { }
 
+            // Se determina el texto del año segun el tipo de control que origino el evento.
             let sYearText = "";
             const sSourceName = oSource.getMetadata().getName();
 
@@ -891,15 +876,23 @@ sap.ui.define([
             const sYear = parseInt(sYearText, 10);
             if (!sYear) return;
 
-            // Caso de cierre de año abierto
-            if (this._openedYear === sYear && sSourceName === "sap.m.Button") {
+            //     Se lee el flag noClose de la fuente para saber si esta llamada proviene
+            //     de una apertura programatica que no debe cerrar el año aunque ya estuviera abierto.
+            const bNoClose = oSource.data("noClose") === true;
+
+            // Se gestiona el cierre del año si ya estaba abierto previamente.
+            //     Se respeta el flag noClose para evitar que aperturas automaticas cierren el año.
+            if (this._openedYear === sYear && sSourceName === "sap.m.Button" && !bNoClose) {
                 this._openedYear = null;
                 oTable.setBusy(true);
+
+                // Se eliminan todas las columnas mensuales dinamicas existentes.
                 const monthColsToRemove = oTable.getColumns().filter(function (c) {
                     return c.data("dynamicMonth");
                 });
                 monthColsToRemove.forEach(function (c) { oTable.removeColumn(c); });
 
+                // Se reinserta la columna de ejercicios anteriores en formato compacto si corresponde.
                 if (bShowEjecutado) {
                     const ejecutadosColsToRemove = oTable.getColumns().filter(function (c) {
                         return c.data("ejecutadosColumn");
@@ -915,6 +908,7 @@ sap.ui.define([
                     }
                 }
 
+                // Se restaura el scroll horizontal y se libera el estado de ocupado de la tabla.
                 setTimeout(function () {
                     try {
                         const oScrollExt = oTable._getScrollExtension();
@@ -927,8 +921,10 @@ sap.ui.define([
                 return;
             }
 
-            // Caso de apertura de año
+            // Se inicia la apertura del anno seleccionado bloqueando la tabla durante el proceso.
             oTable.setBusy(true);
+
+            // Se eliminan columnas mensuales y de ejecutados previas para evitar duplicados.
             const colsToRemove = oTable.getColumns().filter(function (c) {
                 return c.data("dynamicMonth") || c.data("ejecutadosColumn");
             });
@@ -936,18 +932,22 @@ sap.ui.define([
 
             this._openedYear = sYear;
 
+            // Se generan los nombres abreviados de los meses en castellano.
             const aMonthNames = [];
             for (let i = 0; i < 12; i++) {
                 const date = new Date(new Date().getFullYear(), i, 1);
                 aMonthNames.push(date.toLocaleString("es-ES", { month: "short" }));
             }
 
+            // Se obtiene la fecha de referencia efectiva para determinar el mes actual.
             const oRefDate = this._effectiveDate || new Date();
             const currentYear = oRefDate.getFullYear();
             const currentMonth = oRefDate.getMonth();
 
+            // Se calcula el indice de inicio: si ejecutados esta activo se muestran todos los meses desde enero.
             const iStartIdx = (sYear === currentYear && !bShowEjecutado) ? currentMonth : 0;
 
+            // Se localiza la columna del año en la tabla para calcular la posicion de insercion.
             const oYearCol = oTable.getColumns().find(function (c) {
                 const lab = c.getLabel();
                 const txt = lab.getText ? lab.getText() : (lab.getItems ? lab.getItems()[0].getText() : "");
@@ -955,59 +955,69 @@ sap.ui.define([
             });
             const colIndex = oTable.indexOfColumn(oYearCol);
 
+            // Se inserta la columna de ejercicios anteriores expandida antes de los meses si procede.
             let iOffset = 0;
             if (bShowEjecutado) {
                 oTable.insertColumn(this._buildEjecutadosColumn(true, sYear), colIndex + iOffset);
                 iOffset++;
             }
 
+            // Se itera sobre los meses del año para crear una columna por cada uno.
             for (let i = iStartIdx; i < 12; i++) {
                 const sMonthLabel = aMonthNames[i];
                 const iRealIdx = i;
 
-                // CAMBIO CRÍTICO: Se utiliza el operador < en lugar de <= para que el mes actual sea editable.
+                // Se determina si el mes pertenece al pasado respecto a la fecha de referencia efectiva.
                 const bIsPassedMonth = (sYear < currentYear) || (sYear === currentYear && i < currentMonth);
 
                 let oControlTemplate;
 
                 if (bShowEjecutado && bIsPassedMonth) {
-                    const sMonthKey = (i + 1).toString().padStart(2, '0');
-                    const oText = new sap.m.Text({
-                        text: this.getBind("Val" + sMonthKey + subFijoYear),
+
+                    // Se construye la clave de enlace con formato de tres digitos igual que los meses normales.
+                    const sValKey = "Val0" + ((i + 1).toString().length === 1
+                        ? "0" + (i + 1)
+                        : (i + 1).toString()
+                    ) + subFijoYear;
+
+                    // Se utiliza _buildNumericBinding con editable en false para que el tipo Float
+                    // parsee correctamente el valor antes de formatearlo.
+                    const oInput = new sap.m.Input({
+                        width: "100%",
+                        value: this._buildNumericBinding(this.tableModelName + ">" + sValKey),
                         textAlign: "Center",
-                        width: "100%"
-                    });
+                        editable: false,
+                        change: this.onRowInputChange.bind(this)
+                    }).data("monthIdx", i)
+                        .data("monthYear", sYear)
+                        .addStyleClass("borderColYears sapUiSizeCompact");
 
                     oControlTemplate = new sap.m.HBox({
                         renderType: "Bare",
                         justifyContent: "Center",
                         alignItems: "Center",
-                        items: [oText]
+                        items: [oInput]
                     }).addStyleClass("sapUiTinyMarginBegin sapUiTinyMarginEnd");
 
                 } else {
                     oControlTemplate = (function (iIdx, iYr) {
-                        const sMonthKey = (iIdx + 1).toString().padStart(2, '0');
+
+                        // Se construye la clave de binding del mes para el input editable.
+                        const sValKey = "Val0" + ((iIdx + 1).toString().length === 1
+                            ? "0" + (iIdx + 1)
+                            : (iIdx + 1).toString()
+                        ) + subFijoYear;
+
                         const oInput = new sap.m.Input({
                             width: "100%",
-                            value: this.getBind("Val0" + ((i + 1).toString().length == 1 ? "0" + (i + 1) : (i + 1).toString()) + subFijoYear),
+                            value: this._buildNumericBinding(this.tableModelName + ">" + sValKey),
                             textAlign: "Center",
-                            visible: "{= ${expandible} !== false && !${isGroup} }",
-                            change: function (oEvt) {
-                                const oInp = oEvt.getSource();
-                                const oCtx = oInp.getBindingContext();
-                                const oModel = oCtx.getModel();
-                                const sPath = oCtx.getPath();
-                                oModel.setProperty(sPath + "/m" + iYr + "_" + iIdx, oInp.getValue());
-
-                                const oUiModel = this.getView().getModel("ui");
-                                const oCurrentParent = oUiModel.getProperty("/stickyHeaderData/parent");
-                                if (oCurrentParent) {
-                                    oCurrentParent["m" + iYr + "_" + iIdx] = oInp.getValue();
-                                    oUiModel.setProperty("/stickyHeaderData/parent", oCurrentParent);
-                                }
-                            }.bind(this)
-                        }).addStyleClass("customYearInput sapUiSizeCompact");
+                            // Se permite la edicion solo si el tipo de reparto es manual, porcentual o vacio.
+                            editable: "{= !${" + this.tableModelName + ">__isSinProveedor} && (${" + this.tableModelName + ">Tipo} === 'MAN' || ${" + this.tableModelName + ">Tipo} === 'PCT' || ${" + this.tableModelName + ">Tipo} === '') }",
+                            change: this.onRowInputChange.bind(this)
+                        }).data("monthIdx", iIdx)
+                            .data("monthYear", iYr)
+                            .addStyleClass("customYearInput sapUiSizeCompact");
 
                         return new sap.m.HBox({
                             renderType: "Bare",
@@ -1015,12 +1025,15 @@ sap.ui.define([
                             alignItems: "Center",
                             items: [oInput]
                         }).addStyleClass("sapUiTinyMarginBegin sapUiTinyMarginEnd");
+
                     }.bind(this))(iRealIdx, sYear);
                 }
 
+                // Se construyen las rutas de binding para el sticky header del mes actual.
                 const sParentPath = "ui>/stickyHeaderData/parent/m" + sYear + "_" + iRealIdx;
                 const sChildPath = "ui>/stickyHeaderData/child/m" + sYear + "_" + iRealIdx;
 
+                // Se genera el titulo della colonna: el primer mes incluye el boton de cierre del año.
                 const oTitleControl = (i === iStartIdx) ? new sap.m.HBox({
                     alignItems: "Center",
                     justifyContent: "Center",
@@ -1038,6 +1051,7 @@ sap.ui.define([
                     text: sMonthLabel + " " + sYear, design: "Bold", textAlign: "Center", width: "100%"
                 }).addStyleClass("testBold titleGrande");
 
+                // Se ensambla la etiqueta completa de la columna incluyendo sticky parent y sticky child.
                 const oColLabel = new sap.m.VBox({
                     width: "100%",
                     items: [
@@ -1059,12 +1073,20 @@ sap.ui.define([
                     ]
                 }).addStyleClass("fullWidthHeader");
 
+                // Se crea la columna dinamica del mes e si inserta in la posicion correcta.
                 const oColumn = new sap.ui.table.Column({
                     width: "130px",
                     hAlign: "Center",
                     label: oColLabel,
                     template: oControlTemplate
                 }).data("dynamicMonth", true);
+
+                // Se marca la columna como mes pasado para que _handleEjecutado pueda eliminarla selectivamente.
+                if (bShowEjecutado && bIsPassedMonth) {
+                    oColumn.data("isPassedMonth", true);
+                }
+
+                // Se aplica el borde visual al ultimo mes pasado para delimitar la zona ejecutada.
                 const bIsLastPassedMonth = bShowEjecutado && (
                     (sYear < currentYear && i === 11) ||
                     (sYear === currentYear && i === currentMonth - 1)
@@ -1073,19 +1095,21 @@ sap.ui.define([
                     oColLabel.addStyleClass("borderRightLastMonth");
                     oControlTemplate.addStyleClass("borderRightLastMonth");
                 }
-                // Se almacena el índice del mes en la columna para que la clave de búsqueda
-                // de anchos guardados pueda identificarla de forma unívoca.
+
+                // Se almacena el indice del mes y el año en la columna para recuperar anchos guardados.
                 oColumn.data("monthIdx", i);
                 oColumn.data("year", sYear);
 
-                // Se recupera y aplica el ancho guardado para este mes concreto si existe.
+                // Se aplica el ancho guardado previamente para esta columna si existe.
                 const sColKey = "month_" + sYear + "_" + i;
                 if (this._savedColWidths && this._savedColWidths[sColKey]) {
                     oColumn.setWidth(this._savedColWidths[sColKey]);
                 }
+
                 oTable.insertColumn(oColumn, colIndex + iOffset + (i - iStartIdx));
             }
 
+            // Se restaura el scroll horizontal y se libera el bloqueo de la tabla tras la insercion.
             setTimeout(function () {
                 try {
                     const oScrollExt = oTable._getScrollExtension();
@@ -1095,6 +1119,97 @@ sap.ui.define([
                 } catch (e) { }
                 oTable.setBusy(false);
             }.bind(this), 50);
+        },
+        //   Se gestiona el cambio de año en el selector de ejercicio.
+        //   Se recarga el modelo del backend (a1 = año seleccionado, a2 = año+1),
+        //   se reconstruyen las columnas con los sufijos correctos y se abren los meses.
+        onYearChange: async function (oEvent) {
+            var sSelectedYear = oEvent.getParameter("selectedItem").getKey();
+            var iSelectedYear = parseInt(sSelectedYear, 10);
+
+            //   Se actualiza el año seleccionado en yearsModel ANTES de llamar a
+            //   initTabModel para que _getSelectedEjercicio() devuelva el valor
+            //   correcto y el backend reciba el ejercicio exacto en el header.
+            var oYearsModel = this.getView().getModel("yearsModel");
+            if (oYearsModel) {
+                oYearsModel.setProperty("/selectedYear", String(iSelectedYear));
+            }
+
+            var sTableId = this.getCustomTableId ? this.getCustomTableId() : "TreeTableBasic";
+            var oTable = this.byId(sTableId);
+            if (!oTable) return;
+
+            //   Se eliminan columnas de meses y ejecutados antes del reload para
+            //   evitar columnas huérfanas con bindings obsoletos del año anterior.
+            oTable.getColumns()
+                .filter(function (c) { return c.data("dynamicMonth") || c.data("ejecutadosColumn"); })
+                .forEach(function (c) { oTable.removeColumn(c); });
+            this._openedYear = null;
+
+            //   Se recarga el modelo contra el backend. El servidor mapea siempre
+            //   el ejercicio seleccionado como Gjahr1 → a1 y el siguiente como
+            //   Gjahr2 → a2. Nunca se usan a3 ni a4.
+            if (typeof this.initTabModel === "function") {
+                await this.initTabModel();
+            }
+
+            //   Se calcula el último año del rango leyendo yearsModel como fuente
+            //   principal, con fallback a _iYearEnd. Esto permite determinar si el
+            //   año seleccionado es el último (1 columna) o no (2 columnas).
+            var iYearEnd = iSelectedYear;
+            if (oYearsModel) {
+                var aYears = oYearsModel.getProperty("/years") || [];
+                if (aYears.length > 0) {
+                    var iLastFromModel = parseInt(aYears[aYears.length - 1].year, 10);
+                    if (!isNaN(iLastFromModel)) iYearEnd = iLastFromModel;
+                }
+            }
+            if (this._iYearEnd) {
+                iYearEnd = this._iYearEnd;
+            }
+
+            //   Se determina cuántas columnas mostrar:
+            //   - Último año del rango → 1 columna (solo a1, no existe a2)
+            //   - Cualquier otro año   → 2 columnas (a1 = seleccionado, a2 = siguiente)
+            var bIsLastYear = iSelectedYear >= iYearEnd;
+            var iHowMany = bIsLastYear ? 1 : 2;
+
+            //   Se reconstruyen las columnas de año con los sufijos correctos.
+            //   createYearColumns asigna a1 al primer año e a2 al segundo,
+            //   que coincide exactamente con el mapeo Gjahr1/Gjahr2 del backend.
+            //   Nunca se crean columnas con sufijo a3 o a4.
+            this.createYearColumns(iSelectedYear, iHowMany, sTableId);
+
+            //   Se busca la columna dinámica del año seleccionado (siempre a1)
+            //   para abrir su desglose mensual.
+            var oYearCol = oTable.getColumns().find(function (oCol) {
+                return oCol.data("dynamicYear") === true &&
+                    parseInt(oCol.data("year"), 10) === iSelectedYear &&
+                    !oCol.data("ejecutadosColumn");
+            });
+
+            if (!oYearCol) {
+
+                return;
+            }
+
+            //   Se abren los meses con a1 como sufijo porque el backend mapea
+            //   siempre el ejercicio seleccionado en Gjahr1 → a1.
+            this.onCreateMonthsTable({
+                getSource: function () {
+                    return {
+                        getMetadata: function () {
+                            return { getName: function () { return "sap.m.Button"; } };
+                        },
+                        getText: function () { return String(iSelectedYear); },
+                        data: function (sKey) {
+                            if (sKey === "subFijoYear") return "a1";
+                            if (sKey === "year") return String(iSelectedYear);
+                            return null;
+                        }
+                    };
+                }
+            });
         },
 
         /**
@@ -1137,7 +1252,7 @@ sap.ui.define([
          * Esta función reescribe la estructura de las columnas en función de si hay un nivel mensual abierto o no.
          */
         _handleEjecutado: function (bSelected) {
-            // Se almacena el estado global de la selección para que futuras expansiones de años sepan si deben incluir históricos.
+            // Se almacena el estado global de la seleccion para que futuras expansiones de años sepan si deben incluir historicos.
             this._bEjecutadoSelected = bSelected;
 
             // Se recupera la instancia de la TreeTable principal.
@@ -1146,47 +1261,43 @@ sap.ui.define([
 
             // CASO 1: EL USUARIO DESMARCA LA CASILLA (OCULTAR EJECUTADOS)
             if (!bSelected) {
-                // Se localizan todas las columnas que representan meses sueltos o columnas de históricos (ejecutados).
+                //     Se eliminan unicamente la columna de ejercicios anteriores y las columnas de meses
+                //     pasados, identificadas por su marca isPassedMonth. Los meses actuales y futuros
+                //     permanecen visibles. El codigo anterior eliminaba todos los meses dinamicos
+                //     lo que provocaba que al desmarcar se cerraran tambien los meses en curso.
                 oTable.getColumns()
-                    .filter(function (c) { return c.data("dynamicMonth") || c.data("ejecutadosColumn"); })
-                    // Se suprimen una a una de la tabla en el DOM.
+                    .filter(function (c) { return c.data("isPassedMonth") || c.data("ejecutadosColumn"); })
                     .forEach(function (c) { oTable.removeColumn(c); });
 
-                // Al ocultarse el desglose, se limpia la bandera del año abierto para reiniciar el estado de la vista.
-                this._openedYear = null;
+                //     Se conserva _openedYear para que los meses actuales/futuros sigan visibles.
                 return;
             }
 
-            // CASO 2: EL USUARIO MARCA LA CASILLA (MOSTRAR EJECUTADOS) Y YA HABÍA UN AÑO DESPLEGADO EN MESES
+            // CASO 2: EL USUARIO MARCA LA CASILLA Y YA HABIA UN AÑO DESPLEGADO EN MESES
             if (this._openedYear) {
                 const sYear = this._openedYear;
 
-                // Se eliminan los meses actuales de la pantalla. Esto se hace para forzar un repintado limpio que incluya la nueva columna de históricos mensuales.
+                // Se eliminan los meses actuales de la pantalla para forzar un repintado limpio que incluya la nueva columna de historicos mensuales.
                 oTable.getColumns()
                     .filter(function (c) { return c.data("dynamicMonth"); })
                     .forEach(function (c) { oTable.removeColumn(c); });
 
-                // Se busca la columna "padre" del año que estaba abierto (para saber dónde volver a insertar los meses).
+                // Se busca la columna padre del año que estaba abierto para saber donde volver a insertar los meses.
                 const oYearCol = oTable.getColumns().find(function (c) {
                     const lab = c.getLabel();
-                    // Se extrae el texto de la cabecera teniendo en cuenta si es un Label simple o un VBox con items.
                     const txt = lab.getText ? lab.getText() : (lab.getItems ? lab.getItems()[0].getText() : "");
                     return txt === String(sYear);
                 });
 
-                // Si se encontró la columna de ese año, se relanza la función creadora de meses simulando que el usuario hizo clic en ella.
+                // Si se encontro la columna de ese año se relanza la funcion creadora de meses simulando que el usuario hizo clic en ella.
                 if (oYearCol) {
                     const sSubFijo = oYearCol.data("subFijoYear");
-                    // Se fabrica un objeto evento simulado ("Mock Object") para engañar a 'onCreateMonthsTable' 
-                    // haciéndole creer que fue disparado por un control estándar de SAPUI5.
                     this.onCreateMonthsTable({
                         getSource: function () {
                             return {
-                                // Se simula la metadata de un Label para que el flujo interno de onCreateMonthsTable no falle.
                                 getMetadata: function () {
                                     return { getName: function () { return "sap.m.Label"; } };
                                 },
-                                // Se proveen los datos requeridos por la función destino.
                                 getText: function () { return String(sYear); },
                                 data: function (sKey) {
                                     if (sKey === "subFijoYear") return sSubFijo;
@@ -1198,30 +1309,28 @@ sap.ui.define([
                     });
                 }
             }
-            // CASO 3: EL USUARIO MARCA LA CASILLA PERO LA TABLA ESTÁ EN VISTA ANUAL (NINGÚN MES EXPANDIDO)
+            // CASO 3: EL USUARIO MARCA LA CASILLA PERO LA TABLA ESTA EN VISTA ANUAL (NINGUN MES EXPANDIDO)
             else {
-                // Por precaución, se barren y eliminan columnas de ejecutados residuales.
+                // Se barren y eliminan columnas de ejecutados residuales.
                 oTable.getColumns()
                     .filter(function (c) { return c.data("ejecutadosColumn"); })
                     .forEach(function (c) { oTable.removeColumn(c); });
 
-                // Se busca la posición de la primera columna anual dinámica (ej: 2024).
+                // Se busca la posicion de la primera columna anual dinamica.
                 let iInsertIndex = oTable.getColumns().findIndex(function (c) {
                     return c.data("dynamicYear") === true;
                 });
 
-                // Si por alguna razón no se encuentran años, se colocará al final de la tabla.
                 if (iInsertIndex === -1) iInsertIndex = oTable.getColumns().length;
 
-                // Se inserta la columna consolidada (anual) de históricos en la posición calculada.
+                // Se inserta la columna consolidada anual de historicos en la posicion calculada.
                 oTable.insertColumn(this._buildEjecutadosColumn(false, new Date().getFullYear()), iInsertIndex);
 
-                // Como regla de negocio en esta vista, al marcar "Ejecutados" se fuerza la apertura del primer año visible.
+                // Se fuerza la apertura del primer año visible.
                 const oPrimerAnioCol = oTable.getColumns().find(function (c) {
                     return c.data("dynamicYear") === true && !c.data("ejecutadosColumn");
                 });
 
-                // Se repite la técnica del objeto evento simulado para forzar la expansión de ese primer año automáticamente.
                 if (oPrimerAnioCol) {
                     const sSubFijoPrimero = oPrimerAnioCol.data("subFijoYear");
                     const sYearPrimero = oPrimerAnioCol.data("year");
@@ -1244,6 +1353,7 @@ sap.ui.define([
                 }
             }
         },
+
 
         /**
          * Se gestiona la lógica de las cabeceras pegajosas (sticky) durante el desplazamiento vertical de la tabla.
@@ -1359,42 +1469,6 @@ sap.ui.define([
 
             // Se consolidan los rangos analizados en la variable de la clase.
             this._aGroupRanges = aRanges;
-        },
-
-        /**
-         * Se calcula dinámicamente la cantidad de filas que caben en pantalla según el tamaño de la ventana.
-         * Esto evita que la tabla muestre scroll interno innecesario o deje espacios vacíos masivos al final de la vista.
-         */
-        _calculateDynamicRows: function () {
-            const oTable = this.getControlTable();
-            // Se valida que la tabla ya tenga una existencia física en el DOM del navegador.
-            if (!oTable || !oTable.getDomRef()) {
-                return;
-            }
-
-            // Se obtiene la altura total de la ventana gráfica actual del navegador.
-            const iWindowHeight = window.innerHeight;
-            // Se calculan las coordenadas exactas de dónde comienza a pintarse la tabla en la pantalla.
-            const oTableRect = oTable.getDomRef().getBoundingClientRect();
-            const iTableTop = oTableRect.top;
-
-            // Se establece un margen duro para reservar espacio para el pie de página, scrollbars y paddings generales del layout.
-            const iBottomSpace = 148;
-            // Se deduce el espacio vertical neto que realmente le queda a la tabla para expandirse.
-            const iAvailableHeight = iWindowHeight - iTableTop - iBottomSpace;
-            // Se asume la altura fija de cada fila según las guías de diseño "Compact" de Fiori.
-            const iRowHeight = 32;
-
-            // Se divide la altura disponible entre la altura por fila para calcular cuántas filas exactas caben sin desbordar.
-            let iRows = Math.floor(iAvailableHeight / iRowHeight);
-
-            // Se implementa una red de seguridad: independientemente de lo pequeña que sea la ventana, siempre se renderizarán al menos 5 filas para mantener la usabilidad.
-            if (iRows < 5) {
-                iRows = 5;
-            }
-
-            // Se publica el dato en el modelo reactivo de la vista para que el control de la tabla modifique su "visibleRowCount" automáticamente.
-            this.getView().getModel("viewModel").setProperty("/dynamicRowCount", iRows);
         },
 
         /**
@@ -1529,28 +1603,26 @@ sap.ui.define([
                 }
             }.bind(this), 0);
         },
-
-        /**
-         * Se obtiene el ID personalizado de la tabla. 
-         * Es una función abstracta por defecto que retorna vacío, diseñada para ser sobrescrita por los controladores hijos.
-         */
+        /* ───  getCustomTableId() ──────────────────────────────────────────
+      * Devuelve el id de tabla registrado por initVariantConfig.
+      * Las vistas hijas ya no necesitan sobrescribir este método.
+      */
         getCustomTableId: function () {
-            return "";
+            return this._variantConfig ? this._variantConfig.tableId : "";
         },
 
-        /**
-         * Se retorna la tabla dinámica de la vista actual. 
-         * Si el controlador hijo define un ID específico mediante getCustomTableId, se utiliza ese ID para localizar la tabla.
-         */
+        /* ───  getControlTable() ───────────────────────────────────────────
+            * Localiza la tabla por el id almacenado en la configuración de variante.
+            */
         getControlTable: function () {
-            const sId = this.getCustomTableId();
-            return this.byId(sId);
+            var sId = this.getCustomTableId();
+            return sId ? this.byId(sId) : null;
         },
 
         /**
-         * Se configuran las propiedades y eventos necesarios para el funcionamiento de una TreeTable dinámica.
-         * Centraliza la asignación de delegados de teclado, cálculos de tamaño y eventos de scroll.
-         */
+            * Se configuran las propiedades y eventos necesarios para el funcionamiento de una TreeTable dinámica.
+            * Centraliza la asignación de delegados de teclado, cálculos de tamaño y eventos de scroll.
+            */
         setupDynamicTreeTable: function (sTableId) {
             // Se localiza la tabla ya sea por el ID proporcionado o mediante el método de obtención predeterminado.
             const oTable = sTableId ? this.byId(sTableId) : this.getControlTable();
@@ -1559,11 +1631,17 @@ sap.ui.define([
             }
 
             // Se adjunta el evento que detecta cuando el usuario hace scroll vertical.
+            if (!this._debouncedHighlight) {
+                this._debouncedHighlight = this._debounce(function () {
+                    this._highlightSinProveedor(oTable);
+                    this._applyBlockBorder(oTable);
+                }, 80);
+            }
+
             oTable.attachFirstVisibleRowChanged(function (oEvent) {
-                // Se procesa la lógica de las cabeceras pegajosas.
                 this._onScrollLike(oEvent);
-                // Se vuelven a asignar los delegados del teclado a los nuevos inputs que han entrado en el área visible tras el scroll.
                 this._attachArrowDelegates(oTable);
+                this._debouncedHighlight();
             }.bind(this));
 
             // Se define un arreglo con los IDs de las columnas accesorias (meses, checkboxes) y se ocultan por defecto en la carga inicial.
@@ -1573,31 +1651,81 @@ sap.ui.define([
             });
 
             // Se inicializa el delegado general de eventos de teclado si no existía previamente.
+            // (CLINE)    Se incluye onkeypress para bloquear de forma silenciosa la escritura
+            // (CLINE)    de caracteres alfabéticos en los campos de entrada numéricos.
             if (!this._arrowDelegate) {
                 this._arrowDelegate = {
                     onkeydown: function (oEvent) {
                         this._onInputKeyDown(oEvent);
-                    }.bind(this)
+                    }.bind(this),
+                    // (CLINE)    Se cancela la pulsación cuando la tecla corresponde a una letra
+                    // (CLINE)    del alfabeto, impidiendo que el carácter aparezca en el campo
+                    // (CLINE)    sin mostrar ningún mensaje de error ni borde de validación.
+                    onkeypress: function (oEvent) {
+                        var sKey = oEvent.key;
+                        if (sKey && sKey.length === 1 && /[a-zA-Z]/.test(sKey)) {
+                            oEvent.preventDefault();
+                        }
+                    }
                 };
             }
 
             // Se asignan los delegados visuales (colores y teclado) justo después de que la tabla se renderiza por primera vez.
             oTable.addEventDelegate({
                 onAfterRendering: function () {
-                    this._attachArrowDelegates(oTable);
-                    this._applyCabeceraStyle(oTable);
+                    // Se seleccionan TODOS los inputs del DOM de la tabla
+                    var oDomRef = oTable.getDomRef();
+                    if (!oDomRef) return;
+
+                    var aInputs = oDomRef.querySelectorAll("input");
+                    aInputs.forEach(function (oInputDom) {
+                        // Se evita registrar el mismo listener dos veces
+                        if (oInputDom._letterBlockAttached) return;
+                        oInputDom._letterBlockAttached = true;
+
+                        oInputDom.addEventListener("keydown", function (oNativeEvent) {
+                            // Se permite todo si el input tiene la clase allowLetters
+                            if (oInputDom.classList.contains("allowLetters")) return;
+
+                            // Se busca si algún ancestro tiene la clase allowLetters
+                            // (por si el input está dentro de un wrapper con esa clase)
+                            var oParent = oInputDom.parentElement;
+                            var bAllow = false;
+                            while (oParent) {
+                                if (oParent.classList && oParent.classList.contains("allowLetters")) {
+                                    bAllow = true;
+                                    break;
+                                }
+                                oParent = oParent.parentElement;
+                            }
+                            if (bAllow) return;
+
+                            // Se bloquea la tecla si es una letra
+                            var sKey = oNativeEvent.key;
+                            if (sKey && sKey.length === 1 && /[a-zA-Z]/.test(sKey)) {
+                                oNativeEvent.preventDefault();
+                                oNativeEvent.stopImmediatePropagation();
+                            }
+                        });
+                    });
                 }.bind(this)
             });
-
             // Se asegura que cada vez que los datos de las filas cambian (ej. por un expandir/contraer), se repongan los delegados de teclado.
             // Se utiliza una bandera booleana para evitar asociar el mismo evento múltiples veces.
+            // if (!oTable._rowsDelegateAttached) {
+            //     oTable.attachEvent("rowsUpdated", function () {
+            //         this._attachArrowDelegates(oTable);
+            //     }.bind(this));
+            //     oTable._rowsDelegateAttached = true;
+            // }
+
             if (!oTable._rowsDelegateAttached) {
                 oTable.attachEvent("rowsUpdated", function () {
                     this._attachArrowDelegates(oTable);
+                    this._debouncedHighlight();
                 }.bind(this));
                 oTable._rowsDelegateAttached = true;
             }
-
             // Se garantiza la existencia de un modelo de interfaz ('viewModel') para gestionar la cantidad de filas visibles.
             if (!this.getView().getModel("viewModel")) {
                 const oViewModel = new sap.ui.model.json.JSONModel({
@@ -1635,6 +1763,96 @@ sap.ui.define([
                 }.bind(this));
                 oTable._colResizeAttached = true;
             }
+        },
+
+        /**
+         * Se calcula dinámicamente la cantidad de filas que caben en pantalla según el tamaño de la ventana.
+         * Esto evita que la tabla muestre scroll interno innecesario o deje espacios vacíos masivos al final de la vista.
+         */
+        _calculateDynamicRows: function () {
+            const oTable = this.getControlTable();
+
+            //    Se valida que la tabla exista y esté renderizada en el DOM
+            if (!oTable || !oTable.getDomRef()) {
+                return;
+            }
+
+            const oDomRef = oTable.getDomRef();
+
+            //    Se obtiene la altura total de la ventana visible
+            const iWindowHeight = window.innerHeight;
+
+            //    Se obtiene la posición vertical real donde empieza la tabla
+            const iTableTop = oDomRef.getBoundingClientRect().top;
+
+            //    Se obtiene la altura real del footer de la página
+            const oFooter = document.querySelector(".sapMPageFooter");
+            const iFooterHeight = oFooter ? oFooter.offsetHeight : 0;
+
+            //    Se obtiene el contenedor interno donde vive el scroll horizontal real de la tabla
+            const oScrollContainer = oDomRef.querySelector(".sapUiTableCnt");
+
+            let iScrollbarHeight = 0;
+
+            if (oScrollContainer) {
+                //    Se calcula la altura real del scrollbar horizontal
+                iScrollbarHeight = oScrollContainer.offsetHeight - oScrollContainer.clientHeight;
+            }
+
+            //    Se obtiene la altura del header interno de la tabla (cabecera de columnas)
+            let iTableHeaderHeight = 0;
+
+            const oTableHeader = oDomRef.querySelector(".sapUiTableColHdrCnt");
+
+            if (oTableHeader) {
+                iTableHeaderHeight = oTableHeader.offsetHeight;
+            }
+
+            //    Se calcula la altura disponible real restando todos los elementos visibles
+            const iAvailableHeight =
+                iWindowHeight -
+                iTableTop -
+                iFooterHeight -
+                iScrollbarHeight -
+                iTableHeaderHeight;
+
+            //    Se obtiene la altura real de una fila desde el DOM
+            let iRowHeight = 32;
+
+            const oFirstRow = oDomRef.querySelector(".sapUiTableTr");
+
+            if (oFirstRow) {
+                iRowHeight = oFirstRow.offsetHeight;
+            }
+
+            //    Se calcula el número base de filas que caben en el espacio disponible
+            let iRows = Math.floor(iAvailableHeight / iRowHeight);
+
+            //    Se calcula la altura ocupada por las filas completas
+            const iUsedHeight = iRows * iRowHeight;
+
+            //    Se calcula el espacio restante que no llega a completar una fila
+            const iRemainingSpace = iAvailableHeight - iUsedHeight;
+
+            //    Se define un umbral dinámico más conservador para evitar eliminar filas de más
+            const iThreshold = iRowHeight * 0.3;
+
+            //    Se ajusta dinámicamente el número de filas según el espacio restante
+            if (iRemainingSpace < iThreshold) {
+                //    Se eliminan dos filas solo cuando el espacio restante es realmente insuficiente
+                iRows = iRows - 2;
+            } else {
+                //    Se elimina una fila en condiciones normales
+                iRows = iRows - 1;
+            }
+
+            //    Se garantiza un mínimo de filas visibles para mantener la usabilidad
+            if (iRows < 5) {
+                iRows = 5;
+            }
+
+            //    Se actualiza el modelo con el número final de filas
+            this.getView().getModel("viewModel").setProperty("/dynamicRowCount", iRows);
         },
         /**
  * Se construye una clave estable que identifica una columna dinámica
@@ -1738,7 +1956,7 @@ sap.ui.define([
 
             // Se obtiene el índice actual de la fila y el contexto de datos vinculado a ella mediante el modelo nombrado.
             const iCurrentRowIndex = oParent.getIndex();
-            const oCurrentContext = oParent.getBindingContext("corrientesModel");
+            const oCurrentContext = oParent.getBindingContext(this.tableModelName);
             if (!oCurrentContext) return;
 
             // Se recorren las celdas de la fila actual para averiguar en qué índice de columna se encuentra el Input enfocado.
@@ -1752,6 +1970,9 @@ sap.ui.define([
                 }
             }
             if (iTargetColIndex === -1) return;
+            //     Se resetea el destino pendiente antes de calcular el nuevo objetivo
+            //     para evitar que una navegacion anterior interfiera con la actual.
+            this._pendingFocusTarget = null;
 
             // ── LÓGICA DE NAVEGACIÓN HORIZONTAL (DERECHA / IZQUIERDA) ─────────────────────────────
             if (bLeft || bRight) {
@@ -1803,6 +2024,10 @@ sap.ui.define([
 
                 // Se transfiere el foco al input destino encontrado o se devuelve al original si no se halló ninguno.
                 if (oTargetInput) {
+                    //     Se guarda el input destino en _pendingFocusTarget antes de
+                    //     focalizar para que _enviarFilaAlBackend pueda restaurarlo
+                    //     tras completar la llamada asincrona sin perder la posicion.
+                    this._pendingFocusTarget = oTargetInput;
                     setTimeout(function () {
                         oTargetInput.focus();
                         if (oTargetInput.select) oTargetInput.select();
@@ -1908,7 +2133,8 @@ sap.ui.define([
 
                     // Se escanean las filas recién dibujadas buscando aquella cuyo contexto coincida con la ruta de destino.
                     for (let i = 0; i < aRows.length; i++) {
-                        const oRowContext = aRows[i].getBindingContext("corrientesModel");
+                        const oRowContext = aRows[i].getBindingContext(this.tableModelName);
+
                         if (oRowContext && oRowContext.getPath() === sTargetPath) {
                             oTargetRow = aRows[i];
                             break;
@@ -1927,6 +2153,9 @@ sap.ui.define([
                     const oTargetInput = that._recursiveGetInput(oCell);
 
                     if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
+                        //     Se guarda el input destino en _pendingFocusTarget para que
+                        //     _enviarFilaAlBackend pueda restaurarlo tras la llamada async.
+                        that._pendingFocusTarget = oTargetInput;
                         oTargetInput.focus();
                         if (oTargetInput.select) oTargetInput.select();
                     } else {
@@ -1958,7 +2187,8 @@ sap.ui.define([
 
                     // Se busca la fila objetivo por su ruta de binding utilizando el nombre del modelo correcto.
                     for (let i = 0; i < aRows.length; i++) {
-                        const oRowContext = aRows[i].getBindingContext("corrientesModel");
+                        const oRowContext = aRows[i].getBindingContext(this.tableModelName);
+
                         if (oRowContext && oRowContext.getPath() === sPath) {
                             oTargetRow = aRows[i];
                             break;
@@ -1977,6 +2207,9 @@ sap.ui.define([
                     const oTargetInput = this._recursiveGetInput(oCell);
 
                     if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
+                        //     Se guarda el input destino en _pendingFocusTarget para que
+                        //     _enviarFilaAlBackend pueda restaurarlo tras la llamada async.
+                        that._pendingFocusTarget = oTargetInput;
                         oTargetInput.focus();
                         if (oTargetInput.select) oTargetInput.select();
                     } else {
@@ -2344,15 +2577,11 @@ sap.ui.define([
             // Se separan las entradas raiz de las entradas de hijos para mayor legibilidad.
             if (sPath === "") {
                 if (aDelta.length === 0) {
-                    console.log("[VariantDelta] No se han detectado modificaciones respecto al estado original del servidor.");
+
                 } else {
-                    console.log("[VariantDelta] Se han detectado " + aDelta.length + " modificacion(es):");
+
                     aDelta.forEach(function (oEntry, iIdx) {
-                        console.log(
-                            "  [" + iIdx + "] ruta: " + oEntry.path +
-                            " | campo: " + oEntry.key +
-                            " | valor nuevo: " + JSON.stringify(oEntry.value)
-                        );
+
                     });
                 }
             }
@@ -2366,15 +2595,15 @@ sap.ui.define([
          * la variante sin necesidad de almacenar el modelo completo.
          */
         _applyModelDelta: function (aDelta) {
-            const oModel = this.getView().getModel("corrientesModel");
+            const oModel = this.getView().getModel(this.tableModelName);
             if (!oModel) return;
 
-            // Se parte de una copia limpia de los datos del servidor para garantizar
-            // que no queden residuos de sesiones anteriores antes de aplicar el delta.
+            // Se restauran los datos originales del servidor sin invocar refresh(true)
+            // para evitar que el refresco forzado destruya las columnas dinamicas de la tabla
+            // mientras la restauracion de columnas estaticas aun no ha finalizado.
             if (this._originalServerData) {
                 const aFresh = JSON.parse(JSON.stringify(this._originalServerData));
                 oModel.setData(aFresh);
-                oModel.refresh(true);
             }
 
             // Si el delta esta vacio no hay nada que aplicar: la tabla ya muestra
@@ -2386,25 +2615,49 @@ sap.ui.define([
                 oModel.setProperty(oEntry.path + "/" + oEntry.key, oEntry.value);
             });
         },
-        /**
-         * Se inicializa el sistema de gestion de variantes.
-         * Se captura el estado inicial de la tabla como variante estandar y se
-         * carga cualquier variante adicional persistida en el navegador.
+        /*
+              * Se llama desde onInit de cada vista hija para registrar la configuración
+              * específica de su tabla antes de que arranque cualquier lógica de variantes.
+              */
+        initVariantConfig: function (oConfig) {
+            if (!oConfig || !oConfig.tableId) {
+
+                return;
+            }
+            // Se almacena la configuración en una propiedad de instancia privada para
+            // que todos los métodos del BaseController la lean sin parámetros extra.
+            this._variantConfig = {
+                tableId: oConfig.tableId,
+                modelName: oConfig.modelName || "",
+                storageKey: oConfig.storageKey || oConfig.tableId + "_variants"
+            };
+
+            // Se sincroniza tableModelName para que getBind() y los templates XML
+            // sigan funcionando exactamente igual que antes.
+            this.tableModelName = this._variantConfig.modelName;
+        },
+        /* ────────────────────────────────────
+         * Lee la clave de storage desde _variantConfig en lugar de recibir un parámetro
+         * o depender de un valor hardcodeado. El resto de la lógica es idéntica.
          */
-        _initVariantManagement: function (sStorageKey) {
-            this._variantStorageKey = sStorageKey || "ui5_variants_default";
+        _initVariantManagement: function () {
+            var sStorageKey = (this._variantConfig && this._variantConfig.storageKey)
+                ? this._variantConfig.storageKey
+                : "ui5_variants_default";
+
+            this._variantStorageKey = sStorageKey;
             this._bVariantDirty = false;
+            // Se resetea la bandera que indica si el delegate ya aplicó la variante,
+            // para evitar la doble aplicación entre el delegate y este setTimeout.
+            this._bVariantAppliedByDelegate = false;
 
             this._aVariants = this._loadVariantsFromStorage();
 
-            // Se recupera el nombre de la variante marcada como por defecto.
-            // Si no hay ninguna guardada se usa la estandar.
-            const sDefaultName = localStorage.getItem(this._variantStorageKey + "_default") || "Estándar";
-            const oDefaultVariant = this._aVariants.find(function (v) {
+            var sDefaultName = localStorage.getItem(this._variantStorageKey + "_default") || "Estándar";
+            var oDefaultVariant = this._aVariants.find(function (v) {
                 return v.name === sDefaultName;
             }) || this._aVariants[0];
 
-            // Se marca en el array cual es la por defecto.
             this._aVariants.forEach(function (v) { v.isPorDefecto = false; });
             oDefaultVariant.isPorDefecto = true;
 
@@ -2413,22 +2666,38 @@ sap.ui.define([
                 displayLabel: oDefaultVariant.name
             }), "variantModel");
 
-            // Se captura el estado inicial y se aplica la variante por defecto
-            // una vez que la tabla esta completamente renderizada.
             setTimeout(function () {
-                this._aVariants[0].state = this._getCurrentTableState();
+                //  Si cattura lo stato Estándar solo se il delegate non ha ancora applicato
+                // una variante con nome, garantendo che _aVariants[0].state rifletta la
+                // disposizione originale delle colonne e non quella della variante attiva.
+                if (!this._bVariantAppliedByDelegate) {
+                    this._aVariants[0].state = this._getCurrentTableState();
 
-                // Se aplica automaticamente la variante por defecto al arrancar
-                // solo si no es la estandar, ya que la estandar es el estado inicial.
-                if (oDefaultVariant.name !== "Estándar" && oDefaultVariant.state) {
-                    this._bSuppressDirtyFlag = true;
-                    this._applyVariantState(oDefaultVariant.state);
-                    this.getView().getModel("variantModel").setProperty("/currentName", oDefaultVariant.name);
-                    this.getView().getModel("variantModel").setProperty("/displayLabel", oDefaultVariant.name);
+                    if (oDefaultVariant.name !== "Estándar" && oDefaultVariant.state) {
+                        this._bSuppressDirtyFlag = true;
+                        this._applyVariantState(oDefaultVariant.state);
+                        this.getView().getModel("variantModel").setProperty("/currentName", oDefaultVariant.name);
+                        this.getView().getModel("variantModel").setProperty("/displayLabel", oDefaultVariant.name);
+                    }
+                } else {
+                    // Il delegate ha già applicato la variante. Si cattura comunque lo stato
+                    // corrente come base di Estándar per i futuri ripristini, ma senza ri-applicare.
+                    // Si usa un breve ritardo aggiuntivo per assicurarsi che i mesi siano aperti.
+                    setTimeout(function () {
+                        if (this._aVariants[0] && !this._aVariants[0].state) {
+                            //  Si resetta temporaneamente il flag per catturare lo stato Estándar
+                            // pulito prima che la variante con nome fosse applicata. Poiché questo
+                            // setTimeout scatta dopo i 300 ms di _applyVariantState, lo stato
+                            // catturato riflette la variante attiva, non Estándar. Per questo motivo
+                            // si lascia null e si lascia che _doSwitchToVariant ricostruisca
+                            // lo stato quando l'utente torna a Estándar.
+                        }
+                    }.bind(this), 100);
                 }
+                this._bSuppressDirtyFlag = false;
             }.bind(this), 500);
 
-            const oTable = this.getControlTable();
+            var oTable = this.getControlTable();
             if (oTable && !oTable._variantColumnMoveAttached) {
                 oTable.attachColumnMove(function () {
                     this._markVariantDirty();
@@ -2443,9 +2712,9 @@ sap.ui.define([
          * Se omite la marca si el sistema ha suspendido temporalmente la deteccion
          * de cambios durante la restauracion de una variante.
          */
+        /* Se define la función para marcar la variante como modificada y añadir el asterisco visual. */
         _markVariantDirty: function () {
-            // Se ignora la llamada si la supresion temporal esta activa, lo que ocurre
-            // durante la restauracion interna de datos al cambiar de variante.
+            // Se ignora la llamada si la supresión temporal está activa o si ya está marcado como sucio.
             if (this._bSuppressDirtyFlag) return;
             if (this._bVariantDirty) return;
 
@@ -2454,7 +2723,7 @@ sap.ui.define([
             const oVModel = this.getView().getModel("variantModel");
             if (!oVModel) return;
 
-            // Se anade el asterisco al nombre visible para indicar cambios pendientes.
+            // Se añade el asterisco al nombre visible para indicar cambios pendientes de guardar.
             const sName = oVModel.getProperty("/currentName");
             oVModel.setProperty("/displayLabel", sName + " *");
         },
@@ -2525,7 +2794,7 @@ sap.ui.define([
             // Se calcula el delta de cambios en las celdas respecto a los datos originales del servidor.
             let aModelDelta = [];
             try {
-                const oModel = this.getView().getModel("corrientesModel");
+                const oModel = this.getView().getModel(this.tableModelName);
                 if (oModel && this._originalServerData) {
                     aModelDelta = this._computeModelDelta(
                         this._originalServerData,
@@ -2657,6 +2926,11 @@ sap.ui.define([
                         oTable.insertColumn(oCol, iPos);
                     }
                 });
+                aStaticCols.forEach(function (oCol) {
+                    if (oTable.indexOfColumn(oCol) === -1) {
+                        oTable.addColumn(oCol);
+                    }
+                });
             }
 
             // Se restauran las expansiones y selecciones.
@@ -2732,13 +3006,52 @@ sap.ui.define([
         },
 
         /**
-         * Se construye una clave estable para identificar una columna dentro de una variante.
-         */
+        * Se construye una clave estable para identificar una columna dentro de una variante.
+        * Los IDs generados por el framework con formato __columnN varían según el orden en que se
+        * inicializan las vistas en cada sesión. Para columnas sin filterProperty ni ID explícito
+        * se extrae el texto de la etiqueta principal como discriminador invariante entre sesiones.
+        */
         _getVariantColumnKey: function (oCol) {
-            const sFilter = oCol.getFilterProperty && oCol.getFilterProperty();
+            //    La filterProperty es siempre la clave más fiable cuando existe.
+            var sFilter = oCol.getFilterProperty && oCol.getFilterProperty();
             if (sFilter) return sFilter;
-            const sId = oCol.getId() || "";
-            return sId.split("--").pop() || sId;
+
+            var sId = oCol.getId() || "";
+            var sSuffix = sId.split("--").pop() || sId;
+
+            //    Si el sufijo tiene formato de ID automático (__columnN) se intenta
+            // obtener el texto de la primera etiqueta para garantizar estabilidad entre
+            // sesiones independientemente del orden de navegación del usuario.
+            if (sSuffix.indexOf("__") === 0) {
+                try {
+                    var oLabel = oCol.getLabel();
+                    var sText = "";
+                    if (oLabel) {
+                        if (typeof oLabel.getText === "function") {
+                            sText = oLabel.getText();
+                        }
+                        //    Las cabeceras de la TreeTable usan VBox como label;
+                        // se busca el primer Label o Text dentro de sus items.
+                        if (!sText && typeof oLabel.getItems === "function") {
+                            var aItems = oLabel.getItems();
+                            for (var i = 0; i < aItems.length; i++) {
+                                if (typeof aItems[i].getText === "function") {
+                                    sText = aItems[i].getText();
+                                    if (sText) break;
+                                }
+                            }
+                        }
+                    }
+                    if (sText && sText.trim()) {
+                        //    Se normaliza el texto eliminando espacios y caracteres
+                        // especiales para obtener una clave limpia y comparables.
+                        return "lbl__" + sText.trim().replace(/[\s\/\\:{}]/g, "_");
+                    }
+                } catch (e) {
+                    //    Si la extracción falla se usa el ID nativo como último recurso.
+                }
+            }
+            return sSuffix;
         },
 
         /**
@@ -2845,80 +3158,81 @@ sap.ui.define([
          * antes de proceder para evitar la perdida accidental de modificaciones.
          */
         _switchToVariant: function (oVar) {
-            const oVModel = this.getView().getModel("variantModel");
-            const that = this;
+            var oVModel = this.getView().getModel("variantModel");
+            var that = this; //    Se preserva el contexto del controlador.
 
-            // Se verifica si la variante destino es la misma que la activa para evitar
-            // operaciones innecesarias al pulsar sobre la variante ya seleccionada.
-            if (oVar.name === oVModel.getProperty("/currentName") && !this._bVariantDirty) {
-                return;
-            }
-
-            // Se muestra un dialogo de confirmacion si hay cambios pendientes sin guardar.
             if (this._bVariantDirty) {
                 sap.m.MessageBox.confirm(
-                    "Existen cambios sin guardar en la vista actual. Si continua, se perderan las modificaciones no guardadas.",
+                    "Existen cambios sin guardar. ¿Desea continuar?",
                     {
-                        title: "Cambios sin guardar",
-                        actions: [sap.m.MessageBox.Action.OK, sap.m.MessageBox.Action.CANCEL],
-                        emphasizedAction: sap.m.MessageBox.Action.CANCEL,
                         onClose: function (sAction) {
-                            if (sAction !== sap.m.MessageBox.Action.OK) return;
-                            that._doSwitchToVariant(oVar);
+                            if (sAction === sap.m.MessageBox.Action.OK) {
+                                //    Aquí 'that' debe tener la referencia al controlador.
+                                that._doSwitchToVariant(oVar);
+                            }
                         }
                     }
                 );
-                return;
+            } else {
+                this._doSwitchToVariant(oVar);
             }
-
-            // Si no hay cambios pendientes se aplica el cambio directamente.
-            this._doSwitchToVariant(oVar);
         },
 
         /**
-         * Se ejecuta el cambio efectivo de variante una vez confirmado por el usuario.
-         * Se suspende temporalmente el detector de cambios del modelo para evitar que
-         * la restauracion de datos dispare el indicador de modificaciones pendientes.
-         * Al volver a la variante estandar sin estado guardado se resetean ambos controles
-         * utilizando la retrollamada _fnSetEjecutadoCheckBox para el checkbox de la Main view.
+         *    La función ejecuta la lógica técnica del cambio de estado de una variante.
+         *    Se encarga de restaurar columnas, datos y delta del modelo.
          */
         _doSwitchToVariant: function (oVar) {
+            //    Se obtiene el modelo de variantes
             const oVModel = this.getView().getModel("variantModel");
 
-            // Se desactiva el indicador de cambios pendientes y se activa la supresion
-            // para que ninguna operacion interna de restauracion lo vuelva a encender.
+            //    Se desactiva temporalmente el indicador de cambios pendientes y la propagación de eventos
             this._bVariantDirty = false;
             this._bSuppressDirtyFlag = true;
 
+            //    Determina si la variante es la estándar (sin estado guardado o con nombre Standard/Estándar)
+            var bIsStandardVariant = (!oVar.state || oVar.name === "Estándar" || oVar.name === "Standard");
+
+            //    Si hay un método de reset específico en el controlador hijo (ej. Anticipados), se ejecuta
+            if (bIsStandardVariant && typeof this._applyStandardReset === "function") {
+                this._applyStandardReset();
+
+                //    Se actualiza el modelo de variantes tras el reset manual
+                if (oVModel) {
+                    oVModel.setProperty("/currentName", oVar.name);
+                    oVModel.setProperty("/displayLabel", oVar.name);
+                    oVModel.setProperty("/isDirty", false);
+                }
+
+                this._bSuppressDirtyFlag = false;
+                return;
+            }
+
+            //    Si la variante tiene un estado guardado, se aplica directamente
             if (oVar.state) {
                 this._applyVariantState(oVar.state);
             } else if (this._originalServerData) {
-                // Se limpian primero los estados internos para garantizar que cualquier
-                // operacion asincrona desencadenada por el refresco del modelo lea valores
-                // limpios y no aplique anchos de variantes anteriores al recrear columnas.
+                //    Si es estándar pero no hay reset específico, se aplica lógica genérica
                 this._savedColWidths = {};
                 this._openedYear = null;
 
-                const oModel = this.getView().getModel("corrientesModel");
+                //    Restauración de los datos originales del servidor
+                const oModel = this.getView().getModel(this.tableModelName);
                 if (oModel) {
                     oModel.setData(JSON.parse(JSON.stringify(this._originalServerData)));
-                    oModel.refresh(true);
                 }
 
-                // Se cierran las columnas de meses y ejecutados residuales.
+                //    Se eliminan columnas dinámicas de meses o ejecutados que puedan estar abiertas
                 const oTableForClose = this.getControlTable();
                 if (oTableForClose) {
                     oTableForClose.getColumns()
-                        .filter(function (c) {
-                            return c.data("dynamicMonth") || c.data("ejecutadosColumn");
-                        })
-                        .forEach(function (c) { oTableForClose.removeColumn(c); });
+                        .filter(c => c.data("dynamicMonth") || c.data("ejecutadosColumn"))
+                        .forEach(c => oTableForClose.removeColumn(c));
                 }
 
-                // Se aplican los anchos predeterminados a las columnas de años presentes.
-                const oTableForReset = this.getControlTable();
-                if (oTableForReset) {
-                    oTableForReset.getColumns().forEach(function (oCol) {
+                //    Se restauran anchos predeterminados de columnas dinámicas
+                if (oTableForClose) {
+                    oTableForClose.getColumns().forEach(oCol => {
                         if (oCol.data("dynamicYear") && !oCol.data("ejecutadosColumn")) {
                             oCol.setWidth("8rem");
                         } else if (oCol.data("ejecutadosColumn")) {
@@ -2927,97 +3241,54 @@ sap.ui.define([
                     });
                 }
 
-                // Se restauran los anchos originales de las columnas estáticas usando
-                // el estado capturado durante la inicialización.
+                //    Restauración de visibilidad y orden de columnas estáticas usando la primera variante guardada
                 const oInitialState = this._aVariants[0] && this._aVariants[0].state;
-                if (oInitialState && oInitialState.columns && oInitialState.columns.length > 0 && oTableForReset) {
-                    const aStaticCols = oTableForReset.getColumns().filter(function (oCol) {
-                        return !oCol.data("dynamicYear") && !oCol.data("dynamicMonth") && !oCol.data("ejecutadosColumn");
-                    });
+                if (oInitialState && oInitialState.columns?.length && oTableForClose) {
+                    const aStaticCols = oTableForClose.getColumns().filter(oCol =>
+                        !oCol.data("dynamicYear") && !oCol.data("dynamicMonth") && !oCol.data("ejecutadosColumn")
+                    );
+
                     const oKeyToCol = {};
-                    aStaticCols.forEach(function (oCol) {
-                        oKeyToCol[this._getVariantColumnKey(oCol)] = oCol;
-                    }.bind(this));
-                    aStaticCols.forEach(function (oCol) { oTableForReset.removeColumn(oCol); });
-                    oInitialState.columns.forEach(function (oSaved, iPos) {
+                    aStaticCols.forEach(oCol => { oKeyToCol[this._getVariantColumnKey(oCol)] = oCol; });
+
+                    aStaticCols.forEach(oCol => oTableForClose.removeColumn(oCol));
+
+                    oInitialState.columns.forEach((oSaved, iPos) => {
                         const oCol = oKeyToCol[oSaved.key];
                         if (oCol) {
                             oCol.setWidth(oSaved.width);
                             oCol.setVisible(oSaved.visible);
-                            oTableForReset.insertColumn(oCol, iPos);
+                            oTableForClose.insertColumn(oCol, iPos);
                         }
                     });
                 }
 
-                // Se abre automáticamente el primer año con sus meses, igual que al cargar la app.
-                // Se vuelven a aplicar los anchos predeterminados por si alguna operacion
-                // asincrona anterior los hubiera sobreescrito (doble proteccion).
-                setTimeout(function () {
+                //    Reabre el primer año por defecto tras un breve retardo
+                setTimeout(() => {
                     const oTbl = this.getControlTable();
                     if (!oTbl || this._openedYear) return;
 
-                    oTbl.getColumns().forEach(function (oCol) {
-                        if (oCol.data("dynamicYear") && !oCol.data("ejecutadosColumn")) {
-                            oCol.setWidth("8rem");
-                        }
-                    });
-
-                    const oPrimerAnioCol = oTbl.getColumns().find(function (c) {
-                        return c.data("dynamicYear") === true && !c.data("ejecutadosColumn");
-                    });
+                    const oPrimerAnioCol = oTbl.getColumns().find(c => c.data("dynamicYear") && !c.data("ejecutadosColumn"));
                     if (!oPrimerAnioCol) return;
 
-                    const sSubFijo = oPrimerAnioCol.data("subFijoYear");
-                    const sYearVal = oPrimerAnioCol.data("year");
-
                     this.onCreateMonthsTable({
-                        getSource: function () {
-                            return {
-                                getMetadata: function () {
-                                    return { getName: function () { return "sap.m.Button"; } };
-                                },
-                                getText: function () { return String(sYearVal); },
-                                data: function (sKey) {
-                                    if (sKey === "subFijoYear") return sSubFijo;
-                                    if (sKey === "year") return String(sYearVal);
-                                    return null;
-                                }
-                            };
-                        }
+                        getSource: () => ({
+                            getMetadata: () => ({ getName: () => "sap.m.Button" }),
+                            getText: () => String(oPrimerAnioCol.data("year")),
+                            data: sKey => oPrimerAnioCol.data(sKey)
+                        })
                     });
-                }.bind(this), 200);
-
-                // Se resetea idEjecutadoCheckBox2 mediante la retrollamada inyectada por
-                // la Main view, ya que ese control reside en ella y no en esta vista hija.
-                if (this._bEjecutadoSelected) {
-                    if (this._fnSetEjecutadoCheckBox) {
-                        this._fnSetEjecutadoCheckBox(false);
-                    }
-                    this._bEjecutadoSelected = false;
-                    this._handleEjecutado(false);
-                }
-
-                // Se resetea idAjustesCheckBox que pertenece a la vista hija activa
-                // y se actualiza el modelo de visibilidad de columnas correspondiente.
-                const oAjustesCheckBox = this.byId("idAjustesCheckBox");
-                if (oAjustesCheckBox && oAjustesCheckBox.getSelected()) {
-                    oAjustesCheckBox.setSelected(false);
-                    const oVisibleModel = this.getView().getModel("visibleColumn");
-                    if (oVisibleModel) {
-                        oVisibleModel.setProperty("/visible", false);
-                    }
-                }
-
-                // Se libera la supresion tras un ciclo minimo de renderizado.
-                setTimeout(function () {
-                    this._bSuppressDirtyFlag = false;
-                }.bind(this), 100);
+                }, 200);
             }
 
-            // Se actualiza el nombre activo en el modelo de variantes y se elimina
-            // el asterisco de cambios pendientes del boton selector.
-            oVModel.setProperty("/currentName", oVar.name);
-            oVModel.setProperty("/displayLabel", oVar.name);
+            //    Actualización final del modelo de variantes con el nombre de la variante activa
+            if (oVModel) {
+                oVModel.setProperty("/currentName", oVar.name);
+                oVModel.setProperty("/displayLabel", oVar.name);
+            }
+
+            //    Se libera la supresión de eventos tras completar la restauración
+            setTimeout(() => { this._bSuppressDirtyFlag = false; }, 100);
         },
 
         /**
@@ -3450,139 +3721,95 @@ sap.ui.define([
             );
         },
 
-/**
-         * Se recuperan los datos de accesos indirectos correspondientes al entorno de la obra.
-         * Se garantiza que las cabeceras de ambito y norma siempre tengan un valor valido,
-         * recuperandolos del modelo global si el parametro de entrada es nulo.
-         */
-        getAccesoIndirectos: async function (obra) {
-            const oAppData = this.getGlobalModel("appData").getData();
-            const oNormModel = this.getGlobalModel("normModel");
-            
-            /* Se determina el valor del ambito priorizando el parametro, seguido del tramo seleccionado o el nodo inicial. */
-            let sAmbitoFinal = obra;
-            if (!sAmbitoFinal) {
-                if (oAppData.tramo && oAppData.tramo.Prctr) {
-                    sAmbitoFinal = oAppData.tramo.Prctr;
-                } else if (oAppData.userData && oAppData.userData.initialNode) {
-                    sAmbitoFinal = oAppData.userData.initialNode;
-                } else {
-                    sAmbitoFinal = "";
-                }
-            }
 
-            /* Se extrae la norma tecnica del modelo global para incluirla en la peticion. */
-            let sNormaFinal = "";
-            if (oNormModel && oNormModel.getData() && oNormModel.getData().norma) {
-                sNormaFinal = oNormModel.getData().norma;
-            }
-            
-            return this.post(
-                this.getGlobalModel("mainService"), 
-                "/AccesoIndirectosSet", 
-                {
-                    /* Se envian las estructuras necesarias para la respuesta de SAP. */
-                    "NavSelProyecto": [ oAppData.tramo ],
-                    "NavMensajes": [],
-                    "NavKpisIndirectos": [],
-                    "NavResumenIndirectos": [],
-                    "NavMasterLt": [],
-                    "NavLsObra": []
-                }, 
-                {
-                    headers: {
-                        /* Se asignan las cabeceras requeridas para el filtrado en el backend. */
-                        ambito: sAmbitoFinal,
-                        lang: oAppData.userData.AplicationLangu,
-                        norma: sNormaFinal
-                    }
-                }
-            );
-        },
 
         /**
          * Se procesa la selección nativa de filas dentro de la tabla.
          * Su propósito es mantener sincronizados los checkboxes de nivel profundo, propagando selecciones de forma masiva si procede.
          */
-        onRowSelectionChange: function (oEvent) {
-            // Se implementa un bloqueo ('_lock') tipo Mutex rudimentario. Como esta función programa modificaciones sobre la propia tabla, 
-            // se evita que los cambios programáticos re-disparen este mismo evento provocando bucles infinitos (Stack Overflow).
-            if (this._lock) return;
-            this._lock = true;
-            // Se marca la variante activa como modificada al cambiar la seleccion.
-            this._markVariantDirty();
+        onRowInputChange: async function (oEvent) {
 
-            const oTable = oEvent.getSource();
-            // Se captura el listado de índices afectados por la acción reciente del usuario.
-            const aIndices = oEvent.getParameter("rowIndices");
+            let oSource = oEvent.getSource();
+            let oContext = oSource.getBindingContext(this.tableModelName);
 
-            if (!aIndices || !aIndices.length) {
-                this._lock = false;
-                return;
-            }
-
-            const iRow = aIndices[0];
-            const oCtx = oTable.getContextByIndex(iRow);
-
-            if (!oCtx) {
-                this._lock = false;
-                return;
-            }
-
-            // Se inspecciona el estado visual de la fila (si fue marcada o desmarcada).
-            const bSelected = oTable.isIndexSelected(iRow);
-            const iLen = oTable.getBinding("rows").getLength();
-            const sPath = oCtx.getPath();
-            // Se deduce la profundidad en el árbol semántico contando las ocurrencias del segmento '/categories'.
-            const iLevel = sPath.split("/categories").length - 1;
-
-            // Se aplica una lógica de negocio restrictiva: las selecciones múltiples vinculadas se ejecutan desde un subnivel profundo.
-            if (iLevel >= 3) {
-                const sParentPath = sPath.substring(0, sPath.lastIndexOf("/categories"));
-                let firstChildIndex = null;
-
-                // Paso 1: Localizar la primera fila hermana (el primer nodo que comparte el mismo padre) dentro del viewport.
-                for (let j = 0; j < iLen; j++) {
-                    const oCtx2 = oTable.getContextByIndex(j);
-                    if (!oCtx2) continue;
-
-                    const sP = oCtx2.getPath();
-                    const iLvl = sP.split("/categories").length - 1;
-
-                    // Si posee la misma profundidad y comparte la ruta paterna, es un hermano primario.
-                    if (iLvl === iLevel && sP.startsWith(sParentPath + "/categories")) {
-                        firstChildIndex = j;
-                        break;
-                    }
+            //     Se asegura la obtencion del contexto incluso en estructuras anidadas.
+            let oParent = oSource;
+            while (!oContext && oParent) {
+                oParent = oParent.getParent();
+                if (oParent && oParent.getBindingContext) {
+                    oContext = oParent.getBindingContext(this.tableModelName);
                 }
+            }
 
-                // Paso 2: Si el usuario ha clicado sobre el PRIMER hermano explícitamente, se propaga la selección al resto del bloque fraterno.
-                if (firstChildIndex === iRow) {
-                    for (let k = 0; k < iLen; k++) {
-                        const oCtx3 = oTable.getContextByIndex(k);
-                        if (!oCtx3) continue;
+            if (!oContext) return;
 
-                        const sP3 = oCtx3.getPath();
-                        const iLvl3 = sP3.split("/categories").length - 1;
-
-                        // Si la fila iterada es un hermano válido, se fuerza programáticamente la selección.
-                        if (iLvl3 === iLevel && sP3.startsWith(sParentPath + "/categories")) {
-                            if (bSelected) {
-                                oTable.addSelectionInterval(k, k); // Marca
-                            } else {
-                                oTable.removeSelectionInterval(k, k); // Desmarca
-                            }
-                        }
-                    }
+            //     Se obtiene el nombre del campo modificado desde el binding.
+            var oBI = oSource.getBindingInfo && oSource.getBindingInfo("value");
+            var sCampoMod = "";
+            if (oBI) {
+                if (oBI.parts && oBI.parts[0] && oBI.parts[0].path) {
+                    sCampoMod = oBI.parts[0].path;
+                } else if (oBI.path) {
+                    sCampoMod = oBI.path;
                 }
+            }
 
-                // Se levanta el candado para permitir próximas interacciones.
-                this._lock = false;
+            let sNewValue;
+
+            //     Se gestiona el caso especial de Select.
+            if (oSource.isA("sap.m.Select")) {
+                sNewValue = oSource.getSelectedKey();
+                oContext.getModel().setProperty(oContext.getPath() + "/Tipo", sNewValue);
+
+                if (sNewValue === "LIN") {
+                    setTimeout(function () {
+                        this.onOpenRangePicker({
+                            getSource: function () { return oSource; }
+                        }, null, oContext);
+                    }.bind(this), 50);
+                    return;
+                }
+            } else {
+                sNewValue = oSource.getValue();
+            }
+
+            //     Se formatea el valor al formato numerico esperado por SAP.
+            let sValorFormateado = this._formatToSAPNumber(sNewValue);
+
+            //     Se recupera el valor original capturado en focusin.
+            var sOriginalValue = oSource._originalValue || "";
+
+            //     Se evita llamada al backend si el valor no ha cambiado realmente.
+            if (sValorFormateado === sOriginalValue) {
                 return;
             }
 
-            // Si la selección no cayó en un rango con lógica vinculante, se finaliza el proceso rutinario.
-            this._lock = false;
+            //     Se actualiza el modelo con el valor formateado antes de construir el payload.
+            if (sCampoMod && sValorFormateado !== null && sValorFormateado !== undefined && sValorFormateado !== "") {
+                oContext.getModel().setProperty(oContext.getPath() + "/" + sCampoMod, sValorFormateado);
+            }
+
+            //     Se obtiene la fila actualizada.
+            let oRow = oContext.getObject();
+            let oPayloadRow = JSON.parse(JSON.stringify(oRow));
+
+            //     Se eliminan propiedades tecnicas del frontend no soportadas por el backend.
+            var aFrontendOnlyProps = [
+                "__metadata", "children", "parent", "padre", "isEditable",
+                "isSubcapitulo", "isCapitulo", "isVacio", "isGroup",
+                "expandible", "cabecera", "isNew", "_linDateFrom", "_linDateTo"
+            ];
+            aFrontendOnlyProps.forEach(function (sKey) {
+                delete oPayloadRow[sKey];
+            });
+
+            //     Se asegura que el campo modificado lleve el valor correcto.
+            if (sCampoMod && sValorFormateado !== null && sValorFormateado !== undefined && sValorFormateado !== "") {
+                oPayloadRow[sCampoMod] = sValorFormateado;
+            }
+
+            //     Se envia la fila al backend.
+            this._enviarFilaAlBackend(oContext, oPayloadRow, sCampoMod);
         },
 
         /**
@@ -3612,84 +3839,84 @@ sap.ui.define([
             oDefaultModel.refresh(true);
         },
 
-        /**
+        /**NO SE ESTA USANDO
          * Se evalúa de manera meticulosa si el estado actual contiene modificaciones que difieran del snapshot.
-         */
-        hasUnsavedChanges: function () {
-            // Si nunca se tomó una instantánea o el modelo está corrupto, se asume que no hay diferencias procesables.
-            if (!this._originalData) return false;
-            const oDefaultModel = this.getView().getModel();
-            if (!oDefaultModel) return false;
-
-            const aCurrentCat = oDefaultModel.getProperty("/catalog/models/categories");
-            const aOriginalCat = this._originalData.catalog.models.categories;
-
-            // Función local de limpieza de formato. Las interfaces de entrada humana o el motor de formato suelen arrojar 
-            // diferencias cosméticas (0,00 vs 0). Esta rutina nivela la comparación reduciéndolas a falsies ("").
-            const normalize = function (val) {
-                if (val === undefined || val === null || val === "") return "";
-
-                // Si el valor viene envuelto en un arreglo, se reduce uniendo y podando caracteres basura.
-                if (Array.isArray(val)) {
-                    const sJoined = val.join("").replace(/,/g, "").trim();
-                    return (sJoined === "" || /^0+$/.test(sJoined)) ? "" : sJoined;
-                }
-
-                // Normalización de números en crudo.
-                const sVal = val.toString().trim();
-                // Si el valor detectado denota un cero absoluto ("0", "0.00", "0,0"), se asimila con un valor vacío.
-                if (sVal === "0" || sVal === "0.0" || sVal === "0,0" || /^0+(?:[.,]0+)*$/.test(sVal) || /^0+(?:,0+)*$/.test(sVal)) {
-                    return "";
-                }
-                return sVal;
-            };
-
-            // Función recursiva que inspecciona y compara cada nodo entre el modelo vivo y el modelo congelado.
-            const checkRecursive = function (aCurrent, aOriginal, sPath) {
-                if (!aCurrent) return false;
-
-                for (let i = 0; i < aCurrent.length; i++) {
-                    const oCur = aCurrent[i];
-                    // Se protege el acceso al array original para mitigar casos de nodos que fueron introducidos de cero por el usuario.
-                    const oOri = (aOriginal && aOriginal[i]) ? aOriginal[i] : {};
-                    const currentPath = sPath + " -> " + (oCur.name || i);
-
-                    for (let key in oCur) {
-                        // Solo se detectan discrepancias en los campos de captura de datos (Y2025, M2025_01).
-                        if (/^y\d{4}$/.test(key) || /^m\d{4}_\d+$/.test(key)) {
-                            // Se aplica la comparativa sobre los valores purgados y normalizados.
-                            if (normalize(oCur[key]) !== normalize(oOri[key])) {
-                                return true; // Diferencia matemática confirmada.
-                            }
-                        }
-
-                        // Inspección en profundidad en atributos anidados como 'months'
-                        if (key === "months" && oCur[key] && typeof oCur[key] === "object") {
-                            for (let mKey in oCur[key]) {
-                                const vCurM = normalize(oCur[key][mKey]);
-                                const vOriM = (oOri.months) ? normalize(oOri.months[mKey]) : "";
-
-                                if (vCurM !== vOriM) {
-                                    return true;
-                                }
-                            }
-                        }
-                    }
-
-                    // Se delega a los subgrupos (categories) y se propaga cualquier falso positivo retornado.
-                    if (oCur.categories && Array.isArray(oCur.categories) && oCur.categories.length > 0) {
-                        if (checkRecursive(oCur.categories, oOri.categories, currentPath)) {
-                            return true;
-                        }
-                    }
-                }
-                // Si todo el árbol se navegó exitosamente sin incidencias, el formulario está "limpio".
-                return false;
-            };
-
-            // Se dispara la validación desde la raíz global del catálogo.
-            return checkRecursive(aCurrentCat, aOriginalCat, "Root");
-        },
+       
+          hasUnsavedChanges: function () {
+              // Si nunca se tomó una instantánea o el modelo está corrupto, se asume que no hay diferencias procesables.
+              if (!this._originalData) return false;
+              const oDefaultModel = this.getView().getModel();
+              if (!oDefaultModel) return false;
+  
+              const aCurrentCat = oDefaultModel.getProperty("/catalog/models/categories");
+              const aOriginalCat = this._originalData.catalog.models.categories;
+  
+              // Función local de limpieza de formato. Las interfaces de entrada humana o el motor de formato suelen arrojar 
+              // diferencias cosméticas (0,00 vs 0). Esta rutina nivela la comparación reduciéndolas a falsies ("").
+              const normalize = function (val) {
+                  if (val === undefined || val === null || val === "") return "";
+  
+                  // Si el valor viene envuelto en un arreglo, se reduce uniendo y podando caracteres basura.
+                  if (Array.isArray(val)) {
+                      const sJoined = val.join("").replace(/,/g, "").trim();
+                      return (sJoined === "" || /^0+$/.test(sJoined)) ? "" : sJoined;
+                  }
+  
+                  // Normalización de números en crudo.
+                  const sVal = val.toString().trim();
+                  // Si el valor detectado denota un cero absoluto ("0", "0.00", "0,0"), se asimila con un valor vacío.
+                  if (sVal === "0" || sVal === "0.0" || sVal === "0,0" || /^0+(?:[.,]0+)*$/.test(sVal) || /^0+(?:,0+)*$/.test(sVal)) {
+                      return "";
+                  }
+                  return sVal;
+              };
+  
+              // Función recursiva que inspecciona y compara cada nodo entre el modelo vivo y el modelo congelado.
+              const checkRecursive = function (aCurrent, aOriginal, sPath) {
+                  if (!aCurrent) return false;
+  
+                  for (let i = 0; i < aCurrent.length; i++) {
+                      const oCur = aCurrent[i];
+                      // Se protege el acceso al array original para mitigar casos de nodos que fueron introducidos de cero por el usuario.
+                      const oOri = (aOriginal && aOriginal[i]) ? aOriginal[i] : {};
+                      const currentPath = sPath + " -> " + (oCur.name || i);
+  
+                      for (let key in oCur) {
+                          // Solo se detectan discrepancias en los campos de captura de datos (Y2025, M2025_01).
+                          if (/^y\d{4}$/.test(key) || /^m\d{4}_\d+$/.test(key)) {
+                              // Se aplica la comparativa sobre los valores purgados y normalizados.
+                              if (normalize(oCur[key]) !== normalize(oOri[key])) {
+                                  return true; // Diferencia matemática confirmada.
+                              }
+                          }
+  
+                          // Inspección en profundidad en atributos anidados como 'months'
+                          if (key === "months" && oCur[key] && typeof oCur[key] === "object") {
+                              for (let mKey in oCur[key]) {
+                                  const vCurM = normalize(oCur[key][mKey]);
+                                  const vOriM = (oOri.months) ? normalize(oOri.months[mKey]) : "";
+  
+                                  if (vCurM !== vOriM) {
+                                      return true;
+                                  }
+                              }
+                          }
+                      }
+  
+                      // Se delega a los subgrupos (categories) y se propaga cualquier falso positivo retornado.
+                      if (oCur.categories && Array.isArray(oCur.categories) && oCur.categories.length > 0) {
+                          if (checkRecursive(oCur.categories, oOri.categories, currentPath)) {
+                              return true;
+                          }
+                      }
+                  }
+                  // Si todo el árbol se navegó exitosamente sin incidencias, el formulario está "limpio".
+                  return false;
+              };
+  
+              // Se dispara la validación desde la raíz global del catálogo.
+              return checkRecursive(aCurrentCat, aOriginalCat, "Root");
+          },  */
 
         /**
          * Se activa la aplicación algorítmica de la inflación o se restauran los valores crudos, tras interactuar con la casilla respectiva en las filas.
@@ -4189,8 +4416,9 @@ sap.ui.define([
 
             // Se recoge el valor introducido por el usuario en el campo de filtro de la cabecera.
             const sValue = oEvent.getParameter("value") || "";
-            // Se obtiene el modelo de datos principal de la tabla de corrientes.
-            const oModel = this.getView().getModel("corrientesModel");
+            // Se utiliza tableModelName para que el filtrado opere sobre el modelo
+            // correcto independientemente de la vista hija que este activa.
+            const oModel = this.getView().getModel(this.tableModelName);
             // Se obtiene la instancia de la tabla jerárquica.
             const oTable = this.getControlTable();
             // Se obtiene el modelo de interfaz para gestionar la visibilidad de elementos flotantes.
@@ -4356,30 +4584,74 @@ sap.ui.define([
             this._applyCabeceraStyle();
         },
 
-        /**
-         * Se formatea numéricamente una cadena de texto, dotándola de la cantidad exacta de decimales y del separador regional.
-         */
-        formatDecimales: function (numStr, decStr, decimalSep, groupSep) {
-            // Se transforma la cadena a un valor flotante matemático que JavaScript pueda entender.
-            const num = parseFloat(numStr.replace(decimalSep, "."));
-            const dec = parseInt(decStr, 10);
+        //     Se elimina la primera definicion duplicada de formatDecimales que usaba
+        //     parametros decimalSep y groupSep ya no necesarios, y se mantiene unicamente
+        //     esta version que lee el formato directamente desde el CurrencyFormat del usuario.
+        formatDecimales: function (numStr, decStr) {
 
-            // Si las conversiones fallan, se retorna una cadena vacía previniendo renderizados de 'NaN' en la tabla.
-            if (isNaN(num) || isNaN(dec)) {
+            //     Se retorna vacio si el valor no existe o es nulo.
+            if (numStr === null || numStr === undefined || numStr === "") {
+                return "";
+            }
+            // 22/04
+            if (typeof numStr === "string") {
+                var fTest = parseFloat(numStr.replace(/\./g, "").replace(",", "."));
+                if (isNaN(fTest)) {
+                    return numStr;
+                }
+            }
+            // 22/04
+
+            //     Se obtiene el numero de decimales con fallback a 2 si no es valido.
+            var iDec = parseInt(decStr, 10);
+            if (isNaN(iDec)) {
+                iDec = 2;
+            }
+
+            var fVal;
+
+            //     Se usa el valor directamente si ya es de tipo numerico.
+            if (typeof numStr === "number") {
+                fVal = numStr;
+            } else {
+                //     Se convierte a float desde string ya que el backend envia
+                //     los valores en formato numerico estandar con punto decimal.
+                fVal = parseFloat(numStr);
+            }
+
+            //     Se retorna vacio si el resultado no es un numero valido.
+            if (isNaN(fVal)) {
                 return "";
             }
 
-            // Se instancia un formateador de SAPUI5 configurado en base a los parámetros proporcionados.
-            const oNumberFormat = sap.ui.core.format.NumberFormat.getFloatInstance({
-                minFractionDigits: dec,
-                maxFractionDigits: dec,
-                decimalSeparator: decimalSep,
-                groupingSeparator: groupSep || "",
-                groupingEnabled: !!groupSep
+            //     Se leen los separadores del CurrencyFormat del usuario para aplicar
+            //     el formato regional correcto en lugar de asumir separadores fijos.
+            var thousandSeparator = ".";
+            var decimalSeparator = ",";
+            try {
+                var oAppData = sap.ui.getCore().getModel("appData") ||
+                    this.getOwnerComponent && this.getOwnerComponent().getModel("appData");
+                if (oAppData) {
+                    var sCurrencyFormat = oAppData.getProperty("/userData/CurrencyFormat");
+                    if (sCurrencyFormat && sCurrencyFormat.length >= 2) {
+                        thousandSeparator = sCurrencyFormat.charAt(0);
+                        decimalSeparator = sCurrencyFormat.charAt(1);
+                    }
+                }
+            } catch (e) {
+                //     Se mantienen los separadores por defecto si el modelo no es accesible.
+            }
+
+            //     Se aplica el formato numerico con separadores regionales del usuario.
+            var oFmt = sap.ui.core.format.NumberFormat.getFloatInstance({
+                minFractionDigits: iDec,
+                maxFractionDigits: iDec,
+                groupingEnabled: true,
+                groupingSeparator: thousandSeparator,
+                decimalSeparator: decimalSeparator
             });
 
-            // Retorna la cadena ya adaptada visualmente a los requerimientos.
-            return oNumberFormat.format(num);
+            return oFmt.format(fVal);
         },
 
         /**
@@ -4391,6 +4663,1296 @@ sap.ui.define([
             var bSelected = oEvent.getParameter("selected");
             this.getView().getModel("visibleColumn").setProperty("/visible", bSelected);
             this._markVariantDirty();
+        },
+        /**
+                * Se formatea el texto de la versión utilizando el modelo de internacionalización (i18n).
+                * Convierte los códigos técnicos de versión en textos legibles para la interfaz de usuario.
+                */
+        formatTextoVersion: function (sVersion) {
+            // Se verifica que el código de versión exista; de lo contrario, se retorna una cadena vacía para evitar errores.
+            if (!sVersion) return "";
+
+            // Se obtiene el paquete de recursos de traducciones (ResourceBundle) asociado a la vista actual.
+            var oResourceBundle = this.getView().getModel("i18n").getResourceBundle();
+
+            // Se evalúa el código de la versión mediante una estructura condicional múltiple.
+            switch (sVersion) {
+                // Se retorna el texto traducido correspondiente a cada clave predefinida.
+                case "MA": return oResourceBundle.getText("Version_MA");
+                case "MP": return oResourceBundle.getText("Version_MP");
+                case "MO": return oResourceBundle.getText("Version_MO");
+                // Si el código no coincide con ninguno de los esperados, se retorna el valor original como mecanismo de respaldo.
+                default: return sVersion;
+            }
+        },
+        _initYearsModel: function () {
+            // Se leen ambas fechas desde appData como fuente global única.
+            var oAppData = this.getGlobalModel("appData").getData();
+            var sFreal = oAppData.Freal;
+            var sFrealfinobra = oAppData.Frealfinobra;
+
+            // Si alguna de las fechas no está disponible se reintenta tras 500ms
+            //  esperando a que el modelo global las haya persistido.
+            if (!sFreal || !sFrealfinobra) {
+                setTimeout(function () { this._initYearsModel(); }.bind(this), 500);
+                return;
+            }
+
+            // Se parsean las fechas obtenidas al formato Date de JavaScript.
+            var oDateStart = this._parseODataDate(sFreal);
+            var oDateEnd = this._parseODataDate(sFrealfinobra);
+
+            //  Se verifica que ambas fechas sean válidas antes de continuar.
+            if (!oDateStart || !oDateEnd || isNaN(oDateStart) || isNaN(oDateEnd)) {
+                return;
+            }
+
+            var iYearStart = oDateStart.getFullYear();
+            var iYearEnd = oDateEnd.getFullYear();
+
+            //  Se garantiza que el rango tenga siempre al menos 2 años visibles.
+            //  Si Frealfinobra es anterior o igual a Freal se aplica un rango mínimo.
+            if (iYearEnd <= iYearStart) {
+                iYearEnd = iYearStart + 2;
+            }
+
+            // Se guardan el año de inicio y fin para usarlos al crear las columnas dinámicas.
+            this._iYearStart = iYearStart;
+            this._iYearEnd = iYearEnd;
+
+            //  Se construye el array de años para el selector de ejercicio.
+            var aYears = [];
+            for (var i = iYearStart; i <= iYearEnd; i++) {
+                aYears.push({ year: String(i) });
+            }
+
+            // Se asigna el modelo de años a la vista con el primer año como seleccionado por defecto.
+            this.getView().setModel(new sap.ui.model.json.JSONModel({
+                years: aYears,
+                selectedYear: String(iYearStart)
+            }), "yearsModel");
+        },
+        //   Se abre el selector de rango de fechas.
+        //   Se restaura el rango previamente seleccionado según el contexto de la fila.
+        onOpenRangePicker: function (oEvent, oAnchorControl, oExternalContext) {
+            var oAnchor = oAnchorControl || oEvent.getSource();
+
+            //   Se usa this.tableModelName para que el picker funcione en cualquier vista hija.
+            this._oActiveContext = oExternalContext || oAnchor.getBindingContext(this.tableModelName);
+
+            if (!this._oRangePopover) {
+                this._oCalendar = new sap.ui.unified.Calendar({
+                    intervalSelection: true,
+                    select: this.onDateSelected.bind(this)
+                });
+                this._oRangePopover = new sap.m.ResponsivePopover({
+                    title: "Seleccionar Rango",
+                    placement: "Bottom",
+                    content: [this._oCalendar]
+                });
+                this.getView().addDependent(this._oRangePopover);
+            }
+
+            //   Se obtiene el modelo usando tableModelName en lugar de corrientesModel hardcodeado.
+            var oModel = this.getView().getModel(this.tableModelName);
+            var sPath = this._oActiveContext.getPath();
+            var dFrom = oModel.getProperty(sPath + "/_linDateFrom");
+            var dTo = oModel.getProperty(sPath + "/_linDateTo");
+
+            this._oCalendar.removeAllSelectedDates();
+            if (dFrom && dTo) {
+                this._oCalendar.addSelectedDate(new sap.ui.unified.DateRange({
+                    startDate: dFrom,
+                    endDate: dTo
+                }));
+            }
+            this._oRangePopover.openBy(oAnchor);
+        },
+
+        //   Se gestiona la selección de fechas en el calendario sin afectar inmediatamente al backend.
+        //   Se almacenan las fechas en propiedades temporales para permitir actualización del tooltip sin re-renderizar la tabla.
+        //   Se fuerza el refresco del modelo para actualizar bindings visuales como el tooltip.
+        onDateSelected: function () {
+            var aSelectedDates = this._oCalendar.getSelectedDates();
+            if (aSelectedDates.length > 0) {
+                var oDateRange = aSelectedDates[0];
+                var oStartDate = oDateRange.getStartDate();
+                var oEndDate = oDateRange.getEndDate();
+                if (oStartDate && oEndDate) {
+                    //   Se usa tableModelName para que el handler funcione en cualquier vista hija.
+                    var oModel = this.getView().getModel(this.tableModelName);
+                    var sPath = this._oActiveContext.getPath();
+                    oModel.setProperty(sPath + "/_linDateFrom", oStartDate);
+                    oModel.setProperty(sPath + "/_linDateTo", oEndDate);
+                    oModel.refresh(true);
+                    this._oRangePopover.close();
+                    this._confirmDateRange(oStartDate, oEndDate);
+                }
+            }
+        },
+        //   Se muestra el mensaje de confirmación con fechas formateadas.
+        //   Se añade la lógica de reseteo completo en caso de cancelación.
+        _confirmDateRange: function (oStartDate, oEndDate) {
+
+            var oBundle = this.getView().getModel("i18n").getResourceBundle();
+
+            //   Se formatean las fechas para evitar el formato técnico del objeto Date.
+            var oDateFormat = sap.ui.core.format.DateFormat.getDateInstance({
+                pattern: "dd/MM/yyyy"
+            });
+
+            var sFrom = oDateFormat.format(oStartDate);
+            var sTo = oDateFormat.format(oEndDate);
+
+            var sMensaje = oBundle.getText("msgConfirmacionLineal", [
+                sFrom,
+                sTo
+            ]);
+
+            sap.m.MessageBox.confirm(sMensaje, {
+
+                //   Se gestiona la acción del usuario en el mensaje.
+                onClose: function (oAction) {
+
+                    if (oAction === sap.m.MessageBox.Action.OK) {
+
+                        //   Se ejecuta la lógica original del batch.
+                        this._executeBatchLineal(oStartDate, oEndDate);
+
+                    } else {
+
+                        //   Se resetea completamente el estado si el usuario cancela.
+                        this._resetLinState();
+                    }
+
+                }.bind(this)
+            });
+        },
+
+        _buildNumericBinding: function (sFullPath) {
+            //   Se separa el nombre del modelo de la ruta de la propiedad usando
+            //   el caracter ">" como delimitador estándar de SAPUI5.
+            var iSep = sFullPath.indexOf(">");
+            var sModel = iSep >= 0 ? sFullPath.substring(0, iSep) : undefined;
+            var sPath = iSep >= 0 ? sFullPath.substring(iSep + 1) : sFullPath;
+
+            //   Se intenta obtener el número de decimales configurado en el modelo
+            //   de dashboard. Si la operación falla por cualquier motivo se aplica
+            //   el valor de respaldo de 2 decimales para garantizar la estabilidad.
+            var iDecimals = 2;
+            try {
+                var oDash = this.getView().getModel("dashboardModel") ||
+                    this.getGlobalModel("dashboardModel");
+                if (oDash) {
+                    iDecimals = parseInt(oDash.getProperty("/decimales"), 10) || 2;
+                }
+            } catch (e) {
+                //   Se mantiene el valor de respaldo si el modelo no está accesible.
+            }
+            var thousandSeparator = ".";
+            var decimalSeparator = ",";
+            try {
+                var oAppData = this.getGlobalModel("appData");
+                if (oAppData) {
+                    var sCurrencyFormat = oAppData.getProperty("/userData/CurrencyFormat");
+                    if (sCurrencyFormat && sCurrencyFormat.length >= 2) {
+                        thousandSeparator = sCurrencyFormat.charAt(0);
+                        decimalSeparator = sCurrencyFormat.charAt(1);
+                    }
+                }
+            } catch (e) {
+                //     Se mantienen los separadores por defecto si el modelo no es accesible.
+            }
+
+            //  Se construye el objeto de binding con el tipo Float de SAPUI5.
+            // Las opciones de formato definen el separador de millar como punto
+            // y el separador decimal como coma, siguiendo el estándar es-ES.
+            //  La restricción nullable permite que las celdas vacías no generen
+            //  errores de validación durante la navegación entre filas.
+            var oBindingDef = {
+                path: sPath,
+                type: new sap.ui.model.type.Float(
+                    {
+                        minFractionDigits: iDecimals,
+                        maxFractionDigits: iDecimals,
+                        groupingEnabled: true,
+                        //     Se sustituyen los separadores fijos por los del usuario
+                        //     para garantizar coherencia con el resto de inputs de la tabla.
+                        groupingSeparator: thousandSeparator,
+                        decimalSeparator: decimalSeparator
+                    },
+                    { nullable: true }
+                )
+            };
+
+            //  Se añade el nombre del modelo al objeto de binding únicamente
+            //  cuando fue posible extraerlo de la ruta completa recibida.
+            if (sModel) {
+                oBindingDef.model = sModel;
+            }
+
+            return oBindingDef;
+        },
+
+        /**
+         *   Se convierte un número ya formateado en notación, eliminando los separadores de millar
+         *   y sustituyendo la coma decimal por punto antes del parseo.
+         *   Esta función es necesaria en los manejadores de cambio de las columnas
+         *   de meses, donde el valor obtenido desde getValue() llega como cadena
+         *   formateada y debe escribirse como número en el modelo secundario.
+    
+         */
+        _parseFormattedNumber: function (vValue) {
+            //   Se devuelve cero si el valor recibido está vacío o es nulo para
+            //   evitar que se escriban valores indefinidos en el modelo de datos.
+            if (vValue === null || vValue === undefined || vValue === "") {
+                return 0;
+            }
+
+            //   Se eliminan los puntos de millar y se reemplaza la coma decimal
+            //   por punto para que parseFloat pueda interpretar el valor correctamente.
+            var fVal = parseFloat(
+                String(vValue).replace(/\./g, "").replace(",", ".")
+            );
+
+            //   Se devuelve cero como valor de seguridad si el parseo no produce
+            //   un número válido, evitando que NaN se propague al modelo.
+            return isNaN(fVal) ? 0 : fVal;
+        },
+        /**
+         * Se obtiene el ejercicio actualmente seleccionado en el selector de años
+         * de la vista activa.
+         *    Método centralizado en el base controller para permitir su reutilización
+         *    en cualquier controlador hijo sin duplicar la lógica de acceso al modelo.
+         *    Retorna null si el modelo yearsModel no está disponible todavía.
+         */
+        _getSelectedEjercicio: function () {
+            var oYearsModel = this.getView().getModel("yearsModel");
+            if (!oYearsModel) {
+                return null;
+            }
+            var sYear = oYearsModel.getProperty("/selectedYear");
+            return sYear ? String(sYear) : null;
+        },
+
+
+        _cargarDatosTabla: function () {
+            var oAppData = this.getGlobalModel("appData");
+
+            // Obtenemos los datos (cambio el nombre de la variable a "oKpisIndirectos" porque es un objeto)
+            var oKpisIndirectos = oAppData.getProperty("/NavKpisIndirectos") || {};
+
+            // Creamos el modelo y metemos el objeto DENTRO DE UN ARRAY [ ]
+            var oDatakpiModel = new sap.ui.model.json.JSONModel({
+                aKpisIndirectos: [oKpisIndirectos]
+            });
+
+            this.getView().setModel(oDatakpiModel, "dataTitle");
+        },
+        //   Se resetea completamente el estado del flujo LIN para la fila activa.
+        //   Se eliminan las fechas seleccionadas y se limpia el tipo de distribución (Select).
+        _resetLinState: function () {
+            //   Se usa tableModelName para que el reset funcione en cualquier vista hija.
+            var oModel = this.getView().getModel(this.tableModelName);
+            var sPath = this._oActiveContext.getPath();
+            oModel.setProperty(sPath + "/_linDateFrom", null);
+            oModel.setProperty(sPath + "/_linDateTo", null);
+            oModel.setProperty(sPath + "/Fini", null);
+            oModel.setProperty(sPath + "/Ffin", null);
+            oModel.setProperty(sPath + "/Tipo", "");
+            if (this._oCalendar) {
+                this._oCalendar.removeAllSelectedDates();
+            }
+        },
+        //   Se genera el tooltip del boton calendario a partir de las fechas temporales
+        //   almacenadas en el modelo como propiedades _linDateFrom y _linDateTo.
+        //   Se admiten tanto objetos Date nativos como cadenas de fecha parseables
+        //   para garantizar compatibilidad con los dos posibles origenes del valor.
+        getCalendarTooltip: function (dFrom, dTo) {
+
+            //   Se retorna el texto por defecto si alguna de las fechas no esta disponible.
+            if (!dFrom || !dTo) {
+                return "Seleccionar rango de fechas";
+            }
+
+            //   Se normaliza el valor recibido a objeto Date nativo independientemente
+            //   de si llego como instancia Date o como cadena de texto parseable.
+            var oFrom = dFrom instanceof Date ? dFrom : new Date(dFrom);
+            var oTo = dTo instanceof Date ? dTo : new Date(dTo);
+
+            //   Se verifica que ambas fechas resultantes sean validas antes de formatear
+            //   para evitar mostrar "Invalid Date" en el tooltip de la interfaz.
+            if (isNaN(oFrom.getTime()) || isNaN(oTo.getTime())) {
+                return "Seleccionar rango de fechas";
+            }
+
+            //   Se instancia el formateador de fecha con el patron dd/MM/yyyy
+            //   para presentar el rango en el formato habitual del mercado espanol.
+            var oDateFormat = sap.ui.core.format.DateFormat.getDateInstance({
+                pattern: "dd/MM/yyyy"
+            });
+
+            //   Se devuelve la cadena con el rango de fechas formateado y separado por guion.
+            return oDateFormat.format(oFrom) + " - " + oDateFormat.format(oTo);
+        },
+        /**
+          * Se procesa el cambio de cualquier celda editable de la tabla activa.
+          * Se gestiona la sincronizacion del sticky header para inputs de mes, año y columna Resto.
+          * Cuando el tipo seleccionado es LIN se delega la apertura del selector de rango de fechas
+          * al metodo centralizado onOpenRangePicker. Para el resto de tipos se marca la variante
+          * como modificada y se ejecuta el envio al backend si la vista lo requiere.
+          */
+        onRowInputChange: async function (oEvent) {
+
+            let oSource = oEvent.getSource();
+            let oContext = oSource.getBindingContext(this.tableModelName);
+
+            let oParent = oSource;
+            while (!oContext && oParent) {
+                oParent = oParent.getParent();
+                if (oParent && oParent.getBindingContext) {
+                    oContext = oParent.getBindingContext(this.tableModelName);
+                }
+            }
+
+            if (!oContext) return;
+
+            var oBI = oSource.getBindingInfo && oSource.getBindingInfo("value");
+            var sCampoMod = "";
+            if (oBI) {
+                if (oBI.parts && oBI.parts[0] && oBI.parts[0].path) {
+                    sCampoMod = oBI.parts[0].path;
+                } else if (oBI.path) {
+                    sCampoMod = oBI.path;
+                }
+            }
+
+            let sNewValue;
+
+            if (oSource.isA("sap.m.Select")) {
+                sNewValue = oSource.getSelectedKey();
+                oContext.getModel().setProperty(oContext.getPath() + "/Tipo", sNewValue);
+
+                if (sNewValue === "LIN") {
+                    setTimeout(function () {
+                        this.onOpenRangePicker({
+                            getSource: function () { return oSource; }
+                        }, null, oContext);
+                    }.bind(this), 50);
+                    return;
+                }
+            } else {
+                sNewValue = oSource.getValue();
+            }
+
+            let sValorFormateado = this._formatToSAPNumber(sNewValue);
+
+            //     Se compara el valor formateado para SAP con el valor actualmente
+            //     almacenado en el modelo para evitar llamadas inutiles al backend
+            //     cuando el usuario hace clic en una celda sin modificar su contenido.
+            if (sCampoMod) {
+                var sValorActualModelo = oContext.getModel().getProperty(oContext.getPath() + "/" + sCampoMod);
+                var sValorActualNormalizado = this._formatToSAPNumber(
+                    String(sValorActualModelo !== null && sValorActualModelo !== undefined ? sValorActualModelo : "")
+                );
+                if (sValorFormateado === sValorActualNormalizado) {
+                    return;
+                }
+            }
+
+            //     Se actualiza el modelo con el valor formateado antes de leer getObject()
+            //     para garantizar que el payload contenga el valor recien introducido
+            //     y no el valor anterior almacenado en el modelo.
+            if (sCampoMod && sValorFormateado !== null && sValorFormateado !== undefined && sValorFormateado !== "") {
+                oContext.getModel().setProperty(oContext.getPath() + "/" + sCampoMod, sValorFormateado);
+            }
+
+            //     Se lee el objeto del modelo despues del setProperty para que refleje
+            //     el valor actualizado en lugar del valor anterior.
+            let oRow = oContext.getObject();
+            let oPayloadRow = JSON.parse(JSON.stringify(oRow));
+
+            //     Se eliminan todas las propiedades tecnicas del frontend desconocidas
+            //     por el backend SAP para evitar el error 400 "Property is invalid".
+            var aFrontendOnlyProps = [
+                "__metadata", "children", "parent", "padre", "isEditable",
+                "isSubcapitulo", "isCapitulo", "isVacio", "isGroup",
+                "expandible", "cabecera", "isNew", "_linDateFrom", "_linDateTo"
+            ];
+            aFrontendOnlyProps.forEach(function (sKey) {
+                delete oPayloadRow[sKey];
+            });
+
+            //     Se sobreescribe explicitamente el campo modificado en el payload como
+            //     salvaguarda adicional para garantizar que siempre lleve el valor correcto.
+            if (sCampoMod && sValorFormateado !== null && sValorFormateado !== undefined && sValorFormateado !== "") {
+                oPayloadRow[sCampoMod] = sValorFormateado;
+            }
+
+            this._enviarFilaAlBackend(oContext, oPayloadRow, sCampoMod);
+        },
+
+        //   Se añade CampoMod en cabecera para indicar el campo modificado al backend.
+        //     Se envia la fila modificada al backend y se restaura el foco
+        //     en el input destino si existe navegacion pendiente tipo Excel.
+        _enviarFilaAlBackend: async function (oContext, oPayloadRow, sCampoMod) {
+
+            var sEjercicio = this._getSelectedEjercicio() || new Date().getFullYear().toString();
+            var oAppData = this.getGlobalModel("appData").getData();
+
+            //     Se guarda el destino de foco antes de la llamada asincrona.
+            var oPendingFocus = this._pendingFocusTarget || null;
+
+            try {
+                const response = await this.post(
+                    this.getGlobalModel("mainService"),
+                    "/GuardarTempIndirSet",
+                    {
+                        "NavSelProyecto": [oAppData.tramo],
+                        "NavDatosIndirectos": [oPayloadRow],
+                        "NavMensajes": []
+                    },
+                    {
+                        headers: {
+                            ambito: oAppData.userData.initialNode,
+                            lang: oAppData.userData.AplicationLangu,
+                            bloqueado: "",
+                            decimales: "02",
+                            ejercicio: sEjercicio,
+                            pestana: this._pestana || "Corrientes",
+                            CampoMod: sCampoMod || ""
+                        }
+                    }
+                );
+
+                //     Se restaura el foco tras completar la llamada asincrona.
+                if (oPendingFocus && oPendingFocus.getDomRef()) {
+                    setTimeout(function () {
+                        oPendingFocus.focus();
+                        if (oPendingFocus.select) oPendingFocus.select();
+                    }, 50);
+                }
+
+                //     Se limpia el estado de foco pendiente.
+                this._pendingFocusTarget = null;
+
+            } catch (error) {
+
+
+                //     Se limpia tambien en caso de error para evitar inconsistencias.
+                this._pendingFocusTarget = null;
+            }
+        },
+
+
+        //  Se define una función reutilizable para convertir valores numéricos al formato SAP
+        _formatToSAPNumber: function (sValue) {
+
+            //     Se devuelve el valor sin modificar si esta vacio o es nulo.
+            if (sValue === null || sValue === undefined || sValue === "") {
+                return sValue;
+            }
+
+            var sNormalized = sValue.toString();
+
+            //     Se obtienen los separadores reales del formato de moneda del usuario.
+            //     Si el modelo no esta disponible se asumen los separadores espanoles por defecto.
+            var thousandSeparator = ".";
+            var decimalSeparator = ",";
+
+            try {
+                var oAppData = this.getGlobalModel("appData");
+                if (oAppData) {
+                    var sCurrencyFormat = oAppData.getProperty("/userData/CurrencyFormat");
+                    if (sCurrencyFormat && sCurrencyFormat.length >= 2) {
+                        thousandSeparator = sCurrencyFormat.charAt(0);
+                        decimalSeparator = sCurrencyFormat.charAt(1);
+                    }
+                }
+            } catch (e) {
+                //     Se mantienen los separadores por defecto si el modelo no es accesible.
+            }
+
+            //     Se elimina el separador de miles escapandolo para usarlo de forma segura
+            //     en la expresion regular sin que el punto actue como comodin.
+            var sEscapedThousand = thousandSeparator.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            sNormalized = sNormalized.replace(new RegExp(sEscapedThousand, "g"), "");
+
+            //     Se sustituye el separador decimal del usuario por punto estandar SAP.
+            sNormalized = sNormalized.replace(decimalSeparator, ".");
+
+            //     Se convierte a numero flotante y se aplican 5 decimales fijos para
+            //     mantener el mismo formato que devuelve el backend SAP en todos los
+            //     campos numericos (ej: "345.00000", "0.00000", "10.00000").
+            var fParsed = parseFloat(sNormalized);
+            if (!isNaN(fParsed)) {
+                return fParsed.toFixed(5);
+            }
+
+            return sNormalized;
+        },
+        /**
+ * Se ejecuta la distribucion lineal de la fila activa entre las fechas confirmadas
+ * por el usuario en el selector de rango. Se construye el payload a partir de los
+ * datos del modelo y se delega el envio al metodo centralizado _enviarFilaAlBackend.
+ * Se invoca unicamente cuando el usuario confirma el mensaje de confirmacion de fechas.
+ */
+        //   Se reconstruye el metodo _executeBatchLineal que habia desaparecido del controlador.
+        //   El metodo era llamado desde _confirmDateRange pero no estaba definido en ningun fichero,
+        //   lo que provocaba un error silencioso al confirmar el rango de fechas en ambas vistas.
+
+
+        //   Se envía CampoMod="Tipo" ya que la acción modifica el tipo de la fila.
+        _executeBatchLineal: async function (oStartDate, oEndDate) {
+
+            var oContext = this._oActiveContext;
+            if (!oContext) {
+                return;
+            }
+
+            var oModel = this.getView().getModel(this.tableModelName);
+            var sPath = oContext.getPath();
+            var oRowData = oModel.getProperty(sPath);
+
+            if (!oRowData) {
+                return;
+            }
+
+            var oPayloadRow = {};
+            Object.keys(oRowData).forEach(function (sKey) {
+                if (sKey !== "children" &&
+                    sKey !== "padre" &&
+                    sKey !== "isEditable" &&
+                    sKey !== "_linDateFrom" &&
+                    sKey !== "_linDateTo" &&
+                    sKey !== "isSubcapitulo" &&
+                    sKey !== "isCapitulo" &&
+                    sKey !== "isVacio") {
+                    oPayloadRow[sKey] = oRowData[sKey];
+                }
+            });
+
+            oPayloadRow.Fini = "/Date(" + oStartDate.getTime() + ")/";
+            oPayloadRow.Ffin = "/Date(" + oEndDate.getTime() + ")/";
+            oPayloadRow.Tipo = "LIN";
+
+            oModel.setProperty(sPath + "/Fini", oPayloadRow.Fini);
+            oModel.setProperty(sPath + "/Ffin", oPayloadRow.Ffin);
+
+            //   CampoMod fijo
+            await this._enviarFilaAlBackend(oContext, oPayloadRow, "Tipo");
+
+            this._markVariantDirty();
+        },
+        //   Se extrae la logica de envio al backend en un metodo independiente para
+        //   evitar que _confirmDateRange reingrese al flujo LIN de onRowInputChange,
+        //   lo que provocaba que el calendario se reabriese sin llegar al servidor.
+
+        _parseODataDate: function (sODataDate) {
+            if (!sODataDate) return null;
+
+            // Se evalua si la cadena tiene el patron OData /Date(milisegundos)/.
+            var oMatch = /\/Date\((\d+)\)\//.exec(sODataDate);
+            if (oMatch) {
+                return new Date(parseInt(oMatch[1], 10));
+            }
+
+            // Se acepta como fallback una cadena de fecha parseable por el constructor nativo.
+            return new Date(sODataDate);
+        },
+
+        //     Se captura el valor original del input en el momento en que recibe foco.
+        //     Esto permite comparar posteriormente si el usuario realmente ha modificado
+        //     el valor, evitando depender del modelo que puede estar ya actualizado por el binding.
+        _onInputFocusIn: function (oEvent) {
+            var oInput = oEvent.getSource();
+
+            try {
+                var sCurrentValue = oInput.getValue();
+
+                //     Se normaliza el valor al formato SAP para garantizar comparaciones coherentes.
+                oInput._originalValue = this._formatToSAPNumber(
+                    String(sCurrentValue !== null && sCurrentValue !== undefined ? sCurrentValue : "")
+                );
+            } catch (e) {
+                //     En caso de error se guarda el valor en bruto como fallback seguro.
+                oInput._originalValue = oInput.getValue();
+            }
+        },
+        // ─────────────────────────────────────────────────────────────────────────────
+        // (MV) Se gestiona la expansión personalizada del nodo al pulsar el botón "+"
+        // ─────────────────────────────────────────────────────────────────────────────
+        onToggleCustomExpand: function (oEvent) {
+
+            // (MV) Se obtiene el botón que disparó el evento
+            const oButton = oEvent.getSource();
+
+            // (MV) Se obtiene el contexto de binding de la fila correspondiente
+            const oContext = oButton.getBindingContext(this.tableModelName);
+            if (!oContext) return;
+
+            // (MV) Se obtiene el objeto de datos de la fila
+            const oRowData = oContext.getObject();
+
+            // (MV) Se descarta la acción si la fila es grupo, cabecera o padre
+            if (oRowData.isGroup === true || oRowData.cabecera === true || oRowData.padre === true) return;
+
+            // (MV) Se inicializa el array de hijos si no existe
+            if (!oRowData.children) oRowData.children = [];
+
+            // (MV) Se define la plantilla de fila editable vacía
+            const oEmptyEditableRow = {
+                __isCustom: true,
+                __isEditable: true,
+                cabecera: false,
+                expandible: false,
+                isGroup: false,
+                padre: false,
+                children: [],
+                PhPspnr: "",
+                Post1: "",
+                AmoEje: "",
+                AmoEjeAjus: "",
+                AmoEjeReal: "",
+                AmoPen: "",
+                AmoTot: "",
+                Tipo: "",
+                PenPlan: ""
+            };
+
+            // (MV) Se declara la referencia al bloque que se expandirá tras el refresco
+            let oBlockToExpand = null;
+
+            // (MV) Se busca el bloque principal existente dentro del nodo
+            const oMainBlock = oRowData.children.find(function (c) {
+                return c.__isMainBlock === true;
+            });
+
+            if (oMainBlock) {
+                // (MV) Se asegura la expansión lógica del modelo sobre el bloque existente
+                oMainBlock.expanded = true;
+
+                // (MV) Se inicializa el array de hijos del bloque principal si no existe
+                if (!oMainBlock.children) oMainBlock.children = [];
+
+                // (MV) Se garantiza al menos una fila editable siempre presente
+                oMainBlock.children.push(JSON.parse(JSON.stringify(oEmptyEditableRow)));
+
+                // (MV) Se asigna el bloque existente como objetivo de expansión visual
+                oBlockToExpand = oMainBlock;
+
+            } else {
+                // (MV) Se crea la cabecera del bloque con sus columnas descriptivas
+                const oHeaderRow = {
+                    __isCustom: true,
+                    __isHeader: true,
+                    cabecera: true,
+                    expandible: false,
+                    isGroup: false,
+                    padre: false,
+                    PhPspnr: "Agrupador",
+                    Post1: "Descripción",
+                    AmoEje: "Proveedor",
+                    AmoEjeAjus: "",
+                    AmoEjeReal: "",
+                    AmoPen: "Coste pend.",
+                    AmoTot: "Tarifa",
+                    Tipo: "Fecha de Inicio",
+                    PenPlan: "Fecha de fin",
+                    months: "Nºmeses",
+                    pend: "Otros",
+                    flag1Label: "Auto",
+                    CheckInfla: "Inflaz."
+                };
+
+                // (MV) Se crea el bloque principal con expansión activa y una fila editable inicial
+                const oMainBlockRow = {
+                    __isCustom: true,
+                    __isSinProveedor: true,
+                    __isMainBlock: true,
+                    cabecera: false,
+                    expandible: false,
+                    isGroup: false,
+                    padre: false,
+                    expanded: true,
+                    children: [JSON.parse(JSON.stringify(oEmptyEditableRow))],
+                    PhPspnr: "",
+                    Post1: "sin proveedor",
+                    AmoEje: "",
+                    AmoEjeAjus: "",
+                    AmoEjeReal: "",
+                    AmoPen: "",
+                    AmoTot: "",
+                    Tipo: "",
+                    PenPlan: ""
+                };
+
+                // (MV) Se insertan la cabecera y el bloque principal como hijos del nodo raíz
+                oRowData.children.push(oHeaderRow);
+                oRowData.children.push(oMainBlockRow);
+
+                // (MV) Se asigna el nuevo bloque como objetivo de expansión visual
+                oBlockToExpand = oMainBlockRow;
+            }
+
+            // (MV) Se obtiene referencia al TreeTable mediante el ID correcto definido en la vista
+            const oTable = this.byId("TreeTableBasic");
+            if (!oTable) return;
+
+            // (MV) Suscripción única para aplicar CSS cuando el modelo actualice las filas por primera vez
+            oTable.attachEventOnce("rowsUpdated", function () {
+                setTimeout(function () {
+                    this._highlightSinProveedor(oTable);
+                    this._applyBlockBorder(oTable);
+                }.bind(this), 150);
+            }.bind(this));
+
+            // (MV) Se refresca el modelo para que el TreeTable refleje los cambios estructurales
+            oContext.getModel().refresh(true);
+
+            // (MV) Función auxiliar para localizar el índice de un objeto en el binding
+            const fnFindIndex = function (oTarget) {
+                const oBinding = oTable.getBinding("rows");
+                if (!oBinding) return -1;
+                const iLength = oBinding.getLength();
+                for (let i = 0; i < iLength; i++) {
+                    const oCtx = oTable.getContextByIndex(i);
+                    if (oCtx && oCtx.getObject() === oTarget) {
+                        return i;
+                    }
+                }
+                return -1;
+            };
+
+            // (MV) Primer paso: Se expande el nodo raíz tras un breve retardo para asegurar el renderizado
+            setTimeout(function () {
+
+                const iRootIdx = fnFindIndex(oRowData);
+                if (iRootIdx !== -1) {
+                    oTable.expand(iRootIdx);
+                }
+
+                // (MV) Segundo paso: Se expande el bloque hijo ("sin proveedor")
+                setTimeout(function () {
+
+                    const iBlockIdx = fnFindIndex(oBlockToExpand);
+                    if (iBlockIdx !== -1) {
+                        oTable.expand(iBlockIdx);
+
+                        // (MV) Crucial: Se fuerza la aplicación del CSS después de expandir el segundo nivel
+                        // Esto asegura que las nuevas filas creadas reciban el estilo inmediatamente
+                        setTimeout(function () {
+                            this._highlightSinProveedor(oTable);
+                            this._applyBlockBorder(oTable);
+                        }.bind(this), 100);
+                    }
+
+                }.bind(this), 150);
+
+            }.bind(this), 150);
+
+            // (MV) Disparador de seguridad final para garantizar que el CSS se aplique tras las animaciones
+            setTimeout(function () {
+                this._highlightSinProveedor(oTable);
+                this._applyBlockBorder(oTable);
+            }.bind(this), 800);
+
+        },
+        // ─────────────────────────────────────────────────────────────────────────────
+        // (MV) Se gestiona el cambio de valor en el campo proveedor de una fila editable
+        // ─────────────────────────────────────────────────────────────────────────────
+        onAmoEjeChange: function (oEvent) {
+            // (MV) Se obtiene el control Input que disparó el evento
+            const oInput = oEvent.getSource();
+
+            // (MV) Se obtiene el contexto de binding de la fila editable
+            const oContext = oInput.getBindingContext(this.tableModelName);
+            if (!oContext) return;
+
+            // (MV) Se obtiene el objeto de datos de la fila editable
+            const oRow = oContext.getObject();
+
+            // (MV) Se obtiene el path absoluto de la fila dentro del modelo
+            const sPath = oContext.getPath();
+
+            // (MV) Se obtiene el nombre del proveedor introducido por el usuario
+            const sProviderName = (oEvent.getParameter("value") || "").trim();
+
+            // (MV) Se descarta la acción si el bloque ya fue creado para esta fila
+            if (oRow.__blockCreated) return;
+
+            // (MV) Se obtiene el modelo de datos del TreeTable
+            const oModel = this.getView().getModel(this.tableModelName);
+
+            // (MV) Se calcula el path del bloque padre directo de la fila editable
+            const sMainBlockPath = sPath.replace(/\/children\/\d+$/, "");
+
+            // (MV) Se calcula el path del nodo raíz padre del bloque principal
+            const sRootRowPath = sMainBlockPath.replace(/\/children\/\d+$/, "");
+
+            // (MV) Se obtienen los objetos del bloque padre y del nodo raíz desde el modelo
+            const oMainBlock = oModel.getProperty(sMainBlockPath);
+            const oRootRow = oModel.getProperty(sRootRowPath);
+
+            // (MV) Se obtiene referencia al TreeTable
+            const oTable = this.byId("TreeTableBasic");
+
+            // (MV) Se elimina la fila editable del bloque padre tras capturar el proveedor
+            if (oMainBlock && Array.isArray(oMainBlock.children)) {
+                const aFiltered = oMainBlock.children.filter(function (c) {
+                    return c !== oRow;
+                });
+                oModel.setProperty(sMainBlockPath + "/children", aFiltered);
+            }
+
+            if (!oRootRow) {
+                oModel.refresh(true);
+                return;
+            }
+
+            // (MV) Limpieza de bloques vacíos
+            if (Array.isArray(oRootRow.children)) {
+                oRootRow.children = oRootRow.children.filter(function (c) {
+                    if (!c.__isProviderBlock) return true;
+                    return Array.isArray(c.children) && c.children.length > 0;
+                });
+            }
+
+            // (MV) Reordenamiento del bloque principal
+            if (Array.isArray(oRootRow.children)) {
+                const iMainBlockIndex = oRootRow.children.findIndex(function (c) {
+                    return c.__isMainBlock === true;
+                });
+                if (iMainBlockIndex > 1) {
+                    const oMain = oRootRow.children.splice(iMainBlockIndex, 1)[0];
+                    oRootRow.children.splice(1, 0, oMain);
+                }
+            }
+
+            if (!sProviderName) {
+                const oSinProveedorBlock = Array.isArray(oRootRow.children) && oRootRow.children.find(function (c) {
+                    return c.__isMainBlock === true;
+                });
+
+                if (oSinProveedorBlock) {
+                    const oNewEditable = JSON.parse(JSON.stringify(oRow));
+                    delete oNewEditable.__blockCreated;
+                    oNewEditable.__isCustom = true;
+                    oNewEditable.__isEditable = true;
+                    oNewEditable.AmoEje = "";
+                    oNewEditable.children = [];
+                    oSinProveedorBlock.children.push(oNewEditable);
+                    oSinProveedorBlock.expanded = true;
+                }
+
+                if (!oTable) {
+                    oModel.refresh(true);
+                    return;
+                }
+
+                const oSinProveedorBlockRef = oSinProveedorBlock;
+                let iAttempts = 0;
+                const fnTryExpand = function () {
+                    iAttempts++;
+                    const aRows = oTable.getRows();
+                    for (let i = 0; i < aRows.length; i++) {
+                        const oCtx = aRows[i].getBindingContext(this.tableModelName);
+                        if (oCtx && oCtx.getObject() === oSinProveedorBlockRef) {
+                            oTable.expand(aRows[i].getIndex());
+                            // (MV) Aplicar CSS tras expansión
+                            setTimeout(function () {
+                                this._highlightSinProveedor(oTable);
+                                this._applyBlockBorder(oTable);
+                            }.bind(this), 100);
+                            oTable.detachEvent("rowsUpdated", fnTryExpand);
+                            return;
+                        }
+                    }
+                    if (iAttempts >= 3) oTable.detachEvent("rowsUpdated", fnTryExpand);
+                }.bind(this);
+
+                oTable.attachEvent("rowsUpdated", fnTryExpand);
+                oModel.refresh(true);
+                setTimeout(function () { fnTryExpand(); }, 300);
+                return;
+            }
+
+            // (MV) Se marca la fila como procesada
+            oRow.__blockCreated = true;
+
+            const oExistingBlock = Array.isArray(oRootRow.children) && oRootRow.children.find(function (c) {
+                return c.__isProviderBlock === true && c.__providerName === sProviderName;
+            });
+
+            if (oExistingBlock) {
+                const oNewEditable = JSON.parse(JSON.stringify(oRow));
+                delete oNewEditable.__blockCreated;
+                oNewEditable.__isCustom = true;
+                oNewEditable.__isEditable = true;
+                oNewEditable.AmoEje = sProviderName;
+                oNewEditable.children = [];
+                oExistingBlock.children.push(oNewEditable);
+                oExistingBlock.expanded = true;
+
+                oModel.refresh(true);
+
+                if (oTable) {
+                    // (MV) Trigger CSS antes y después de la expansión
+                    this._highlightSinProveedor(oTable);
+                    this._expandInTwoSteps(oTable, this.tableModelName, oRootRow, oExistingBlock);
+                    setTimeout(function () {
+                        this._highlightSinProveedor(oTable);
+                        this._applyBlockBorder(oTable);
+                    }.bind(this), 500);
+                }
+            } else {
+
+                this._createProviderBlock(oRow, sProviderName, oRootRow);
+            }
+        },
+
+        _createProviderBlock: function (oSourceRow, sProviderName, oRootRow) {
+            const oEditableRow = JSON.parse(JSON.stringify(oSourceRow));
+            delete oEditableRow.__blockCreated;
+            delete oEditableRow.__isCommitted;
+            oEditableRow.__isCustom = true;
+            oEditableRow.__isEditable = true;
+            oEditableRow.AmoEje = sProviderName;
+            oEditableRow.children = [];
+
+            const oStaticRow = {
+                __isCustom: true,
+                __isEditable: false,
+                __isSinProveedor: true,
+                __isProviderBlock: true,
+                __providerName: sProviderName,
+                cabecera: false,
+                expandible: false,
+                isGroup: false,
+                padre: false,
+                expanded: true,
+                AmoEje: "",
+                PhPspnr: "",
+                Post1: sProviderName,
+                AmoEjeAjus: "", AmoEjeReal: "", AmoPen: "", AmoTot: "", Tipo: "", PenPlan: "",
+                children: [oEditableRow]
+            };
+
+            if (!oRootRow.children) oRootRow.children = [];
+            oRootRow.children.push(oStaticRow);
+            oRootRow.expanded = true;
+
+            const oTable = this.byId("TreeTableBasic");
+            if (!oTable) return;
+
+            // (MV) Disparador CSS al actualizar modelo
+            oTable.attachEventOnce("rowsUpdated", function () {
+                setTimeout(function () {
+                    this._highlightSinProveedor(oTable);
+                    this._applyBlockBorder(oTable);
+                }.bind(this), 200);
+            }.bind(this));
+
+            let iAttempts = 0;
+            const fnTryExpand = function () {
+                iAttempts++;
+                const aRows = oTable.getRows();
+                for (let i = 0; i < aRows.length; i++) {
+                    const oCtx = aRows[i].getBindingContext(this.tableModelName);
+                    if (oCtx && oCtx.getObject() === oStaticRow) {
+                        oTable.expand(aRows[i].getIndex());
+                        // (MV) Aplicar CSS específicamente tras expandir el nuevo bloque
+                        setTimeout(function () {
+                            this._highlightSinProveedor(oTable);
+                            this._applyBlockBorder(oTable);
+                        }.bind(this), 150);
+                        oTable.detachEvent("rowsUpdated", fnTryExpand);
+                        return;
+                    }
+                }
+                if (iAttempts >= 3) oTable.detachEvent("rowsUpdated", fnTryExpand);
+            }.bind(this);
+
+            oTable.attachEvent("rowsUpdated", fnTryExpand);
+            this.getView().getModel(this.tableModelName).refresh(true);
+
+            setTimeout(function () { fnTryExpand(); }, 350);
+        },
+        // ─────────────────────────────────────────────────────────────────────────────
+        // (MV) Se expande primero el nodo raíz y luego el bloque objetivo en dos pasos
+        // (MV) encadenados mediante el evento rowsUpdated del TreeTable, garantizando
+        // (MV) que cada expansión se ejecuta solo cuando el DOM está listo para recibirla
+        // ─────────────────────────────────────────────────────────────────────────────
+        _expandInTwoSteps: function (oTable, sModelName, oRootRow, oBlockToExpand) {
+
+            // (MV) Se declara el manejador del segundo paso que expande el bloque objetivo
+            const fnExpandBlock = function () {
+
+                const aRows = oTable.getRows();
+
+                for (let i = 0; i < aRows.length; i++) {
+                    const oCtx = aRows[i].getBindingContext(sModelName);
+                    if (!oCtx) continue;
+
+                    // (MV) Se localiza el bloque objetivo por referencia de objeto en memoria
+                    if (oCtx.getObject() === oBlockToExpand) {
+
+                        // (MV) Se expande visualmente el bloque objetivo para mostrar su fila editable
+                        oTable.expand(aRows[i].getIndex());
+
+                        // (MV) Se desuscribe el manejador tras completar su única ejecución
+                        oTable.detachEvent("rowsUpdated", fnExpandBlock);
+                        break;
+                    }
+                }
+            };
+
+            // (MV) Se declara el manejador del primer paso que gestiona la expansión del nodo raíz
+            const fnExpandRoot = function () {
+
+                const aRows = oTable.getRows();
+
+                for (let i = 0; i < aRows.length; i++) {
+                    const oCtx = aRows[i].getBindingContext(sModelName);
+                    if (!oCtx) continue;
+
+                    // (MV) Se localiza el nodo raíz por referencia de objeto en memoria
+                    if (oCtx.getObject() === oRootRow) {
+
+                        // (MV) Se desuscribe el primer manejador antes de proceder
+                        oTable.detachEvent("rowsUpdated", fnExpandRoot);
+
+                        const iIndex = aRows[i].getIndex();
+
+                        if (oTable.isExpanded(iIndex)) {
+
+                            // (MV) Si el nodo raíz ya está expandido se busca el bloque
+                            // (MV) directamente en las filas visibles actuales sin necesidad
+                            // (MV) de esperar un nuevo evento rowsUpdated
+                            let bFound = false;
+
+                            for (let j = 0; j < aRows.length; j++) {
+                                const oCtx2 = aRows[j].getBindingContext(sModelName);
+                                if (!oCtx2) continue;
+
+                                if (oCtx2.getObject() === oBlockToExpand) {
+
+                                    // (MV) Se expande el bloque directamente al estar ya visible
+                                    oTable.expand(aRows[j].getIndex());
+                                    bFound = true;
+                                    break;
+                                }
+                            }
+
+                            if (!bFound) {
+
+                                // (MV) Si el bloque aún no es visible en el DOM tras el refresco
+                                // (MV) se suscribe el manejador para ejecutarlo en el siguiente render
+                                oTable.attachEvent("rowsUpdated", fnExpandBlock);
+                            }
+
+                        } else {
+
+                            // (MV) Si el nodo raíz está colapsado se suscribe el segundo manejador
+                            // (MV) antes de expandir para que rowsUpdated active directamente el paso dos
+                            oTable.attachEvent("rowsUpdated", fnExpandBlock);
+
+                            // (MV) Se expande visualmente el nodo raíz para que sus hijos sean visibles
+                            oTable.expand(iIndex);
+                        }
+
+                        break;
+                    }
+                }
+            };
+
+            // (MV) Se suscribe el primer manejador al evento rowsUpdated del TreeTable
+            oTable.attachEvent("rowsUpdated", fnExpandRoot);
+        },
+
+        _findTreeParent: function (aNodes, oTarget) { // (MV) localiza el nodo padre real dentro del TreeTable
+
+            for (let i = 0; i < aNodes.length; i++) {
+
+                const oNode = aNodes[i];
+
+                if (oNode.children && oNode.children.includes(oTarget)) {
+                    return oNode;
+                }
+
+                if (oNode.children && oNode.children.length > 0) {
+                    const oFound = this._findTreeParent(oNode.children, oTarget);
+                    if (oFound) return oFound;
+                }
+            }
+
+            return null;
+        },
+        _createNextBlockInsideParent: function (oSourceRow) {
+            const oModel = this.getView().getModel("corrientesModel");
+            const aData = oModel.getData();
+
+            // (MV) Si clona il contesto della riga che ha scatenato la creazione del blocco.
+            const oBase = JSON.parse(JSON.stringify(oSourceRow));
+            // (MV) Si rimuovono i flag tecnici del blocco precedente per evitare che
+            // (MV) il nuovo blocco erediti stati già consumati come __blockCreated.
+            delete oBase.__blockCreated;
+            delete oBase.__isCommitted;
+
+            // (MV) Seconda riga: figlia editabile con gli stessi valori del contesto.
+            const oEditableRow = Object.assign({}, oBase, {
+                __isCustom: true,
+                __isEditable: true,
+                __isSinProveedor: false,
+                children: []
+            });
+
+            // (MV) Prima riga: padre non editabile che contiene la riga editabile come figlia.
+            // (MV) La gerarchia è: oStaticRow (padre) → oEditableRow (figlia), 2 righe totali.
+            const oStaticRow = Object.assign({}, oBase, {
+                __isCustom: true,
+                __isEditable: false,
+                __isSinProveedor: true,
+                children: [oEditableRow]
+            });
+
+            // (MV) Si inserisce il padre direttamente nel nodo reale del TreeTable,
+            // (MV) senza un contenitore oNewBlock intermedio che genera la terza riga.
+            const oParent = this._findTreeParent(aData, oSourceRow);
+            if (!oParent) return;
+
+            if (!oParent.children) {
+                oParent.children = [];
+            }
+
+            oParent.children.push(oStaticRow);
+
+            oModel.refresh(true);
+        },
+
+        _getRootArray: function (aData) { // (MV) retorna el array raíz del modelo
+
+            return Array.isArray(aData) ? aData : [];
+        },
+        // (MV) Se sustituye el doble setTimeout por escucha del evento rowsUpdated,
+        // (MV) que se dispara cuando el TreeTable termina de renderizar las filas
+        _expandBlockWhenReady: function (oTable, sModelName, oRootRow, oBlockToExpand) {
+
+            // (MV) Se declara referencia a la función manejadora para poder desuscribirla
+            const fnHandler = function () {
+
+                const aRows = oTable.getRows();
+                let bRootExpanded = false;
+                let bBlockExpanded = false;
+
+                for (let i = 0; i < aRows.length; i++) {
+                    const oCtx = aRows[i].getBindingContext(sModelName);
+                    if (!oCtx) continue;
+                    const oObj = oCtx.getObject();
+
+                    // (MV) Se expande el nodo raíz si todavía no se ha expandido
+                    if (oObj === oRootRow && !bRootExpanded) {
+                        oTable.expand(aRows[i].getIndex());
+                        bRootExpanded = true;
+                    }
+
+                    // (MV) Se expande el bloque objetivo si ya es visible en el TreeTable
+                    if (oObj === oBlockToExpand && !bBlockExpanded) {
+                        oTable.expand(aRows[i].getIndex());
+                        bBlockExpanded = true;
+                    }
+                }
+
+                // (MV) Se desuscribe el evento una vez completadas ambas expansiones
+                // (MV) para evitar que el manejador se ejecute en futuros refrescos
+                if (bRootExpanded && bBlockExpanded) {
+                    oTable.detachEvent("rowsUpdated", fnHandler);
+                }
+            };
+
+            // (MV) Se suscribe el manejador al evento rowsUpdated del TreeTable
+            oTable.attachEvent("rowsUpdated", fnHandler);
+        },
+
+        _highlightSinProveedor: function (oTable) {
+            if (!oTable) return;
+
+            var aRows = oTable.getRows();
+            var iFirst = oTable.getFirstVisibleRow();
+
+            aRows.forEach(function (oRow) {
+                // 1. Pulizia obbligatoria per evitare bug nello scroll
+                oRow.removeStyleClass("sinProveedorRow");
+                oRow.removeStyleClass("headerGrayRow");
+
+                var oContext = oRow.getBindingContext("corrientesModel");
+                if (oContext) {
+                    var oData = oContext.getObject();
+
+                    // 2. Applichiamo la classe all'OGGETTO riga, non al DOM
+                    if (oData && oData.__isSinProveedor === true) {
+                        oRow.addStyleClass("sinProveedorRow");
+                    } else if (oData && oData.__isHeader === true) {
+                        oRow.addStyleClass("headerGrayRow");
+                    }
+                }
+            });
+        },
+        _applyBlockBorder: function (oTable) {
+            if (!oTable) return;
+
+            var iFirst = oTable.getFirstVisibleRow();
+            var aRows = oTable.getRows();
+
+            for (var i = 0; i < aRows.length; i++) {
+                var oCtx = oTable.getContextByIndex(iFirst + i);
+                var oDom = aRows[i].getDomRef();
+                if (!oDom) continue;
+
+
+                oDom.querySelectorAll("td").forEach(function (td) {
+                    td.style.borderBottom = "";
+                });
+                var oFixed = document.getElementById(oDom.id + "-fixed");
+                if (oFixed) {
+                    oFixed.querySelectorAll("td").forEach(function (td) {
+                        td.style.borderBottom = "";
+                    });
+                }
+
+                if (!oCtx) continue;
+                var oData = oCtx.getObject();
+                if (!oData) continue;
+
+                var oNextCtx = oTable.getContextByIndex(iFirst + i + 1);
+                var oNextData = oNextCtx && oNextCtx.getObject();
+
+
+                var bCurrentIsEditable = oData.__isEditable === true;
+                var bNextIsNotCustom = !oNextData || oNextData.__isCustom !== true;
+
+                if (bCurrentIsEditable && bNextIsNotCustom) {
+                    oDom.querySelectorAll("td").forEach(function (td) {
+                        td.style.setProperty("border-bottom", "2px solid #000000", "important");
+                    });
+                    if (oFixed) {
+                        oFixed.querySelectorAll("td").forEach(function (td) {
+                            td.style.setProperty("border-bottom", "2px solid #000000", "important");
+                        });
+                    }
+                }
+            }
+        },
+        _debounce: function (fn, delay) {
+            var timer = null;
+            return function () {
+                var context = this;
+                var args = arguments;
+                clearTimeout(timer);
+                timer = setTimeout(function () {
+                    fn.apply(context, args);
+                }, delay);
+            };
         },
 
     });

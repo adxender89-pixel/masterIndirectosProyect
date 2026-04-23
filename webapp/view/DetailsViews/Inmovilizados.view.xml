@@ -70,7 +70,7 @@
                                         alignContent="Center"
                                     >
                                         <Label
-                                            text="{i18n>Aplicacion} {i18n>ejecutado}"
+                                            text="{i18n>inversion} {i18n>ejecutado}"
                                             design="Bold"
                                         />
                                     </VBox>
@@ -84,7 +84,7 @@
                                         class="fullWidthHeader"
                                     >
                                         <Label
-                                            text="{i18n>Aplicacion} {i18n>pendiente}"
+                                            text="{i18n>inversion} {i18n>pendiente}"
                                             design="Bold"
                                         />
                                     </VBox>
@@ -98,7 +98,7 @@
                                         class="fullWidthHeader"
                                     >
                                         <Label
-                                            text="{i18n>Aplicacion} {i18n>total}"
+                                            text="{i18n>inversion} {i18n>total}"
                                             design="Bold"
                                         />
                                     </VBox>
@@ -132,7 +132,7 @@
                             <t:columns>
                                 <t:Column hAlign="Center">
                                     <Label
-                                        text="{i18n>provision} {i18n>ejecutado}"
+                                        text="{i18n>amortizacion} {i18n>ejecutado}"
                                         design="Bold"
                                     />
                                     <t:template>
@@ -141,7 +141,7 @@
                                 </t:Column>
                                 <t:Column hAlign="Center">
                                     <Label
-                                        text="{i18n>provision} {i18n>pendiente}"
+                                        text="{i18n>amortizacion} {i18n>pendiente}"
                                         design="Bold"
                                     />
                                     <t:template>
@@ -150,7 +150,7 @@
                                 </t:Column>
                                 <t:Column hAlign="Center">
                                     <Label
-                                        text="{i18n>provision} {i18n>total}"
+                                        text="{i18n>amortizacion} {i18n>total}"
                                         design="Bold"
                                     />
                                     <t:template>
@@ -191,43 +191,68 @@
                                     }"
                                     toggleOpenState="onToggleOpenState"
                                     rowSelectionChange="onRowSelectionChange"
-                                    class="sapUiSizeCompact"
                                     visibleRowCount="{viewModel>/dynamicRowCount}"
+                                    fixedColumnCount ="2"
+                                    class="sapUiSizeCompact"
                                     width="100%"
                                 >
-                                    <t:extension>
+                                 <t:extension>
                                         <OverflowToolbar height="100%">
-                                            <ComboBox
-                                                width="180px"
-                                                class="sapUiSizeCompact"
-                                                selectionChange="onOperacionChange"
-                                                showClearIcon="true"
-                                                items="{operacionesModel>/items}"
-                                            >
-                                                <core:Item
-                                                    key="{operacionesModel>key}"
-                                                    text="{operacionesModel>text}"
-                                                />
-                                            </ComboBox>
-                                              <Button
+                                            <!-- Se sustituye el ComboBox de operacion por el selector de variantes de la tabla. -->
+                                            <Button
+                                                id="btnVariantSelector"
+                                                text="{variantModel>/displayLabel}"
+                                                iconFirst="false"
+                                                type="Transparent"
+                                                press="onOpenVariantPopover"
+                                            />
+                                            <ToolbarSeparator />
+                                            <Button
                                                 width="8%"
                                                 text="{i18n>TBorigen}"
                                                 press="onOriginPress"
                                             />
                                             <Label
-                                                text="Reales:vacio"
-                                                width="8rem"
+                                                text="{i18n>reales}"
+                                                class="sapUiSmallMarginBegin"
                                             />
                                             <Label
-                                                text="OEO:vacio"
-                                                width="8rem"
+                                                text="{
+                                                path: 'dashboardModel>/NavMasterLt/0/Freal',
+                                                type: 'sap.ui.model.type.Date',
+                                                formatOptions: {
+                                                    pattern: 'dd/MM/yyyy'
+                                                }
+                                            }"
                                             />
+                                            <Label
+                                                text="{i18n>OEO}"
+                                                class=" sapUiMediumMarginBegin"
+                                            />
+                                            <Label
+                                                text="{
+                                                    path: 'dashboardModel>/NavMasterLt/0/Oeo',
+                                                    type: 'sap.ui.model.type.Float',
+                                                    formatOptions: {
+                                                        decimals: 2,
+                                                        groupingEnabled: true
+                                                    }
+                                                }"
+                                                class="sapUiMediumMarginEnd"
+                                            />
+                                           
                                             <ToolbarSpacer />
-                                            <CheckBox
-                                                id="idEjecutadoCheckBox"
+                                              <CheckBox
+                                                id="idEjecutadoCheckBox2"
                                                 text="{i18n>cbEjecutado}"
                                                 class="alignTextCheckBox"
                                                 select="onEjecutadoCheckBoxSelect"
+                                            />
+                                            <CheckBox
+                                                id="idAjustesCheckBox"
+                                                text="{i18n>cbAjustes}"
+                                                class="alignTextCheckBox"
+                                                select="onAjustesCheckBox"
                                             />
                                             <Select
                                                 items="{yearsModel>/years}"
@@ -242,828 +267,574 @@
                                                     text="{yearsModel>year}"
                                                 />
                                             </Select>
+                                            <!-- items="{yearsModel>/years}" -->
                                             <Button
                                                 icon="sap-icon://add"
                                                 press="onAddPress"
-                                                class="sapUiSizeCompact"
+                                                class="toolbarActionBtn"
+                                                tooltip="{i18n>anadir}"
                                             />
                                             <Button
                                                 icon="sap-icon://delete"
                                                 press="onDeletePress"
-                                                class="sapUiSizeCompact"
+                                                class="toolbarActionBtn"
+                                                tooltip="{i18n>eliminar}"
                                             />
                                             <Button
                                                 icon="sap-icon://shortcut"
                                                 press="onShortcutPress"
-                                                class="sapUiSizeCompact"
+                                                class="toolbarActionBtn"
+                                                tooltip="{i18n>repartir}"
                                             />
                                             <Button
                                                 icon="sap-icon://arrow-bottom"
                                                 press="onProcessPress"
-                                                class="sapUiSizeCompact"
+                                                class="toolbarActionBtn"
+                                                tooltip="{i18n>subirDesglose}"
                                             />
                                         </OverflowToolbar>
                                     </t:extension>
                                     <t:columns>
-                                        <t:Column
-                                            width="180px"
-                                            hAlign="Center"
-                                        >
-                                            <t:label>
-                                                <VBox
-                                                    width="100%"
-                                                    class="fullWidthHeader"
-                                                >
-                                                    <Label
-                                                        text="{i18n>operacion}"
-                                                        class="titleGrande"
-                                                        design="Bold"
-                                                    />
-                                                    <HBox
-                                                        renderType="Bare"
-                                                        visible="{ui>/showStickyParent}"
-                                                        class="parentHeaderBox"
-                                                    >
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/parent/name}"
-                                                            wrapping="false"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                        />
+                                    <!-- COLUMNA: Operación - NO EDITABLE -->
+                                    <t:Column width="180px" hAlign="Center">
+                                        <t:label>
+                                            <VBox width="100%" class="fullWidthHeader">
+                                                <Label text="{i18n>operacion}" class="titleGrande" design="Bold" />
+                                                <HBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                                    <Text text="{ui>/stickyHeaderData/parent/name}" wrapping="false" width="100%" textAlign="Center" />
+                                                </HBox>
+                                                <VBox>
+                                                    <HBox class="parentHeader" renderType="Bare" alignContent="Start">
+                                                        <Button visible="{ui>/showStickyChild}" class="childHeaderBtn sapUiTinyMarginEnd"
+                                                            icon="sap-icon://navigation-up-arrow" press="onCollapseFromHeader" />
+                                                        <Text text="{ui>/stickyHeaderData/child/name}" width="100%" textAlign="Center"
+                                                            class="secondStickyText" wrapping="false" visible="{ui>/showStickyChild}" />
                                                     </HBox>
-                                                    <VBox>
-                                                        <HBox
-                                                            class="parentHeader"
-                                                            renderType="Bare"
-                                                            alignContent="Start"
-                                                        >
-                                                            <Button
-                                                                visible="{ui>/showStickyChild}"
-                                                                class="childHeaderBtn sapUiTinyMarginEnd"
-                                                                icon="sap-icon://navigation-up-arrow"
-                                                                press="onCollapseFromHeader"
-                                                            />
-                                                            <Text
-                                                                text="{ui>/stickyHeaderData/child/name}"
-                                                                width="100%"
-                                                                textAlign="Center"
-                                                                class="secondStickyText"
-                                                                wrapping="false"
-                                                                visible="{ui>/showStickyChild}"
-                                                            />
-                                                        </HBox>
-                                                    </VBox>
                                                 </VBox>
-                                            </t:label>
-                                            <t:template>
-                                                <VBox
-                                                    renderType="Bare"
-                                                    width="100%"
-                                                    alignContent="Center"
-                                                >
-                                                    <Input
-                                                        width="8.5rem"
-                                                        textAlign="Center"
-                                                        editable="{= ${isGroup} !== true}"
-                                                        value="{inmovilizadosModel>PhPspnr}"
-                                                        class="flatCellInput yearCell"
-                                                    />
+                                            </VBox>
+                                        </t:label>
+                                        <t:template>
+                                            <VBox renderType="Bare" width="100%" alignContent="Center">
+                                                <Input
+                                                    width="8.5rem"
+                                                    textAlign="Center"
+                                                    editable="false"
+                                                    value="{inmovilizadosModel>PhPspnr}"
+                                                    class="flatCellInput yearCell"
+                                                />
+                                            </VBox>
+                                        </t:template>
+                                    </t:Column>
+                                
+                                    <!-- COLUMNA: Descripción - Editable solo en nivel 3 o nueva operación -->
+                                    <t:Column width="160px" hAlign="Center">
+                                        <t:label>
+                                            <VBox width="100%" class="fullWidthHeader">
+                                                <Label text="{i18n>descripcionOperacion}" class="titleGrande" design="Bold" />
+                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                                    <Text text="{ui>/stickyHeaderData/parent/currency}" wrapping="false" width="100%" textAlign="Center" />
                                                 </VBox>
-                                            </t:template>
-                                        </t:Column>
-                                        <t:Column
-                                            width="160px"
-                                            hAlign="Center"
-                                        >
-                                            <t:label>
-                                                <VBox
-                                                    width="100%"
-                                                    class="fullWidthHeader"
-                                                >
-                                                    <Label
-                                                        text="{i18n>descripcionOperacion}"
-                                                        class="titleGrande"
-                                                        design="Bold"
-                                                    />
-                                                    <VBox
-                                                        renderType="Bare"
-                                                        visible="{ui>/showStickyParent}"
-                                                        class="parentHeaderBox"
-                                                    >
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/parent/currency}"
-                                                            wrapping="false"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                        />
-                                                    </VBox>
-                                                    <VBox class="parentHeader">
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/child/currency}"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                            class="secondStickyText"
-                                                            visible="{ui>/showStickyChild}"
-                                                        />
-                                                    </VBox>
+                                                <VBox class="parentHeader">
+                                                    <Text text="{ui>/stickyHeaderData/child/currency}" textAlign="Center" wrapping="false"
+                                                        class="secondStickyText" visible="{ui>/showStickyChild}" />
                                                 </VBox>
-                                            </t:label>
-                                            <t:template>
-                                                <VBox
-                                                    renderType="Bare"
-                                                    alignContent="Center"
-                                                    width="100%"
-                                                >
-                                                    <Input
-                                                        value="{inmovilizadosModel>Post1}"
-                                                        width="9rem"
-                                                        editable="{= ${isGroup} !== true}"
-                                                        textAlign="Center"
-                                                        class="flatCellInput"
-                                                    />
+                                            </VBox>
+                                        </t:label>
+                                        <t:template>
+                                            <VBox renderType="Bare" alignContent="Center" width="100%">
+                                                <Input
+                                                    value="{inmovilizadosModel>Post1}"
+                                                    width="9rem"
+                                                    editable="{= ${inmovilizadosModel>isLevel3} === true || ${inmovilizadosModel>isNew} === true}"
+                                                    textAlign="Center"
+                                                    class="flatCellInput"
+                                                />
+                                            </VBox>
+                                        </t:template>
+                                    </t:Column>
+                                    <t:Column width="80px" hAlign="Center">
+                                        <t:label>
+                                            <VBox width="100%" class="fullWidthHeader">
+                                                <Label text="{i18n>Tipo}" class="titleGrande" design="Bold" />
+                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                                    <Text text="{ui>/stickyHeaderData/parent/amount}" width="100%" textAlign="Center" wrapping="false" />
                                                 </VBox>
-                                            </t:template>
-                                        </t:Column>
-                                        <t:Column
-                                            width="80px"
-                                            hAlign="Center"
-                                        >
-                                            <t:label>
-                                                <VBox
-                                                    width="100%"
-                                                    class="fullWidthHeader"
-                                                >
-                                                    <Label
-                                                        text="{i18n>Tipo}"
-                                                        class="titleGrande"
-                                                        design="Bold"
-                                                    />
-                                                    <VBox
-                                                        renderType="Bare"
-                                                        visible="{ui>/showStickyParent}"
-                                                        class="parentHeaderBox"
-                                                    >
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/parent/amount}"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                        />
-                                                    </VBox>
-                                                    <VBox class="parentHeader">
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/child/amount}"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                            class="secondStickyText"
-                                                            visible="{ui>/showStickyChild}"
-                                                        />
-                                                    </VBox>
+                                                <VBox class="parentHeader">
+                                                    <Text text="{ui>/stickyHeaderData/child/amount}" textAlign="Center" wrapping="false"
+                                                        class="secondStickyText" visible="{ui>/showStickyChild}" />
                                                 </VBox>
-                                            </t:label>
-                                            <t:template>
-                                                <VBox
-                                                    renderType="Bare"
-                                                    width="100%"
-                                                    alignContent="Center"
-                                                >
-                                                    <Input
-                                                        width="4.2rem"
-                                                        textAlign="Center"
-                                                        editable="{= ${isGroup} !== true}"
-                                                        value="{inmovilizadosModel>Tipo}"
-                                                        class="flatCellInput"
-                                                    />
+                                            </VBox>
+                                        </t:label>
+                                        <t:template>
+                                            <VBox renderType="Bare" width="100%" alignContent="Center">
+                                                <Input
+                                                    width="4.2rem"
+                                                    textAlign="Center"
+                                                    editable="false"
+                                                    value="{inmovilizadosModel>TipoInd}"
+                                                    class="flatCellInput"
+                                                />
+                                            </VBox>
+                                        </t:template>
+                                    </t:Column>
+                                    <t:Column width="80px" hAlign="Center" visible="false">
+                                        <t:label>
+                                            <VBox width="100%" class="fullWidthHeader">
+                                                <Label text="{i18n>inveje}" class="titleGrande" design="Bold" />
+                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                                    <Text text="{ui>/stickyHeaderData/parent/amount}" width="100%" textAlign="Center" wrapping="false" />
                                                 </VBox>
-                                            </t:template>
-                                        </t:Column>
-                                        <t:Column
-                                            width="80px"
-                                            hAlign="Center"
-                                        >
-                                            <t:label>
-                                                <VBox
-                                                    width="100%"
-                                                    class="fullWidthHeader"
-                                                >
-                                                    <Label
-                                                        text="{i18n>coste}"
-                                                        class="titleGrande"
-                                                        design="Bold"
-                                                    />
-                                                    <VBox
-                                                        renderType="Bare"
-                                                        visible="{ui>/showStickyParent}"
-                                                        class="parentHeaderBox"
-                                                    >
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/parent/amount}"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                        />
-                                                    </VBox>
-                                                    <VBox class="parentHeader">
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/child/amount}"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                            class="secondStickyText"
-                                                            visible="{ui>/showStickyChild}"
-                                                        />
-                                                    </VBox>
+                                                <VBox class="parentHeader">
+                                                    <Text text="{ui>/stickyHeaderData/child/amount}" textAlign="Center" wrapping="false"
+                                                        class="secondStickyText" visible="{ui>/showStickyChild}" />
                                                 </VBox>
-                                            </t:label>
-                                            <t:template>
-                                                <HBox
-                                                    renderType="Bare"
-                                                    width="100%"
-                                                    alignItems="Center"
-                                                >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                          width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
-                                                    >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="AmoEje"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                     <vn:DecimalesInput
-                                                        width="4.2rem"
-                                                        decimalNumbers="{dashboardModel>/decimales}"
-                                                        textAlign="Center"
-                                                        editable="{= ${isGroup} !== true}"
-                                                        value="{
-                                                            parts: [
-                                                                'inmovilizadosModel>AmoEje',
-                                                                'dashboardModel>/decimales',
-                                                                'appData>/userData/CurrencyFormat'
-                                                            ],
-                                                            formatter: '.formatter.formatDecimales'
-                                                        }"
-                                                        class="flatCellInput"
-
-                                                    />
-                                                </HBox>
-                                            </t:template>
-                                        </t:Column>
-                                        <t:Column
-                                            width="80px"
-                                            hAlign="Center"
-                                        >
-                                            <t:label>
-                                                <VBox
-                                                    width="100%"
-                                                    class="fullWidthHeader"
-                                                >
-                                                    <Label
-                                                        text="{i18n>costepend}"
-                                                        design="Bold"
-                                                        class="titleGrande"
-                                                    />
-                                                    <VBox
-                                                        renderType="Bare"
-                                                        visible="{ui>/showStickyParent}"
-                                                        class="parentHeaderBox"
-                                                    >
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/parent/pricepending}"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                        />
-                                                    </VBox>
-                                                    <VBox class="parentHeader">
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/child/pricepending}"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                            class="secondStickyText"
-                                                            visible="{ui>/showStickyChild}"
-                                                        />
-                                                    </VBox>
-                                                </VBox>
-                                            </t:label>
-                                            <t:template>
-                                                <HBox
-                                                    renderType="Bare"
-                                                    width="100%"
-                                                     alignItems="Center"
-                                                >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                         width="0.9rem"
-                                                          class="bottomFilter"
-                                                        visible="{= ${cabecera} === true}"
-                                                    >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="AmoPen"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                  <vn:DecimalesInput
-                                                        width="4.2rem"
-                                                        decimalNumbers="{dashboardModel>/decimales}"
-                                                        textAlign="Center"
-                                                        editable="{= ${isGroup} !== true}"
-                                                        value="{
-                                                            parts: [
-                                                                'inmovilizadosModel>AmoPen',
-                                                                'dashboardModel>/decimales',
-                                                                'appData>/userData/CurrencyFormat'
-                                                            ],
-                                                            formatter: '.formatter.formatDecimales'
-                                                        }"
-                                                        class="flatCellInput"
-
-                                                    />
-                                                </HBox>
-                                            </t:template>
-                                        </t:Column>
-                                        <t:Column
-                                            width="80px"
-                                            hAlign="Center"
-                                        >
-                                            <t:label>
-                                                <VBox
-                                                    width="100%"
-                                                    class="fullWidthHeader"
-                                                >
-                                                    <Label
-                                                        text="{i18n>costetotal}"
-                                                        class="titleGrande"
-                                                        design="Bold"
-                                                    />
-                                                    <VBox
-                                                        renderType="Bare"
-                                                        visible="{ui>/showStickyParent}"
-                                                        class="parentHeaderBox"
-                                                    >
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/parent/pricetotal}"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                        />
-                                                    </VBox>
-                                                    <VBox class="parentHeader">
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/child/pricetotal}"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                            class="secondStickyText"
-                                                            visible="{ui>/showStickyChild}"
-                                                        />
-                                                    </VBox>
-                                                </VBox>
-                                            </t:label>
-                                            <t:template>
-                                                <HBox
-                                                    renderType="Bare"
-                                                    width="100%"
-                                                     alignItems="Center"
-                                                >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                         width="0.9rem"
-                                                          class="bottomFilter"
-                                                        visible="{= ${cabecera} === true}"
-                                                    >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="AmoTot"
-                                                            />
-                                                        </customData>
-                                                    </Button>
+                                            </VBox>
+                                        </t:label>
+                                        <t:template>
+                                            <HBox renderType="Bare" width="100%" alignItems="Center">
+                                                <Button icon="sap-icon://filter" press="filterTableRow"
+                                                    class="bottomFilter" width="0.9rem"
+                                                    visible="{= ${cabecera} === true}">
+                                                    <customData>
+                                                        <core:CustomData key="filterProp" value="InvEje" />
+                                                    </customData>
+                                                </Button>
                                                 <vn:DecimalesInput
-                                                        width="4.2rem"
-                                                        decimalNumbers="{dashboardModel>/decimales}"
-                                                        textAlign="Center"
-                                                        editable="{= ${isGroup} !== true}"
-                                                        value="{
-                                                            parts: [
-                                                                'inmovilizadosModel>AmoTot',
-                                                                'dashboardModel>/decimales',
-                                                                'appData>/userData/CurrencyFormat'
-                                                            ],
-                                                            formatter: '.formatter.formatDecimales'
-                                                        }"
-                                                        class="flatCellInput"
-
-                                                    />
-                                                </HBox>
-                                            </t:template>
-                                        </t:Column>
-                                        <t:Column
-                                            width="80px"
-                                            hAlign="Center"
-                                        >
-                                            <t:label>
-                                                <VBox
-                                                    width="100%"
-                                                    class="fullWidthHeader"
-                                                >
-                                                    <Label
-                                                        text="{i18n>valorResidual}"
-                                                        design="Bold"
-                                                        class="titleGrande"
-                                                        textAlign="Center"
-                                                    />
-                                                    <VBox
-                                                        renderType="Bare"
-                                                        visible="{ui>/showStickyParent}"
-                                                        class="parentHeaderBox"
-                                                    >
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/parent/size}"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                        />
-                                                    </VBox>
-                                                    <VBox class="parentHeader">
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/child/size}"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                            class="secondStickyText"
-                                                            visible="{ui>/showStickyChild}"
-                                                        />
-                                                    </VBox>
+                                                    width="4.2rem"
+                                                    decimalNumbers="{dashboardModel>/decimales}"
+                                                    textAlign="Center"
+                                                    editable="false"
+                                                    value="{
+                                                        parts: [
+                                                            'inmovilizadosModel>InvEje',
+                                                            'dashboardModel>/decimales',
+                                                            'appData>/userData/CurrencyFormat'
+                                                        ],
+                                                        formatter: '.formatDecimales'
+                                                    }"
+                                                    class="flatCellInput"
+                                                />
+                                            </HBox>
+                                        </t:template>
+                                    </t:Column>
+                                    <t:Column width="80px" hAlign="Center" visible= "false">
+                                        <t:label>
+                                            <VBox width="100%" class="fullWidthHeader">
+                                                <Label text="{i18n>Invejereal}" class="titleGrande" design="Bold" />
+                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                                    <Text text="{ui>/stickyHeaderData/parent/amount}" width="100%" textAlign="Center" wrapping="false" />
                                                 </VBox>
-                                            </t:label>
-                                            <t:template>
-                                                <HBox
-                                                    width="100%"
-                                                    alignContent="Center"
-                                                    renderType="Bare"
-                                                >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                          width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
-                                                    >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="ValResidAmo"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                    <Input
-                                                        value="{inmovilizadosModel>ValResidAmo}"
-                                                        editable="{= ${isGroup} !== true}"
-                                                        class="flatCellInput"
-                                                        width="100%"
-                                                        textAlign="Center"
-                                                    />
-                                                </HBox>
-                                            </t:template>
-                                        </t:Column>
-                                        <t:Column
-                                            width="80px"
-                                            hAlign="Center"
-                                        >
-                                            <t:label>
-                                                <VBox
-                                                    width="100%"
-                                                    class="fullWidthHeader"
-                                                >
-                                                    <Label
-                                                        text="{i18n>percValorResidual}"
-                                                        design="Bold"
-                                                        class="titleGrande"
-                                                        textAlign="Center"
-                                                    />
-                                                    <VBox
-                                                        renderType="Bare"
-                                                        visible="{ui>/showStickyParent}"
-                                                        class="parentHeaderBox"
-                                                    >
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/parent/size}"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                        />
-                                                    </VBox>
-                                                    <VBox class="parentHeader">
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/child/size}"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                            class="secondStickyText"
-                                                            visible="{ui>/showStickyChild}"
-                                                        />
-                                                    </VBox>
+                                                <VBox class="parentHeader">
+                                                    <Text text="{ui>/stickyHeaderData/child/amount}" textAlign="Center" wrapping="false"
+                                                        class="secondStickyText" visible="{ui>/showStickyChild}" />
                                                 </VBox>
-                                            </t:label>
-                                            <t:template>
-                                                <HBox
-                                                    width="100%"
-                                                    alignContent="Center"
-                                                    renderType="Bare"
-                                                >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                          width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
-                                                    >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="PctjResidAmo"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                    <Input
-                                                        value="{inmovilizadosModel>PctjResidAmo}"
-                                                        editable="{= ${isGroup} !== true}"
-                                                        class="flatCellInput"
-                                                        width="100%"
-                                                        textAlign="Center"
-                                                    />
-                                                </HBox>
-                                            </t:template>
-                                        </t:Column>
-                                        <t:Column
-                                            id="colStart"
-                                            width="115px"
-                                            hAlign="Center"
-                                        >
-                                            <t:label>
-                                                <VBox
-                                                    width="100%"
-                                                    class="fullWidthHeader"
-                                                >
-                                                    <Label
-                                                        text="{i18n>dbReparto}"
-                                                        design="Bold"
-                                                        class="titleGrande"
-                                                        textAlign="Center"
-                                                    />
-                                                    <VBox
-                                                        renderType="Bare"
-                                                        visible="{ui>/showStickyParent}"
-                                                        class="parentHeaderBox"
-                                                    >
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/parent/size}"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                        />
-                                                    </VBox>
-                                                    <VBox class="parentHeader">
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/child/size}"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                            class="secondStickyText"
-                                                            visible="{ui>/showStickyChild}"
-                                                        />
-                                                    </VBox>
+                                            </VBox>
+                                        </t:label>
+                                        <t:template>
+                                            <HBox renderType="Bare" width="100%" alignItems="Center">
+                                                <Button icon="sap-icon://filter" press="filterTableRow"
+                                                    class="bottomFilter" width="0.9rem"
+                                                    visible="{= ${cabecera} === true}">
+                                                    <customData>
+                                                        <core:CustomData key="filterProp" value="Invejereal" />
+                                                    </customData>
+                                                </Button>
+                                                <vn:DecimalesInput
+                                                    width="4.2rem"
+                                                    decimalNumbers="{dashboardModel>/decimales}"
+                                                    textAlign="Center"
+                                                    editable="false"
+                                                    value="{
+                                                        parts: [
+                                                            'inmovilizadosModel>Invejereal',
+                                                            'dashboardModel>/decimales',
+                                                            'appData>/userData/CurrencyFormat'
+                                                        ],
+                                                        formatter: '.formatDecimales'
+                                                    }"
+                                                    class="flatCellInput"
+                                                />
+                                            </HBox>
+                                        </t:template>
+                                    </t:Column>
+                                    <t:Column width="80px" hAlign="Center" visible="false">
+                                        <t:label>
+                                            <VBox width="100%" class="fullWidthHeader">
+                                                <Label text="{i18n>Invejeajus}" class="titleGrande" design="Bold" />
+                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                                    <Text text="{ui>/stickyHeaderData/parent/amount}" width="100%" textAlign="Center" wrapping="false" />
                                                 </VBox>
-                                            </t:label>
-                                            <t:template>
-                                                <HBox
-                                                    width="100%"
-                                                    alignContent="Center"
-                                                    renderType="Bare"
-                                                >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                          width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
-                                                    >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="Tipo"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                    <Input
-                                                        value="{inmovilizadosModel>Tipo}"
-                                                        editable="{= ${isGroup} !== true}"
-                                                        class="flatCellInput"
-                                                        width="100%"
-                                                        textAlign="Center"
-                                                    />
-                                                </HBox>
-                                            </t:template>
-                                        </t:Column>
-                                        <t:Column
-                                            id="colEnd"
-                                            width="100px"
-                                            hAlign="Center"
-                                        >
-                                            <t:label>
-                                                <VBox
-                                                    width="100%"
-                                                    class="fullWidthHeader"
-                                                >
-                                                    <Label
-                                                        text="{i18n>dbPendPlanificar}"
-                                                        design="Bold"
-                                                        class="titleGrande"
-                                                        textAlign="Center"
-                                                    />
-                                                    <VBox
-                                                        renderType="Bare"
-                                                        visible="{ui>/showStickyParent}"
-                                                        class="parentHeaderBox"
-                                                    >
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/parent/last}"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                        />
-                                                    </VBox>
-                                                    <VBox class="parentHeader">
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/child/last}"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                            class="secondStickyText"
-                                                            visible="{ui>/showStickyChild}"
-                                                        />
-                                                    </VBox>
+                                                <VBox class="parentHeader">
+                                                    <Text text="{ui>/stickyHeaderData/child/amount}" textAlign="Center" wrapping="false"
+                                                        class="secondStickyText" visible="{ui>/showStickyChild}" />
                                                 </VBox>
-                                            </t:label>
-                                            <t:template>
-                                                <HBox
-                                                    width="100%"
-                                                    alignContent="Center"
-                                                    renderType="Bare"
-                                                >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                          width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
-                                                    >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="PenPlan"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                    <Input
-                                                        value="{inmovilizadosModel>PenPlan}"
-                                                        editable="{= ${isGroup} !== true}"
-                                                        class="flatCellInput"
-                                                        width="{= ${cabecera} === true ? '4rem' : '5.5rem'}"
-                                                        textAlign="Center"
-                                                    />
-                                                </HBox>
-                                            </t:template>
-                                        </t:Column>
-                                        <t:Column
-                                            id="colMonths"
-                                            width="60px"
-                                            hAlign="Center"
-                                        >
-                                            <t:label>
-                                                <VBox
-                                                    width="100%"
-                                                    class="fullWidthHeader"
-                                                >
-                                                    <Label text="&#160;" />
-                                                    <VBox
-                                                        renderType="Bare"
-                                                        visible="{ui>/showStickyParent}"
-                                                        class="parentHeaderBox"
-                                                    >
-                                                        <Text text="&#160;" />
-                                                    </VBox>
-                                                    <VBox class="parentHeader">
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/child/months}"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                            class="secondStickyText"
-                                                            visible="{ui>/showStickyChild}"
-                                                        />
-                                                    </VBox>
+                                            </VBox>
+                                        </t:label>
+                                        <t:template>
+                                            <HBox renderType="Bare" width="100%" alignItems="Center">
+                                                <Button icon="sap-icon://filter" press="filterTableRow"
+                                                    class="bottomFilter" width="0.9rem"
+                                                    visible="{= ${cabecera} === true}">
+                                                    <customData>
+                                                        <core:CustomData key="filterProp" value="Invejeajus" />
+                                                    </customData>
+                                                </Button>
+                                                <vn:DecimalesInput
+                                                    width="4.2rem"
+                                                    decimalNumbers="{dashboardModel>/decimales}"
+                                                    textAlign="Center"
+                                                    editable="false"
+                                                    value="{
+                                                        parts: [
+                                                            'inmovilizadosModel>Invejeajus',
+                                                            'dashboardModel>/decimales',
+                                                            'appData>/userData/CurrencyFormat'
+                                                        ],
+                                                        formatter: '.formatDecimales'
+                                                    }"
+                                                    class="flatCellInput"
+                                                />
+                                            </HBox>
+                                        </t:template>
+                                    </t:Column>
+                                    <t:Column width="80px" hAlign="Center">
+                                        <t:label>
+                                            <VBox width="100%" class="fullWidthHeader">
+                                                <Label text="{i18n>coste}" class="titleGrande" design="Bold" />
+                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                                    <Text text="{ui>/stickyHeaderData/parent/amount}" width="100%" textAlign="Center" wrapping="false" />
                                                 </VBox>
-                                            </t:label>
-                                            <t:template>
-                                                <HBox
-                                                    width="100%"
-                                                    alignContent="Center"
-                                                    renderType="Bare"
-                                                >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                         class="bottomFilter"
-                                                          width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
-                                                    >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="months"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                    <Input
-                                                        value="{inmovilizadosModel>months}"
-                                                        editable="{= ${isGroup} !== true}"
-                                                        class="flatCellInput"
-                                                        width="{= ${cabecera} === true ? '4rem' : '85px'}"
-                                                        textAlign="Center"
-                                                    />
-                                                </HBox>
-                                            </t:template>
-                                        </t:Column>
-                                        <t:Column
-                                            id="colNew"
-                                            width="60px"
-                                            hAlign="Center"
-                                        >
-                                            <t:label>
-                                                <VBox
-                                                    width="100%"
-                                                    class="fullWidthHeader"
-                                                >
-                                                    <Label text="&#160;" />
-                                                    <VBox
-                                                        renderType="Bare"
-                                                        visible="{ui>/showStickyParent}"
-                                                        class="parentHeaderBox"
-                                                    >
-                                                        <Text
-                                                            text="&#160;"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                        />
-                                                    </VBox>
-                                                    <VBox class="parentHeader">
-                                                        <Text
-                                                            text="{ui>/stickyHeaderData/child/pend}"
-                                                            visible="{ui>/showStickyChild}"
-                                                            width="100%"
-                                                            textAlign="Center"
-                                                            wrapping="false"
-                                                            class="secondStickyText"
-                                                        />
-                                                    </VBox>
+                                                <VBox class="parentHeader">
+                                                    <Text text="{ui>/stickyHeaderData/child/amount}" textAlign="Center" wrapping="false"
+                                                        class="secondStickyText" visible="{ui>/showStickyChild}" />
                                                 </VBox>
-                                            </t:label>
-                                            <t:template>
-                                                <HBox
+                                            </VBox>
+                                        </t:label>
+                                        <t:template>
+                                            <HBox renderType="Bare" width="100%" alignItems="Center">
+                                                <Button icon="sap-icon://filter" press="filterTableRow"
+                                                    class="bottomFilter" width="0.9rem"
+                                                    visible="{= ${cabecera} === true}">
+                                                    <customData>
+                                                        <core:CustomData key="filterProp" value="AmoEje" />
+                                                    </customData>
+                                                </Button>
+                                                <vn:DecimalesInput
+                                                    width="4.2rem"
+                                                    decimalNumbers="{dashboardModel>/decimales}"
+                                                    textAlign="Center"
+                                                    editable="false"
+                                                    value="{
+                                                        parts: [
+                                                            'inmovilizadosModel>AmoEje',
+                                                            'dashboardModel>/decimales',
+                                                            'appData>/userData/CurrencyFormat'
+                                                        ],
+                                                        formatter: '.formatDecimales'
+                                                    }"
+                                                    class="flatCellInput"
+                                                />
+                                            </HBox>
+                                        </t:template>
+                                    </t:Column>
+                                
+                                    <!-- COLUMNA: Coste pendiente (AmoPen) - EDITABLE -->
+                                    <t:Column width="80px" hAlign="Center">
+                                        <t:label>
+                                            <VBox width="100%" class="fullWidthHeader">
+                                                <Label text="{i18n>costepend}" design="Bold" class="titleGrande" />
+                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                                    <Text text="{ui>/stickyHeaderData/parent/pricepending}" width="100%" textAlign="Center" wrapping="false" />
+                                                </VBox>
+                                                <VBox class="parentHeader">
+                                                    <Text text="{ui>/stickyHeaderData/child/pricepending}" textAlign="Center" wrapping="false"
+                                                        class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                                </VBox>
+                                            </VBox>
+                                        </t:label>
+                                        <t:template>
+                                            <HBox renderType="Bare" width="100%" alignItems="Center">
+                                                <Button icon="sap-icon://filter" press="filterTableRow"
+                                                    width="0.9rem" class="bottomFilter"
+                                                    visible="{= ${cabecera} === true}">
+                                                    <customData>
+                                                        <core:CustomData key="filterProp" value="AmoPen" />
+                                                    </customData>
+                                                </Button>
+                                                <vn:DecimalesInput
+                                                    width="4.2rem"
+                                                    decimalNumbers="{dashboardModel>/decimales}"
+                                                    textAlign="Center"
+                                                    editable="true"
+                                                    change="onAmoPenChange"
+                                                    value="{
+                                                        parts: [
+                                                            'inmovilizadosModel>AmoPen',
+                                                            'dashboardModel>/decimales',
+                                                            'appData>/userData/CurrencyFormat'
+                                                        ],
+                                                        formatter: '.formatDecimales'
+                                                    }"
+                                                    class="flatCellInput"
+                                                />
+                                            </HBox>
+                                        </t:template>
+                                    </t:Column>
+                                
+                                    <!-- COLUMNA: Coste total (AmoTot) - NO EDITABLE -->
+                                    <t:Column width="80px" hAlign="Center">
+                                        <t:label>
+                                            <VBox width="100%" class="fullWidthHeader">
+                                                <Label text="{i18n>costetotal}" class="titleGrande" design="Bold" />
+                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                                    <Text text="{ui>/stickyHeaderData/parent/pricetotal}" width="100%" textAlign="Center" wrapping="false" />
+                                                </VBox>
+                                                <VBox class="parentHeader">
+                                                    <Text text="{ui>/stickyHeaderData/child/pricetotal}" width="100%" textAlign="Center" wrapping="false"
+                                                        class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                                </VBox>
+                                            </VBox>
+                                        </t:label>
+                                        <t:template>
+                                            <HBox renderType="Bare" width="100%" alignItems="Center">
+                                                <Button icon="sap-icon://filter" press="filterTableRow"
+                                                    width="0.9rem" class="bottomFilter"
+                                                    visible="{= ${cabecera} === true}">
+                                                    <customData>
+                                                        <core:CustomData key="filterProp" value="AmoTot" />
+                                                    </customData>
+                                                </Button>
+                                                <vn:DecimalesInput
+                                                    width="4.2rem"
+                                                    decimalNumbers="{dashboardModel>/decimales}"
+                                                    textAlign="Center"
+                                                    editable="false"
+                                                    value="{
+                                                        parts: [
+                                                            'inmovilizadosModel>AmoTot',
+                                                            'dashboardModel>/decimales',
+                                                            'appData>/userData/CurrencyFormat'
+                                                        ],
+                                                        formatter: '.formatDecimales'
+                                                    }"
+                                                    class="flatCellInput"
+                                                />
+                                            </HBox>
+                                        </t:template>
+                                    </t:Column>
+                                
+                                    <!-- COLUMNA: Valor Residual - EDITABLE -->
+                                    <t:Column width="80px" hAlign="Center">
+                                        <t:label>
+                                            <VBox width="100%" class="fullWidthHeader">
+                                                <Label text="{i18n>valorResidual}" design="Bold" class="titleGrande" textAlign="Center" />
+                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                                    <Text text="{ui>/stickyHeaderData/parent/size}" width="100%" textAlign="Center" wrapping="false" />
+                                                </VBox>
+                                                <VBox class="parentHeader">
+                                                    <Text text="{ui>/stickyHeaderData/child/size}" textAlign="Center" wrapping="false"
+                                                        class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                                </VBox>
+                                            </VBox>
+                                        </t:label>
+                                        <t:template>
+                                            <HBox width="100%" alignContent="Center" renderType="Bare">
+                                                <Button icon="sap-icon://filter" press="filterTableRow"
+                                                    class="bottomFilter" width="0.9rem"
+                                                    visible="{= ${cabecera} === true}">
+                                                    <customData>
+                                                        <core:CustomData key="filterProp" value="ValResidAmo" />
+                                                    </customData>
+                                                </Button>
+                                                <Input
+                                                    value="{inmovilizadosModel>ValResidAmo}"
+                                                    editable="true"
+                                                    class="flatCellInput"
                                                     width="100%"
-                                                    alignContent="Center"
-                                                    renderType="Bare"
+                                                    textAlign="Center"
+                                                />
+                                            </HBox>
+                                        </t:template>
+                                    </t:Column>
+                                
+                                    <!-- COLUMNA: % Residual - EDITABLE -->
+                                    <t:Column width="80px" hAlign="Center">
+                                        <t:label>
+                                            <VBox width="100%" class="fullWidthHeader">
+                                                <Label text="{i18n>percValorResidual}" design="Bold" class="titleGrande" textAlign="Center" />
+                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                                    <Text text="{ui>/stickyHeaderData/parent/size}" width="100%" textAlign="Center" wrapping="false" />
+                                                </VBox>
+                                                <VBox class="parentHeader">
+                                                    <Text text="{ui>/stickyHeaderData/child/size}" textAlign="Center" wrapping="false"
+                                                        class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                                </VBox>
+                                            </VBox>
+                                        </t:label>
+                                        <t:template>
+                                            <HBox width="100%" alignContent="Center" renderType="Bare">
+                                                <Button icon="sap-icon://filter" press="filterTableRow"
+                                                    class="bottomFilter" width="0.9rem"
+                                                    visible="{= ${cabecera} === true}">
+                                                    <customData>
+                                                        <core:CustomData key="filterProp" value="PctjResidAmo" />
+                                                    </customData>
+                                                </Button>
+                                                <Input
+                                                    value="{inmovilizadosModel>PctjResidAmo}"
+                                                    editable="true"
+                                                    class="flatCellInput"
+                                                    width="100%"
+                                                    textAlign="Center"
+                                                />
+                                            </HBox>
+                                        </t:template>
+                                    </t:Column>
+                                
+                                    <!-- COLUMNA: Reparto - Select/Dropdown. Inversión (P) = solo Manual, Amortización (B) = OEO/Lineal/Manual -->
+                                    <t:Column id="colStart" width="115px" hAlign="Center">
+                                        <t:label>
+                                            <VBox width="100%" class="fullWidthHeader">
+                                                <Label text="{i18n>dbReparto}" design="Bold" class="titleGrande" textAlign="Center" />
+                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                                    <Text text="{ui>/stickyHeaderData/parent/size}" width="100%" textAlign="Center" wrapping="false" />
+                                                </VBox>
+                                                <VBox class="parentHeader">
+                                                    <Text text="{ui>/stickyHeaderData/child/size}" textAlign="Center" wrapping="false"
+                                                        class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                                </VBox>
+                                            </VBox>
+                                        </t:label>
+                                        <t:template>
+                                            <HBox width="100%" alignContent="Center" renderType="Bare">
+                                                <Button icon="sap-icon://filter" press="filterTableRow"
+                                                    class="bottomFilter" width="0.9rem"
+                                                    visible="{= ${cabecera} === true}">
+                                                    <customData>
+                                                        <core:CustomData key="filterProp" value="Tipo" />
+                                                    </customData>
+                                                </Button>
+                                                <Select
+                                                    selectedKey="{inmovilizadosModel>Tipo}"
+                                                    width="100%"
+                                                    class="flatCellInput"
+                                                    change="onRepartoChange"
+                                                    items="{
+                                                        path: 'inmovilizadosModel>repartoItems',
+                                                        templateShareable: false
+                                                    }"
                                                 >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                          width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
-                                                    >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="pend"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                    <Input
-                                                        value="{inmovilizadosModel>pend}"
-                                                        editable="{= ${isGroup} !== true}"
-                                                        textAlign="Center"
-                                                        class="flatCellInput"
-                                                        width="{= ${cabecera} === true ? '3.5rem' : '70px'}"
+                                                    <core:Item
+                                                        key="{inmovilizadosModel>key}"
+                                                        text="{inmovilizadosModel>text}"
                                                     />
-                                                </HBox>
-                                            </t:template>
-                                        </t:Column>
-                                    </t:columns>
+                                                </Select>
+                                            </HBox>
+                                        </t:template>
+                                    </t:Column>
+                                
+                                    <!-- COLUMNA: Pend. Planificar (PenPlan) - NO EDITABLE (calculado) -->
+                                    <t:Column id="colEnd" width="100px" hAlign="Center">
+                                        <t:label>
+                                            <VBox width="100%" class="fullWidthHeader">
+                                                <Label text="{i18n>dbPendPlanificar}" design="Bold" class="titleGrande" textAlign="Center" />
+                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                                    <Text text="{ui>/stickyHeaderData/parent/last}" width="100%" textAlign="Center" wrapping="false" />
+                                                </VBox>
+                                                <VBox class="parentHeader">
+                                                    <Text text="{ui>/stickyHeaderData/child/last}" textAlign="Center" wrapping="false"
+                                                        class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                                </VBox>
+                                            </VBox>
+                                        </t:label>
+                                        <t:template>
+                                            <HBox width="100%" alignContent="Center" renderType="Bare">
+                                                <Button icon="sap-icon://filter" press="filterTableRow"
+                                                    class="bottomFilter" width="0.9rem"
+                                                    visible="{= ${cabecera} === true}">
+                                                    <customData>
+                                                        <core:CustomData key="filterProp" value="PenPlan" />
+                                                    </customData>
+                                                </Button>
+                                                <Input
+                                                    value="{inmovilizadosModel>PenPlan}"
+                                                    editable="false"
+                                                    class="flatCellInput"
+                                                    width="{= ${cabecera} === true ? '4rem' : '5.5rem'}"
+                                                    textAlign="Center"
+                                                />
+                                            </HBox>
+                                        </t:template>
+                                    </t:Column>
+                                
+                                    <!-- COLUMNA: Months -->
+                                    <t:Column id="colMonths" width="60px" hAlign="Center">
+                                        <t:label>
+                                            <VBox width="100%" class="fullWidthHeader">
+                                                <Label text="&#160;" />
+                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                                    <Text text="&#160;" />
+                                                </VBox>
+                                                <VBox class="parentHeader">
+                                                    <Text text="{ui>/stickyHeaderData/child/months}" textAlign="Center" wrapping="false"
+                                                        class="secondStickyText" visible="{ui>/showStickyChild}" />
+                                                </VBox>
+                                            </VBox>
+                                        </t:label>
+                                        <t:template>
+                                            <HBox width="100%" alignContent="Center" renderType="Bare">
+                                                <Button icon="sap-icon://filter" press="filterTableRow"
+                                                    class="bottomFilter" width="0.9rem"
+                                                    visible="{= ${cabecera} === true}">
+                                                    <customData>
+                                                        <core:CustomData key="filterProp" value="months" />
+                                                    </customData>
+                                                </Button>
+                                                <Input
+                                                    value="{inmovilizadosModel>months}"
+                                                    editable="{= ${isGroup} !== true}"
+                                                    class="flatCellInput"
+                                                    width="{= ${cabecera} === true ? '4rem' : '85px'}"
+                                                    textAlign="Center"
+                                                />
+                                            </HBox>
+                                        </t:template>
+                                    </t:Column>
+                                
+                                    <!-- COLUMNA: Pend -->
+                                    <t:Column id="colNew" width="60px" hAlign="Center">
+                                        <t:label>
+                                            <VBox width="100%" class="fullWidthHeader">
+                                                <Label text="&#160;" />
+                                                <VBox renderType="Bare" visible="{ui>/showStickyParent}" class="parentHeaderBox">
+                                                    <Text text="&#160;" width="100%" textAlign="Center" />
+                                                </VBox>
+                                                <VBox class="parentHeader">
+                                                    <Text text="{ui>/stickyHeaderData/child/pend}" visible="{ui>/showStickyChild}" width="100%"
+                                                        textAlign="Center" wrapping="false" class="secondStickyText" />
+                                                </VBox>
+                                            </VBox>
+                                        </t:label>
+                                        <t:template>
+                                            <HBox width="100%" alignContent="Center" renderType="Bare">
+                                                <Button icon="sap-icon://filter" press="filterTableRow"
+                                                    class="bottomFilter" width="0.9rem"
+                                                    visible="{= ${cabecera} === true}">
+                                                    <customData>
+                                                        <core:CustomData key="filterProp" value="pend" />
+                                                    </customData>
+                                                </Button>
+                                                <Input
+                                                    value="{inmovilizadosModel>pend}"
+                                                    editable="{= ${isGroup} !== true}"
+                                                    textAlign="Center"
+                                                    class="flatCellInput"
+                                                    width="{= ${cabecera} === true ? '3.5rem' : '70px'}"
+                                                />
+                                            </HBox>
+                                        </t:template>
+                                    </t:Column>
+                                </t:columns>
                                 </t:TreeTable>
                             </VBox>
                         </uxap:blocks>
