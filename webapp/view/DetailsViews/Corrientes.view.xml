@@ -42,7 +42,7 @@
                     <VBox width="50%">
                         <t:Table
                             class="sapUiSizeCompact smallHeaderTable"
-                            rows="{dataTitle>/data}"
+                            rows="{dataTitle>/aKpisIndirectos}"
                             visibleRowCount="1"
                             columnHeaderHeight="10"
                             width="100%"
@@ -55,7 +55,7 @@
                                         design="Bold"
                                     />
                                     <t:template>
-                                        <Text text="{dataTitle>title3}" />
+                                        <Text text="{dataTitle>CtotEje}" />
                                     </t:template>
                                 </t:Column>
                                 <t:Column hAlign="Center">
@@ -64,7 +64,7 @@
                                         design="Bold"
                                     />
                                     <t:template>
-                                        <Text text="{dataTitle>title4}" />
+                                        <Text text="{dataTitle>CtotPen}" />
                                     </t:template>
                                 </t:Column>
                                 <t:Column hAlign="Center">
@@ -73,7 +73,7 @@
                                         design="Bold"
                                     />
                                     <t:template>
-                                        <Text text="{dataTitle>title}" />
+                                        <Text text="{dataTitle>Ctot}" />
                                     </t:template>
                                 </t:Column>
                             </t:columns>
@@ -98,7 +98,7 @@
                             <VBox
                                 width="100%"
                                 height="100%"
-                                class="noMarginTop"
+                                class="noMarginTop sapUiNoContentPadding"
                             >
                                 <t:TreeTable
                                     id="TreeTableBasic"
@@ -137,15 +137,13 @@
                                                 text="{i18n>reales}"
                                                 class="sapUiSmallMarginBegin"
                                             />
-                                            <Label
-                                                text="{
+                                            <Label text="{
                                                 path: 'dashboardModel>/NavMasterLt/0/Freal',
                                                 type: 'sap.ui.model.type.Date',
                                                 formatOptions: {
                                                     pattern: 'dd/MM/yyyy'
                                                 }
-                                            }"
-                                            />
+                                            }" />
                                             <Label
                                                 text="{i18n>OEO}"
                                                 class=" sapUiMediumMarginBegin"
@@ -173,6 +171,12 @@
                                             />
                                             <Text text="%" />
                                             <ToolbarSpacer />
+                                            <CheckBox
+                                                id="idEjecutadoCheckBox2"
+                                                text="{i18n>cbEjecutado}"
+                                                class="alignTextCheckBox"
+                                                select="onEjecutadoCheckBoxSelect"
+                                            />
                                             <CheckBox
                                                 id="idAjustesCheckBox"
                                                 text="{i18n>cbAjustes}"
@@ -220,6 +224,7 @@
                                         </OverflowToolbar>
                                     </t:extension>
                                     <t:columns>
+                                        <!-- COLUMNA 1: Operación / PhPspnr -->
                                         <t:Column
                                             width="200px"
                                             hAlign="Center"
@@ -287,36 +292,76 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <HBox
+                                                <VBox
                                                     renderType="Bare"
                                                     width="100%"
-                                                    alignContent="Center"
                                                 >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                        width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
+                                                    <HBox
+                                                        renderType="Bare"
+                                                        width="100%"
+                                                        alignItems="Center"
+                                                        visible="{= ${corrientesModel>__isCustom} !== true }"
                                                     >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="PhPspnr"
-                                                            />
-                                                        </customData>
-                                                    </Button>
+                                                        <Button
+                                                            icon="sap-icon://add"
+                                                            width="1.5rem"
+                                                            type="Transparent"
+                                                            press=".onToggleCustomExpand"
+                                                            visible="{= ${corrientesModel>cabecera} !== true &amp;&amp; ${corrientesModel>isGroup} !== true }"
+                                                            class="sapUiTinyMarginEnd"
+                                                        />
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableRow"
+                                                            class="bottomFilter"
+                                                            width="0.9rem"
+                                                            visible="{= ${corrientesModel>cabecera} === true }"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="PhPspnr"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <vn:DecimalesInput
+                                                            width="100%"
+                                                            decimalNumbers="{dashboardModel>/decimales}"
+                                                            textAlign="Center"
+                                                            change=".onRowInputChange"
+                                                            value="{corrientesModel>PhPspnr}"
+                                                            editable="{= !(${corrientesModel>isSubcapitulo} || ${corrientesModel>isEditable} || ${corrientesModel>isCapitulo}) }"
+                                                            class="flatCellInput"
+                                                        />
+                                                    </HBox>
                                                     <Input
+                                                        value="{corrientesModel>PhPspnr}"
+                                                        editable="false"
+                                                        class="flatCellInput"
                                                         width="100%"
                                                         textAlign="Center"
-                                                        editable="{corrientesModel>isEditable}"
-                                                        value="{corrientesModel>PhPspnr}"
-                                                        showValueHelp="true"
-                                                        class="flatCellInput yearCell"
+                                                        visible="{= ${corrientesModel>__isHeader} === true }"
                                                     />
-                                                </HBox>
+                                                    <Input
+                                                        value="{corrientesModel>PhPspnr}"
+                                                        editable="false"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${corrientesModel>__isSinProveedor} === true }"
+                                                    />
+                                                    <Input
+                                                        value="{corrientesModel>PhPspnr}"
+                                                        class="sapUiSizeCompact allowLetters"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        
+                                                        visible="{= ${corrientesModel>__isEditable} === true }"
+                                                    />
+                                                </VBox>
                                             </t:template>
                                         </t:Column>
+                                        <!-- COLUMNA 2: Descripción / Post1 -->
                                         <t:Column
                                             width="170px"
                                             hAlign="Center"
@@ -376,36 +421,71 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <HBox
+                                                <VBox
                                                     renderType="Bare"
-                                                    alignItems="Center"
                                                     width="100%"
                                                 >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                        width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
-                                                    >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="Post1"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                    <Input
+                                                    <HBox
+                                                        renderType="Bare"
+                                                        alignItems="Center"
                                                         width="100%"
+                                                        visible="{= ${corrientesModel>__isCustom} !== true }"
+                                                    >
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableRow"
+                                                            class="bottomFilter"
+                                                            width="0.9rem"
+                                                            visible="{= ${corrientesModel>cabecera} === true }"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="Post1"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <Input
+                                                            width="100%"
+                                                            value="{
+                                                                path: 'corrientesModel>Post1',
+                                                                type: 'sap.ui.model.type.String'
+                                                            }"
+                                                            editable="{= !(${corrientesModel>isSubcapitulo} || ${corrientesModel>isEditable} || ${corrientesModel>isCapitulo}) }"
+                                                            textAlign="Center"
+                                                            class="flatCellInput allowLetters"
+                                                            type="Text"
+                                                            change=".onRowInputChange"
+                                                        />
+                                                    </HBox>
+                                                    <Input
                                                         value="{corrientesModel>Post1}"
-                                                        editable="{corrientesModel>isEditable}"
-                                                        textAlign="Center"
+                                                        editable="false"
                                                         class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${corrientesModel>__isHeader} === true }"
                                                     />
-                                                </HBox>
+                                                    <Input
+                                                        value="{corrientesModel>Post1}"
+                                                        editable="false"
+                                                        class="flatCellInput  placeholderLike"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${corrientesModel>__isSinProveedor} === true }"
+                                                    />
+                                                    <Input
+                                                        value="{corrientesModel>Post1}"
+                                                        class="sapUiSizeCompact allowLetters"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        
+                                                        visible="{= ${corrientesModel>__isEditable} === true }"
+                                                    />
+                                                </VBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLONNA: Coste / amount -->
+                                        <!-- COLUMNA 3: Coste eje / AmoEje -->
                                         <t:Column
                                             width="80px"
                                             hAlign="Center"
@@ -465,52 +545,76 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <HBox
+                                                <VBox
                                                     renderType="Bare"
                                                     width="100%"
-                                                    alignItems="Center"
                                                 >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                        width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
+                                                    <HBox
+                                                        renderType="Bare"
+                                                        width="100%"
+                                                        alignItems="Center"
+                                                        visible="{= ${corrientesModel>__isCustom} !== true }"
                                                     >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="AmoEje"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                    <!--Input
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableRow"
+                                                            class="bottomFilter"
+                                                            width="0.9rem"
+                                                            visible="{= ${corrientesModel>cabecera} === true }"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="AmoEje"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <vn:DecimalesInput
+                                                            width="100%"
+                                                            decimalNumbers="{dashboardModel>/decimales}"
+                                                            textAlign="Center"
+                                                            editable="{= !(${corrientesModel>isSubcapitulo} || ${corrientesModel>isEditable} || ${corrientesModel>isCapitulo}) }"
+                                                            value="{
+                                                                parts: [
+                                                                    'corrientesModel>AmoEje',
+                                                                    'dashboardModel>/decimales',
+                                                                    'appData>/userData/CurrencyFormat'
+                                                                ],
+                                                                formatter: '.formatDecimales'
+                                                            }"
+                                                            change=".onRowInputChange"
+                                                            class="flatCellInput"
+                                                        />
+                                                    </HBox>
+                                                    <Input
+                                                        value="{corrientesModel>AmoEje}"
+                                                        editable="false"
+                                                        class="flatCellInput"
                                                         width="100%"
                                                         textAlign="Center"
-                                                        editable="{corrientesModel>isEditable}"
-
+                                                        visible="{= ${corrientesModel>__isHeader} === true }"
+                                                    />
+                                                    <Input
+                                                        value="{corrientesModel>AmoEje}"
+                                                        editable="false"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${corrientesModel>__isSinProveedor} === true }"
+                                                    />
+                                                    <Input
                                                         value="{corrientesModel>AmoEje}"
                                                         class="flatCellInput"
-                                                    /-->
-                                                    <vn:DecimalesInput
-                                                        width="4.2rem"
-                                                        decimalNumbers="{dashboardModel>/decimales}"
+                                                        width="100%"
                                                         textAlign="Center"
-                                                        editable="{= ${isGroup} !== true}"
-                                                        value="{
-                                                            parts: [
-                                                                'corrientesModel>AmoEje',
-                                                                'dashboardModel>/decimales',
-                                                                'appData>/userData/CurrencyFormat'
-                                                            ],
-                                                            formatter: '.formatter.formatDecimales'
-                                                        }"
-                                                        class="flatCellInput"
+                                                        visible="{= ${corrientesModel>__isEditable} === true }"
+                                                        change=".onAmoEjeChange"
+
                                                     />
-                                                </HBox>
+                                                </VBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLONNA: Operacion -->
+                                        <!-- COLUMNA 4: CostEjAjust / AmoEjeAjus -->
                                         <t:Column
                                             visible="{visibleColumn>/visible}"
                                             width="90px"
@@ -570,36 +674,76 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <HBox
+                                                <VBox
                                                     renderType="Bare"
                                                     width="100%"
-                                                    alignItems="Center"
                                                 >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                        width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
+                                                    <HBox
+                                                        renderType="Bare"
+                                                        width="100%"
+                                                        alignItems="Center"
+                                                        visible="{= ${corrientesModel>__isCustom} !== true }"
                                                     >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="AmoEjeAjus"
-                                                            />
-                                                        </customData>
-                                                    </Button>
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableRow"
+                                                            class="bottomFilter"
+                                                            width="0.9rem"
+                                                            visible="{= ${corrientesModel>cabecera} === true }"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="AmoEjeAjus"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <vn:DecimalesInput
+                                                            width="100%"
+                                                            decimalNumbers="{dashboardModel>/decimales}"
+                                                            textAlign="Center"
+                                                            editable="{= !${corrientesModel>isEditable} }"
+                                                            value="{
+                                                                parts: [
+                                                                    'corrientesModel>AmoEjeAjus',
+                                                                    'dashboardModel>/decimales',
+                                                                    'appData>/userData/CurrencyFormat'
+                                                                ],
+                                                                formatter: '.formatDecimales'
+                                                            }"
+                                                            class="flatCellInput"
+                                                            change=".onRowInputChange"
+                                                        />
+                                                    </HBox>
                                                     <Input
                                                         value="{corrientesModel>AmoEjeAjus}"
-                                                        editable="{corrientesModel>isEditable}"
-                                                        textAlign="Center"
+                                                        editable="false"
                                                         class="flatCellInput"
                                                         width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${corrientesModel>__isHeader} === true }"
                                                     />
-                                                </HBox>
+                                                    <Input
+                                                        value="{corrientesModel>AmoEjeAjus}"
+                                                        editable="false"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${corrientesModel>__isSinProveedor} === true }"
+                                                    />
+                                                    <Input
+                                                        value="{corrientesModel>AmoEjeAjus}"
+                                                        class="sapUiSizeCompact"
+                                                        editable="true"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        
+                                                        visible="{= ${corrientesModel>__isEditable} === true }"
+                                                    />
+                                                </VBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLONNA: Destino -->
+                                        <!-- COLUMNA 5: CostEjReal / AmoEjeReal -->
                                         <t:Column
                                             visible="{visibleColumn>/visible}"
                                             width="90px"
@@ -659,36 +803,75 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <HBox
+                                                <VBox
                                                     renderType="Bare"
                                                     width="100%"
-                                                    alignItems="Center"
                                                 >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                        width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
+                                                    <HBox
+                                                        renderType="Bare"
+                                                        width="100%"
+                                                        alignItems="Center"
+                                                        visible="{= ${corrientesModel>__isCustom} !== true }"
                                                     >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="AmoEjeReal"
-                                                            />
-                                                        </customData>
-                                                    </Button>
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableRow"
+                                                            class="bottomFilter"
+                                                            width="0.9rem"
+                                                            visible="{= ${corrientesModel>cabecera} === true }"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="AmoEjeReal"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <vn:DecimalesInput
+                                                            width="100%"
+                                                            decimalNumbers="{dashboardModel>/decimales}"
+                                                            textAlign="Center"
+                                                            editable="{= !${corrientesModel>isEditable} }"
+                                                            value="{
+                                                                parts: [
+                                                                    'corrientesModel>AmoEjeReal',
+                                                                    'dashboardModel>/decimales',
+                                                                    'appData>/userData/CurrencyFormat'
+                                                                ],
+                                                                formatter: '.formatDecimales'
+                                                            }"
+                                                            class="flatCellInput"
+                                                            change=".onRowInputChange"
+                                                        />
+                                                    </HBox>
                                                     <Input
                                                         value="{corrientesModel>AmoEjeReal}"
-                                                        editable="{corrientesModel>isEditable}"
-                                                        textAlign="Center"
+                                                        editable="false"
                                                         class="flatCellInput"
                                                         width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${corrientesModel>__isHeader} === true }"
                                                     />
-                                                </HBox>
+                                                    <Input
+                                                        value="{corrientesModel>AmoEjeReal}"
+                                                        editable="false"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${corrientesModel>__isSinProveedor} === true }"
+                                                    />
+                                                    <Input
+                                                        value="{corrientesModel>AmoEjeReal}"
+                                                        class="sapUiSizeCompact"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        
+                                                        visible="{= ${corrientesModel>__isEditable} === true }"
+                                                    />
+                                                </VBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLONNA: Coste pend / pricepending -->
+                                        <!-- COLUMNA 6: Coste pend / AmoPen -->
                                         <t:Column
                                             width="90px"
                                             hAlign="Center"
@@ -748,51 +931,75 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <HBox
+                                                <VBox
                                                     renderType="Bare"
                                                     width="100%"
-                                                    alignItems="Center"
                                                 >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        width="0.9rem"
-                                                        class="bottomFilter"
-                                                        visible="{= ${cabecera} === true}"
-                                                    >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="AmoPen"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                    <!--Input
-                                                        value="{corrientesModel>AmoPen}"
+                                                    <HBox
+                                                        renderType="Bare"
                                                         width="100%"
-                                                        editable="{corrientesModel>isEditable}"
+                                                        alignItems="Center"
+                                                        visible="{= ${corrientesModel>__isCustom} !== true }"
+                                                    >
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableRow"
+                                                            width="0.9rem"
+                                                            class="bottomFilter"
+                                                            visible="{= ${corrientesModel>cabecera} === true }"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="AmoPen"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <vn:DecimalesInput
+                                                            width="100%"
+                                                            decimalNumbers="{dashboardModel>/decimales}"
+                                                            textAlign="Center"
+                                                            editable="{= !${corrientesModel>isSubcapitulo} &amp;&amp; !${corrientesModel>isCapitulo} }"
+                                                            value="{
+                                                                parts: [
+                                                                    'corrientesModel>AmoPen',
+                                                                    'dashboardModel>/decimales',
+                                                                    'appData>/userData/CurrencyFormat'
+                                                                ],
+                                                                formatter: '.formatDecimales'
+                                                            }"
+                                                            class="flatCellInput"
+                                                            change=".onRowInputChange"
+                                                        />
+                                                    </HBox>
+                                                    <Input
+                                                        value="{corrientesModel>AmoPen}"
+                                                        editable="false"
                                                         class="flatCellInput"
+                                                        width="100%"
                                                         textAlign="Center"
-                                                    /-->
-                                                    <vn:DecimalesInput
-                                                        width="4.2rem"
-                                                        decimalNumbers="{dashboardModel>/decimales}"
-                                                        textAlign="Center"
-                                                        editable="{= ${isGroup} !== true}"
-                                                        value="{
-                                                            parts: [
-                                                                'corrientesModel>AmoPen',
-                                                                'dashboardModel>/decimales',
-                                                                'appData>/userData/CurrencyFormat'
-                                                            ],
-                                                            formatter: '.formatter.formatDecimales'
-                                                        }"
-                                                        class="flatCellInput"
+                                                        visible="{= ${corrientesModel>__isHeader} === true }"
                                                     />
-                                                </HBox>
+                                                    <Input
+                                                        value="{corrientesModel>AmoPen}"
+                                                        editable="false"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${corrientesModel>__isSinProveedor} === true }"
+                                                    />
+                                                    <Input
+                                                        value="{corrientesModel>AmoPen}"
+                                                        class="sapUiSizeCompact"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        
+                                                        visible="{= ${corrientesModel>__isEditable} === true }"
+                                                    />
+                                                </VBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLONNA: Coste total / pricetotal -->
+                                        <!-- COLUMNA 7: Coste total / AmoTot -->
                                         <t:Column
                                             width="80px"
                                             hAlign="Center"
@@ -852,52 +1059,75 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <HBox
+                                                <VBox
                                                     renderType="Bare"
                                                     width="100%"
-                                                    alignItems="Center"
                                                 >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                        width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
+                                                    <HBox
+                                                        renderType="Bare"
+                                                        width="100%"
+                                                        alignItems="Center"
+                                                        visible="{= ${corrientesModel>__isCustom} !== true }"
                                                     >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="AmoTot"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                    <!--Input
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableRow"
+                                                            class="bottomFilter"
+                                                            width="0.9rem"
+                                                            visible="{= ${corrientesModel>cabecera} === true }"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="AmoTot"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <vn:DecimalesInput
+                                                            width="100%"
+                                                            decimalNumbers="{dashboardModel>/decimales}"
+                                                            textAlign="Center"
+                                                            editable="{= !(${corrientesModel>isSubcapitulo} || ${corrientesModel>isCapitulo}) }"
+                                                            value="{
+                                                                parts: [
+                                                                    'corrientesModel>AmoTot',
+                                                                    'dashboardModel>/decimales',
+                                                                    'appData>/userData/CurrencyFormat'
+                                                                ],
+                                                                formatter: '.formatDecimales'
+                                                            }"
+                                                            class="flatCellInput"
+                                                            change=".onRowInputChange"
+                                                        />
+                                                    </HBox>
+                                                    <Input
                                                         value="{corrientesModel>AmoTot}"
-                                                        editable="{corrientesModel>isEditable}"
-
+                                                        editable="false"
+                                                        class="flatCellInput"
                                                         width="100%"
                                                         textAlign="Center"
-                                                        class="flatCellInput"
-                                                    /-->
-                                                    <vn:DecimalesInput
-                                                        width="4.2rem"
-                                                        decimalNumbers="{dashboardModel>/decimales}"
-                                                        textAlign="Center"
-                                                        editable="{= ${isGroup} !== true}"
-                                                        value="{
-                                                            parts: [
-                                                                'corrientesModel>AmoTot',
-                                                                'dashboardModel>/decimales',
-                                                                'appData>/userData/CurrencyFormat'
-                                                            ],
-                                                            formatter: '.formatter.formatDecimales'
-                                                        }"
-                                                        class="flatCellInput"
+                                                        visible="{= ${corrientesModel>__isHeader} === true }"
                                                     />
-                                                </HBox>
+                                                    <Input
+                                                        value="{corrientesModel>AmoTot}"
+                                                        editable="false"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${corrientesModel>__isSinProveedor} === true }"
+                                                    />
+                                                    <Input
+                                                        value="{corrientesModel>AmoTot}"
+                                                        class="sapUiSizeCompact"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        
+                                                        visible="{= ${corrientesModel>__isEditable} === true }"
+                                                    />
+                                                </VBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLONNA: Reparto / size -->
+                                        <!-- COLUMNA 8: Reparto / Tipo -->
                                         <t:Column
                                             id="colStart"
                                             width="115px"
@@ -959,57 +1189,108 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <HBox
-                                                    width="100%"
-                                                    alignContent="Center"
+                                                <VBox
                                                     renderType="Bare"
+                                                    width="100%"
                                                 >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                        width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
+                                                    <!-- righe normali: Select + calendario -->
+                                                    <HBox
+                                                        width="100%"
+                                                        alignContent="Center"
+                                                        renderType="Bare"
+                                                        class="centeredHBoxColumn"
+                                                        visible="{= ${corrientesModel>__isCustom} !== true }"
                                                     >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="Tipo"
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableRow"
+                                                            class="bottomFilter"
+                                                            width="0.9rem"
+                                                            visible="{= ${corrientesModel>cabecera} === true }"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="Tipo"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <HBox alignItems="Center">
+                                                            <Select
+                                                                selectedKey="{corrientesModel>Tipo}"
+                                                                visible="{= ${corrientesModel>cabecera} !== true }"
+                                                                class="flatCellInput"
+                                                                forceSelection="true"
+                                                                change="onRowInputChange"
+                                                                width="auto"
+                                                            >
+                                                                <items>
+                                                                    <core:Item
+                                                                        key="MAN"
+                                                                        text="Manual"
+                                                                    />
+                                                                    <core:Item
+                                                                        key="LIN"
+                                                                        text="Lineal"
+                                                                    />
+                                                                    <core:Item
+                                                                        key="OEO"
+                                                                        text="OEO"
+                                                                    />
+                                                                    <core:Item
+                                                                        key="PCT"
+                                                                        text="Percentage"
+                                                                    />
+                                                                </items>
+                                                            </Select>
+                                                            <Button
+                                                                icon="sap-icon://calendar"
+                                                                visible="{= ${corrientesModel>Tipo} === 'LIN'}"
+                                                                type="Transparent"
+                                                                press="onOpenRangePicker"
+                                                                width="auto"
+                                                                tooltip="{
+                                                                    parts: [{
+                                                                        path: 'corrientesModel>_linDateFrom'
+                                                                    }, {
+                                                                        path: 'corrientesModel>_linDateTo'
+                                                                    }],
+                                                                    formatter: '.getCalendarTooltip'
+                                                                }"
                                                             />
-                                                        </customData>
-                                                    </Button>
-                                                    <!-- Filas normales: muestra Select con size2 -->
-                                                    <Select
-                                                        selectedKey="{size2}"
-                                                        visible="{= ${cabecera} !== true}"
+                                                        </HBox>
+                                                    </HBox>
+                                                    <!-- header: testo -->
+                                                    <Input
+                                                        value="{corrientesModel>Tipo}"
+                                                        editable="false"
                                                         class="flatCellInput"
                                                         width="100%"
-                                                        forceSelection="false"
-                                                        change="onSizeChange"
-                                                    >
-                                                        <items>
-                                                            <core:Item
-                                                                key="MAN"
-                                                                text="Manual"
-                                                            />
-                                                            <core:Item
-                                                                key="LIN"
-                                                                text="Lineal"
-                                                            />
-                                                            <core:Item
-                                                                key="OEO"
-                                                                text="OEO"
-                                                            />
-                                                            <core:Item
-                                                                key="PCT"
-                                                                text="Percentage"
-                                                            />
-                                                        </items>
-                                                    </Select>
-                                                </HBox>
+                                                        textAlign="Center"
+                                                        visible="{= ${corrientesModel>__isHeader} === true }"
+                                                    />
+                                                    <!-- sin proveedor: readonly -->
+                                                    <Input
+                                                        value="{corrientesModel>Tipo}"
+                                                        editable="false"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${corrientesModel>__isSinProveedor} === true }"
+                                                    />
+                                                    <!-- editabile: Input semplice, NO Select -->
+                                                    <Input
+                                                        value="{corrientesModel>Tipo}"
+                                                        class="sapUiSizeCompact allowLetters"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        
+                                                        visible="{= ${corrientesModel>__isEditable} === true }"
+                                                    />
+                                                </VBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLONNA: Pend a planificar / last -->
+                                        <!-- COLUMNA 9: Pend a planificar / PenPlan -->
                                         <t:Column
                                             id="colEnd"
                                             width="100px"
@@ -1072,37 +1353,76 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <HBox
-                                                    width="100%"
-                                                    alignContent="Center"
+                                                <VBox
                                                     renderType="Bare"
-                                                    class="borderRightPend"
+                                                    width="100%"
                                                 >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                        width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
+                                                    <HBox
+                                                        width="100%"
+                                                        alignContent="Center"
+                                                        renderType="Bare"
+                                                        class="borderRightPend"
+                                                        visible="{= ${corrientesModel>__isCustom} !== true }"
                                                     >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="PenPlan"
-                                                            />
-                                                        </customData>
-                                                    </Button>
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableRow"
+                                                            class="bottomFilter"
+                                                            width="0.9rem"
+                                                            visible="{= ${corrientesModel>cabecera} === true }"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="PenPlan"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <vn:DecimalesInput
+                                                            width="100%"
+                                                            decimalNumbers="{dashboardModel>/decimales}"
+                                                            textAlign="Center"
+                                                            editable="false"
+                                                            value="{
+                                                                parts: [
+                                                                    'corrientesModel>PenPlan',
+                                                                    'dashboardModel>/decimales',
+                                                                    'appData>/userData/CurrencyFormat'
+                                                                ],
+                                                                formatter: '.formatDecimales'
+                                                            }"
+                                                            class="flatCellInput"
+                                                            change=".onRowInputChange"
+                                                        />
+                                                    </HBox>
                                                     <Input
                                                         value="{corrientesModel>PenPlan}"
-                                                        editable="{corrientesModel>isEditable}"
+                                                        editable="false"
                                                         class="flatCellInput"
                                                         width="100%"
                                                         textAlign="Center"
+                                                        visible="{= ${corrientesModel>__isHeader} === true }"
                                                     />
-                                                </HBox>
+                                                    <Input
+                                                        value="{corrientesModel>PenPlan}"
+                                                        editable="false"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${corrientesModel>__isSinProveedor} === true }"
+                                                    />
+                                                    <Input
+                                                        value="{corrientesModel>PenPlan}"
+                                                        class="sapUiSizeCompact"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        
+                                                        visible="{= ${corrientesModel>__isEditable} === true }"
+                                                    />
+                                                </VBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLONNA: Months (nessun bottone sticky, testo solo) -->
+                                        <!-- COLUMNA 10: Months -->
                                         <t:Column
                                             id="colMonths"
                                             width="85px"
@@ -1165,7 +1485,7 @@
                                                         press="filterTableRow"
                                                         class="bottomFilter"
                                                         width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
+                                                        visible="{= ${corrientesModel>cabecera} === true }"
                                                     >
                                                         <customData>
                                                             <core:CustomData
@@ -1174,17 +1494,18 @@
                                                             />
                                                         </customData>
                                                     </Button>
-                                                    <Input
-                                                        value="{corrientesModel>months}"
-                                                        editable="{corrientesModel>isEditable}"
-                                                        class="flatCellInput"
+                                                    <vn:DecimalesInput
                                                         width="100%"
+                                                        decimalNumbers="0"
                                                         textAlign="Center"
+                                                        editable="{= !${corrientesModel>isEditable} &amp;&amp; ${corrientesModel>__isCustom} !== true }"
+                                                        value="{corrientesModel>months}"
+                                                        class="flatCellInput"
                                                     />
                                                 </HBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLONNA: Pend -->
+                                        <!-- COLUMNA 11: Pend -->
                                         <t:Column
                                             id="colNew"
                                             width="70px"
@@ -1251,7 +1572,7 @@
                                                         press="filterTableRow"
                                                         class="bottomFilter"
                                                         width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
+                                                        visible="{= ${corrientesModel>cabecera} === true }"
                                                     >
                                                         <customData>
                                                             <core:CustomData
@@ -1262,7 +1583,7 @@
                                                     </Button>
                                                     <Input
                                                         value="{corrientesModel>pend}"
-                                                        editable="{corrientesModel>isEditable}"
+                                                        editable="false"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                         width="100%"
@@ -1270,7 +1591,7 @@
                                                 </HBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLONNA: Auto (CheckBox1) - nessun filtro -->
+                                        <!-- COLUMNA 12: Auto / CheckBox1 -->
                                         <t:Column
                                             id="colCheckBox1"
                                             width="50px"
@@ -1335,17 +1656,17 @@
                                                         editable="false"
                                                         class="flatCellInput sapUiSmallMarginBegin"
                                                         textAlign="Center"
-                                                        visible="{= ${cabecera} === true }"
+                                                        visible="{= ${corrientesModel>cabecera} === true }"
                                                         width="100%"
                                                     />
                                                     <CheckBox
-                                                        selected="{flag1}"
-                                                        visible="{= ${expandible} !== false &amp;&amp; !${isGroup} }"
+                                                        selected="{corrientesModel>flag1}"
+                                                        visible="{= ${corrientesModel>expandible} !== false &amp;&amp; !${corrientesModel>isGroup} &amp;&amp; ${corrientesModel>__isCustom} !== true }"
                                                     />
                                                 </VBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLONNA: Inflaz (CheckBox2) - nessun filtro -->
+                                        <!-- COLUMNA 13: Inflaz / CheckBox2 -->
                                         <t:Column
                                             id="colCheckBox2"
                                             width="50px"
@@ -1401,12 +1722,12 @@
                                                         class="flatCellInput"
                                                         width="100%"
                                                         textAlign="Center"
-                                                        visible="{= ${cabecera} === true }"
+                                                        visible="{= ${corrientesModel>cabecera} === true }"
                                                     />
                                                     <CheckBox
                                                         selected="{corrientesModel>CheckInfla}"
                                                         select="onInflacionCheckBoxSelect"
-                                                        visible="{= ${expandible} !== false &amp;&amp; !${isGroup} }"
+                                                        visible="{= ${corrientesModel>expandible} !== false &amp;&amp; !${corrientesModel>isGroup} &amp;&amp; ${corrientesModel>__isCustom} !== true }"
                                                     />
                                                 </VBox>
                                             </t:template>

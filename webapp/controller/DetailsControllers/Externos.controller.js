@@ -5,7 +5,7 @@ sap.ui.define([
     "sap/m/Button",
     "sap/m/Label",
     "masterindirectos/controller/BaseController",
-     "masterindirectos/model/formatter"
+    "masterindirectos/model/formatter"
 ], function (
     JSONModel,
     Column,
@@ -18,163 +18,428 @@ sap.ui.define([
     "use strict";
 
     return BaseController.extend("masterindirectos.controller.DetailsControllers.Externos", {
-         formatter: formatter,
+        formatter: formatter,
+
         /**
-         * Esta función le dice al BaseController qué ID de tabla buscar 
-         * en esta vista específica.
+         * Se obtiene el identificador de la tabla personalizada correspondiente a esta vista.
          */
-        getCustomTableId: function() {
+        getCustomTableId: function () {
             return "TreeTableExternos";
         },
 
         onInit: function () {
+            this.setInitData();
+        },
 
-            
-            this.initExternosModel();
+        /**
+         * Se inicializa la vista de Externos definiendo el estado de navegacion y visibilidad.
+         * Se configura la tabla principal y se preparan las columnas anuales iniciales.
+         */
+       setInitData: async function () {
+            // Se inicia la carga de datos maestros y la inicializacion del modelo de externos.
+            this._cargarDatosTabla();
+            await this.initExternosModel();
+            this._initYearsModel();
+
+            // Se define el nombre del modelo y el valor de la pestana.
+            this.tableModelName = "externosModel";
+            this._pestana = "Externos";
+            this.firstTime = true;
+
             this.getView().setModel(new JSONModel({
                 selectedKey: "Externos"
             }), "state");
-            
-            this.getView().setModel(new JSONModel({
-                Coste: "19.882.313,17",
-                CostePendiente: "3.134.026,07",
-                CosteTotal: "23.016.339,24"
 
-            }), "KpiExternos");
-
-            this.getView().setModel(new JSONModel({
-                tableVisible: false,
-                splitterSizeMain: "100%"
-            }), "viewModel");
-
-            this.tableModelName = "externos"; // Nombre del modelo para la tabla, se usará en funciones genéricas del BaseController
-            var oCatalogModel = new JSONModel();
-            this.getView().setModel(oCatalogModel, this.tableModelName);
-
-            oCatalogModel.loadData("model/CatalogExternos.json");
-
-            oCatalogModel.attachRequestCompleted(function () {
-                var aCategories = oCatalogModel.getProperty("/catalogExternos/models/categories");
-                if (!Array.isArray(aCategories)) {
-
-                    return;
-                }
-
-                var aComboItems = this._buildOperacionesCombo(aCategories);
-
-                this.getView().setModel(
-                    new JSONModel({ items: aComboItems }),
-                    "operacionesModel"
-                );
-
-                this._createSnapshot();
-            }.bind(this));
-
-            // Ejecuta la configuración base para la TreeTable.
             this.setupDynamicTreeTable("TreeTableExternos");
+            this._initVariantManagement("TreeTableExternos");
 
-            // Tras el renderizado, añade las columnas de los próximos 3 años.
-            this.getView().attachEventOnce("afterRendering", function () {
-                this.createYearColumns(
-                    
-                    new Date().getFullYear(),
-                    3, "TreeTableExternos"
-                );
-            }.bind(this));
+            const oTable = this.byId("TreeTableExternos");
+
+            // Se configura el delegado para el manejo de renderizado y navegacion por teclado.
+            oTable.addEventDelegate({
+                onAfterRendering: function () {
+                    const oTableDom = oTable.getDomRef();
+                    if (!oTableDom) return;
+
+                    const $table = $(oTableDom);
+
+                    $table.off("keydown", "input").on("keydown", "input", function (oNativeEvent) {
+                        const iKeyCode = oNativeEvent.keyCode;
+                        if (iKeyCode < 37 || iKeyCode > 40) return;
+
+                        const sControlId = oNativeEvent.target.id.replace("-inner", "");
+                        const oInput = sap.ui.getCore().byId(sControlId);
+
+                        if (oInput && oInput.isA("sap.m.Input")) {
+                            this._onInputKeyDown({
+                                srcControl: oInput,
+                                keyCode: iKeyCode,
+                                preventDefault: function () { oNativeEvent.preventDefault(); },
+                                stopImmediatePropagation: function () { oNativeEvent.stopImmediatePropagation(); }
+                            });
+                        }
+                    }.bind(this));
+
+                    if (this.firstTime) {
+                        this.firstTime = false;
+
+                        // Se obtienen las fechas clave desde el modelo global de la aplicacion.
+                        const sFreal = this.getGlobalModel("appData").getProperty("/Freal");
+                        const sFrealsist = this.getGlobalModel("appData").getProperty("/Frealsist");
+
+                        const oDateFreal = new Date(sFreal);
+                        const oDateFrealsist = new Date(sFrealsist);
+                        const bSameDay = oDateFreal.getDate() === oDateFrealsist.getDate();
+
+                        let iYear;
+                        if (bSameDay) {
+                            this._effectiveDate = oDateFreal;
+                            iYear = oDateFreal.getFullYear();
+                        } else {
+                            const oDatePlusOne = new Date(oDateFreal);
+                            oDatePlusOne.setDate(oDatePlusOne.getDate() + 1);
+                            this._effectiveDate = oDatePlusOne;
+                            iYear = oDatePlusOne.getFullYear();
+                        }
+
+                        var iYearEnd = this._iYearEnd || (iYear + 2);
+                        var iExtraYears = Math.max(0, iYearEnd - iYear + 1);
+
+                        // Se corrige el identificador de tabla y el modelo respecto al codigo original.
+                        this.createYearColumns(iYear, iExtraYears, "TreeTableExternos", this.getView().getModel("externosModel"));
+
+                        setTimeout(function () {
+                            const oTableInst = this.byId("TreeTableExternos");
+                            if (!oTableInst) return;
+
+                            this._showYearColumns(iYear);
+
+                            const oPrimerAnioCol = oTableInst.getColumns().find(function (c) {
+                                return c.data("dynamicYear") === true && !c.data("ejecutadosColumn");
+                            });
+
+                            if (oPrimerAnioCol) {
+                                const sSubFijo = oPrimerAnioCol.data("subFijoYear");
+                                const sYearVal = oPrimerAnioCol.data("year");
+
+                                //       Se usa "sap.m.Button" para que onCreateMonthsTable lea el año
+                                //       desde oSource.data("year") en lugar de this._openedYear, que en
+                                //       el primer render es null y provocaba NaN y return immediato.
+                                //       Se agrega el flag noClose en la fuente simulada para que
+                                //       onCreateMonthsTable no cierre el año si ya estuviera abierto.
+                                this.onCreateMonthsTable({
+                                    getSource: function () {
+                                        return {
+                                            getMetadata: function () {
+                                                return { getName: function () { return "sap.m.Button"; } };
+                                            },
+                                            getText: function () { return String(sYearVal); },
+                                            data: function (sKey) {
+                                                if (sKey === "subFijoYear") return sSubFijo;
+                                                if (sKey === "year") return String(sYearVal);
+                                                if (sKey === "noClose") return true;
+                                                return null;
+                                            }
+                                        };
+                                    }
+                                });
+                            }
+                        }.bind(this), 150);
+                    }
+
+                    this._attachHeaderToggleListener();
+                }.bind(this)
+            });
         },
 
+
         /**
-         * Forza el renderizado de la tabla una vez la vista está disponible en el DOM.
+         * Se permite que el selector de año recargue los datos de esta pestana
+         * usando el mismo contrato que el resto de vistas hijas.
          */
-        onAfterRendering: function(oEvent){
-            this.byId("TreeTableExternos").rerender(true);
+        initTabModel: function () {
+            return this.initExternosModel();
         },
-      
+
         /**
-         * Gestiona la visibilidad de columnas extendidas al expandir nodos en la TreeTable.
+         * Se inicializa el modelo de datos de la pestana Externos realizando una peticion
+         * asincrona al servidor OData y construyendo la estructura jerarquica de la tabla.
+         */
+        initExternosModel: async function () {
+            var oAppData = this.getGlobalModel("appData").getData();
+
+            // Se obtiene la version activa desde el modelo global de la aplicacion.
+            var versiones = oAppData.NavLtVersiones;
+            var flagSelectVersion = versiones.find(function (item) {
+                return item.Activo === "X";
+            });
+
+            var oDashModel = this.getGlobalModel("dashboardModel");
+            var sFreal = "";
+
+            // Se intenta obtener Freal desde appData.tramo como fuente principal.
+            if (oAppData && oAppData.tramo && oAppData.tramo.Freal) {
+                sFreal = oAppData.tramo.Freal;
+            } else if (oDashModel) {
+                // Se recurre al dashboardModel unicamente si appData no contiene Freal.
+                sFreal = oDashModel.getProperty("/NavMasterLt/0/Freal");
+            }
+
+            // Si Freal no esta disponible en ninguna fuente se reintenta tras 500ms.
+            if (!sFreal) {
+                setTimeout(function () {
+                    this.initExternosModel();
+                }.bind(this), 500);
+                return;
+            }
+
+            // Se parsea la fecha de Freal al formato Date de JavaScript.
+            var oDateStart = this._parseODataDate(sFreal);
+
+            // Si el parseo de Freal falla se detiene la ejecucion sin enviar ninguna llamada.
+            if (!oDateStart || isNaN(oDateStart.getTime())) {
+                return;
+            }
+
+            //      Se obtiene el ejercicio desde el selector con fallback al año de Freal,
+            //      replicando el mismo patron que usa Corrientes en initCorrienteModel.
+            var sEjercicioFromSelector = this._getSelectedEjercicio();
+            var sEjercicioFallback = oDateStart.getFullYear().toString();
+            var sEjercicio = sEjercicioFromSelector || sEjercicioFallback;
+            const token = this.getGlobalModel("appData").getProperty("/EvToken");
+
+            try {
+                const response = await this.post(
+                    this.getGlobalModel("mainService"),
+                    "/CambioPestIndirectosSet",
+                    {
+                        "NavSelProyecto": [this.getGlobalModel("appData").getData().tramo],
+                        "NavChanges": [],
+                        "NavDatosIndirectos": [],
+                        "EvBloqueados": "",
+                        "NavMensajes": [],
+                        "NavLtVersiones": [flagSelectVersion]
+                    },
+                    {
+                        headers: {
+                            ambito: this.getGlobalModel("appData").getData().userData.initialNode,
+                            lang: this.getGlobalModel("appData").getData().userData.AplicationLangu,
+                            bloqueado: "",
+                            decimales: this.getGlobalModel("dashboardModel").getData().decimales,
+                            ejercicio: sEjercicio,
+                            pestana: "Externos",
+                            token: token
+                        }
+                    }
+                );
+
+                const tree = this.buildTree(response.NavDatosIndirectos.results);
+                this.getView().setModel(new sap.ui.model.json.JSONModel(tree), "externosModel");
+                //Prueba editabilidad
+                //oModel.setProperty("/EvBloqueados", "X");
+
+            } catch (error) {
+                // Se omite el manejo del error para no interrumpir el flujo de la vista.
+            }
+        },
+
+        /**
+         * Se procesan los datos lineales obtenidos del servicio y se transforman en una
+         * estructura de arbol jerarquica. Se guarda ademas una copia profunda de los datos
+         * originales del servidor para el control de cambios y la restauracion de variantes.
+         */
+        buildTree: function (data) {
+            const map = {};
+
+            //      Se crea un mapa por clave PhPspnr conservando todos los campos originales
+            //      del backend e incluyendo la propiedad isEditable derivada del campo Estructura.
+            data.forEach(item => {
+                map[item.PhPspnr] = {
+                    ...item,
+                    children: [],
+                    isEditable: item.Estructura === "O",
+                    isSubcapitulo: item.Estructura === "S",
+                    isCapitulo: item.Estructura === "C",
+                    isVacio: item.Estructura === "",
+                };
+            });
+
+            const roots = [];
+
+            //      Se construye la jerarquia padre-hijo y se asigna la propiedad padre
+            //      necesaria para que el BaseController distinga nodos raiz de nodos hijos
+            //      en la logica del menu contextual, navegacion de teclado y sticky headers.
+            data.forEach(item => {
+                if (item.ParentPath === "I") {
+                    //      Se marca el nodo como raiz y se evitan duplicados en el array de raices.
+                    map[item.PhPspnr].padre = true;
+                    if (!roots.some(r => r.PhPspnr === item.PhPspnr)) {
+                        roots.push(map[item.PhPspnr]);
+                    }
+                } else {
+                    //      Se enlaza el nodo hijo con su padre correspondiente segun ParentPath.
+                    const parent = map[item.ParentPath];
+                    if (parent) {
+                        map[item.PhPspnr].padre = false;
+                        parent.children.push(map[item.PhPspnr]);
+                    }
+                }
+            });
+
+            //      Se guarda una copia profunda de los datos originales del servidor
+            //      para el control de cambios y la restauracion del delta de variantes.
+            this._originalServerData = JSON.parse(JSON.stringify(roots));
+            return roots;
+        },
+
+        /**
+         * Se parsea una fecha en formato OData y se devuelve un objeto Date.
+         * Se contempla tambien el caso en que la fecha sea un objeto Date o un string ISO.
+         */
+        _parseODataDate: function (sODataDate) {
+            if (!sODataDate) return null;
+            var oMatch = /\/Date\((\d+)\)\//.exec(sODataDate);
+            if (oMatch) {
+                return new Date(parseInt(oMatch[1], 10));
+            }
+            return new Date(sODataDate);
+        },
+
+        /**
+         * Se fuerza el recalculo de filas dinamicas una vez la vista esta disponible en el DOM.
+         */
+        onAfterRendering: function (oEvent) {
+            //      Se reemplaza el rerender directo por el recalculo dinamico de filas
+            //      para evitar el error cuando TreeTableExternos todavia no esta en el DOM.
+            this._calculateDynamicRows();
+            this._attachHeaderToggleListener();
+        },
+
+        /**
+         * Se gestiona la visibilidad de las columnas extendidas al expandir o contraer
+         * nodos en la TreeTable. Se marca ademas la variante activa como modificada.
          */
         onToggleOpenState: function (oEvent) {
-            var oTable = oEvent.getSource();
-            var sTableId = oTable.getId();
-            var bExpanded = oEvent.getParameter("expanded");
-            var oUiModel = this.getView().getModel("ui");
+            const oTable = oEvent.getSource();
+            const sTableId = oTable.getId();
+            const bExpanded = oEvent.getParameter("expanded");
+            const iRowIndex = oEvent.getParameter("rowIndex");
+            const oUiModel = this.getView().getModel("ui");
 
-            var oColMonths = this.byId("colMonths");
-            var oColNew = this.byId("colNew");
+            //      Se marca la variante activa como modificada al expandir o contraer un nodo.
+            this._markVariantDirty();
 
-            if (!bExpanded) {
-                // Si se contrae un nodo, verifica si todavía quedan otros expandidos para mantener las columnas.
-                var bAnyExpanded = false;
-                var oBinding = oTable.getBinding("rows");
+            const oColMonths = this.byId("colMonths");
+            const oColNew = this.byId("colNew");
+            const oColCheck1 = this.byId("colCheckBox1");
+            const oColCheck2 = this.byId("colCheckBox2");
+
+            const oContext = oTable.getContextByIndex(iRowIndex);
+            const sPath = oContext && oContext.getPath();
+            const oObject = oContext && oContext.getObject();
+
+            //      Se calcula el nivel jerarquico del nodo usando la clave children
+            //      en lugar de categories ya que el modelo de Externos usa children.
+            const iLevel = sPath ? (sPath.match(/\/children/g) || []).length : 0;
+
+            if (bExpanded) {
+                const bIsDetailLevel =
+                    iLevel >= 1 &&
+                    oObject &&
+                    oObject.children &&
+                    oObject.children.length > 0;
+
+                if (oColMonths) oColMonths.setVisible(bIsDetailLevel);
+                if (oColNew) oColNew.setVisible(bIsDetailLevel);
+                if (oColCheck1) oColCheck1.setVisible(bIsDetailLevel);
+                if (oColCheck2) oColCheck2.setVisible(bIsDetailLevel);
+
+                if (bIsDetailLevel && sPath) {
+                    this._sLastExpandedPath = sPath;
+                }
+            } else {
+                if (this._sLastExpandedPath === sPath) {
+                    this._sLastExpandedPath = null;
+                }
+
+                let bAnyDetailExpanded = false;
+                const oBinding = oTable.getBinding("rows");
 
                 if (oBinding) {
-                    for (var i = 0; i < oBinding.getLength(); i++) {
+                    const iLength = oBinding.getLength();
+                    for (let i = 0; i < iLength; i++) {
                         if (oTable.isExpanded(i)) {
-                            bAnyExpanded = true;
+                            bAnyDetailExpanded = true;
                             break;
                         }
                     }
                 }
 
-                if (!bAnyExpanded) {
+                if (!bAnyDetailExpanded) {
                     if (oColMonths) oColMonths.setVisible(false);
                     if (oColNew) oColNew.setVisible(false);
+                    if (oColCheck1) oColCheck1.setVisible(false);
+                    if (oColCheck2) oColCheck2.setVisible(false);
 
                     this._aGroupRanges = [];
-                    oUiModel.setProperty("/showStickyAgrupador", false);
-                    return;
-                }
-            } else {
-                // Al expandir, asegura que las columnas de detalle sean visibles.
-                if (oColMonths) oColMonths.setVisible(true);
-                if (oColNew) oColNew.setVisible(true);
-            }
-
-            // Refresca la lógica de estilos y scroll de la tabla.
-            setTimeout(function () {
-                this._refreshAfterToggle(sTableId);
-            }.bind(this), 0);
-        },
-          initExternosModel: function(evt){
-            this.post(
-                this.getGlobalModel("mainService"),
-                "/CambioPestIndirectosSet",
-                {
-                    "NavSelProyecto": [this.getGlobalModel("appData").getData().tramo],
-                    "NavChanges": [],
-                    "NavDatosIndirectos": [],
-                    "EvBloqueados" : "",
-                    "NavMensajes" : [],
-                    "NavDatosIndirectos" : []
-
-
-                },
-                {
-                    headers: {
-                        ambito: this.getGlobalModel("appData").getData().userData.initialNode,
-                        lang: this.getGlobalModel("appData").getData().userData.AplicationLangu,
-                        bloqueado: "",
-                        decimales: this.getGlobalModel("dashboardModel").getData().decimales,
-                        ejercicio: "2026",
-                        pestana:"Externos"
+                    if (oUiModel) {
+                        oUiModel.setProperty("/showStickyAgrupador", false);
+                        oUiModel.setProperty("/showStickyParent", false);
+                        oUiModel.setProperty("/showStickyChild", false);
                     }
                 }
-            ).then(function (response) {
-                let tree = this.buildTree(response.NavDatosIndirectos.results)
-                this.getView().setModel(new sap.ui.model.json.JSONModel(tree), "externosModel");
-        }.bind(this));
-        },
-
-
-        /** 
-         * Crea una copia profunda del modelo "externos" para comparaciones futuras
-         */
-        _createSnapshot: function () {
-            var oDefaultModel = this.getView().getModel("externos");  // SIN "catalog"
-            if (oDefaultModel) {
-                var oData = oDefaultModel.getData();
-                this._originalData = JSON.parse(JSON.stringify(oData));
             }
+
+            setTimeout(function () {
+                this._refreshAfterToggle(sTableId);
+            }.bind(this));
         },
+
+        /**
+         * Se escucha el evento de expansion o colapso de la cabecera principal
+         * para recalcular las filas de la tabla dinamicamente.
+         */
+        _attachHeaderToggleListener: function () {
+            //      Se busca el layout por el id correcto de la vista Externos.
+            var oObjectPageLayout = this.byId("objectPageExternos");
+            if (!oObjectPageLayout) return;
+
+            setTimeout(function () {
+                var oDom = oObjectPageLayout.getDomRef();
+                if (!oDom) return;
+
+                oDom.addEventListener("click", function () {
+                    setTimeout(function () {
+                        this._calculateDynamicRows();
+                    }.bind(this), 200);
+                }.bind(this), true);
+
+            }.bind(this), 1000);
+        },
+
+        /**NO SE ESTA USANDO
+         * Se gestiona el evento de cierre del navegador para advertir sobre cambios sin guardar.
+        
+        onBrowserClose: function (oEvent) {
+            if (this.hasUnsavedChanges()) {
+                oEvent.preventDefault();
+                oEvent.returnValue = '';
+                return '';
+            }
+        }, */
+
+        /** NO SE ESTA USANDO
+         * Se limpian los escuchadores de eventos activos al destruir el controlador de la vista.
+       
+        onExit: function () {
+            if (this._boundBrowserClose) {
+                window.removeEventListener("beforeunload", this._boundBrowserClose);
+            }
+            if (this._boundResizeHandler) {
+                $(window).off("resize", this._boundResizeHandler);
+            }
+        },  */
+
+
     });
 });

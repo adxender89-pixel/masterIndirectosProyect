@@ -14,8 +14,11 @@ sap.ui.define(
        * Se inicializa el controlador principal de la aplicación.
        * Se encarga de instanciar los modelos globales de alcance, tramos y estado de la interfaz.
        */
-      onInit: async function () {
+      onInit: function () {
 
+        this.setInitData();
+      },
+      setInitData: async function () {
         const oVisibleColumn = new sap.ui.model.json.JSONModel({
           visible: false,
         });
@@ -86,7 +89,7 @@ sap.ui.define(
         // Se inicia la configuración básica de la aplicación cargando los datos del usuario, los tramos y el acceso.
         const userConfig = await this.getUserConfig();
         const userInsite = await this.getUserInsite(userConfig);
-        
+
         const userData = {
           ...userInsite.userData,
           ...userConfig
@@ -98,7 +101,7 @@ sap.ui.define(
           tramo: null
         });
         this.setGlobalModel(appDataModel, "appData");
-        
+
         const tramo = await this.getTramos(userData);
         delete tramo.__metadata;
         appDataModel.setProperty("/tramo", tramo);
@@ -131,7 +134,7 @@ sap.ui.define(
       getUserInsite: async function (user) {
         const sUrl = this.getEndpointData().urlInsite;
         return this.callExternalService(sUrl + "/security/userLogin", "GET", {
-          loginUser: "Z02KB",//user.User,
+          loginUser: user.User,
           idLanguage: user.AplicationLangu
         });
       },
@@ -139,18 +142,17 @@ sap.ui.define(
       /**
        * Se obtienen los tramos disponibles para el usuario actual.
        */
-      getTramos: async function (userData) {
+     getTramos: async function (userData) {
         return new Promise((resolve, reject) => {
           this.getTramosByObra(userData.initialNode).then((response) => {
             const oDatosTramos = response.NavTramosDatos.results[0];
-            
+
             if (!oDatosTramos.Error) {
               const norm = oDatosTramos.Norma;
               const normModel = new JSONModel({
                 norma: norm
               });
               this.setGlobalModel(normModel, "normModel");
-
               if (response.NavTramosProy.results.length > 1) {
                 this.openSelectorDialog({
                   title: this.getTranslatedText("SELECCIONA_TRAMO"),
@@ -191,31 +193,31 @@ sap.ui.define(
         oSideBar.setVisible(!oSideBar.getVisible());
       },
 
-/**
- * Se propaga el estado de seleccion de la casilla de ejecutado hacia la vista activa.
- * Se marca ademas la variante activa como modificada en el controlador hijo para
- * habilitar el guardado directo, de forma identica al comportamiento de idAjustesCheckBox.
- */
-onEjecutadoCheckBoxSelect: function (oEvent) {
-    const bSelected = oEvent.getParameter("selected");
-    const sCurrentKey = this._lastSelectedKey || this.byId("itb").getSelectedKey();
-    const oActiveView = this._mViews[sCurrentKey];
+      /**
+       * Se propaga el estado de seleccion de la casilla de ejecutado hacia la vista activa.
+       * Se marca ademas la variante activa como modificada en el controlador hijo para
+       * habilitar el guardado directo, de forma identica al comportamiento de idAjustesCheckBox.
+       */
+      onEjecutadoCheckBoxSelect: function (oEvent) {
+        const bSelected = oEvent.getParameter("selected");
+        const sCurrentKey = this._lastSelectedKey || this.byId("itb").getSelectedKey();
+        const oActiveView = this._mViews[sCurrentKey];
 
-    if (!oActiveView) return;
+        if (!oActiveView) return;
 
-    const oActiveController = oActiveView.getController();
+        const oActiveController = oActiveView.getController();
 
-    // Se marca la variante activa como modificada en el controlador hijo activo
-    // para que aparezca el asterisco y se habilite el boton de guardado directo.
-    if (oActiveController._markVariantDirty) {
-        oActiveController._markVariantDirty();
-    }
+        // Se marca la variante activa como modificada en el controlador hijo activo
+        // para que aparezca el asterisco y se habilite el boton de guardado directo.
+        if (oActiveController._markVariantDirty) {
+          oActiveController._markVariantDirty();
+        }
 
-    // Se delega la logica de columnas al controlador hijo con el estado booleano correcto.
-    if (oActiveController._handleEjecutado) {
-        oActiveController._handleEjecutado(bSelected);
-    }
-},
+        // Se delega la logica de columnas al controlador hijo con el estado booleano correcto.
+        if (oActiveController._handleEjecutado) {
+          oActiveController._handleEjecutado(bSelected);
+        }
+      },
 
       /**
        * Se gestiona la navegación entre las diferentes pestañas del menú principal.
@@ -229,8 +231,18 @@ onEjecutadoCheckBoxSelect: function (oEvent) {
         if (sCurrentKey === "corrientes" && sNewKey !== "corrientes") {
           this._resetCorrientesColumns();
         }
+        else if (sCurrentKey === "anticipados" && sNewKey !== "anticipados") {
+          this._resetAnticipadosColumns();
+        }
+        else if (sCurrentKey === "diferidos" && sNewKey !== "diferidos") {
+          this._resetDiferidosColumns();
+        }
+        else if (sCurrentKey === "inmov" && sNewKey !== "inmov") {
+          this._resetInmovilizadosColumns();
+        }
+        
 
-        // Se verifica si existen cambios sin guardar antes de abandonar la vista de "corrientes"
+        /* NO SE ESTA USANDO Se verifica si existen cambios sin guardar antes de abandonar la vista de "corrientes"
         if (sCurrentKey === "corrientes" && this._mViews["corrientes"]) {
           const oCorrientesController = this._mViews["corrientes"].getController();
 
@@ -252,10 +264,10 @@ onEjecutadoCheckBoxSelect: function (oEvent) {
             });
             return;
           }
-        }
+        }*/
 
         this._lastSelectedKey = sNewKey;
-        this._showView(sNewKey);
+        this._showView(sNewKey, sCurrentKey);
       },
 
       /**
@@ -280,50 +292,140 @@ onEjecutadoCheckBoxSelect: function (oEvent) {
           }
         }
       },
-/**
- * Se inyecta dinamicamente la vista seleccionada en el contenedor de contenido.
- * Se utiliza una cache interna (_mViews) para no volver a instanciar vistas ya creadas.
- * Se asigna ademas una retrollamada al controlador hijo para que pueda actualizar
- * visualmente el checkbox idEjecutadoCheckBox2 que reside en la Main view.
- */
-_showView: async function (sKey) {
-    const oContainer = this.byId("tabContent");
-    oContainer.removeAllItems();
-    const oComp = this.getOwnerComponent();
 
-    if (!this._mViews[sKey]) {
-        this._mViews[sKey] = await oComp.runAsOwner(() =>
+      /**
+       * Se restablecen los elementos visuales específicos de la vista de diferidos.
+       */
+      _resetDiferidosColumns: function () {
+        if (this._mViews["diferidos"]) {
+          const oCorrientesController = this._mViews["diferidos"].getController();
+
+          // Se ocultan las columnas dinámicas
+          const oColMonths = oCorrientesController.byId("colMonths");
+          const oColNew = oCorrientesController.byId("colNew");
+
+          if (oColMonths) oColMonths.setVisible(false);
+          if (oColNew) oColNew.setVisible(false);
+
+          // Se restablece el modelo de interfaz de usuario
+          const oUiModel = oCorrientesController.getView().getModel("ui");
+          if (oUiModel) {
+            oUiModel.setProperty("/showStickyParent", false);
+            oUiModel.setProperty("/showStickyChild", false);
+          }
+        }
+      },
+
+      /**
+       * Se restablecen los elementos visuales específicos de la vista de inmovilizados.
+       */
+      _resetInmovilizadosColumns: function () {
+        if (this._mViews["inmov"]) {
+          const oCorrientesController = this._mViews["inmov"].getController();
+
+          // Se ocultan las columnas dinámicas
+          const oColMonths = oCorrientesController.byId("colMonths");
+          const oColNew = oCorrientesController.byId("colNew");
+
+          if (oColMonths) oColMonths.setVisible(false);
+          if (oColNew) oColNew.setVisible(false);
+
+          // Se restablece el modelo de interfaz de usuario
+          const oUiModel = oCorrientesController.getView().getModel("ui");
+          if (oUiModel) {
+            oUiModel.setProperty("/showStickyParent", false);
+            oUiModel.setProperty("/showStickyChild", false);
+          }
+        }
+      },
+
+      /**
+       * Se restablecen los elementos visuales específicos de la vista de anticipados.
+       */
+      _resetAnticipadosColumns: function () {
+        if (this._mViews["anticipados"]) {
+          const oCorrientesController = this._mViews["anticipados"].getController();
+
+          // Se ocultan las columnas dinámicas
+          const oColMonths = oCorrientesController.byId("colMonths");
+          const oColNew = oCorrientesController.byId("colNew");
+
+          if (oColMonths) oColMonths.setVisible(false);
+          if (oColNew) oColNew.setVisible(false);
+
+          // Se restablece el modelo de interfaz de usuario
+          const oUiModel = oCorrientesController.getView().getModel("ui");
+          if (oUiModel) {
+            oUiModel.setProperty("/showStickyParent", false);
+            oUiModel.setProperty("/showStickyChild", false);
+          }
+        }
+      },
+      /**
+       * Se inyecta dinamicamente la vista seleccionada en el contenedor de contenido.
+       * Se utiliza una cache interna (_mViews) para no volver a instanciar vistas ya creadas.
+       * Se asigna ademas una retrollamada al controlador hijo para que pueda actualizar
+       * visualmente el checkbox idEjecutadoCheckBox2 que reside en la Main view.
+       */
+      _showView: async function (sKey, sPreviousKey) {
+        const oContainer = this.byId("tabContent");
+        oContainer.removeAllItems();
+        const oComp = this.getOwnerComponent();
+
+        if (!this._mViews[sKey]) {
+          this._mViews[sKey] = await oComp.runAsOwner(() =>
             sap.ui.xmlview({
-                height: "100%",
-                layoutData: new sap.m.FlexItemData({ growFactor: 1 }),
-                viewName: "masterindirectos.view.DetailsViews." + this._mapKeyToView(sKey),
+              height: "100%",
+              layoutData: new sap.m.FlexItemData({ growFactor: 1 }),
+              viewName: "masterindirectos.view.DetailsViews." + this._mapKeyToView(sKey),
             })
-        );
-    }
+          );
 
-    oContainer.addItem(this._mViews[sKey]);
+          const oNewController = this._mViews[sKey].getController();
+          if (oNewController) {
+            oNewController._previousTabKey = sPreviousKey;
+          }
+        }
 
-    const oActiveController = this._mViews[sKey].getController();
+        oContainer.addItem(this._mViews[sKey]);
 
-    // Se asigna una retrollamada al controlador hijo para que pueda actualizar
-    // visualmente el checkbox idEjecutadoCheckBox2 que reside en la Main view,
-    // ya que el hijo no tiene acceso directo a los controles de esta vista padre.
-    const oCheckBoxRef = this.byId("idEjecutadoCheckBox2");
-    if (oActiveController) {
-        oActiveController._fnSetEjecutadoCheckBox = function (bSelected) {
+        const oActiveController = this._mViews[sKey].getController();
+        // Se recargan los datos del servicio OData SOLO si la vista ya existía en caché
+        // (no la primera vez que se crea, para evitar llamadas duplicadas)
+        if (oActiveController) {
+        if (sKey === "anticipados" && typeof oActiveController.initAnticipadosModel === "function") {
+          oActiveController.initAnticipadosModel(sPreviousKey);
+        } else if (sKey === "diferidos" && typeof oActiveController.initDiferidosModel === "function") {
+          oActiveController.initDiferidosModel(sPreviousKey);
+        } else if (sKey === "inmov" && typeof oActiveController.initInmovilizadosModel === "function") {
+          oActiveController.initInmovilizadosModel(sPreviousKey);
+        }
+      }
+        
+        // Se marca que la vista ya se ha renderizado al menos una vez
+        if (oActiveController) {
+          oActiveController._bViewAlreadyRendered = true;
+        }
+
+        // Se asigna una retrollamada al controlador hijo para que pueda actualizar
+        // visualmente el checkbox idEjecutadoCheckBox2 que reside en la Main view,
+        // ya que el hijo no tiene acceso directo a los controles de esta vista padre.
+        const oCheckBoxRef = this.byId("idEjecutadoCheckBox2");
+        if (oActiveController) {
+          oActiveController._fnSetEjecutadoCheckBox = function (bSelected) {
             if (oCheckBoxRef) {
-                oCheckBoxRef.setSelected(bSelected);
+              oCheckBoxRef.setSelected(bSelected);
             }
-        };
-    }
+          };
+        }
 
-    // Se sincroniza siempre el estado del checkbox con la vista activa al renderizar.
-    if (oCheckBoxRef && oActiveController && oActiveController._handleEjecutado) {
-        setTimeout(function () {
+        // Se sincroniza siempre el estado del checkbox con la vista activa al renderizar.
+        if (oCheckBoxRef && oActiveController && oActiveController._handleEjecutado) {
+          setTimeout(function () {
             oActiveController._handleEjecutado(oCheckBoxRef.getSelected());
-        }, 100);
-    }
-},
+          }, 100);
+        }
+      },
 
       /**
        * Se mapean las claves de las pestañas con los nombres físicos de las vistas XML correspondientes.
@@ -345,7 +447,7 @@ _showView: async function (sKey) {
       getUserScopes: async function () {
         const appData = this.getGlobalModel("appData").getData();
         const sUrl = this.getEndpointData().urlInsite;
-        
+
         return this.callExternalService(sUrl + "/security/userScopes", "GET", {
           loadAll: false,
           idUser: appData.userData.idUser,
@@ -377,13 +479,13 @@ _showView: async function (sKey) {
               viewName: "masterindirectos.view.DialogsViews.ScopeSelector",
               viewData: {
                 callback: async function (oSelectedScope, tramoSelected) {
-                  
+
                   // Se actualiza el modelo de alcance global con la nueva selección.
                   if (oSelectedScope) {
                     this.getGlobalModel("appData").setProperty("/userData/initialNode", oSelectedScope.profitCenter);
                     this.getGlobalModel("appData").setProperty("/userData/descriptionNode", oSelectedScope.profitCenterDescription);
                   }
-                  
+
                   // Se actualiza el tramo seleccionado basándose en la elección del usuario.
                   if (tramoSelected) {
                     delete tramoSelected.__metadata;
@@ -398,16 +500,28 @@ _showView: async function (sKey) {
                         (tramo) => tramo.Prctr === oSelectedScope.profitCenter,
                       )[0];
                     if (defaultTramo) {
-                        delete defaultTramo.__metadata;
-                        this.getGlobalModel("appData").setProperty("/tramo", defaultTramo);
+                      delete defaultTramo.__metadata;
+                      this.getGlobalModel("appData").setProperty("/tramo", defaultTramo);
                     }
                   }
-                  
+
                   // Si se ha seleccionado una obra específica, se actualiza la norma en el modelo correspondiente.
                   const tramosByObra = await this.getTramosByObra(oSelectedScope.profitCenter);
-                  if (tramosByObra.NavTramosDatos.results.length > 0) {
+                  if (tramosByObra.NavTramosDatos.results.length > 0 && !tramosByObra.NavTramosDatos.results[0].Error) {
                     const norm = tramosByObra.NavTramosDatos.results[0].Norma;
                     this.getGlobalModel("normModel").setProperty("/norma", norm);
+                  } else if (!!tramosByObra.NavTramosDatos.results[0].Error) {
+                    this.getGlobalModel("normModel").setProperty("/norma", "");
+                    this.createMessageDialog({
+                      title: this.getTranslatedText("ERROR"),
+                      textAccept: this.getTranslatedText("ACEPTAR"),
+                      messages: [{
+                        text: tramosByObra.NavTramosDatos.results[0].Error,
+                        type: "Error",
+                        showIcon: false,
+                        onAccept: function () { },
+                      }]
+                    });
                   }
                   this.setUserScopeData();
                 }.bind(this),
@@ -429,13 +543,17 @@ _showView: async function (sKey) {
       },
 
       /**
-       * Se configura la información de usuario y se actualizan los datos de la vista activa.
-       */
-      setUserScopeData: function () {
+  * Se configura la informacion de usuario y se actualizan los datos de las vistas cacheadas.
+  * Se garantiza que el dashboardModel se actualice siempre en primer lugar, ya que otras
+  * vistas como corrientes dependen de sus datos para calcular rangos de anos y columnas.
+  */
+      setUserScopeData: async function () {
+        // Se obtienen los datos globales de la aplicacion y la configuracion del usuario activo.
         const appData = this.getGlobalModel("appData").getData();
         const userConfig = appData.userData;
-        
-        this.callExternalService(this.getEndpointData().urlInsite + "/menu/mainMenu", "GET", {
+
+        // Se llama al servicio externo del menu principal con el nodo recien seleccionado.
+        await this.callExternalService(this.getEndpointData().urlInsite + "/menu/mainMenu", "GET", {
           idUser: userConfig.idUser,
           loginUser: userConfig.User,
           idLanguageApp: userConfig.AplicationLangu,
@@ -445,26 +563,93 @@ _showView: async function (sKey) {
           erpRegion: null,
           idHierarchy: "FERR",
           idApplication: "FIDE"
-        }).then(function (response) {
-          // Se obtiene la vista del IconTabBar para refrescar los datos internos.
-          const oIconTabBar = this.getView().byId("itb");
-          const currentKey = oIconTabBar.getSelectedKey();
-          const currentView = this._mViews[currentKey];
-          
-          if (currentView && currentView.getController().setInitData) {
-            currentView.getController().setInitData();
-          }
+        });
 
-        }.bind(this));
+        // Se obtiene la clave de la pestana activa en este momento.
+        const oIconTabBar = this.getView().byId("itb");
+        const currentKey = oIconTabBar.getSelectedKey();
+
+        // Se actualiza siempre el dashboard en primer lugar, independientemente de la pestana activa.
+        // Esto es obligatorio porque el dashboardModel con las fechas Freal y Frealfinobra del nuevo
+        // tramo es leido por corrientes en _initYearsModel para calcular el rango de columnas anuales.
+        const oDashboardView = this._mViews["dashboard"];
+        if (oDashboardView && oDashboardView.getController().setInitData) {
+          await oDashboardView.getController().setInitData();
+        }
+
+        // Se actualiza la vista activa si no es el dashboard que ya fue actualizado arriba.
+        if (currentKey !== "dashboard") {
+          const currentView = this._mViews[currentKey];
+          if (currentView && currentView.getController().setInitData) {
+            await currentView.getController().setInitData();
+          }
+        }
+
+        // Se registra el tramo que se esta cargando para facilitar el diagnostico.
+        console.log("[setUserScopeData] Actualizando corrientes para tramo:",
+          this.getGlobalModel("appData").getData().tramo.Prctr);
+
+        // Se reinicializa la vista de corrientes si esta en cache con los datos del nuevo tramo.
+        if (this._mViews["corrientes"]) {
+          const oCorrientesController = this._mViews["corrientes"].getController();
+          if (oCorrientesController && oCorrientesController.initCorrienteModel) {
+            await oCorrientesController.initCorrienteModel();
+          }
+        }
       },
+
 
       /**
        * Se actualiza el modelo que controla la visibilidad global de las columnas ejecutadas.
        */
-      onMainEjecutadoToggle: function(oEvent) {
+      onMainEjecutadoToggle: function (oEvent) {
         const bSelected = oEvent.getParameter("selected");
         this.getView().getModel("visibleColumn").setProperty("/visible", bSelected);
+      },
+      /**
+       * Se gestiona el cambio de versión seleccionada por el usuario.
+       * Se actualiza el modelo global para reflejar la nueva versión activa y se fuerza
+       * la reinicialización de los datos en la pestaña visible actualmente.
+       */
+      onSelectVersion: function (oEvent) {
+        // Se obtiene la referencia al modelo global de datos de la aplicación.
+        var oAppDataModel = this.getGlobalModel("appData");
+
+        // Se recupera la clave de la versión que acaba de ser seleccionada.
+        var sSelectedKey = oAppDataModel.getProperty("/sVersionActiva");
+
+        // Se extrae el arreglo con el listado completo de versiones disponibles.
+        var aVersiones = oAppDataModel.getProperty("/NavLtVersiones") || [];
+
+        // Se recorre el arreglo completo para limpiar el estado activo de todas las versiones previas.
+        aVersiones.forEach(function (item) {
+          item.Activo = "";
+        });
+
+        // Se busca el objeto específico que corresponde a la nueva versión seleccionada.
+        var oVersionEncontrada = aVersiones.find(function (item) {
+          return item.Version === sSelectedKey;
+        });
+
+        // Se marca la versión encontrada como la actual activa mediante el indicador "X".
+        oVersionEncontrada.Activo = "X";
+
+        // Se localiza el control contenedor de pestañas (IconTabBar) de la vista principal.
+        const oIconTabBar = this.getView().byId("itb");
+
+        // Se determina cuál es la clave de la pestaña que el usuario está viendo en este momento.
+        const currentKey = oIconTabBar.getSelectedKey();
+
+        // Se recupera la instancia de la vista anidada correspondiente a dicha pestaña.
+        const currentView = this._mViews[currentKey];
+
+        // Se comprueba si la vista interna y su controlador disponen de la función de inicialización,
+        // y de ser así, se ejecuta para que recargue los datos usando la nueva versión activa.
+        if (currentView && currentView.getController().setInitData) {
+          currentView.getController().setInitData();
+        }
       }
+
 
     });
   }

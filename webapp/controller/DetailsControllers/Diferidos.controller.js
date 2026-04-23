@@ -5,7 +5,7 @@ sap.ui.define([
     "sap/m/Button",
     "sap/m/Label",
     "masterindirectos/controller/BaseController",
-     "masterindirectos/model/formatter"
+    "masterindirectos/model/formatter"
 ], function (
     JSONModel,
     Column,
@@ -18,20 +18,33 @@ sap.ui.define([
     "use strict";
 
     return BaseController.extend("masterindirectos.controller.DetailsControllers.Diferidos", {
-        
+
         formatter: formatter,
 
         /**
          * Inicializa la vista de Diferidos definiendo el estado de navegación y visibilidad.
          * Configura la tabla principal y prepara las columnas anuales iniciales.
          */
-        getCustomTableId: function() {
+        getCustomTableId: function () {
             return "TreeTableDiferidos";
         },
-
         onInit: function () {
 
-            this.initDiferidosModel();
+            this.setInitData();
+
+        },
+        setInitData: async function () {
+
+            // Configuración de la variante para diferidos 
+            this.initVariantConfig({
+                tableId: "TreeTableDiferidos", // ID exacto del XML 
+                modelName: "diferidosModel",     // Nombre del modelo de datos 
+                storageKey: "diferidos_variants"  // Clave única en localStorage 
+            });
+
+            this._initVariantManagement(); // Ahora se llama sin parámetros 
+            this._initYearsModel();
+            //this.initDiferidosModel(this._previousTabKey);
             this.getView().setModel(new JSONModel({
                 selectedKey: "Home"
             }), "state");
@@ -43,22 +56,25 @@ sap.ui.define([
 
             // Ejecuta la configuración base para la TreeTable.
             this.setupDynamicTreeTable("TreeTableDiferidos");
-
+            //  Se crean las columnas dinámicas utilizando el rango Freal → Frealfinobra,
+            //  evitando el uso de años fijos basados en la fecha actual.
+            this.createDynamicYearColumns("TreeTableInmovilizados");
             // Tras el renderizado, añade las columnas de los próximos 3 años.
-            this.getView().attachEventOnce("afterRendering", function () {
-                this.createYearColumns(new Date().getFullYear(), 3, "TreeTableDiferidos");
-                this._attachHeaderToggleListener();
-            }.bind(this));
+            const oTable = this.byId(this.getCustomTableId());
+            if (oTable) {
+                oTable.addEventDelegate({
+                    onAfterRendering: function () {
+                        if (this._bDiferidosFirstRender) return;
+                        this._bDiferidosFirstRender = true;
 
-            var iActualYear = new Date().getFullYear();
-            var aSelectYears = [];
-            for (var i = 0; i < 10; i++) {
-                aSelectYears.push({ year: iActualYear + i });
+                        // this.createDynamicYearColumns(this.getCustomTableId());
+                        this._attachHeaderToggleListener();
+
+
+                    }.bind(this)
+                });
             }
-            this.getView().setModel(new sap.ui.model.json.JSONModel({
-                years: aSelectYears,
-                selectedYear: iActualYear
-            }), "yearsModel");
+
 
             this._boundResizeHandler = function () {
                 this._calculateDynamicRows();
@@ -68,18 +84,28 @@ sap.ui.define([
             this._boundBrowserClose = this.onBrowserClose.bind(this);
             window.addEventListener("beforeunload", this._boundBrowserClose);
         },
+        onBeforeRendering: function () {
+            if (this._observer) {
+                this._observer.disconnect();
+                this._observer = null;
+            }
+        },
 
         /**
          * Forza el renderizado de la tabla una vez la vista está disponible en el DOM.
          */
-        onAfterRendering: function(oEvent){
-            this.byId("TreeTableDiferidos").rerender(true);
+        onAfterRendering: function (oEvent) {
+            let table = this.byId("TreeTableDiferidos")
+            table.attachEvent("rowsUpdated", this.colorRows.bind(this));
+            table.attachEvent("firstVisibleRowChanged", this.colorRows.bind(this));
+            table.rerender(true);
         },
-      
+
         /**
          * Gestiona la visibilidad de columnas extendidas al expandir nodos en la TreeTable.
          */
         onToggleOpenState: function (oEvent) {
+            this._markVariantDirty();
             var oTable = oEvent.getSource();
             var sTableId = oTable.getId();
             var bExpanded = oEvent.getParameter("expanded");
@@ -119,62 +145,186 @@ sap.ui.define([
             // Refresca la lógica de estilos y scroll de la tabla.
             setTimeout(function () {
                 this._refreshAfterToggle(sTableId);
+                this.colorRows()
             }.bind(this), 0);
         },
 
-        initDiferidosModel: function(evt){
-            this.post(
-                this.getGlobalModel("mainService"),
-                "/CambioPestIndirectosSet",
-                {
-                    "NavSelProyecto": [this.getGlobalModel("appData").getData().tramo],
-                    "NavChanges": [],
-                    "NavDatosIndirectos": [],
-                    "EvBloqueados" : "",
-                    "NavMensajes" : [],
-                    "NavDatosIndirectos" : []
+        _createSnapshot: function () {
+            var oDefaultModel = this.getView().getModel("diferidosModel");
+            if (oDefaultModel) {
+                var oData = oDefaultModel.getData();
+                this._originalData = JSON.parse(JSON.stringify(oData));
+            }
+        },
+        initDiferidosModel: async function (sPreviousKey) {
+            var oAppData = this.getGlobalModel("appData").getData();
+
+            // Se obtiene la version activa desde el modelo global de la aplicacion.
+            var versiones = oAppData.NavLtVersiones;
+            var flagSelectVersion = versiones.find(function (item) {
+                return item.Activo === "X";
+            });
+
+            // Se lee Freal desde appData como fuente global unica, con fallback al tramo
+            // en caso de que el dashboard no haya persistido el valor todavia.
+            var sFreal = oAppData.Freal || (oAppData.tramo && oAppData.tramo.Freal) || "";
+            var oDashModel = this.getGlobalModel("dashboardModel")
+            var sFreal = "";
+
+            // Se recupera el arreglo de versiones desde el modelo global de la aplicación.
+            var versiones = this.getGlobalModel("appData").getData().NavLtVersiones;
+            // Se busca e identifica el objeto correspondiente a la versión que se encuentra actualmente marcada como activa ("X").
+            var flagSelectVersion = versiones.find(function (item) {
+                return item.Activo === "X";
+            });
+
+            // (MV) Se intenta obtener Freal desde appData.tramo como fuente principal.
+            if (oAppData && oAppData.tramo && oAppData.tramo.Freal) {
+                sFreal = oAppData.tramo.Freal;
+            } else if (oDashModel) {
+                // Se recurre al dashboardModel únicamente si appData no contiene Freal.
+                sFreal = oDashModel.getProperty("/NavMasterLt/0/Freal");
+            }
+
+            //Si Freal no está disponible en ninguna fuente, se reintenta tras 500ms
+            // hasta que el modelo esté cargado. No se utiliza ningún valor por defecto.
+            if (!sFreal) {
+
+                setTimeout(function () {
+                    this.initDiferidosModel(sPreviousKey);
+                }.bind(this), 500);
+                return;
+            }
+
+            // Se parsea la fecha de Freal al formato Date de JavaScript.
+            var oDateStart = this._parseODataDate(sFreal);
+
+            // Si el parseo de Freal falla, se detiene la ejecución sin enviar ninguna llamada.
+            // No se permite continuar con un ejercicio incorrecto.
+            if (!oDateStart || isNaN(oDateStart.getTime())) {
+
+                return;
+            }
+
+            // Se extrae el año directamente de Freal para usarlo como ejercicio en la cabecera.
+            var sEjercicio = oDateStart.getFullYear().toString();
+            const token = this.getGlobalModel("appData").getProperty("/EvToken");
+            try {
+                const response = await this.post(
+                    this.getGlobalModel("mainService"),
+                    "/CambioPestIndirectosSet",
+                    {
+                        "NavSelProyecto": [this.getGlobalModel("appData").getData().tramo],
+                        "NavChanges": [],
+                        "NavDatosIndirectos": [],
+                        "EvBloqueados": "",
+                        "NavMensajes": [],
+                        "NavDatosIndirectos": [],
+                        "NavLtVersiones": [flagSelectVersion]
 
 
-                },
-                {
-                    headers: {
-                        ambito: this.getGlobalModel("appData").getData().userData.initialNode,
-                        lang: this.getGlobalModel("appData").getData().userData.AplicationLangu,
-                        bloqueado: "",
-                        decimales: this.getGlobalModel("dashboardModel").getData().decimales,
-                        ejercicio: "2026",
-                        pestana:"Diferidos"
+                    },
+                    {
+                        headers: {
+                            ambito: this.getGlobalModel("appData").getData().userData.initialNode,
+                            lang: this.getGlobalModel("appData").getData().userData.AplicationLangu,
+                            bloqueado: !!sPreviousKey ? sPreviousKey : "",
+                            decimales: this.getGlobalModel("dashboardModel").getData().decimales,
+                            ejercicio: sEjercicio,
+                            pestana: "Diferidos",
+                            token: token
+                        }
                     }
-                }
-            ).then(function (response) {
+                );
+                var aMensajes = response.NavMensajes?.results || [];
+                    var aMensajesError = aMensajes.filter(function(mensaje) {
+                        return mensaje.Tipo === "E";
+                    });
+
+                    if (aMensajesError.length > 0) {
+                        this.createMessageDialog({
+                            title: this.getTranslatedText("ERROR"),
+                            textAccept: this.getTranslatedText("ACEPTAR"),
+                            messages: aMensajesError
+                        });
+                    }
                 let tree = this.buildTree(response.NavDatosIndirectos.results)
                 this.getView().setModel(new sap.ui.model.json.JSONModel(tree), "diferidosModel");
-        }.bind(this));
+                this._createSnapshot();
+                setTimeout(function () {
+                    this.colorRows();
+                }.bind(this), 500);
+
+            } catch (error) {
+
+            }
+        },
+        _parseODataDate: function (sODataDate) {
+            if (!sODataDate) return null;
+            var oMatch = /\/Date\((\d+)\)\//.exec(sODataDate);
+            if (oMatch) {
+                return new Date(parseInt(oMatch[1], 10));
+            }
+            return new Date(sODataDate);
         },
 
         buildTree: function (data) {
-            // Crear un mapa para acceso rápido por PhPspnr
-            const map = {};
+            const groups = {};
             data.forEach(item => {
-                map[item.PhPspnr] = { ...item, children: [] }; // Clonamos para no modificar el original
+                if (!groups[item.PhPspnr]) {
+                    groups[item.PhPspnr] = {};
+                }
+
+                var isLevel3 = item.PhPspnr.split(".").length >= 3;
+
+                var repartoItems;
+                if (item.TipoInd === "P") {
+                    repartoItems = [
+                        { key: "O", text: "OEO" }
+                    ];
+                } else {
+                    repartoItems = [
+                        { key: "M", text: "Manual" }
+                    ];
+                }
+
+                groups[item.PhPspnr][item.TipoInd] = {
+                    ...item,
+                    isLevel3: isLevel3,
+                    isNew: false,
+                    repartoItems: repartoItems,
+                    children: []
+                };
             });
 
-            const roots = [];
+            const result = [];
+            const processed = new Set();
 
+            // Primero: buscar y añadir el objeto con PhPspnr = "D"
+            if (groups["D"]) {
+                Object.keys(groups["D"]).forEach(tipo => {
+                    result.push(groups["D"][tipo]);
+                });
+                processed.add("D");
+            }
+
+            // Después: todos los demás, ordenados por PhPspnr, con P antes de B
             data.forEach(item => {
-                if (item.ParentPath === "I") {
-                    // Nodo raíz
-                    roots.push(map[item.PhPspnr]);
-                } else {
-                    // Nodo hijo: buscar su padre por ParentPath
-                    const parent = map[item.ParentPath];
-                    if (parent) {
-                        parent.children.push(map[item.PhPspnr]);
-                    }
+                if (processed.has(item.PhPspnr)) return;
+                processed.add(item.PhPspnr);
+
+                const versionP = groups[item.PhPspnr]["P"];
+                const versionB = groups[item.PhPspnr]["B"];
+
+                if (versionP) {
+                    result.push(versionP);
+                }
+                if (versionB) {
+                    result.push(versionB);
                 }
             });
 
-            return roots;
+            return result;
         },
         _attachHeaderToggleListener: function () {
             var oObjectPageLayout = this.byId("objectPageLayout");
@@ -197,10 +347,10 @@ sap.ui.define([
          */
         onBrowserClose: function (oEvent) {
             if (this.hasUnsavedChanges()) {
-                
+
                 oEvent.preventDefault();
-                oEvent.returnValue = ''; 
-                return ''; 
+                oEvent.returnValue = '';
+                return '';
             }
         },
 
@@ -208,13 +358,117 @@ sap.ui.define([
          * Limpia los event listeners al destruir el controlador
          */
         onExit: function () {
-            
+
             if (this._boundBrowserClose) {
                 window.removeEventListener("beforeunload", this._boundBrowserClose);
             }
             if (this._boundResizeHandler) {
                 $(window).off("resize", this._boundResizeHandler);
             }
+        },
+        colorRows: function () {
+            var oTable = this.byId("TreeTableDiferidos");
+            var aRows = oTable.getRows();
+            var sTableId = oTable.getId();
+
+            aRows.forEach(function (oRow, i) {
+                var oContext = oRow.getBindingContext("diferidosModel") 
+            || (oRow.oBindingContexts && oRow.oBindingContexts["diferidosModel"]);
+
+
+                var oFixedRef = oTable.$().find(".sapUiTableCtrlFixed tbody tr[data-sap-ui-rowindex='" + i + "']");
+                var oScrollRef = oTable.$().find(".sapUiTableCtrlScroll tbody tr[data-sap-ui-rowindex='" + i + "']");
+                var oRowSelRef = jQuery("#" + sTableId + "-rowsel" + i);
+
+                oFixedRef.removeClass("rowVersionB rowVersionP");
+                oScrollRef.removeClass("rowVersionB rowVersionP");
+                oRowSelRef.removeClass("rowVersionB rowVersionP");
+
+                if (!oContext) return;
+
+                var sTipoInd = oContext.getProperty("TipoInd");
+                var sParentPath = oContext.getProperty("ParentPath");
+
+                if (sTipoInd === "B") {
+                    oFixedRef.addClass("rowVersionB");
+                    oScrollRef.addClass("rowVersionB");
+                    oRowSelRef.addClass("rowVersionB");
+                } else if (sTipoInd === "P") {
+                    oFixedRef.addClass("rowVersionP");
+                    oScrollRef.addClass("rowVersionP");
+                    oRowSelRef.addClass("rowVersionP");
+
+
+                }
+            });
+        },
+
+        onAmoPenChange: function (oEvent) {
+            var oSource = oEvent.getSource();
+            var oContext = oSource.getBindingContext("diferidosModel");
+
+            if (oContext) {
+                // Leer el valor directamente del input
+                var sRawValue = oSource.getValue();
+
+                // Limpiar formato (quitar separadores de miles, convertir decimal)
+                var oAppData = this.getOwnerComponent().getModel("appData").getData().userData;
+                var sCurrencyFormat = oAppData.CurrencyFormat;
+                var sThousandSep = sCurrencyFormat.charAt(0);
+                var sDecimalSep = sCurrencyFormat.charAt(1);
+
+                sRawValue = sRawValue.split(sThousandSep).join("");
+                sRawValue = sRawValue.split(sDecimalSep).join(".");
+
+                var fAmoPen = parseFloat(sRawValue) || 0;
+
+                // Escribir el valor limpio de vuelta al modelo
+                var sPath = oContext.getPath();
+                var oModel = oContext.getModel();
+                oModel.setProperty(sPath + "/AmoPen", fAmoPen.toString());
+
+                // Ahora leer AmoEje del modelo y calcular AmoTot
+                var fAmoEje = parseFloat(oContext.getObject().AmoEje) || 0;
+                var fAmoTot = fAmoPen + fAmoEje;
+
+                oModel.setProperty(sPath + "/AmoTot", fAmoTot.toString());
+                this.onRowInputChange(oEvent);
+            }
+        },
+
+        _onAfterRowInputChange: async function (oContext, oSource) {
+
+            //    Se verifica que el contexto este disponible antes de construir el payload.
+            //    Si el contexto es nulo el metodo padre ya habria retornado antes de llegar aqui.
+            if (!oContext) {
+                return;
+            }
+
+            //    Se obtiene el objeto de datos completo de la fila desde el modelo de Corrientes.
+            var oModel = this.getView().getModel(this.tableModelName);
+            var sPath = oContext.getPath();
+            var oRowData = oModel.getProperty(sPath);
+
+            if (!oRowData) {
+                return;
+            }
+
+            //    Se construye el payload de la fila copiando todos los campos del nodo del modelo
+            //    y eliminando las propiedades internas del arbol que el backend no debe recibir.
+            var oPayloadRow = {};
+            Object.keys(oRowData).forEach(function (sKey) {
+                if (sKey !== "children" &&
+                    sKey !== "padre" &&
+                    sKey !== "isEditable" &&
+                    sKey !== "_linDateFrom" &&
+                    sKey !== "_linDateTo") {
+                    oPayloadRow[sKey] = oRowData[sKey];
+                }
+            });
+
+            //    Se delega el envio al metodo centralizado del BaseController que gestiona
+            //    la autenticacion, cabeceras y el endpoint /GuardarTempIndirSet.
+            await this._enviarFilaAlBackend(oContext, oPayloadRow);
         },
     });
 });
