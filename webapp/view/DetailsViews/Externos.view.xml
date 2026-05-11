@@ -56,22 +56,54 @@
                                         <Text text="{dataTitle>CtotEje}" />
                                     </t:template>
                                 </t:Column>
+                                <!--    Se sustituye el Text estatico por un Input condicionado al flag editCtotPen,
+                                     que es true unicamente cuando Estructura=O y TipoTasa está vacío (EXT). -->
                                 <t:Column hAlign="Center">
                                     <Label
                                         text="{i18n>cost} {i18n>pendiente}"
                                         design="Bold"
                                     />
                                     <t:template>
-                                        <Text text="{dataTitle>CtotPen}" />
+                                        <vn:DecimalesInput
+                                            decimalNumbers="{dashboardModel>/decimales}"
+                                            textAlign="Center"
+                                            editable="{dataTitle>editCtotPen}"
+                                            value="{
+                                                parts: [
+                                                    'dataTitle>CtotPen',
+                                                    'dashboardModel>/decimales',
+                                                    'appData>/userData/CurrencyFormat'
+                                                ],
+                                                formatter: '.formatDecimales'
+                                            }"
+                                            class="flatCellInput"
+                                            change=".onRowInputChange"
+                                        />
                                     </t:template>
                                 </t:Column>
+                                <!--    Se sustituye el Text estatico por un Input condicionado al flag editCtot,
+                                     que es true unicamente cuando Estructura=O y TipoTasa está vacío (EXT). -->
                                 <t:Column hAlign="Center">
                                     <Label
                                         text="{i18n>cost} {i18n>total}"
                                         design="Bold"
                                     />
                                     <t:template>
-                                        <Text text="{dataTitle>Ctot}" />
+                                        <vn:DecimalesInput
+                                            decimalNumbers="{dashboardModel>/decimales}"
+                                            textAlign="Center"
+                                            editable="{dataTitle>editCtot}"
+                                            value="{
+                                                parts: [
+                                                    'dataTitle>Ctot',
+                                                    'dashboardModel>/decimales',
+                                                    'appData>/userData/CurrencyFormat'
+                                                ],
+                                                formatter: '.formatDecimales'
+                                            }"
+                                            class="flatCellInput"
+                                            change=".onRowInputChange"
+                                        />
                                     </t:template>
                                 </t:Column>
                             </t:columns>
@@ -116,15 +148,18 @@
                                 >
                                     <t:extension>
                                         <OverflowToolbar height="100%">
-                                            <!-- Se sustituye el ComboBox de operacion por el selector de variantes de la tabla. -->
-                                            <Button
-                                                id="btnVariantSelector"
-                                                text="{variantModel>/displayLabel}"
-                                                iconFirst="false"
-                                                type="Transparent"
-                                                press="onOpenVariantPopover"
+                                            <!-- Se anade un campo de busqueda que filtra la columna OPERACION (PhPspnr) del TreeTable. (MV) -->
+                                            <!-- Se aplica la clase allowLetters para evitar el bloqueo global de letras en inputs de la tabla. (MV) -->
+                                            <!-- Se habilitan sugerencias para mostrar las opciones disponibles a partir de los datos cargados. (MV) -->
+                                            <SearchField
+                                                width="200px"
+                                                placeholder="{i18n>operacion}"
+                                                class="allowLetters"
+                                                enableSuggestions="true"
+                                                suggest="onOperacionSuggest"
+                                                liveChange="onOperacionLiveChange"
+                                                search="onOperacionSearch"
                                             />
-                                            <ToolbarSeparator />
                                             <Button
                                                 width="8%"
                                                 text="{i18n>TBorigen}"
@@ -206,6 +241,15 @@
                                                 press="onProcessPress"
                                                 class="toolbarActionBtn"
                                                 tooltip="{i18n>subirDesglose}"
+                                            />
+                                            <ToolbarSeparator />
+                                            <!-- Se sustituye el ComboBox de operacion por el selector de variantes de la tabla. -->
+                                            <Button
+                                                id="btnVariantSelector"
+                                                text="{variantModel>/displayLabel}"
+                                                iconFirst="false"
+                                                type="Transparent"
+                                                press="onOpenVariantPopover"
                                             />
                                         </OverflowToolbar>
                                     </t:extension>
@@ -299,7 +343,7 @@
                                                     <Input
                                                         width="100%"
                                                         textAlign="Center"
-                                                        editable="{externosModel>isEditable}"
+                                                        editable="{externosModel>editPhPspnr}"
                                                         value="{externosModel>PhPspnr}"
                                                         showValueHelp="true"
                                                         class="flatCellInput yearCell"
@@ -392,7 +436,7 @@
                                                             path: 'externosModel>Post1',
                                                             type: 'sap.ui.model.type.String'
                                                         }"
-                                                        editable="{externosModel>isEditable}"
+                                                        editable="{externosModel>editPost1}"
                                                         textAlign="Center"
                                                         class="flatCellInput allowLetters"
                                                         type="Text"
@@ -438,10 +482,12 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
+                                                <!--    Se condiciona la editabilidad de %Tasa al flag editTasa,
+                                                     que en buildTree solo es true cuando Estructura=O y TipoTasa="X" (INT). -->
                                                 <vn:DecimalesInput
                                                     decimalNumbers="{dashboardModel>/decimales}"
                                                     textAlign="Center"
-                                                    editable="{externosModel>isEditable}"
+                                                    editable="{externosModel>editTasa}"
                                                     value="{
                                                         parts: [
                                                             'externosModel>Tasa',
@@ -451,7 +497,7 @@
                                                         formatter: '.formatDecimales'
                                                     }"
                                                     class="flatCellInput"
-                                                      change=".onRowInputChange"
+                                                    change=".onRowInputChange"
                                                 />
                                             </t:template>
                                         </t:Column>
@@ -643,7 +689,7 @@
                                                         width="100%"
                                                         decimalNumbers="{dashboardModel>/decimales}"
                                                         textAlign="Center"
-                                                        editable="{= ${externosModel>isEditable} === true}"
+                                                        editable="false"
                                                         value="{
                                                             parts: [
                                                                 'externosModel>AmoEjeAjus',
@@ -741,7 +787,7 @@
                                                         width="100%"
                                                         decimalNumbers="{dashboardModel>/decimales}"
                                                         textAlign="Center"
-                                                        editable="{= ${externosModel>isEditable} === true}"
+                                                        editable="false"
                                                         value="{
                                                             parts: [
                                                                 'externosModel>AmoEjeReal',
@@ -755,7 +801,7 @@
                                                     />
                                                 </HBox>
                                             </t:template>
-                                        </t:Column> 
+                                        </t:Column>
                                         <!-- COLUMNA: Coste pend / pricepending -->
                                         <t:Column
                                             width="90px"
@@ -839,7 +885,7 @@
                                                         width="100%"
                                                         decimalNumbers="{dashboardModel>/decimales}"
                                                         textAlign="Center"
-                                                        editable="{externosModel>isEditable}"
+                                                        editable="{externosModel>editAmoPen}"
                                                         value="{
                                                             parts: [
                                                                 'externosModel>AmoPen',
@@ -937,7 +983,7 @@
                                                         width="100%"
                                                         decimalNumbers="{dashboardModel>/decimales}"
                                                         textAlign="Center"
-                                                        editable="{externosModel>isEditable}"
+                                                        editable="{externosModel>editAmoTot}"
                                                         value="{
                                                             parts: [
                                                                 'externosModel>AmoTot',
@@ -1010,12 +1056,11 @@
                                                             />
                                                         </customData>
                                                     </Button>
-                                                    
-                                                       <vn:DecimalesInput
+                                                    <vn:DecimalesInput
                                                         width="100%"
                                                         decimalNumbers="{dashboardModel>/decimales}"
                                                         textAlign="Center"
-                                                        editable="{externosModel>isEditable}"
+                                                        editable="{externosModel>editPepDest}"
                                                         value="{
                                                             parts: [
                                                                 'externosModel>PepDest',
@@ -1117,6 +1162,7 @@
                                                         <Select
                                                             selectedKey="{externosModel>Tipo}"
                                                             visible="{= ${cabecera} !== true}"
+                                                            
                                                             class="flatCellInput"
                                                             forceSelection="true"
                                                             change="onRowInputChange"
@@ -1262,7 +1308,7 @@
                                                 </HBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLUMNA: Months (nessun bottone sticky, testo solo) -->
+                                        <!-- COLUMNA: Months (sin botón sticky, solo texto) -->
                                         <t:Column
                                             id="colMonths"
                                             width="85px"
@@ -1338,7 +1384,7 @@
                                                         width="100%"
                                                         decimalNumbers="0"
                                                         textAlign="Center"
-                                                        editable="{externosModel>isEditable}"
+                                                        editable="{externosModel>editMonths}"
                                                         value="{externosModel>months}"
                                                         class="flatCellInput"
                                                     />
@@ -1423,7 +1469,7 @@
                                                     </Button>
                                                     <Input
                                                         value="{externosModel>pend}"
-                                                        editable="{externosModel>isEditable}"
+                                                        editable="{externosModel>editPend}"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                         width="100%"
@@ -1431,7 +1477,7 @@
                                                 </HBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLUMNA: Auto (CheckBox1) - nessun filtro -->
+                                        <!-- COLUMNA: Auto (CheckBox1) - sin filtro -->
                                         <t:Column
                                             id="colCheckBox1"
                                             width="50px"
@@ -1506,7 +1552,7 @@
                                                 </VBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLUMNA: Inflaz (CheckBox2) - nessun filtro -->
+                                        <!-- COLUMNA: Inflaz (CheckBox2) - sin filtro -->
                                         <t:Column
                                             id="colCheckBox2"
                                             width="50px"

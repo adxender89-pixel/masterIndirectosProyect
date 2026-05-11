@@ -70,18 +70,60 @@ sap.ui.define([
             const dashboardModel = new JSONModel({
                 kpi: dashBoardData.NavKpisIndirectos.results,
                 resumen: dashBoardData.NavResumenIndirectos.results.sort((a, b) => {
-                    const valA = a.PhPspnr;
-                    const valB = b.PhPspnr;
+                            const valA = a.PhPspnr || "";
+                            const valB = b.PhPspnr || "";
+                            const post1A = a.Post1 || "";
+                            const post1B = b.Post1 || "";
 
-                    if (!valA && !valB) return 0;
-                    if (!valA) return 1;
-                    if (!valB) return -1;
+                            // Definir items que deben ir al final (totales y resultado)
+                            const endItems = ["TOTAL GASTOS GESTIÓN", "RESULTADO"];
+                            const isEndA = endItems.some(item => post1A.includes(item));
+                            const isEndB = endItems.some(item => post1B.includes(item));
 
-                    // const numA = parseInt(valA.split('.')[1], 10);
-                    // const numB = parseInt(valB.split('.')[1], 10);
+                            // Si ambos son items finales, mantener su orden
+                            if (isEndA && isEndB) {
+                                return post1A.localeCompare(post1B);
+                            }
 
-                    return a - b;
-                }),
+                            // Si A es item final, debe ir después de B
+                            if (isEndA) return 1;
+                            
+                            // Si B es item final, debe ir después de A
+                            if (isEndB) return -1;
+
+                            // Definir el orden especial: Personal, Financieros, Resto deben ir después de I.003
+                            const specialItems = ["Personal", "Financieros", "Resto"];
+                            const isSpecialA = specialItems.includes(post1A);
+                            const isSpecialB = specialItems.includes(post1B);
+
+                            // Si ambos son especiales, mantener el orden Personal -> Financieros -> Resto
+                            if (isSpecialA && isSpecialB) {
+                                return specialItems.indexOf(post1A) - specialItems.indexOf(post1B);
+                            }
+
+                            // Si A es especial y B tiene PhPspnr "I.003", A debe ir después
+                            if (isSpecialA && valB.includes("I.003")) {
+                                return 1;
+                            }
+
+                            // Si B es especial y A tiene PhPspnr "I.003", B debe ir después
+                            if (isSpecialB && valA.includes("I.003")) {
+                                return -1;
+                            }
+
+                            // Si A es especial y B tiene PhPspnr distinto de I.003, A debe ir después de I.003 pero antes de I.004+
+                            if (isSpecialA && valB && !valB.includes("I.003")) {
+                                return valB.includes("I.004") || valB > "I.003" ? -1 : 1;
+                            }
+
+                            // Si B es especial y A tiene PhPspnr distinto de I.003
+                            if (isSpecialB && valA && !valA.includes("I.003")) {
+                                return valA.includes("I.004") || valA > "I.003" ? 1 : -1;
+                            }
+
+                            // Ordenamiento normal por PhPspnr para el resto de casos
+                            return valA.localeCompare(valB);
+                        }),
                 decimales: dashBoardData.EvDecimales,
                 NavMasterLt: dashBoardData.NavMasterLt.results,
                 NavLsObra: dashBoardData.NavLsObra.results,
@@ -203,7 +245,12 @@ sap.ui.define([
                         this.createMessageDialog({
                             title: this.getTranslatedText("ERROR"),
                             textAccept: this.getTranslatedText("ACEPTAR"),
-                            messages: aMensajesError
+                            messages: aMensajesError.map(function(mensaje) {
+                            return {
+                                text: mensaje.Mensaje || mensaje.Message || mensaje.text || "",
+                                type: "Error"
+                            };
+                        })
                         });
                     }
                     // 1. Extraemos los KPIs de la respuesta 

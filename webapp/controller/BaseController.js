@@ -21,7 +21,8 @@ sap.ui.define([
     "sap/m/VBox",
     "masterindirectos/utils/ServiceCaller",
     "sap/ui/core/Fragment",
-    "sap/m/MessageBox"
+    "sap/m/MessageBox",
+    "sap/m/SuggestionItem"
 ], function (
     Controller,
     History,
@@ -45,7 +46,8 @@ sap.ui.define([
     VBox,
     serviceCaller,
     Fragment,
-    MessageBox
+    MessageBox,
+    SuggestionItem
 ) {
     "use strict";
 
@@ -103,23 +105,26 @@ sap.ui.define([
         },
 
         /**
-         * Se realiza una petición GET al servidor OData.
-         */
+       /**
+ * Se realiza una petición GET al servidor OData.
+ */
         get: async function (oModel, sPath, oParams = {}) {
-            // Se despliega el bloqueo de pantalla mientras se resuelve la petición.
             this._showLoadingDialog();
 
-            // Se retorna una promesa para manejar la asincronía del backend.
+            const oAppData = this.getGlobalModel("appData");
+            const sToken = oAppData ? oAppData.getProperty("/EvToken") : undefined;
+
             return new Promise((resolve, reject) => {
-                // Se ejecuta el método de lectura estándar del modelo OData de SAPUI5.
                 oModel.read(sPath, {
                     ...oParams,
-                    // Se resuelve la promesa y se oculta el diálogo en caso de éxito.
+                    headers: {
+                        ...oParams.headers,
+                        ...(sToken && { token: sToken })
+                    },
                     success: function (data) {
                         resolve(data);
                         this._hideLoadingDialog();
                     }.bind(this),
-                    // Se rechaza la promesa propagando el error y se oculta el diálogo en caso de fallo.
                     error: function (error) {
                         reject(error);
                         this._hideLoadingDialog();
@@ -129,26 +134,68 @@ sap.ui.define([
         },
 
         /**
+       * Limpia las propiedades temporales que no deben enviarse al backend
+       * @param {object|array} data - Datos a limpiar
+       * @returns {object|array} Datos limpios
+       */
+        _cleanDataForPost: function (data) {
+            //     Se anaden editCtotPen y editCtot a la lista de propiedades a eliminar
+            // antes de enviar datos al backend, ya que son propiedades exclusivas del frontend
+            // calculadas en buildTree para condicionar la editabilidad segun TipoTasa.
+            const propsToRemove = [
+                "_Pendiente", "_Ejecutado", "_Total", "isLevel3", "isNew",
+                "repartoItems", "children",
+                "editPhPspnr", "editPost1", "editTasa", "editAmoEje", "editAmoEjeAjus",
+                "editAmoEjeReal", "editAmoPen", "editAmoTot", "editPepDest",
+                "editTipo", "editPenPlan", "editMonths", "editPend",
+                "editCtotPen", "editCtot"
+            ];
+
+            if (data && data.NavDatosIndirectos && Array.isArray(data.NavDatosIndirectos)) {
+                data.NavDatosIndirectos = data.NavDatosIndirectos.map(item => {
+                    if (item && typeof item === "object") {
+                        const cleanItem = { ...item };
+                        propsToRemove.forEach(prop => delete cleanItem[prop]);
+                        return cleanItem;
+                    }
+                    return item;
+                });
+            }
+
+            return data;
+        },
+
+        /**
          * Se realiza una petición POST al servidor OData.
          */
         post: async function (oModel, sPath, oData, oParams = {}) {
-            // Se activa el indicador visual de carga de datos.
-            this._showLoadingDialog();
+            const { noLoading, ...oRestParams } = oParams;
+            if (!noLoading) {
+                this._showLoadingDialog();
+            }
 
-            // Se envuelve la llamada de creación en una promesa.
+            const oAppData = this.getGlobalModel("appData");
+            const sToken = oAppData ? oAppData.getProperty("/EvToken") : undefined;
+            // Limpiar propiedades temporales antes de enviar
+            oData = this._cleanDataForPost(oData);
             return new Promise((resolve, reject) => {
-                // Se inyectan los datos al path especificado en el modelo OData.
                 oModel.create(sPath, oData, {
-                    ...oParams,
-                    // Se finaliza la promesa de forma exitosa y se retira el bloqueo de pantalla.
+                    ...oRestParams,
+                    headers: {
+                        ...oRestParams.headers,
+                        ...(sToken && { token: sToken })
+                    },
                     success: function (data) {
                         resolve(data);
-                        this._hideLoadingDialog();
+                        if (!noLoading) {
+                            this._hideLoadingDialog();
+                        }
                     }.bind(this),
-                    // Se captura la excepción, se rechaza la promesa y se desbloquea la pantalla.
                     error: function (error) {
                         reject(error);
-                        this._hideLoadingDialog();
+                        if (!noLoading) {
+                            this._hideLoadingDialog();
+                        }
                     }.bind(this),
                 });
             });
@@ -247,7 +294,7 @@ sap.ui.define([
         _buildEjecutadosColumn: function (bAsDynamicMonth, iYear) {
             let oLabel;
 
-            // MV: testo traducibile per la cabecera
+            //   Se obtiene el texto traducible para la cabecera de la columna.
             const sEjerciciosAnterioresText = this.getResourceBundle().getText("EJERCICIOS_ANTERIORES") || "Ejercicios anteriores";
 
             if (bAsDynamicMonth) {
@@ -303,7 +350,7 @@ sap.ui.define([
                 }).addStyleClass("borderLeftEjecutado");
             }
 
-            // MV: columna con formatter aplicado en el Text (sin convertir a Input)
+            //   : columna con formatter aplicado en el Text (sin convertir a Input)
             const oCol = new sap.ui.table.Column({
                 width: "130px",
                 hAlign: "Center",
@@ -320,18 +367,18 @@ sap.ui.define([
                             wrapping: false,
                             text: {
                                 parts: [
-                                    this.tableModelName + ">InvEjeReal", // MV: campo original
-                                    "dashboardModel>/decimales",         // MV: nº decimales
-                                    "appData>/userData/CurrencyFormat"   // MV: formato moneda
+                                    this.tableModelName + ">InvEjeReal", //   : campo original
+                                    "dashboardModel>/decimales",         //   : nº decimales
+                                    "appData>/userData/CurrencyFormat"   //   : formato moneda
                                 ],
-                                formatter: this.formatter.formatDecimales // MV: formatter aplicado
+                                formatter: this.formatter.formatDecimales //   : formatter aplicado
                             }
                         })
                     ]
                 }).addStyleClass("borderLeftEjecutado")
             });
 
-            // MV: metadata para identificación
+            //   : metadata para identificación
             if (bAsDynamicMonth) {
                 oCol.data("dynamicMonth", true);
             } else {
@@ -440,7 +487,7 @@ sap.ui.define([
                     justifyContent: "Center",
                     alignItems: "Center",
                     // La celda general solo es visible si la fila NO es una cabecera organizativa.
-                    visible: "{= " + sCabeceraBinding + " !== true }",
+                    visible: true,
                     items: [
                         // Campo editable para introducir datos manuales. Se oculta automáticamente si la fila no es de detalle puro.
                         //   Se sustituye el binding de cadena por un objeto de binding con tipo
@@ -453,15 +500,12 @@ sap.ui.define([
                         //   método identifique el control como perteneciente a una columna dinámica de año.
                         // prueba editabilidad"{= ${" + this.tableModelName + ">/EvBloqueados} !== 'X' }"
                         new sap.m.Input({
-                            width: "100%",
-                            editable: "{= !${" + this.tableModelName + ">__isSinProveedor} && ${" + this.tableModelName + ">padre} !== true }",
+                            editable: false,
                             textAlign: "Center",
                             value: this._buildNumericBinding(
                                 this.tableModelName + ">Totala" + (parseInt(index) + 1)
                             ),
-                            visible: "{= ${" + this.tableModelName + ">expandible} !== false && !${" +
-                                this.tableModelName + ">isGroup} && ${" +
-                                this.tableModelName + ">cabecera} !== true }",
+                            visible: true,
 
                             //   Se registra el handler centralizado de cambio de celda. Este método
                             //   gestiona el formateo, parseo y envío al backend de forma unificada
@@ -478,13 +522,15 @@ sap.ui.define([
                             //   construir la clave de payload correcta (Totala1, Totala2...) dentro
                             //   de onRowInputChange sin necesidad de inferirlo desde el binding.
                             .data("yearColSubFijo", sSubFijo)
-                            .addStyleClass("borderColYears sapUiSizeCompact"),
+                            .addStyleClass("customYearInput sapUiSizeCompact"),
 
                         // Texto de solo lectura para los nodos padres (agrupadores) donde los totales no son editables directamente.
                         new sap.m.Text({
-                            width: "100%",
                             textAlign: "Center",
-                            visible: "{= ${" + this.tableModelName + ">expandible} === false || ${" + this.tableModelName + ">isGroup} === true }",
+                            visible: "{= (${" + this.tableModelName + ">expandible} === false || ${" +
+                                this.tableModelName + ">isGroup} === true) && !${" +
+                                this.tableModelName + ">__isCustom} }",
+
                             wrapping: false,
                             text: {
                                 path: this.tableModelName + ">Totala" + (parseInt(index) + 1),
@@ -547,7 +593,7 @@ sap.ui.define([
                         visible: "{ui>/showStickyParent}",
                         items: [
                             new sap.m.Text({
-                                text: "{ui>/stickyHeaderData/parent/Resto}",
+                                text: "{ui>/stickyHeaderData/parent/PlanResto}",
                                 wrapping: false,
                                 width: "100%",
                                 textAlign: "Center"
@@ -559,7 +605,7 @@ sap.ui.define([
                         alignContent: "Start",
                         items: [
                             new sap.m.Text({
-                                text: "{ui>/stickyHeaderData/child/Resto}",
+                                text: "{ui>/stickyHeaderData/child/PlanResto}",
                                 textAlign: "Center",
                                 wrapping: false,
                                 visible: "{ui>/showStickyChild}",
@@ -580,18 +626,19 @@ sap.ui.define([
                         width: "100%",
                         textAlign: "Center",
                         wrapping: false,
-                        text: "{" + this.tableModelName + ">Resto}",
+                        text: "{" + this.tableModelName + ">PlanResto}",
                         visible: "{= ${" + this.tableModelName + ">expandible} === false || ${" + this.tableModelName + ">isGroup} === true }"
                     }),
                     new masterindirectos.control.DecimalesInput({
                         width: "100%",
                         textAlign: "Center",
                         decimalNumbers: "{dashboardModel>/decimales}",
-                        editable: "{= !${" + this.tableModelName + ">__isSinProveedor} && ${" + this.tableModelName + ">padre} !== true && (${" + this.tableModelName + ">Tipo} === 'MAN' || ${" + this.tableModelName + ">Tipo} === 'PCT' || ${" + this.tableModelName + ">Tipo} === '') }",
+                        // editable: "{= !${" + this.tableModelName + ">__isSinProveedor} && ${" + this.tableModelName + ">padre} !== true && (${" + this.tableModelName + ">Tipo} === 'MAN' || ${" + this.tableModelName + ">Tipo} === 'PCT' || ${" + this.tableModelName + ">Tipo} === '') }",
+                        editable: false,
                         visible: "{= ${" + this.tableModelName + ">expandible} !== false && !${" + this.tableModelName + ">isGroup} }",
                         value: {
                             parts: [
-                                this.tableModelName + ">Resto",
+                                this.tableModelName + ">PlanResto",
                                 "dashboardModel>/decimales",
                                 "appData>/userData/CurrencyFormat"
                             ],
@@ -760,6 +807,13 @@ sap.ui.define([
 
             // Se vuelven a evaluar e inyectar las clases de color de fondo a las nuevas cabeceras visibles.
             this._applyCabeceraStyle();
+
+            //    Se actualiza la visibilidad de las columnas exclusivas de
+            // filas custom para ocultarlas si el colapso ha eliminado todos
+            // los bloques custom del viewport actual.
+            setTimeout(function () {
+                this._updateCustomColsVisibility();
+            }.bind(this), 50);
         },
 
         /**
@@ -789,7 +843,7 @@ sap.ui.define([
                 }
             }
 
-            // Colori e bordi gestiti separatamente
+            //   Se gestionan los colores y bordes de forma independiente.
             this._highlightSinProveedor(oTable);
             this._applyBlockBorder(oTable);
         },
@@ -801,6 +855,12 @@ sap.ui.define([
             const oOriginControl = oParams.cellControl;
             // Se obtiene la referencia a la vista actual para poder anclar el fragmento.
             const oView = this.getView();
+
+            // Se bloquea el menú contextual en la fila "D" (OEO).
+            const oRowData = oRowContext && oRowContext.getObject();
+            if (oRowData && oRowData.PhPspnr === "D") {
+                return;
+            }
 
             // Se guarda una referencia global del contexto para que las acciones (Añadir, Eliminar) sepan sobre qué fila operar.
             this._oContextRecord = oRowContext;
@@ -987,17 +1047,20 @@ sap.ui.define([
                         value: this._buildNumericBinding(this.tableModelName + ">" + sValKey),
                         textAlign: "Center",
                         editable: false,
-                        change: this.onRowInputChange.bind(this)
+                        // enabled: "{modeloBloqueo>/isBlocked}",
                     }).data("monthIdx", i)
                         .data("monthYear", sYear)
-                        .addStyleClass("borderColYears sapUiSizeCompact");
+                        .addStyleClass("customYearInput sapUiSizeCompact");
 
                     oControlTemplate = new sap.m.HBox({
                         renderType: "Bare",
                         justifyContent: "Center",
                         alignItems: "Center",
+                        visible: true,
                         items: [oInput]
                     }).addStyleClass("sapUiTinyMarginBegin sapUiTinyMarginEnd");
+
+
 
                 } else {
                     oControlTemplate = (function (iIdx, iYr) {
@@ -1012,10 +1075,15 @@ sap.ui.define([
                             width: "100%",
                             value: this._buildNumericBinding(this.tableModelName + ">" + sValKey),
                             textAlign: "Center",
-                            // Se permite la edicion solo si el tipo de reparto es manual, porcentual o vacio.
-                            editable: "{= !${" + this.tableModelName + ">__isSinProveedor} && (${" + this.tableModelName + ">Tipo} === 'MAN' || ${" + this.tableModelName + ">Tipo} === 'PCT' || ${" + this.tableModelName + ">Tipo} === '') }",
+                            editable: {
+                                path: this.tableModelName + ">Tipo",
+                                formatter: function (sTipo) {
+                                    return sTipo !== "OEO";
+                                }
+                            },
                             change: this.onRowInputChange.bind(this)
-                        }).data("monthIdx", iIdx)
+                        })
+                            .data("monthIdx", iIdx)
                             .data("monthYear", iYr)
                             .addStyleClass("customYearInput sapUiSizeCompact");
 
@@ -1023,6 +1091,7 @@ sap.ui.define([
                             renderType: "Bare",
                             justifyContent: "Center",
                             alignItems: "Center",
+                            visible: true, //   
                             items: [oInput]
                         }).addStyleClass("sapUiTinyMarginBegin sapUiTinyMarginEnd");
 
@@ -1033,7 +1102,7 @@ sap.ui.define([
                 const sParentPath = "ui>/stickyHeaderData/parent/m" + sYear + "_" + iRealIdx;
                 const sChildPath = "ui>/stickyHeaderData/child/m" + sYear + "_" + iRealIdx;
 
-                // Se genera el titulo della colonna: el primer mes incluye el boton de cierre del año.
+                // Se genera el título de la columna: el primer mes incluye el botón de cierre del año.
                 const oTitleControl = (i === iStartIdx) ? new sap.m.HBox({
                     alignItems: "Center",
                     justifyContent: "Center",
@@ -1245,6 +1314,13 @@ sap.ui.define([
         onEjecutadoCheckBoxSelect: function (oEvent) {
             this._markVariantDirty();
             this._handleEjecutado(oEvent.getParameter("selected"));
+            setTimeout(function () {
+                var oTable = this.getControlTable();
+                if (oTable) {
+                    this._highlightSinProveedor(oTable);
+                    this._applyBlockBorder(oTable);
+                }
+            }.bind(this), 300);
         },
 
         /**
@@ -1644,11 +1720,30 @@ sap.ui.define([
                 this._debouncedHighlight();
             }.bind(this));
 
-            // Se define un arreglo con los IDs de las columnas accesorias (meses, checkboxes) y se ocultan por defecto en la carga inicial.
-            const aColsToHide = ["colMonths", "colNew", "colCheckBox1", "colCheckBox2"];
-            aColsToHide.forEach(colId => {
+            //    Se añade listener para recalcular filas cuando la tabla se renderiza
+            if (!oTable._rowsUpdatedAttachedForResize) {
+                oTable.attachEvent("rowsUpdated", function () {
+                    // Se ejecuta el cálculo solo después del primer renderizado completo
+                    if (!this._initialRowCalculationDone) {
+                        setTimeout(function () {
+                            this._calculateDynamicRows();
+                            this._initialRowCalculationDone = true;
+                        }.bind(this), 100);
+                    }
+                }.bind(this));
+                oTable._rowsUpdatedAttachedForResize = true;
+            }
+
+            //    Se añaden las columnas exclusivas de filas custom al array
+            // de ocultación inicial para que no aparezcan vacías al cargar la vista.
+            const aColsToHide = [
+                "colMonths", "colNew", "colCheckBox1", "colCheckBox2",
+                "colProveedor", "colTarifa", "colFechaInicio",
+                "colFechaFin", "colNMeses", "colOtros"
+            ];
+            aColsToHide.forEach(function (colId) {
                 if (this.byId(colId)) this.byId(colId).setVisible(false);
-            });
+            }.bind(this));
 
             // Se inicializa el delegado general de eventos de teclado si no existía previamente.
             // (CLINE)    Se incluye onkeypress para bloquear de forma silenciosa la escritura
@@ -1658,15 +1753,6 @@ sap.ui.define([
                     onkeydown: function (oEvent) {
                         this._onInputKeyDown(oEvent);
                     }.bind(this),
-                    // (CLINE)    Se cancela la pulsación cuando la tecla corresponde a una letra
-                    // (CLINE)    del alfabeto, impidiendo que el carácter aparezca en el campo
-                    // (CLINE)    sin mostrar ningún mensaje de error ni borde de validación.
-                    onkeypress: function (oEvent) {
-                        var sKey = oEvent.key;
-                        if (sKey && sKey.length === 1 && /[a-zA-Z]/.test(sKey)) {
-                            oEvent.preventDefault();
-                        }
-                    }
                 };
             }
 
@@ -1710,19 +1796,12 @@ sap.ui.define([
                     });
                 }.bind(this)
             });
-            // Se asegura que cada vez que los datos de las filas cambian (ej. por un expandir/contraer), se repongan los delegados de teclado.
-            // Se utiliza una bandera booleana para evitar asociar el mismo evento múltiples veces.
-            // if (!oTable._rowsDelegateAttached) {
-            //     oTable.attachEvent("rowsUpdated", function () {
-            //         this._attachArrowDelegates(oTable);
-            //     }.bind(this));
-            //     oTable._rowsDelegateAttached = true;
-            // }
 
             if (!oTable._rowsDelegateAttached) {
                 oTable.attachEvent("rowsUpdated", function () {
                     this._attachArrowDelegates(oTable);
-                    this._debouncedHighlight();
+                    this._highlightSinProveedor(oTable);
+                    this._applyBlockBorder(oTable);
                 }.bind(this));
                 oTable._rowsDelegateAttached = true;
             }
@@ -1734,8 +1813,74 @@ sap.ui.define([
                 this.getView().setModel(oViewModel, "viewModel");
             }
 
-            // Se ejecuta la lógica de cálculo matemático para adaptar la tabla al tamaño actual de la ventana.
-            this._calculateDynamicRows();
+            // Se calcula la altura dinámica del Splitter.
+            this._calculateSplitterHeight();
+
+            // Listener de resize de ventana registrado una sola vez.
+            if (!this._windowResizeHandler) {
+                this._windowResizeHandler = function () {
+                    this._calculateSplitterHeight();
+                }.bind(this);
+                window.addEventListener("resize", this._windowResizeHandler);
+            }
+
+            //   Se engancha el evento de expansion y colapso de la cabecera del
+            // ObjectPageLayout para recalcular el splitter y las filas visibles.
+            // Se usa attachEvent con el nombre interno del evento de snap/expand
+            // ya que attachToggleHeaderOnTitleClick no existe como API publica.
+            // El ObjectPageLayout emite "_snapHeader" al colapsar y "_expandHeader"
+            // al expandir; ambos se interceptan con el mismo handler de recalculo.
+            if (!this._oHeaderToggleAttached) {
+                var oObjectPage = this.byId("objectPageLayout");
+                if (oObjectPage) {
+                    //   Se usa attachEventOnce en bucle para capturar cada toggle.
+                    // Como el evento se dispara cada vez que cambia el estado de la
+                    // cabecera, se registra un listener permanente con attachEvent.
+                    var fnRecalcAfterToggle = function () {
+                        //   Se espera 400ms para que la animacion CSS del
+                        // ObjectPageLayout termine antes de medir el DOM.
+                        setTimeout(function () {
+                            this._calculateSplitterHeight();
+                        }.bind(this), 400);
+                    }.bind(this);
+
+                    //   Se intentan los dos nombres de evento conocidos del
+                    // ObjectPageLayout. Si ninguno existe en esta version de UI5,
+                    // se usa MutationObserver sobre el DOM como fallback robusto.
+                    try {
+                        oObjectPage.attachEvent("_snapHeader", fnRecalcAfterToggle);
+                        oObjectPage.attachEvent("_expandHeader", fnRecalcAfterToggle);
+                    } catch (e) {
+                        //   Fallback: MutationObserver que detecta el cambio de
+                        // clase CSS sapUxAPObjectPageLayout-header-forceSnapped que
+                        // el ObjectPageLayout añade al colapsar la cabecera.
+                    }
+
+                    //   MutationObserver como mecanismo principal y de respaldo.
+                    // Observa cambios de clase en el DOM del ObjectPageLayout y
+                    // recalcula las dimensiones cuando detecta el snap o el expand.
+                    var oObjectPageDom = oObjectPage.getDomRef
+                        ? oObjectPage.getDomRef()
+                        : null;
+
+                    if (!oObjectPageDom) {
+                        //   Si el DOM aun no esta disponible se espera al primer
+                        // renderizado para conectar el observer.
+                        oObjectPage.addEventDelegate({
+                            onAfterRendering: function () {
+                                if (this._oHeaderMutationObserver) return;
+                                var oDom = oObjectPage.getDomRef();
+                                if (!oDom) return;
+                                this._connectHeaderObserver(oDom, fnRecalcAfterToggle);
+                            }.bind(this)
+                        });
+                    } else {
+                        this._connectHeaderObserver(oObjectPageDom, fnRecalcAfterToggle);
+                    }
+
+                    this._oHeaderToggleAttached = true;
+                }
+            }
 
             // Se controla el borrado de los filtros nativos de la tabla.
             if (!oTable._filterEmptyAttached) {
@@ -1764,6 +1909,42 @@ sap.ui.define([
                 oTable._colResizeAttached = true;
             }
         },
+        //   Se conecta un MutationObserver al DOM del ObjectPageLayout para
+        // detectar cuando la cabecera cambia de estado (snap/expand) y recalcular
+        // el splitter y las filas visibles. Es el mecanismo mas robusto porque no
+        // depende de nombres de eventos internos que pueden cambiar entre versiones
+        // de SAPUI5.
+        _connectHeaderObserver: function (oDom, fnCallback) {
+            if (this._oHeaderMutationObserver) return;
+
+            this._oHeaderMutationObserver = new MutationObserver(function (aMutations) {
+                var bRelevant = aMutations.some(function (oMut) {
+                    return oMut.type === "attributes" && oMut.attributeName === "class";
+                });
+                if (bRelevant) {
+                    fnCallback();
+                }
+            });
+
+            //   Se observan cambios de atributo class en el elemento raiz del
+            // ObjectPageLayout y en su hijo directo que contiene la cabecera,
+            // ya que SAPUI5 puede añadir la clase de snap en cualquiera de los dos.
+            this._oHeaderMutationObserver.observe(oDom, {
+                attributes: true,
+                attributeFilter: ["class"],
+                subtree: false
+            });
+
+            //   Se observa tambien el primer hijo directo donde el ObjectPageLayout
+            // suele colocar las clases de estado de la cabecera segun la version de UI5.
+            if (oDom.firstElementChild) {
+                this._oHeaderMutationObserver.observe(oDom.firstElementChild, {
+                    attributes: true,
+                    attributeFilter: ["class"],
+                    subtree: false
+                });
+            }
+        },
 
         /**
          * Se calcula dinámicamente la cantidad de filas que caben en pantalla según el tamaño de la ventana.
@@ -1771,88 +1952,119 @@ sap.ui.define([
          */
         _calculateDynamicRows: function () {
             const oTable = this.getControlTable();
-
-            //    Se valida que la tabla exista y esté renderizada en el DOM
-            if (!oTable || !oTable.getDomRef()) {
-                return;
-            }
+            if (!oTable || !oTable.getDomRef()) return;
 
             const oDomRef = oTable.getDomRef();
 
-            //    Se obtiene la altura total de la ventana visible
-            const iWindowHeight = window.innerHeight;
+            // Se toma el VBox superior del splitter como referencia
+            // en lugar de la ventana entera, dado que el ObjectPageLayout
+            // ya gestiona su propio espacio interno
+            const oSplitterPane = oDomRef.closest(".sapUiLoSplitterContent");
+            const iAvailablePaneHeight = oSplitterPane
+                ? oSplitterPane.getBoundingClientRect().height
+                : (window.innerHeight - oDomRef.getBoundingClientRect().top - 50);
 
-            //    Se obtiene la posición vertical real donde empieza la tabla
-            const iTableTop = oDomRef.getBoundingClientRect().top;
-
-            //    Se obtiene la altura real del footer de la página
-            const oFooter = document.querySelector(".sapMPageFooter");
-            const iFooterHeight = oFooter ? oFooter.offsetHeight : 0;
-
-            //    Se obtiene el contenedor interno donde vive el scroll horizontal real de la tabla
             const oScrollContainer = oDomRef.querySelector(".sapUiTableCnt");
-
             let iScrollbarHeight = 0;
-
             if (oScrollContainer) {
-                //    Se calcula la altura real del scrollbar horizontal
                 iScrollbarHeight = oScrollContainer.offsetHeight - oScrollContainer.clientHeight;
             }
 
-            //    Se obtiene la altura del header interno de la tabla (cabecera de columnas)
-            let iTableHeaderHeight = 0;
-
             const oTableHeader = oDomRef.querySelector(".sapUiTableColHdrCnt");
-
+            let iTableHeaderHeight = 0;
             if (oTableHeader) {
                 iTableHeaderHeight = oTableHeader.offsetHeight;
             }
 
-            //    Se calcula la altura disponible real restando todos los elementos visibles
+            const oToolbar = oDomRef.querySelector(".sapUiTableTbr");
+            let iToolbarHeight = 0;
+            if (oToolbar) {
+                iToolbarHeight = oToolbar.offsetHeight;
+            }
+
             const iAvailableHeight =
-                iWindowHeight -
-                iTableTop -
-                iFooterHeight -
+                iAvailablePaneHeight -
                 iScrollbarHeight -
-                iTableHeaderHeight;
+                iTableHeaderHeight -
+                iToolbarHeight;
 
-            //    Se obtiene la altura real de una fila desde el DOM
             let iRowHeight = 32;
-
             const oFirstRow = oDomRef.querySelector(".sapUiTableTr");
-
             if (oFirstRow) {
                 iRowHeight = oFirstRow.offsetHeight;
             }
 
-            //    Se calcula el número base de filas que caben en el espacio disponible
             let iRows = Math.floor(iAvailableHeight / iRowHeight);
 
-            //    Se calcula la altura ocupada por las filas completas
             const iUsedHeight = iRows * iRowHeight;
-
-            //    Se calcula el espacio restante que no llega a completar una fila
             const iRemainingSpace = iAvailableHeight - iUsedHeight;
-
-            //    Se define un umbral dinámico más conservador para evitar eliminar filas de más
             const iThreshold = iRowHeight * 0.3;
 
-            //    Se ajusta dinámicamente el número de filas según el espacio restante
             if (iRemainingSpace < iThreshold) {
-                //    Se eliminan dos filas solo cuando el espacio restante es realmente insuficiente
                 iRows = iRows - 2;
             } else {
-                //    Se elimina una fila en condiciones normales
                 iRows = iRows - 1;
             }
 
-            //    Se garantiza un mínimo de filas visibles para mantener la usabilidad
-            if (iRows < 5) {
-                iRows = 5;
-            }
+            if (iRows < 5) iRows = 5;
 
-            //    Se actualiza el modelo con el número final de filas
             this.getView().getModel("viewModel").setProperty("/dynamicRowCount", iRows);
+        },
+
+        /**
+         * Se calcula dinámicamente la altura del Splitter vertical
+         * restando la posición superior del control y el footer
+         * de la altura total de la ventana. De este modo el Splitter
+         * se adapta a cualquier nivel de zoom sin usar píxeles fijos.
+         */
+        _calculateSplitterHeight: function () {
+            var oSplitter = this.byId("mainSplitter");
+            if (!oSplitter) return;
+
+            var fnCompute = function () {
+                var oDom = oSplitter.getDomRef();
+                if (!oDom) return;
+
+                // Distancia del borde superior del splitter respecto al top de la ventana
+                var iTop = oDom.getBoundingClientRect().top;
+
+                // Altura del footer (OverflowToolbar dentro de sap.m.Page)
+                var oFooterDom = document.querySelector(".sapMPageFooter");
+                var iFooter = oFooterDom ? oFooterDom.getBoundingClientRect().height : 40;
+
+                var iAvailable = window.innerHeight - iTop - iFooter;
+                if (iAvailable < 100) iAvailable = 100;
+
+                oSplitter.setHeight(iAvailable + "px");
+
+                // Tras fijar la altura del splitter se recalculan
+                // las filas visibles de la TreeTable en función del panel superior.
+                setTimeout(function () {
+                    // Se ejecuta la lógica de cálculo matemático para adaptar la tabla al tamaño actual de la ventana.
+                    this._calculateDynamicRows();
+
+                    // Listener de resize: si el panel está abierto se recalcula splitter + filas,
+                    // de lo contrario solo las filas (splitter height = auto).
+                    if (!this._windowResizeHandler) {
+                        this._windowResizeHandler = function () {
+                            var oPanelLayout = this.byId("panelSplitterLayout");
+                            if (oPanelLayout && oPanelLayout.getSize() !== "0px") {
+                                this._calculateSplitterHeight();
+                            } else {
+                                this._calculateDynamicRows();
+                            }
+                        }.bind(this);
+                        window.addEventListener("resize", this._windowResizeHandler);
+                    }
+                }.bind(this), 50);
+            }.bind(this);
+
+            if (oSplitter.getDomRef()) {
+                fnCompute();
+            } else {
+                // Lo splitter non è ancora nel DOM: si aggancia l'evento
+                oSplitter.addEventDelegate({ onAfterRendering: fnCompute });
+            }
         },
         /**
  * Se construye una clave estable que identifica una columna dinámica
@@ -1929,6 +2141,8 @@ sap.ui.define([
 
             // Si se navega horizontalmente, se previene el salto nativo del cursor de texto para que podamos cambiar de celda en su lugar.
             if (bLeft || bRight) oEvent.preventDefault();
+
+
 
             // Se sincroniza el valor del DOM con el control SAPUI5 para evitar la pérdida de datos introducidos parcialmente antes de cambiar de celda.
             const sCurrentDomValue = oDomRef.value;
@@ -2530,21 +2744,28 @@ sap.ui.define([
             return aBase;
         },
         /**
- * Se compara el arbol actual del modelo con el arbol original del servidor
- * y se devuelve unicamente la lista de valores que han cambiado respecto al origen.
- * Cada entrada del delta contiene la ruta de acceso al nodo, la clave del
- * campo modificado y el nuevo valor introducido por el usuario.
- */
+         * Se compara el arbol actual del modelo con el arbol original del servidor
+         * y se devuelve unicamente la lista de valores que han cambiado respecto al origen.
+         * Cada entrada del delta contiene la ruta de acceso al nodo, la clave del
+         * campo modificado y el nuevo valor introducido por el usuario.
+         */
         _computeModelDelta: function (aOriginal, aCurrent, sBasePath) {
             const aDelta = [];
             const sPath = sBasePath || "";
 
             if (!Array.isArray(aCurrent) || !Array.isArray(aOriginal)) return aDelta;
 
+            //     Se anaden editCtotPen y editCtot a las claves estructurales que se
+            // ignoran al calcular el delta, ya que son flags de editabilidad exclusivos
+            // del frontend y no representan datos modificables por el usuario.
             const aStructuralKeys = [
                 "children", "padre", "isGroup", "expandible", "cabecera",
                 "ParentPath", "flag1", "flag2", "flag1Label", "flag2Label",
-                "monthsData", "size2"
+                "monthsData", "size2",
+                "editPhPspnr", "editPost1", "editTasa", "editAmoEje", "editAmoEjeAjus",
+                "editAmoEjeReal", "editAmoPen", "editAmoTot", "editPepDest",
+                "editTipo", "editPenPlan", "editMonths", "editPend",
+                "editCtotPen", "editCtot"
             ];
 
             for (let i = 0; i < aCurrent.length; i++) {
@@ -2570,19 +2791,6 @@ sap.ui.define([
                         sNode + "/children"
                     );
                     aChildDelta.forEach(function (oEntry) { aDelta.push(oEntry); });
-                }
-            }
-
-            // Se registran en consola las modificaciones detectadas para facilitar el diagnostico.
-            // Se separan las entradas raiz de las entradas de hijos para mayor legibilidad.
-            if (sPath === "") {
-                if (aDelta.length === 0) {
-
-                } else {
-
-                    aDelta.forEach(function (oEntry, iIdx) {
-
-                    });
                 }
             }
 
@@ -2667,9 +2875,9 @@ sap.ui.define([
             }), "variantModel");
 
             setTimeout(function () {
-                //  Si cattura lo stato Estándar solo se il delegate non ha ancora applicato
-                // una variante con nome, garantendo che _aVariants[0].state rifletta la
-                // disposizione originale delle colonne e non quella della variante attiva.
+                //   Se captura el estado Estándar solo si el delegate no ha aplicado aún
+                // una variante con nombre, garantizando que _aVariants[0].state refleje la
+                // disposición original de las columnas y no la de la variante activa.
                 if (!this._bVariantAppliedByDelegate) {
                     this._aVariants[0].state = this._getCurrentTableState();
 
@@ -2680,17 +2888,10 @@ sap.ui.define([
                         this.getView().getModel("variantModel").setProperty("/displayLabel", oDefaultVariant.name);
                     }
                 } else {
-                    // Il delegate ha già applicato la variante. Si cattura comunque lo stato
-                    // corrente come base di Estándar per i futuri ripristini, ma senza ri-applicare.
-                    // Si usa un breve ritardo aggiuntivo per assicurarsi che i mesi siano aperti.
+
                     setTimeout(function () {
                         if (this._aVariants[0] && !this._aVariants[0].state) {
-                            //  Si resetta temporaneamente il flag per catturare lo stato Estándar
-                            // pulito prima che la variante con nome fosse applicata. Poiché questo
-                            // setTimeout scatta dopo i 300 ms di _applyVariantState, lo stato
-                            // catturato riflette la variante attiva, non Estándar. Per questo motivo
-                            // si lascia null e si lascia che _doSwitchToVariant ricostruisca
-                            // lo stato quando l'utente torna a Estándar.
+
                         }
                     }.bind(this), 100);
                 }
@@ -3055,6 +3256,234 @@ sap.ui.define([
         },
 
         /**
+         * Se localiza el TreeTable contenedor a partir de un control descendiente (SearchField).   
+         */
+        _findHostTreeTable: function (oControl) {
+            // Se asciende por la jerarquia de controles hasta encontrar el TreeTable.   
+            while (oControl && !(oControl instanceof sap.ui.table.TreeTable)) {
+                oControl = oControl.getParent();
+            }
+            return oControl || null;
+        },
+
+        /**
+         * Se filtra el TreeTable construyendo un nuevo arbol con solo las coincidencias y sus padres reales.   
+         * Reglas:   
+         *   - Si el nodo coincidente tiene hijos (es padre): se muestra junto con sus hijos.   
+         *   - Si el nodo coincidente es hijo de un padre real (con varios hijos): se muestra el padre expandido con el hijo encontrado.   
+         *   - Si el nodo coincidente no tiene familia (sin hijos y con genitores que solo lo contienen a el como unico hijo): se muestra como fila aislada en raiz.   
+         * Se conserva una copia del arbol original para poder restaurarlo cuando se vacia el campo de busqueda.   
+         */
+        onOperacionSearch: function (oEvent) {
+            // Se obtiene el valor desde search (query) o desde la seleccion de una sugerencia.   
+            var sQuery = oEvent.getParameter("query");
+            if (sQuery === undefined) {
+                var oSelected = oEvent.getParameter("selectedItem");
+                if (oSelected && typeof oSelected.getText === "function") {
+                    sQuery = oSelected.getText();
+                } else {
+                    sQuery = oEvent.getSource().getValue();
+                }
+            }
+            sQuery = (sQuery || "").trim();
+
+            var oTable = this._findHostTreeTable(oEvent.getSource().getParent());
+            if (!oTable) return;
+            var oBindingInfo = oTable.getBindingInfo("rows");
+            if (!oBindingInfo) return;
+            var oModel = oTable.getModel(oBindingInfo.model);
+            if (!oModel) return;
+            var oBinding = oTable.getBinding("rows");
+            if (!oBinding) return;
+
+            // Se mantiene un mapa de respaldo por cada TreeTable para no mezclar estados entre vistas.   
+            this._oOperacionSearchBackups = this._oOperacionSearchBackups || {};
+            var sTableId = oTable.getId();
+
+            // Si ya habia una busqueda activa se restaura primero el arbol original antes de aplicar la nueva.   
+            if (this._oOperacionSearchBackups[sTableId]) {
+                oModel.setProperty("/", this._oOperacionSearchBackups[sTableId]);
+                delete this._oOperacionSearchBackups[sTableId];
+            }
+            oBinding.filter([]);
+
+            // Si no hay texto la tabla queda restaurada y no se aplica filtrado.   
+            if (!sQuery) return;
+
+            // Se almacena la referencia del arbol original para poder restaurarlo al limpiar la busqueda.   
+            var aOriginalRoot = oModel.getProperty("/");
+            this._oOperacionSearchBackups[sTableId] = aOriginalRoot;
+
+            var sLower = sQuery.toLowerCase();
+
+            // Se detecta si la consulta coincide exactamente con algun PhPspnr existente en los datos originales.   
+            // En ese caso (tipico tras seleccionar una sugerencia) se usa coincidencia exacta para no traer falsos positivos por descripcion.   
+            var bExactExists = false;
+            (function findExact(aNodes) {
+                if (!Array.isArray(aNodes) || bExactExists) return;
+                aNodes.forEach(function (oNode) {
+                    if (bExactExists) return;
+                    if (oNode && oNode.PhPspnr !== undefined && oNode.PhPspnr !== null && String(oNode.PhPspnr).toLowerCase() === sLower) {
+                        bExactExists = true;
+                        return;
+                    }
+                    if (oNode && Array.isArray(oNode.children)) findExact(oNode.children);
+                });
+            })(aOriginalRoot);
+
+            // Se determina si un nodo concreto coincide; en modo exacto solo PhPspnr identico, en modo fuzzy contains sobre PhPspnr o Post1.   
+            function matchesNode(oNode) {
+                if (!oNode) return false;
+                var sCode = (oNode.PhPspnr !== undefined && oNode.PhPspnr !== null) ? String(oNode.PhPspnr).toLowerCase() : "";
+                if (bExactExists) {
+                    return sCode === sLower;
+                }
+                if (sCode && sCode.indexOf(sLower) !== -1) return true;
+                if (oNode.Post1 && String(oNode.Post1).toLowerCase().indexOf(sLower) !== -1) return true;
+                return false;
+            }
+
+            // Se construye recursivamente la lista de nodos visibles para un nivel dado.   
+            // Los wrappers estructurales (padres con un unico hijo y sin coincidencia propia) se omiten promoviendo a sus hijos al nivel superior.   
+            function buildFiltered(aNodes) {
+                if (!Array.isArray(aNodes)) return [];
+                var aResult = [];
+                aNodes.forEach(function (oNode) {
+                    if (!oNode) return;
+                    var bSelfMatch = matchesNode(oNode);
+                    var aOrigChildren = Array.isArray(oNode.children) ? oNode.children : [];
+                    var aFilteredChildren = aOrigChildren.length > 0 ? buildFiltered(aOrigChildren) : [];
+
+                    if (aFilteredChildren.length > 0) {
+                        if (aOrigChildren.length > 1) {
+                            // Padre real (con varios hijos): se muestra con los hijos coincidentes.   
+                            if (aFilteredChildren.length === aOrigChildren.length) {
+                                // Si no se altera la lista de hijos se reutiliza el nodo original para preservar referencias.   
+                                aResult.push(oNode);
+                            } else {
+                                // Si se filtra la lista de hijos se necesita una copia con la nueva aggregation.   
+                                var oCopy = Object.assign({}, oNode);
+                                oCopy.children = aFilteredChildren;
+                                aResult.push(oCopy);
+                            }
+                        } else {
+                            // Wrapper estructural (un solo hijo): se omite y se promueven los hijos al nivel actual.   
+                            aFilteredChildren.forEach(function (oChild) { aResult.push(oChild); });
+                        }
+                    } else if (bSelfMatch) {
+                        // El nodo coincide por si mismo y no tiene descendientes coincidentes: se incluye con sus hijos originales (si los hubiera).   
+                        aResult.push(oNode);
+                    }
+                });
+                return aResult;
+            }
+
+            var aNewRoot = buildFiltered(aOriginalRoot);
+            oModel.setProperty("/", aNewRoot);
+
+            // Se expanden todos los niveles para que los hijos coincidentes sean visibles bajo sus padres reales.   
+            if (typeof oTable.expandToLevel === "function") {
+                setTimeout(function () { oTable.expandToLevel(99); }, 0);
+            }
+        },
+
+        /**
+         * Se reabre el popover de sugerencias tras pulsar la X de borrado del SearchField.   
+         * Sin esto el campo queda enfocado pero sin popover, y un nuevo clic sobre el mismo SearchField   
+         * no desencadena ningun evento de focus, por lo que las opciones no reaparecerian.   
+         */
+        onOperacionLiveChange: function (oEvent) {
+            // Solo se actua cuando el campo se vacia (caso tipico tras pulsar la X).   
+            var sNewValue = oEvent.getParameter("newValue");
+            if (sNewValue !== "") return;
+
+            var oSearchField = oEvent.getSource();
+            var that = this;
+
+            // Se difiere la apertura del popover para asegurar que el ciclo de eventos del control de busqueda haya terminado.   
+            setTimeout(function () {
+                var oFakeEvent = {
+                    getSource: function () { return oSearchField; },
+                    getParameter: function (sName) { return sName === "suggestValue" ? "" : undefined; }
+                };
+                that.onOperacionSuggest(oFakeEvent);
+            }, 0);
+        },
+
+        /**
+         * Se rellenan las sugerencias del SearchField con los codigos PhPspnr disponibles en el modelo del TreeTable,   
+         * mostrando la descripcion (Post1) como texto adicional para facilitar la identificacion.   
+         * Se utiliza un binding sobre un modelo dedicado para evitar invalidaciones masivas (destroy/add)   
+         * que provocaban un bucle de renderizado del nucleo de UI5 ("Rendering has been re-started too many times").   
+         */
+        onOperacionSuggest: function (oEvent) {
+            var oSearchField = oEvent.getSource();
+            var sValue = (oEvent.getParameter("suggestValue") || "").toLowerCase();
+
+            var oTable = this._findHostTreeTable(oSearchField.getParent());
+            if (!oTable) return;
+
+            // Se obtiene el modelo asociado al binding de filas para recorrer la jerarquia de datos.   
+            var oBindingInfo = oTable.getBindingInfo("rows");
+            if (!oBindingInfo) return;
+            var oSourceModel = oTable.getModel(oBindingInfo.model);
+            if (!oSourceModel) return;
+
+            // Se inicializa una sola vez el modelo y el binding de la aggregation suggestionItems.   
+            // Las actualizaciones posteriores se realizan con un unico setProperty para no invalidar el control multiples veces.   
+            var oSuggestModel = oSearchField.getModel("opSugg");
+            if (!oSuggestModel) {
+                oSuggestModel = new JSONModel({ items: [] });
+                oSuggestModel.setSizeLimit(500);
+                oSearchField.setModel(oSuggestModel, "opSugg");
+                oSearchField.bindAggregation("suggestionItems", {
+                    path: "opSugg>/items",
+                    template: new SuggestionItem({
+                        text: "{opSugg>code}",
+                        description: "{opSugg>desc}"
+                    }),
+                    templateShareable: false
+                });
+            }
+
+            // Si hay un filtro activo el modelo contiene solo el subarbol filtrado, por lo que se usa el respaldo   
+            // para que las sugerencias sigan mostrando todas las opciones disponibles en los datos originales.   
+            this._oOperacionSearchBackups = this._oOperacionSearchBackups || {};
+            var aData = this._oOperacionSearchBackups[oTable.getId()] || oSourceModel.getProperty("/");
+
+            // Se recorre el arbol de forma recursiva acumulando codigos unicos en cualquier nivel.   
+            var oSeen = {};
+            var aItems = [];
+            function collect(aNodes) {
+                if (!Array.isArray(aNodes)) return;
+                aNodes.forEach(function (oNode) {
+                    if (!oNode) return;
+                    var sCode = oNode.PhPspnr;
+                    if (sCode !== undefined && sCode !== null && sCode !== "" && !oSeen[sCode]) {
+                        oSeen[sCode] = true;
+                        aItems.push({ code: String(sCode), desc: oNode.Post1 ? String(oNode.Post1) : "" });
+                    }
+                    if (Array.isArray(oNode.children)) collect(oNode.children);
+                });
+            }
+            collect(aData);
+
+            // Se filtran las sugerencias segun el texto actual y se limita el numero mostrado.   
+            var aFiltered = sValue ? aItems.filter(function (oIt) {
+                return oIt.code.toLowerCase().indexOf(sValue) !== -1
+                    || oIt.desc.toLowerCase().indexOf(sValue) !== -1;
+            }) : aItems;
+
+            // Se actualiza el modelo de sugerencias con una unica operacion para evitar bucles de render.   
+            oSuggestModel.setProperty("/items", aFiltered.slice(0, 50));
+
+            // Se fuerza la apertura del popover de sugerencias para que el usuario vea las opciones disponibles mientras escribe.   
+            if (typeof oSearchField.suggest === "function") {
+                oSearchField.suggest();
+            }
+        },
+
+        /**
          * Se abre el popover de seleccion de variantes.
          * Cuando la variante activa no es la estandar y tiene cambios pendientes
          * se muestra un boton adicional para guardar directamente sin pedir nombre.
@@ -3138,6 +3567,8 @@ sap.ui.define([
             this._oVariantPopover = new sap.m.Popover({
                 title: "Mis vistas",
                 contentWidth: "300px",
+                // Se fuerza la apertura hacia abajo porque el boton se ha movido al extremo derecho de la barra y la apertura por defecto quedaria fuera de la pantalla.   
+                placement: sap.m.PlacementType.Bottom,
                 content: [oList],
                 footer: oFooter,
                 afterClose: function () {
@@ -3722,96 +4153,6 @@ sap.ui.define([
         },
 
 
-
-        /**
-         * Se procesa la selección nativa de filas dentro de la tabla.
-         * Su propósito es mantener sincronizados los checkboxes de nivel profundo, propagando selecciones de forma masiva si procede.
-         */
-        onRowInputChange: async function (oEvent) {
-
-            let oSource = oEvent.getSource();
-            let oContext = oSource.getBindingContext(this.tableModelName);
-
-            //     Se asegura la obtencion del contexto incluso en estructuras anidadas.
-            let oParent = oSource;
-            while (!oContext && oParent) {
-                oParent = oParent.getParent();
-                if (oParent && oParent.getBindingContext) {
-                    oContext = oParent.getBindingContext(this.tableModelName);
-                }
-            }
-
-            if (!oContext) return;
-
-            //     Se obtiene el nombre del campo modificado desde el binding.
-            var oBI = oSource.getBindingInfo && oSource.getBindingInfo("value");
-            var sCampoMod = "";
-            if (oBI) {
-                if (oBI.parts && oBI.parts[0] && oBI.parts[0].path) {
-                    sCampoMod = oBI.parts[0].path;
-                } else if (oBI.path) {
-                    sCampoMod = oBI.path;
-                }
-            }
-
-            let sNewValue;
-
-            //     Se gestiona el caso especial de Select.
-            if (oSource.isA("sap.m.Select")) {
-                sNewValue = oSource.getSelectedKey();
-                oContext.getModel().setProperty(oContext.getPath() + "/Tipo", sNewValue);
-
-                if (sNewValue === "LIN") {
-                    setTimeout(function () {
-                        this.onOpenRangePicker({
-                            getSource: function () { return oSource; }
-                        }, null, oContext);
-                    }.bind(this), 50);
-                    return;
-                }
-            } else {
-                sNewValue = oSource.getValue();
-            }
-
-            //     Se formatea el valor al formato numerico esperado por SAP.
-            let sValorFormateado = this._formatToSAPNumber(sNewValue);
-
-            //     Se recupera el valor original capturado en focusin.
-            var sOriginalValue = oSource._originalValue || "";
-
-            //     Se evita llamada al backend si el valor no ha cambiado realmente.
-            if (sValorFormateado === sOriginalValue) {
-                return;
-            }
-
-            //     Se actualiza el modelo con el valor formateado antes de construir el payload.
-            if (sCampoMod && sValorFormateado !== null && sValorFormateado !== undefined && sValorFormateado !== "") {
-                oContext.getModel().setProperty(oContext.getPath() + "/" + sCampoMod, sValorFormateado);
-            }
-
-            //     Se obtiene la fila actualizada.
-            let oRow = oContext.getObject();
-            let oPayloadRow = JSON.parse(JSON.stringify(oRow));
-
-            //     Se eliminan propiedades tecnicas del frontend no soportadas por el backend.
-            var aFrontendOnlyProps = [
-                "__metadata", "children", "parent", "padre", "isEditable",
-                "isSubcapitulo", "isCapitulo", "isVacio", "isGroup",
-                "expandible", "cabecera", "isNew", "_linDateFrom", "_linDateTo"
-            ];
-            aFrontendOnlyProps.forEach(function (sKey) {
-                delete oPayloadRow[sKey];
-            });
-
-            //     Se asegura que el campo modificado lleve el valor correcto.
-            if (sCampoMod && sValorFormateado !== null && sValorFormateado !== undefined && sValorFormateado !== "") {
-                oPayloadRow[sCampoMod] = sValorFormateado;
-            }
-
-            //     Se envia la fila al backend.
-            this._enviarFilaAlBackend(oContext, oPayloadRow, sCampoMod);
-        },
-
         /**
          * Se genera una captura (snapshot) profunda del modelo actual.
          * Sirve como punto de restauración y como punto de referencia para calcular deltas (cambios no guardados).
@@ -3839,84 +4180,6 @@ sap.ui.define([
             oDefaultModel.refresh(true);
         },
 
-        /**NO SE ESTA USANDO
-         * Se evalúa de manera meticulosa si el estado actual contiene modificaciones que difieran del snapshot.
-       
-          hasUnsavedChanges: function () {
-              // Si nunca se tomó una instantánea o el modelo está corrupto, se asume que no hay diferencias procesables.
-              if (!this._originalData) return false;
-              const oDefaultModel = this.getView().getModel();
-              if (!oDefaultModel) return false;
-  
-              const aCurrentCat = oDefaultModel.getProperty("/catalog/models/categories");
-              const aOriginalCat = this._originalData.catalog.models.categories;
-  
-              // Función local de limpieza de formato. Las interfaces de entrada humana o el motor de formato suelen arrojar 
-              // diferencias cosméticas (0,00 vs 0). Esta rutina nivela la comparación reduciéndolas a falsies ("").
-              const normalize = function (val) {
-                  if (val === undefined || val === null || val === "") return "";
-  
-                  // Si el valor viene envuelto en un arreglo, se reduce uniendo y podando caracteres basura.
-                  if (Array.isArray(val)) {
-                      const sJoined = val.join("").replace(/,/g, "").trim();
-                      return (sJoined === "" || /^0+$/.test(sJoined)) ? "" : sJoined;
-                  }
-  
-                  // Normalización de números en crudo.
-                  const sVal = val.toString().trim();
-                  // Si el valor detectado denota un cero absoluto ("0", "0.00", "0,0"), se asimila con un valor vacío.
-                  if (sVal === "0" || sVal === "0.0" || sVal === "0,0" || /^0+(?:[.,]0+)*$/.test(sVal) || /^0+(?:,0+)*$/.test(sVal)) {
-                      return "";
-                  }
-                  return sVal;
-              };
-  
-              // Función recursiva que inspecciona y compara cada nodo entre el modelo vivo y el modelo congelado.
-              const checkRecursive = function (aCurrent, aOriginal, sPath) {
-                  if (!aCurrent) return false;
-  
-                  for (let i = 0; i < aCurrent.length; i++) {
-                      const oCur = aCurrent[i];
-                      // Se protege el acceso al array original para mitigar casos de nodos que fueron introducidos de cero por el usuario.
-                      const oOri = (aOriginal && aOriginal[i]) ? aOriginal[i] : {};
-                      const currentPath = sPath + " -> " + (oCur.name || i);
-  
-                      for (let key in oCur) {
-                          // Solo se detectan discrepancias en los campos de captura de datos (Y2025, M2025_01).
-                          if (/^y\d{4}$/.test(key) || /^m\d{4}_\d+$/.test(key)) {
-                              // Se aplica la comparativa sobre los valores purgados y normalizados.
-                              if (normalize(oCur[key]) !== normalize(oOri[key])) {
-                                  return true; // Diferencia matemática confirmada.
-                              }
-                          }
-  
-                          // Inspección en profundidad en atributos anidados como 'months'
-                          if (key === "months" && oCur[key] && typeof oCur[key] === "object") {
-                              for (let mKey in oCur[key]) {
-                                  const vCurM = normalize(oCur[key][mKey]);
-                                  const vOriM = (oOri.months) ? normalize(oOri.months[mKey]) : "";
-  
-                                  if (vCurM !== vOriM) {
-                                      return true;
-                                  }
-                              }
-                          }
-                      }
-  
-                      // Se delega a los subgrupos (categories) y se propaga cualquier falso positivo retornado.
-                      if (oCur.categories && Array.isArray(oCur.categories) && oCur.categories.length > 0) {
-                          if (checkRecursive(oCur.categories, oOri.categories, currentPath)) {
-                              return true;
-                          }
-                      }
-                  }
-                  // Si todo el árbol se navegó exitosamente sin incidencias, el formulario está "limpio".
-                  return false;
-              };
-  
-              // Se dispara la validación desde la raíz global del catálogo.
-              return checkRecursive(aCurrentCat, aOriginalCat, "Root");
-          },  */
 
         /**
          * Se activa la aplicación algorítmica de la inflación o se restauran los valores crudos, tras interactuar con la casilla respectiva en las filas.
@@ -4663,6 +4926,13 @@ sap.ui.define([
             var bSelected = oEvent.getParameter("selected");
             this.getView().getModel("visibleColumn").setProperty("/visible", bSelected);
             this._markVariantDirty();
+            setTimeout(function () {
+                var oTable = this.getControlTable();
+                if (oTable) {
+                    this._highlightSinProveedor(oTable);
+                    this._applyBlockBorder(oTable);
+                }
+            }.bind(this), 100);
         },
         /**
                 * Se formatea el texto de la versión utilizando el modelo de internacionalización (i18n).
@@ -4732,28 +5002,32 @@ sap.ui.define([
                 selectedYear: String(iYearStart)
             }), "yearsModel");
         },
-        //   Se abre el selector de rango de fechas.
-        //   Se restaura el rango previamente seleccionado según el contexto de la fila.
+
+        /**
+            * Se abre el popover de seleccion de rangos mensuales.
+            * Se utiliza CalendarMonthInterval para restringir la seleccion unicamente a meses y años.
+            */
         onOpenRangePicker: function (oEvent, oAnchorControl, oExternalContext) {
             var oAnchor = oAnchorControl || oEvent.getSource();
 
-            //   Se usa this.tableModelName para que el picker funcione en cualquier vista hija.
+            // Se usa this.tableModelName para que el picker funcione en cualquier vista hija.
             this._oActiveContext = oExternalContext || oAnchor.getBindingContext(this.tableModelName);
 
             if (!this._oRangePopover) {
-                this._oCalendar = new sap.ui.unified.Calendar({
+
+                this._oCalendar = new sap.ui.unified.CalendarMonthInterval({
                     intervalSelection: true,
                     select: this.onDateSelected.bind(this)
                 });
                 this._oRangePopover = new sap.m.ResponsivePopover({
-                    title: "Seleccionar Rango",
+                    title: "Seleccionar Rango Mensual",
                     placement: "Bottom",
                     content: [this._oCalendar]
                 });
                 this.getView().addDependent(this._oRangePopover);
             }
 
-            //   Se obtiene el modelo usando tableModelName en lugar de corrientesModel hardcodeado.
+            // Se obtiene el modelo usando tableModelName en lugar de corrientesModel hardcodeado.
             var oModel = this.getView().getModel(this.tableModelName);
             var sPath = this._oActiveContext.getPath();
             var dFrom = oModel.getProperty(sPath + "/_linDateFrom");
@@ -4769,36 +5043,45 @@ sap.ui.define([
             this._oRangePopover.openBy(oAnchor);
         },
 
-        //   Se gestiona la selección de fechas en el calendario sin afectar inmediatamente al backend.
-        //   Se almacenan las fechas en propiedades temporales para permitir actualización del tooltip sin re-renderizar la tabla.
-        //   Se fuerza el refresco del modelo para actualizar bindings visuales como el tooltip.
+        /**
+         * Se gestiona la selección de fechas en el calendario sin afectar inmediatamente al backend.
+         * Se almacenan las fechas en propiedades temporales para permitir actualización del tooltip.
+         */
         onDateSelected: function () {
             var aSelectedDates = this._oCalendar.getSelectedDates();
             if (aSelectedDates.length > 0) {
                 var oDateRange = aSelectedDates[0];
                 var oStartDate = oDateRange.getStartDate();
                 var oEndDate = oDateRange.getEndDate();
+
                 if (oStartDate && oEndDate) {
-                    //   Se usa tableModelName para que el handler funcione en cualquier vista hija.
+
+                    // Se fuerza a que oEndDate sea el último día exacto de ese mes para evitar cálculos erróneos.
+                    oEndDate = new Date(oEndDate.getFullYear(), oEndDate.getMonth() + 1, 0);
+
+                    // Se usa tableModelName para que el handler funcione en cualquier vista hija.
                     var oModel = this.getView().getModel(this.tableModelName);
                     var sPath = this._oActiveContext.getPath();
                     oModel.setProperty(sPath + "/_linDateFrom", oStartDate);
                     oModel.setProperty(sPath + "/_linDateTo", oEndDate);
                     oModel.refresh(true);
                     this._oRangePopover.close();
+
                     this._confirmDateRange(oStartDate, oEndDate);
                 }
             }
         },
-        //   Se muestra el mensaje de confirmación con fechas formateadas.
-        //   Se añade la lógica de reseteo completo en caso de cancelación.
+
+        /**
+         * Se muestra el mensaje de confirmación con fechas formateadas a mes y año.
+         * Se añade la lógica de reseteo completo en caso de cancelación.
+         */
         _confirmDateRange: function (oStartDate, oEndDate) {
 
             var oBundle = this.getView().getModel("i18n").getResourceBundle();
 
-            //   Se formatean las fechas para evitar el formato técnico del objeto Date.
             var oDateFormat = sap.ui.core.format.DateFormat.getDateInstance({
-                pattern: "dd/MM/yyyy"
+                pattern: "MM/yyyy"
             });
 
             var sFrom = oDateFormat.format(oStartDate);
@@ -4811,24 +5094,23 @@ sap.ui.define([
 
             sap.m.MessageBox.confirm(sMensaje, {
 
-                //   Se gestiona la acción del usuario en el mensaje.
+                // Se gestiona la acción del usuario en el mensaje.
                 onClose: function (oAction) {
 
                     if (oAction === sap.m.MessageBox.Action.OK) {
 
-                        //   Se ejecuta la lógica original del batch.
+                        // Se ejecuta la lógica original del batch.
                         this._executeBatchLineal(oStartDate, oEndDate);
 
                     } else {
 
-                        //   Se resetea completamente el estado si el usuario cancela.
+                        // Se resetea completamente el estado si el usuario cancela.
                         this._resetLinState();
                     }
 
                 }.bind(this)
             });
         },
-
         _buildNumericBinding: function (sFullPath) {
             //   Se separa el nombre del modelo de la ruta de la propiedad usando
             //   el caracter ">" como delimitador estándar de SAPUI5.
@@ -4864,11 +5146,6 @@ sap.ui.define([
                 //     Se mantienen los separadores por defecto si el modelo no es accesible.
             }
 
-            //  Se construye el objeto de binding con el tipo Float de SAPUI5.
-            // Las opciones de formato definen el separador de millar como punto
-            // y el separador decimal como coma, siguiendo el estándar es-ES.
-            //  La restricción nullable permite que las celdas vacías no generen
-            //  errores de validación durante la navegación entre filas.
             var oBindingDef = {
                 path: sPath,
                 type: new sap.ui.model.type.Float(
@@ -4894,14 +5171,6 @@ sap.ui.define([
             return oBindingDef;
         },
 
-        /**
-         *   Se convierte un número ya formateado en notación, eliminando los separadores de millar
-         *   y sustituyendo la coma decimal por punto antes del parseo.
-         *   Esta función es necesaria en los manejadores de cambio de las columnas
-         *   de meses, donde el valor obtenido desde getValue() llega como cadena
-         *   formateada y debe escribirse como número en el modelo secundario.
-    
-         */
         _parseFormattedNumber: function (vValue) {
             //   Se devuelve cero si el valor recibido está vacío o es nulo para
             //   evitar que se escriban valores indefinidos en el modelo de datos.
@@ -4919,13 +5188,7 @@ sap.ui.define([
             //   un número válido, evitando que NaN se propague al modelo.
             return isNaN(fVal) ? 0 : fVal;
         },
-        /**
-         * Se obtiene el ejercicio actualmente seleccionado en el selector de años
-         * de la vista activa.
-         *    Método centralizado en el base controller para permitir su reutilización
-         *    en cualquier controlador hijo sin duplicar la lógica de acceso al modelo.
-         *    Retorna null si el modelo yearsModel no está disponible todavía.
-         */
+
         _getSelectedEjercicio: function () {
             var oYearsModel = this.getView().getModel("yearsModel");
             if (!oYearsModel) {
@@ -4964,10 +5227,7 @@ sap.ui.define([
                 this._oCalendar.removeAllSelectedDates();
             }
         },
-        //   Se genera el tooltip del boton calendario a partir de las fechas temporales
-        //   almacenadas en el modelo como propiedades _linDateFrom y _linDateTo.
-        //   Se admiten tanto objetos Date nativos como cadenas de fecha parseables
-        //   para garantizar compatibilidad con los dos posibles origenes del valor.
+
         getCalendarTooltip: function (dFrom, dTo) {
 
             //   Se retorna el texto por defecto si alguna de las fechas no esta disponible.
@@ -4995,18 +5255,13 @@ sap.ui.define([
             //   Se devuelve la cadena con el rango de fechas formateado y separado por guion.
             return oDateFormat.format(oFrom) + " - " + oDateFormat.format(oTo);
         },
-        /**
-          * Se procesa el cambio de cualquier celda editable de la tabla activa.
-          * Se gestiona la sincronizacion del sticky header para inputs de mes, año y columna Resto.
-          * Cuando el tipo seleccionado es LIN se delega la apertura del selector de rango de fechas
-          * al metodo centralizado onOpenRangePicker. Para el resto de tipos se marca la variante
-          * como modificada y se ejecuta el envio al backend si la vista lo requiere.
-          */
         onRowInputChange: async function (oEvent) {
 
             let oSource = oEvent.getSource();
             let oContext = oSource.getBindingContext(this.tableModelName);
 
+            // Se busca el contexto real subiendo por los padres cuando el control
+            // no posee binding directo sobre la fila.
             let oParent = oSource;
             while (!oContext && oParent) {
                 oParent = oParent.getParent();
@@ -5015,10 +5270,13 @@ sap.ui.define([
                 }
             }
 
+            // Se cancela si no existe contexto valido.
             if (!oContext) return;
 
+            // Se obtiene binding info del value para identificar el campo tecnico.
             var oBI = oSource.getBindingInfo && oSource.getBindingInfo("value");
             var sCampoMod = "";
+
             if (oBI) {
                 if (oBI.parts && oBI.parts[0] && oBI.parts[0].path) {
                     sCampoMod = oBI.parts[0].path;
@@ -5028,63 +5286,102 @@ sap.ui.define([
             }
 
             let sNewValue;
+            let sValorFormateado;
+
+            //     Se incluyen editCtotPen y editCtot en la lista de propiedades
+            // exclusivas del frontend que deben eliminarse antes de enviar al backend.
+            var aFrontendOnlyProps = [
+                "__metadata", "children", "parent", "padre", "isEditable",
+                "isSubcapitulo", "isCapitulo", "isVacio", "isGroup",
+                "expandible", "cabecera", "isNew", "_linDateFrom", "_linDateTo",
+                "_Ejecutado", "_Pendiente", "_Total", "_isSinProveedor", "expanded",
+                "editPhPspnr", "editPost1", "editTasa", "editAmoEje", "editAmoEjeAjus",
+                "editAmoEjeReal", "editAmoPen", "editAmoTot", "editPepDest",
+                "editTipo", "editPenPlan", "editMonths", "editPend",
+                "editCtotPen", "editCtot"
+            ];
 
             if (oSource.isA("sap.m.Select")) {
                 sNewValue = oSource.getSelectedKey();
+
+                // Actualizacion del modelo para consistencia visual
                 oContext.getModel().setProperty(oContext.getPath() + "/Tipo", sNewValue);
 
+                //     Si el campo modificado es TipoTasa se recalculan los flags de
+                // editabilidad que dependen de su valor: editTasa, editCtotPen y editCtot.
+                // Esto garantiza que al cambiar TipoTasa en una fila con Estructura=O
+                // las columnas %Tasa, Pendiente y Total reflejen inmediatamente la nueva
+                // condicion de editabilidad sin necesidad de recargar el modelo.
+                if (sCampoMod === "TipoTasa") {
+                    const oRowObj = oContext.getObject();
+                    const isO = oRowObj && oRowObj.Estructura === "O";
+                    const oModel = oContext.getModel();
+                    const sBasePath = oContext.getPath();
+
+                    oModel.setProperty(sBasePath + "/editTasa", isO && sNewValue === "X");
+                    oModel.setProperty(sBasePath + "/editCtotPen", isO && sNewValue !== "X");
+                    oModel.setProperty(sBasePath + "/editCtot", isO && sNewValue !== "X");
+                }
+
+                // Caso especial LIN: abre el selector de rango
                 if (sNewValue === "LIN") {
                     setTimeout(function () {
-                        this.onOpenRangePicker({
-                            getSource: function () { return oSource; }
-                        }, null, oContext);
+                        this.onOpenRangePicker(
+                            { getSource: function () { return oSource; } },
+                            null,
+                            oContext
+                        );
                     }.bind(this), 50);
                     return;
                 }
-            } else {
-                sNewValue = oSource.getValue();
+
+                let oRow = oContext.getObject();
+                let oPayloadRow = JSON.parse(JSON.stringify(oRow));
+
+                aFrontendOnlyProps.forEach(function (sKey) {
+                    delete oPayloadRow[sKey];
+                });
+
+                oPayloadRow.Tipo = sNewValue;
+                this._enviarFilaAlBackend(oContext, oPayloadRow, "Tipo");
+                return;
             }
 
-            let sValorFormateado = this._formatToSAPNumber(sNewValue);
+            sNewValue = oSource.getValue();
+            sValorFormateado = this._formatToSAPNumber(sNewValue);
 
-            //     Se compara el valor formateado para SAP con el valor actualmente
-            //     almacenado en el modelo para evitar llamadas inutiles al backend
-            //     cuando el usuario hace clic en una celda sin modificar su contenido.
             if (sCampoMod) {
-                var sValorActualModelo = oContext.getModel().getProperty(oContext.getPath() + "/" + sCampoMod);
-                var sValorActualNormalizado = this._formatToSAPNumber(
-                    String(sValorActualModelo !== null && sValorActualModelo !== undefined ? sValorActualModelo : "")
-                );
-                if (sValorFormateado === sValorActualNormalizado) {
-                    return;
+
+                // Identificamos si es un campo de meses (ej: Val001a2024)
+                const bIsMesField = /^Val\d{3}a\d+$/.test(sCampoMod);
+
+                // Si NO es un campo de mes, aplicamos el filtro de comparacion para evitar llamadas inutiles
+                if (!bIsMesField) {
+                    var sValorActualModelo = oContext.getModel().getProperty(oContext.getPath() + "/" + sCampoMod);
+                    var sValorActualNormalizado = this._formatToSAPNumber(
+                        String(sValorActualModelo !== null && sValorActualModelo !== undefined ? sValorActualModelo : "")
+                    );
+
+                    // Si el valor no ha cambiado realmente, abortamos envio
+                    if (sValorFormateado === sValorActualNormalizado) {
+                        return;
+                    }
                 }
+                // Si ES un campo de mes (bIsMesField === true), saltamos la comparacion y seguimos al envio
             }
 
-            //     Se actualiza el modelo con el valor formateado antes de leer getObject()
-            //     para garantizar que el payload contenga el valor recien introducido
-            //     y no el valor anterior almacenado en el modelo.
+            // Actualizamos el modelo antes de generar el objeto final
             if (sCampoMod && sValorFormateado !== null && sValorFormateado !== undefined && sValorFormateado !== "") {
                 oContext.getModel().setProperty(oContext.getPath() + "/" + sCampoMod, sValorFormateado);
             }
 
-            //     Se lee el objeto del modelo despues del setProperty para que refleje
-            //     el valor actualizado en lugar del valor anterior.
             let oRow = oContext.getObject();
             let oPayloadRow = JSON.parse(JSON.stringify(oRow));
 
-            //     Se eliminan todas las propiedades tecnicas del frontend desconocidas
-            //     por el backend SAP para evitar el error 400 "Property is invalid".
-            var aFrontendOnlyProps = [
-                "__metadata", "children", "parent", "padre", "isEditable",
-                "isSubcapitulo", "isCapitulo", "isVacio", "isGroup",
-                "expandible", "cabecera", "isNew", "_linDateFrom", "_linDateTo"
-            ];
             aFrontendOnlyProps.forEach(function (sKey) {
                 delete oPayloadRow[sKey];
             });
 
-            //     Se sobreescribe explicitamente el campo modificado en el payload como
-            //     salvaguarda adicional para garantizar que siempre lleve el valor correcto.
             if (sCampoMod && sValorFormateado !== null && sValorFormateado !== undefined && sValorFormateado !== "") {
                 oPayloadRow[sCampoMod] = sValorFormateado;
             }
@@ -5113,6 +5410,7 @@ sap.ui.define([
                         "NavMensajes": []
                     },
                     {
+                        noLoading: true,
                         headers: {
                             ambito: oAppData.userData.initialNode,
                             lang: oAppData.userData.AplicationLangu,
@@ -5180,10 +5478,6 @@ sap.ui.define([
 
             //     Se sustituye el separador decimal del usuario por punto estandar SAP.
             sNormalized = sNormalized.replace(decimalSeparator, ".");
-
-            //     Se convierte a numero flotante y se aplican 5 decimales fijos para
-            //     mantener el mismo formato que devuelve el backend SAP en todos los
-            //     campos numericos (ej: "345.00000", "0.00000", "10.00000").
             var fParsed = parseFloat(sNormalized);
             if (!isNaN(fParsed)) {
                 return fParsed.toFixed(5);
@@ -5191,55 +5485,50 @@ sap.ui.define([
 
             return sNormalized;
         },
-        /**
- * Se ejecuta la distribucion lineal de la fila activa entre las fechas confirmadas
- * por el usuario en el selector de rango. Se construye el payload a partir de los
- * datos del modelo y se delega el envio al metodo centralizado _enviarFilaAlBackend.
- * Se invoca unicamente cuando el usuario confirma el mensaje de confirmacion de fechas.
- */
-        //   Se reconstruye el metodo _executeBatchLineal que habia desaparecido del controlador.
-        //   El metodo era llamado desde _confirmDateRange pero no estaba definido en ningun fichero,
-        //   lo que provocaba un error silencioso al confirmar el rango de fechas en ambas vistas.
-
-
-        //   Se envía CampoMod="Tipo" ya que la acción modifica el tipo de la fila.
         _executeBatchLineal: async function (oStartDate, oEndDate) {
 
             var oContext = this._oActiveContext;
-            if (!oContext) {
-                return;
-            }
+            if (!oContext) return;
 
             var oModel = this.getView().getModel(this.tableModelName);
             var sPath = oContext.getPath();
             var oRowData = oModel.getProperty(sPath);
+            if (!oRowData) return;
 
-            if (!oRowData) {
-                return;
-            }
+            //     Se incluyen editCtotPen y editCtot en la lista de propiedades
+            // exclusivas del frontend que deben excluirse del payload enviado al backend.
+            var aFrontendOnlyProps = [
+                "__metadata", "children", "parent", "padre", "isEditable",
+                "isSubcapitulo", "isCapitulo", "isVacio", "isGroup",
+                "expandible", "cabecera", "isNew", "_linDateFrom", "_linDateTo",
+                "_Ejecutado", "_Pendiente", "_Total", "_isSinProveedor", "expanded",
+                "editPhPspnr", "editPost1", "editTasa", "editAmoEje", "editAmoEjeAjus",
+                "editAmoEjeReal", "editAmoPen", "editAmoTot", "editPepDest",
+                "editTipo", "editPenPlan", "editMonths", "editPend",
+                "editCtotPen", "editCtot"
+            ];
 
             var oPayloadRow = {};
             Object.keys(oRowData).forEach(function (sKey) {
-                if (sKey !== "children" &&
-                    sKey !== "padre" &&
-                    sKey !== "isEditable" &&
-                    sKey !== "_linDateFrom" &&
-                    sKey !== "_linDateTo" &&
-                    sKey !== "isSubcapitulo" &&
-                    sKey !== "isCapitulo" &&
-                    sKey !== "isVacio") {
+                if (aFrontendOnlyProps.indexOf(sKey) === -1) {
                     oPayloadRow[sKey] = oRowData[sKey];
                 }
             });
 
-            oPayloadRow.Fini = "/Date(" + oStartDate.getTime() + ")/";
-            oPayloadRow.Ffin = "/Date(" + oEndDate.getTime() + ")/";
+            // Se construyen Fini y Ffin a partir de los componentes ano/mes en UTC para evitar el desfase del huso horario local.   
+            // Fini se ancla siempre al dia 1 del mes inicial seleccionado y Ffin al ultimo dia del mes final (dia 0 del mes siguiente).   
+            // De este modo el valor /Date(ms)/ enviado al backend representa el rango "primer mes - ultimo mes" sin perder un dia por la conversion a UTC.   
+            var iFiniMs = Date.UTC(oStartDate.getFullYear(), oStartDate.getMonth(), 1);
+            var iFfinMs = Date.UTC(oEndDate.getFullYear(), oEndDate.getMonth() + 1, 0);
+
+            oPayloadRow.Fini = "/Date(" + iFiniMs + ")/";
+            oPayloadRow.Ffin = "/Date(" + iFfinMs + ")/";
             oPayloadRow.Tipo = "LIN";
 
             oModel.setProperty(sPath + "/Fini", oPayloadRow.Fini);
             oModel.setProperty(sPath + "/Ffin", oPayloadRow.Ffin);
 
-            //   CampoMod fijo
+            // CampoMod fijo
             await this._enviarFilaAlBackend(oContext, oPayloadRow, "Tipo");
 
             this._markVariantDirty();
@@ -5279,627 +5568,548 @@ sap.ui.define([
                 oInput._originalValue = oInput.getValue();
             }
         },
-        // ─────────────────────────────────────────────────────────────────────────────
-        // (MV) Se gestiona la expansión personalizada del nodo al pulsar el botón "+"
-        // ─────────────────────────────────────────────────────────────────────────────
+
         onToggleCustomExpand: function (oEvent) {
-
-            // (MV) Se obtiene el botón que disparó el evento
             const oButton = oEvent.getSource();
-
-            // (MV) Se obtiene el contexto de binding de la fila correspondiente
             const oContext = oButton.getBindingContext(this.tableModelName);
             if (!oContext) return;
 
-            // (MV) Se obtiene el objeto de datos de la fila
             const oRowData = oContext.getObject();
+            const sRootPath = oContext.getPath();
 
-            // (MV) Se descarta la acción si la fila es grupo, cabecera o padre
-            if (oRowData.isGroup === true || oRowData.cabecera === true || oRowData.padre === true) return;
-
-            // (MV) Se inicializa el array de hijos si no existe
+            if (oRowData.isGroup || oRowData.cabecera || oRowData.padre) return;
             if (!oRowData.children) oRowData.children = [];
 
-            // (MV) Se define la plantilla de fila editable vacía
-            const oEmptyEditableRow = {
-                __isCustom: true,
-                __isEditable: true,
-                cabecera: false,
-                expandible: false,
-                isGroup: false,
-                padre: false,
-                children: [],
-                PhPspnr: "",
-                Post1: "",
-                AmoEje: "",
-                AmoEjeAjus: "",
-                AmoEjeReal: "",
-                AmoPen: "",
-                AmoTot: "",
-                Tipo: "",
-                PenPlan: ""
-            };
+            const oTable = this.getControlTable();
 
-            // (MV) Se declara la referencia al bloque que se expandirá tras el refresco
-            let oBlockToExpand = null;
-
-            // (MV) Se busca el bloque principal existente dentro del nodo
-            const oMainBlock = oRowData.children.find(function (c) {
-                return c.__isMainBlock === true;
-            });
-
-            if (oMainBlock) {
-                // (MV) Se asegura la expansión lógica del modelo sobre el bloque existente
-                oMainBlock.expanded = true;
-
-                // (MV) Se inicializa el array de hijos del bloque principal si no existe
-                if (!oMainBlock.children) oMainBlock.children = [];
-
-                // (MV) Se garantiza al menos una fila editable siempre presente
-                oMainBlock.children.push(JSON.parse(JSON.stringify(oEmptyEditableRow)));
-
-                // (MV) Se asigna el bloque existente como objetivo de expansión visual
-                oBlockToExpand = oMainBlock;
-
-            } else {
-                // (MV) Se crea la cabecera del bloque con sus columnas descriptivas
-                const oHeaderRow = {
-                    __isCustom: true,
-                    __isHeader: true,
-                    cabecera: true,
-                    expandible: false,
-                    isGroup: false,
-                    padre: false,
-                    PhPspnr: "Agrupador",
-                    Post1: "Descripción",
-                    AmoEje: "Proveedor",
-                    AmoEjeAjus: "",
-                    AmoEjeReal: "",
-                    AmoPen: "Coste pend.",
-                    AmoTot: "Tarifa",
-                    Tipo: "Fecha de Inicio",
-                    PenPlan: "Fecha de fin",
-                    months: "Nºmeses",
-                    pend: "Otros",
-                    flag1Label: "Auto",
-                    CheckInfla: "Inflaz."
-                };
-
-                // (MV) Se crea el bloque principal con expansión activa y una fila editable inicial
-                const oMainBlockRow = {
-                    __isCustom: true,
-                    __isSinProveedor: true,
-                    __isMainBlock: true,
-                    cabecera: false,
-                    expandible: false,
-                    isGroup: false,
-                    padre: false,
-                    expanded: true,
-                    children: [JSON.parse(JSON.stringify(oEmptyEditableRow))],
-                    PhPspnr: "",
-                    Post1: "sin proveedor",
-                    AmoEje: "",
-                    AmoEjeAjus: "",
-                    AmoEjeReal: "",
-                    AmoPen: "",
-                    AmoTot: "",
-                    Tipo: "",
-                    PenPlan: ""
-                };
-
-                // (MV) Se insertan la cabecera y el bloque principal como hijos del nodo raíz
-                oRowData.children.push(oHeaderRow);
-                oRowData.children.push(oMainBlockRow);
-
-                // (MV) Se asigna el nuevo bloque como objetivo de expansión visual
-                oBlockToExpand = oMainBlockRow;
-            }
-
-            // (MV) Se obtiene referencia al TreeTable mediante el ID correcto definido en la vista
-            const oTable = this.byId("TreeTableBasic");
-            if (!oTable) return;
-
-            // (MV) Suscripción única para aplicar CSS cuando el modelo actualice las filas por primera vez
-            oTable.attachEventOnce("rowsUpdated", function () {
-                setTimeout(function () {
+            const fnTriggerExpand = function () {
+                if (fnTriggerExpand._fired) return;
+                fnTriggerExpand._fired = true;
+                this._expandFullBlock(oTable, sRootPath, function () {
                     this._highlightSinProveedor(oTable);
                     this._applyBlockBorder(oTable);
-                }.bind(this), 150);
-            }.bind(this));
+                    //    Se actualiza la visibilidad de las columnas custom
+                    // tras expandir el bloque para mostrarlas si estaban ocultas.
+                    this._updateCustomColsVisibility();
+                }.bind(this));
+            }.bind(this);
 
-            // (MV) Se refresca el modelo para que el TreeTable refleje los cambios estructurales
-            oContext.getModel().refresh(true);
+            //   Se comprueba si ya existe la fila de cabecera del bloque personalizado.
+            if (oRowData.children.some(function (c) { return c.__isHeader === true; })) {
+                //   Segunda apertura: se inserta una nueva fila editable inmediatamente
+                // despues del header gris para que aparezca en la parte superior del bloque.
+                const oNuevaEditable = Object.assign(this._createEmptyEditableRow(), {
+                    __isMainEditable: true
+                });
+                const iHeaderIdx = oRowData.children.findIndex(function (c) {
+                    return c.__isHeader === true;
+                });
+                oRowData.children.splice(iHeaderIdx + 1, 0, oNuevaEditable);
 
-            // (MV) Función auxiliar para localizar el índice de un objeto en el binding
-            const fnFindIndex = function (oTarget) {
-                const oBinding = oTable.getBinding("rows");
-                if (!oBinding) return -1;
-                const iLength = oBinding.getLength();
-                for (let i = 0; i < iLength; i++) {
-                    const oCtx = oTable.getContextByIndex(i);
-                    if (oCtx && oCtx.getObject() === oTarget) {
-                        return i;
-                    }
+                oContext.getModel().refresh(true);
+                if (oTable) {
+                    oTable.attachEventOnce("rowsUpdated", fnTriggerExpand);
+                    setTimeout(fnTriggerExpand, 150);
                 }
-                return -1;
+                return;
+            }
+
+            //   Primera apertura: se crea el header gris con __isCustom: true y con
+            // los textos de etiqueta en cada campo para que las columnas del XML muestren
+            // los titulos correctos. Sin estos valores los inputs del header aparecen vacios
+            // porque el XML hace binding directo sobre los campos del objeto de modelo.
+            // Las columnas fijas (PhPspnr, Post1, AmoEje...) usan value="{corrientesModel>campo}"
+            // y las columnas custom (colProveedor, colTarifa...) usan value estatico en el XML,
+            // por lo que solo las fijas necesitan el texto aqui en el objeto del modelo.
+            const oHeaderRow = {
+                __isCustom: true,
+                __isHeader: true,
+                cabecera: false, expandible: false, isGroup: false, padre: false,
+                PhPspnr: "Agrupador",
+                Post1: "Descripción",
+                AmoEje: "Ejecutado",
+                AmoEjeAjus: "Coste Ejec. Ajustado",
+                AmoEjeReal: "Coste Ejec. Real",
+                AmoPen: "Pendiente",
+                AmoTot: "Total",
+                Tipo: "Reparto",
+                PenPlan: "Pend.planif.",
+                Proveedor: "Proveedor",
+                FEE: "", NMES: "", Otros: "",
+                children: []
             };
 
-            // (MV) Primer paso: Se expande el nodo raíz tras un breve retardo para asegurar el renderizado
-            setTimeout(function () {
 
-                const iRootIdx = fnFindIndex(oRowData);
-                if (iRootIdx !== -1) {
-                    oTable.expand(iRootIdx);
-                }
+            //   Se crea la fila editable principal para introducir el primer proveedor.
+            const oMainEditable = Object.assign(this._createEmptyEditableRow(), {
+                __isMainEditable: true
+            });
 
-                // (MV) Segundo paso: Se expande el bloque hijo ("sin proveedor")
-                setTimeout(function () {
+            oRowData.children.push(oHeaderRow);
+            oRowData.children.push(oMainEditable);
+            oRowData.expanded = true;
+            oContext.getModel().refresh(true);
 
-                    const iBlockIdx = fnFindIndex(oBlockToExpand);
-                    if (iBlockIdx !== -1) {
-                        oTable.expand(iBlockIdx);
-
-                        // (MV) Crucial: Se fuerza la aplicación del CSS después de expandir el segundo nivel
-                        // Esto asegura que las nuevas filas creadas reciban el estilo inmediatamente
-                        setTimeout(function () {
-                            this._highlightSinProveedor(oTable);
-                            this._applyBlockBorder(oTable);
-                        }.bind(this), 100);
-                    }
-
-                }.bind(this), 150);
-
-            }.bind(this), 150);
-
-            // (MV) Disparador de seguridad final para garantizar que el CSS se aplique tras las animaciones
-            setTimeout(function () {
-                this._highlightSinProveedor(oTable);
-                this._applyBlockBorder(oTable);
-            }.bind(this), 800);
-
+            if (oTable) {
+                oTable.attachEventOnce("rowsUpdated", fnTriggerExpand);
+                setTimeout(fnTriggerExpand, 150);
+            }
         },
-        // ─────────────────────────────────────────────────────────────────────────────
-        // (MV) Se gestiona el cambio de valor en el campo proveedor de una fila editable
-        // ─────────────────────────────────────────────────────────────────────────────
-        onAmoEjeChange: function (oEvent) {
-            // (MV) Se obtiene el control Input que disparó el evento
-            const oInput = oEvent.getSource();
 
-            // (MV) Se obtiene el contexto de binding de la fila editable
+
+
+        onEditableRowFieldChange: function (oEvent) {
+            const oInput = oEvent.getSource();
             const oContext = oInput.getBindingContext(this.tableModelName);
             if (!oContext) return;
 
-            // (MV) Se obtiene el objeto de datos de la fila editable
             const oRow = oContext.getObject();
+            if (!oRow.__isEditable) return;
+            if (oRow.__processing) return;
 
-            // (MV) Se obtiene el path absoluto de la fila dentro del modelo
+            const sRawProveedor = (oRow.Proveedor || "").trim();
+            const sProveedor = sRawProveedor.length > 0
+                ? sRawProveedor.charAt(0).toUpperCase() + sRawProveedor.slice(1)
+                : "";
+
+            //   Fix 2: se restablece el ValueState en cuanto el campo se vacía,
+            // sin esperar a que el usuario escriba un nuevo valor.
+            if (!sProveedor) {
+                oInput.setValueState(sap.ui.core.ValueState.None);
+                oInput.setValueStateText("");
+                //   Se elimina la fila solo si todos los demas campos relevantes
+                // estan vacios. Si la fila tiene datos (AGRUP, FEE, etc.) se conserva
+                // para no perder informacion introducida por el usuario.  
+                if (oRow.__wasFilled && this._isRowEmpty(oRow)) {
+                    this._removeEditableRow(oContext, this.getView().getModel(this.tableModelName), oRow);
+                }
+                return;
+            }
+
             const sPath = oContext.getPath();
-
-            // (MV) Se obtiene el nombre del proveedor introducido por el usuario
-            const sProviderName = (oEvent.getParameter("value") || "").trim();
-
-            // (MV) Se descarta la acción si el bloque ya fue creado para esta fila
-            if (oRow.__blockCreated) return;
-
-            // (MV) Se obtiene el modelo de datos del TreeTable
+            const sParentPath = sPath.replace(/\/children\/\d+$/, "");
+            const sRootRowPath = sParentPath;
             const oModel = this.getView().getModel(this.tableModelName);
 
-            // (MV) Se calcula el path del bloque padre directo de la fila editable
-            const sMainBlockPath = sPath.replace(/\/children\/\d+$/, "");
+            oInput.setValueState(sap.ui.core.ValueState.None);
+            oRow.__wasFilled = true;
+            oRow.__processing = true;
 
-            // (MV) Se calcula el path del nodo raíz padre del bloque principal
-            const sRootRowPath = sMainBlockPath.replace(/\/children\/\d+$/, "");
+            const oRootRowCheck = oModel.getProperty(sRootRowPath);
+            const bDuplicate = oRootRowCheck && Array.isArray(oRootRowCheck.children) &&
+                oRootRowCheck.children.some(function (c) {
+                    return c.__isProviderBlock === true && c.__providerName === sProveedor;
+                });
 
-            // (MV) Se obtienen los objetos del bloque padre y del nodo raíz desde el modelo
-            const oMainBlock = oModel.getProperty(sMainBlockPath);
+            if (bDuplicate) {
+                sap.m.MessageBox.error("Ya existe un bloque para el proveedor \"" + sProveedor + "\".");
+                oInput.setValueState(sap.ui.core.ValueState.Error);
+                oInput.setValueStateText("Ya existe un bloque para este proveedor.");
+                oRow.__wasFilled = false;
+                delete oRow.__processing;
+                oModel.refresh(true);
+                return;
+            }
+
             const oRootRow = oModel.getProperty(sRootRowPath);
-
-            // (MV) Se obtiene referencia al TreeTable
-            const oTable = this.byId("TreeTableBasic");
-
-            // (MV) Se elimina la fila editable del bloque padre tras capturar el proveedor
-            if (oMainBlock && Array.isArray(oMainBlock.children)) {
-                const aFiltered = oMainBlock.children.filter(function (c) {
-                    return c !== oRow;
-                });
-                oModel.setProperty(sMainBlockPath + "/children", aFiltered);
+            if (sProveedor) {
+                this._insertProveedorBlock(oRootRow, sProveedor, oRow);
             }
+            if (oRootRow) this._cleanupEmptyBlocks(oRootRow);
+            delete oRow.__processing;
 
-            if (!oRootRow) {
-                oModel.refresh(true);
-                return;
-            }
+            const oTable = this.getControlTable();
+            oModel.refresh(true);
 
-            // (MV) Limpieza de bloques vacíos
-            if (Array.isArray(oRootRow.children)) {
-                oRootRow.children = oRootRow.children.filter(function (c) {
-                    if (!c.__isProviderBlock) return true;
-                    return Array.isArray(c.children) && c.children.length > 0;
-                });
-            }
-
-            // (MV) Reordenamiento del bloque principal
-            if (Array.isArray(oRootRow.children)) {
-                const iMainBlockIndex = oRootRow.children.findIndex(function (c) {
-                    return c.__isMainBlock === true;
-                });
-                if (iMainBlockIndex > 1) {
-                    const oMain = oRootRow.children.splice(iMainBlockIndex, 1)[0];
-                    oRootRow.children.splice(1, 0, oMain);
-                }
-            }
-
-            if (!sProviderName) {
-                const oSinProveedorBlock = Array.isArray(oRootRow.children) && oRootRow.children.find(function (c) {
-                    return c.__isMainBlock === true;
-                });
-
-                if (oSinProveedorBlock) {
-                    const oNewEditable = JSON.parse(JSON.stringify(oRow));
-                    delete oNewEditable.__blockCreated;
-                    oNewEditable.__isCustom = true;
-                    oNewEditable.__isEditable = true;
-                    oNewEditable.AmoEje = "";
-                    oNewEditable.children = [];
-                    oSinProveedorBlock.children.push(oNewEditable);
-                    oSinProveedorBlock.expanded = true;
-                }
-
-                if (!oTable) {
-                    oModel.refresh(true);
-                    return;
-                }
-
-                const oSinProveedorBlockRef = oSinProveedorBlock;
-                let iAttempts = 0;
-                const fnTryExpand = function () {
-                    iAttempts++;
-                    const aRows = oTable.getRows();
-                    for (let i = 0; i < aRows.length; i++) {
-                        const oCtx = aRows[i].getBindingContext(this.tableModelName);
-                        if (oCtx && oCtx.getObject() === oSinProveedorBlockRef) {
-                            oTable.expand(aRows[i].getIndex());
-                            // (MV) Aplicar CSS tras expansión
-                            setTimeout(function () {
-                                this._highlightSinProveedor(oTable);
-                                this._applyBlockBorder(oTable);
-                            }.bind(this), 100);
-                            oTable.detachEvent("rowsUpdated", fnTryExpand);
-                            return;
-                        }
-                    }
-                    if (iAttempts >= 3) oTable.detachEvent("rowsUpdated", fnTryExpand);
-                }.bind(this);
-
-                oTable.attachEvent("rowsUpdated", fnTryExpand);
-                oModel.refresh(true);
-                setTimeout(function () { fnTryExpand(); }, 300);
-                return;
-            }
-
-            // (MV) Se marca la fila como procesada
-            oRow.__blockCreated = true;
-
-            const oExistingBlock = Array.isArray(oRootRow.children) && oRootRow.children.find(function (c) {
-                return c.__isProviderBlock === true && c.__providerName === sProviderName;
-            });
-
-            if (oExistingBlock) {
-                const oNewEditable = JSON.parse(JSON.stringify(oRow));
-                delete oNewEditable.__blockCreated;
-                oNewEditable.__isCustom = true;
-                oNewEditable.__isEditable = true;
-                oNewEditable.AmoEje = sProviderName;
-                oNewEditable.children = [];
-                oExistingBlock.children.push(oNewEditable);
-                oExistingBlock.expanded = true;
-
-                oModel.refresh(true);
-
-                if (oTable) {
-                    // (MV) Trigger CSS antes y después de la expansión
-                    this._highlightSinProveedor(oTable);
-                    this._expandInTwoSteps(oTable, this.tableModelName, oRootRow, oExistingBlock);
-                    setTimeout(function () {
+            if (oTable) {
+                const fnTriggerExpand = function () {
+                    if (fnTriggerExpand._fired) return;
+                    fnTriggerExpand._fired = true;
+                    this._expandFullBlock(oTable, sRootRowPath, function () {
                         this._highlightSinProveedor(oTable);
                         this._applyBlockBorder(oTable);
-                    }.bind(this), 500);
-                }
-            } else {
+                        //    Se actualiza la visibilidad de columnas custom tras
+                        // reorganizar el árbol por cambio de campo en fila editable.
+                        this._updateCustomColsVisibility();
+                    }.bind(this));
+                }.bind(this);
 
-                this._createProviderBlock(oRow, sProviderName, oRootRow);
+                oTable.attachEventOnce("rowsUpdated", fnTriggerExpand);
+                setTimeout(fnTriggerExpand, 150);
             }
         },
 
-        _createProviderBlock: function (oSourceRow, sProviderName, oRootRow) {
-            const oEditableRow = JSON.parse(JSON.stringify(oSourceRow));
-            delete oEditableRow.__blockCreated;
-            delete oEditableRow.__isCommitted;
-            oEditableRow.__isCustom = true;
-            oEditableRow.__isEditable = true;
-            oEditableRow.AmoEje = sProviderName;
-            oEditableRow.children = [];
-
-            const oStaticRow = {
+        _createEmptyEditableRow: function () {
+            return {
                 __isCustom: true,
-                __isEditable: false,
-                __isSinProveedor: true,
-                __isProviderBlock: true,
-                __providerName: sProviderName,
-                cabecera: false,
-                expandible: false,
-                isGroup: false,
-                padre: false,
-                expanded: true,
-                AmoEje: "",
-                PhPspnr: "",
-                Post1: sProviderName,
-                AmoEjeAjus: "", AmoEjeReal: "", AmoPen: "", AmoTot: "", Tipo: "", PenPlan: "",
-                children: [oEditableRow]
+                __isEditable: true,
+                __isMainEditable: false,
+                __isNieto: false,
+                __hasProviderRows: false, //   Se inicializa a false para mostrar el Input editable por defecto.
+                __uid: Date.now() + "_" + Math.random(),
+                cabecera: false, expandible: false, isGroup: false, padre: false,
+                children: [],
+                PhPspnr: "", Post1: "", AmoEje: "", AmoEjeAjus: "", AmoEjeReal: "",
+                AmoPen: "", AmoTot: "", Tipo: "MAN", PenPlan: "",
+                Proveedor: "",
+                FEE: "",
+                FINI: "", FFIN: "", _linDateFrom: "", _linDateTo: "",
+                Otros: "", months: "",
+                AGRUP: "", DESCRIP: "", NMES: ""
             };
+        },
 
+        _formatDateDisplay: function (dVal) {
+            if (!dVal) return "";
+            var oDate = dVal instanceof Date ? dVal : new Date(dVal);
+            if (isNaN(oDate.getTime())) return "";
+            var oFmt = sap.ui.core.format.DateFormat.getDateInstance({ pattern: "dd/MM/yyyy" });
+            return oFmt.format(oDate);
+        },
+
+        /**
+         * Se elimina una fila editable vaciada y se limpia el bloque padre si queda vacío.
+         */
+        _removeEditableRow: function (oContext, oModel, oRow) {
+            const sPath = oContext.getPath();
+            const sParentPath = sPath.replace(/\/children\/\d+$/, "");
+
+            //   Fix: sRootPath es el padre directo de la fila editable,
+            // igual que la correccion aplicada en onEditableRowFieldChange (Bug 1).
+            // La doble sustitucion anterior apuntaba al abuelo en rutas anidadas.
+            const sRootPath = sParentPath;
+
+            const oParent = oModel.getProperty(sParentPath);
+            const oRootRow = oModel.getProperty(sRootPath);
+
+            if (oParent && Array.isArray(oParent.children)) {
+                oParent.children = oParent.children.filter(function (c) {
+                    return c.__uid !== oRow.__uid;
+                });
+            }
+
+            this._addRowToMainBlock(oRootRow);
+            if (oRootRow) this._cleanupEmptyBlocks(oRootRow);
+
+            const oTable = this.getControlTable();
+            oModel.refresh(true);
+
+            if (oTable) {
+                const fnTriggerExpand = function () {
+                    if (fnTriggerExpand._fired) return;
+                    fnTriggerExpand._fired = true;
+                    this._expandFullBlock(oTable, sRootPath, function () {
+                        this._highlightSinProveedor(oTable);
+                        this._applyBlockBorder(oTable);
+                        //    Se actualiza la visibilidad de columnas custom tras
+                        // eliminar una fila editable para ocultar las columnas si
+                        // ya no quedan bloques custom activos en la tabla.
+                        this._updateCustomColsVisibility();
+                    }.bind(this));
+                }.bind(this);
+
+                oTable.attachEventOnce("rowsUpdated", fnTriggerExpand);
+                setTimeout(fnTriggerExpand, 150);
+            }
+        },
+        _addRowToMainBlock: function (oRootRow) {
+            if (!oRootRow || !Array.isArray(oRootRow.children)) return;
+
+            const bHasEditable = oRootRow.children.some(function (c) {
+                return c.__isEditable === true && c.__uid;
+            });
+            if (bHasEditable) return;
+
+            const oNuevaEditable = Object.assign(this._createEmptyEditableRow(), {
+                __isMainEditable: true
+            });
+
+            //   La editable se ubica siempre justo después del header, antes que todo lo demás.
+            const iHeaderIdx = oRootRow.children.findIndex(function (c) {
+                return c.__isHeader === true;
+            });
+            if (iHeaderIdx !== -1) {
+                oRootRow.children.splice(iHeaderIdx + 1, 0, oNuevaEditable);
+            } else {
+                oRootRow.children.unshift(oNuevaEditable);
+            }
+        },
+        _cleanupEmptyBlocks: function (oNode) {
+            if (!oNode || !Array.isArray(oNode.children)) return;
+
+            oNode.children.forEach(function (oChild) {
+                this._cleanupEmptyBlocks(oChild);
+            }.bind(this));
+
+            oNode.children = oNode.children.filter(function (oChild) {
+                if (oChild.__isHeader || oChild.__isMainBlock) return true;
+                if (oChild.__isAgrupadorTotal) return true; //   Fix: no se eliminan las filas grises de grupo
+                if (oChild.__isSinAgrupador && oNode.__isMainBlock) return true;
+                if (oChild.__isCustom) {
+                    return this._hasEditableDescendant(oChild);
+                }
+                return true;
+            }.bind(this));
+        },
+
+
+        _hasEditableDescendant: function (oNode) {
+            if (!oNode) return false;
+            if (oNode.__isEditable) return true;
+            if (!Array.isArray(oNode.children)) return false;
+            return oNode.children.some(function (c) {
+                return this._hasEditableDescendant(c);
+            }.bind(this));
+        },
+        _hasCustomDescendant: function (oNode) {
+            if (!oNode) return false;
+            if (oNode.__isCustom === true) return true;
+            if (!Array.isArray(oNode.children)) return false;
+            return oNode.children.some(function (c) {
+                return this._hasCustomDescendant(c);
+            }.bind(this));
+        },
+        _cloneEditableRow: function (oRow) {
+            const oClone = JSON.parse(JSON.stringify(oRow));
+
+            ["__processing", "__blockCreated", "__agrupadorCreated", "__isCommitted"].forEach(function (k) {
+                delete oClone[k];
+            });
+            oClone.__isCustom = true;
+            oClone.__isEditable = true;
+            oClone.children = [];
+            return oClone;
+        },
+        _insertProveedorBlock: function (oRootRow, sProveedor, oEditableRow) {
+            if (!oRootRow) return;
             if (!oRootRow.children) oRootRow.children = [];
-            oRootRow.children.push(oStaticRow);
+
+            const oNieto = this._cloneEditableRow(oEditableRow);
+            oNieto.__isNieto = true;
+            oNieto.__isMainEditable = false;
+            oNieto.__isProviderBlock = true;
+            oNieto.__providerName = sProveedor;
+            oNieto.Proveedor = sProveedor;
+
+            //   Se elimina la fila editable original.
+            oRootRow.children = oRootRow.children.filter(function (c) {
+                return c.__uid !== oEditableRow.__uid;
+            });
+
+            const sAgrup = (oNieto.AGRUP || "").trim();
+            const bGroupsExist = oRootRow.children.some(function (c) {
+                return c.__isAgrupadorTotal === true;
+            });
+
+            if (bGroupsExist && sAgrup) {
+                //   Los grupos existen y el nieto tiene AGRUP: se inserta dentro del grupo correcto.
+                const iTargetTotal = oRootRow.children.findIndex(function (c) {
+                    return c.__isAgrupadorTotal === true &&
+                        (c.__agrupadorName || "").trim() === sAgrup;
+                });
+
+                if (iTargetTotal !== -1) {
+                    //   Se inserta tras el último miembro del grupo.
+                    let iInsert = iTargetTotal + 1;
+                    while (
+                        iInsert < oRootRow.children.length &&
+                        oRootRow.children[iInsert].__isAgrupadorTotal !== true &&
+                        oRootRow.children[iInsert].__isHeader !== true &&
+                        oRootRow.children[iInsert].__isEditable !== true
+                    ) {
+                        iInsert++;
+                    }
+                    oRootRow.children.splice(iInsert, 0, oNieto);
+                } else {
+                    //   Grupo aún no existente: se sitúa al final, antes de las editables.
+                    const iFallback = this._findInsertAfterEditables(oRootRow.children);
+                    oRootRow.children.splice(iFallback, 0, oNieto);
+                }
+            } else {
+                //   Ningún grupo activo: posición estándar tras header + editables.
+                const iPos = this._findInsertAfterEditables(oRootRow.children);
+                oRootRow.children.splice(iPos, 0, oNieto);
+            }
+
             oRootRow.expanded = true;
+        },
 
-            const oTable = this.byId("TreeTableBasic");
-            if (!oTable) return;
 
-            // (MV) Disparador CSS al actualizar modelo
-            oTable.attachEventOnce("rowsUpdated", function () {
+        _expandAllCustomNodes: function (oTable, iMaxPasses, fnDone) {
+            if (iMaxPasses === undefined) iMaxPasses = 10;
+            if (iMaxPasses <= 0) {
                 setTimeout(function () {
                     this._highlightSinProveedor(oTable);
                     this._applyBlockBorder(oTable);
-                }.bind(this), 200);
-            }.bind(this));
+                }.bind(this), 50);
+                if (fnDone) fnDone();
+                return;
+            }
 
-            let iAttempts = 0;
-            const fnTryExpand = function () {
-                iAttempts++;
-                const aRows = oTable.getRows();
-                for (let i = 0; i < aRows.length; i++) {
-                    const oCtx = aRows[i].getBindingContext(this.tableModelName);
-                    if (oCtx && oCtx.getObject() === oStaticRow) {
-                        oTable.expand(aRows[i].getIndex());
-                        // (MV) Aplicar CSS específicamente tras expandir el nuevo bloque
-                        setTimeout(function () {
-                            this._highlightSinProveedor(oTable);
-                            this._applyBlockBorder(oTable);
-                        }.bind(this), 150);
-                        oTable.detachEvent("rowsUpdated", fnTryExpand);
+            const aRows = oTable.getRows();
+
+            for (let i = 0; i < aRows.length; i++) {
+                const oCtx = aRows[i].getBindingContext(this.tableModelName);
+                if (!oCtx) continue;
+                const oData = oCtx.getObject();
+                if (oData && oData.__isCustom && oData.expanded &&
+                    Array.isArray(oData.children) && oData.children.length > 0) {
+                    const iIdx = aRows[i].getIndex();
+                    if (!oTable.isExpanded(iIdx)) {
+                        oTable.attachEventOnce("rowsUpdated", function () {
+                            this._expandAllCustomNodes(oTable, iMaxPasses - 1, fnDone);
+                        }.bind(this));
+                        oTable.expand(iIdx);
                         return;
                     }
                 }
-                if (iAttempts >= 3) oTable.detachEvent("rowsUpdated", fnTryExpand);
+            }
+
+            setTimeout(function () {
+                this._highlightSinProveedor(oTable);
+                this._applyBlockBorder(oTable);
+                if (fnDone) fnDone();
+            }.bind(this), 50);
+        },
+
+        _expandFullBlock: function (oTable, sRootPath, fnDone) {
+            const sModelName = this.tableModelName;
+            let iAttempts = 0;
+
+            const fnFindAndExpand = function () {
+                const aRows = oTable.getRows();
+
+                for (let i = 0; i < aRows.length; i++) {
+                    const oCtx = aRows[i].getBindingContext(sModelName);
+                    if (!oCtx || oCtx.getPath() !== sRootPath) continue;
+
+                    const iIdx = aRows[i].getIndex();
+
+                    if (!oTable.isExpanded(iIdx)) {
+                        const fnAfterRoot = function () {
+                            if (fnAfterRoot._fired) return;
+                            fnAfterRoot._fired = true;
+                            setTimeout(function () {
+
+                                this._expandCustomLoop(oTable, 15, fnDone, sRootPath);
+                            }.bind(this), 50);
+                        }.bind(this);
+
+                        oTable.attachEventOnce("rowsUpdated", fnAfterRoot);
+                        setTimeout(fnAfterRoot, 200);
+                        oTable.expand(iIdx);
+                    } else {
+                        setTimeout(function () {
+
+                            this._expandCustomLoop(oTable, 15, fnDone, sRootPath);
+                        }.bind(this), 50);
+                    }
+                    return;
+                }
+
+                if (iAttempts++ < 30) {
+                    setTimeout(fnFindAndExpand, 50);
+                } else {
+                    if (fnDone) fnDone();
+                }
             }.bind(this);
 
-            oTable.attachEvent("rowsUpdated", fnTryExpand);
-            this.getView().getModel(this.tableModelName).refresh(true);
-
-            setTimeout(function () { fnTryExpand(); }, 350);
-        },
-        // ─────────────────────────────────────────────────────────────────────────────
-        // (MV) Se expande primero el nodo raíz y luego el bloque objetivo en dos pasos
-        // (MV) encadenados mediante el evento rowsUpdated del TreeTable, garantizando
-        // (MV) que cada expansión se ejecuta solo cuando el DOM está listo para recibirla
-        // ─────────────────────────────────────────────────────────────────────────────
-        _expandInTwoSteps: function (oTable, sModelName, oRootRow, oBlockToExpand) {
-
-            // (MV) Se declara el manejador del segundo paso que expande el bloque objetivo
-            const fnExpandBlock = function () {
-
-                const aRows = oTable.getRows();
-
-                for (let i = 0; i < aRows.length; i++) {
-                    const oCtx = aRows[i].getBindingContext(sModelName);
-                    if (!oCtx) continue;
-
-                    // (MV) Se localiza el bloque objetivo por referencia de objeto en memoria
-                    if (oCtx.getObject() === oBlockToExpand) {
-
-                        // (MV) Se expande visualmente el bloque objetivo para mostrar su fila editable
-                        oTable.expand(aRows[i].getIndex());
-
-                        // (MV) Se desuscribe el manejador tras completar su única ejecución
-                        oTable.detachEvent("rowsUpdated", fnExpandBlock);
-                        break;
-                    }
-                }
-            };
-
-            // (MV) Se declara el manejador del primer paso que gestiona la expansión del nodo raíz
-            const fnExpandRoot = function () {
-
-                const aRows = oTable.getRows();
-
-                for (let i = 0; i < aRows.length; i++) {
-                    const oCtx = aRows[i].getBindingContext(sModelName);
-                    if (!oCtx) continue;
-
-                    // (MV) Se localiza el nodo raíz por referencia de objeto en memoria
-                    if (oCtx.getObject() === oRootRow) {
-
-                        // (MV) Se desuscribe el primer manejador antes de proceder
-                        oTable.detachEvent("rowsUpdated", fnExpandRoot);
-
-                        const iIndex = aRows[i].getIndex();
-
-                        if (oTable.isExpanded(iIndex)) {
-
-                            // (MV) Si el nodo raíz ya está expandido se busca el bloque
-                            // (MV) directamente en las filas visibles actuales sin necesidad
-                            // (MV) de esperar un nuevo evento rowsUpdated
-                            let bFound = false;
-
-                            for (let j = 0; j < aRows.length; j++) {
-                                const oCtx2 = aRows[j].getBindingContext(sModelName);
-                                if (!oCtx2) continue;
-
-                                if (oCtx2.getObject() === oBlockToExpand) {
-
-                                    // (MV) Se expande el bloque directamente al estar ya visible
-                                    oTable.expand(aRows[j].getIndex());
-                                    bFound = true;
-                                    break;
-                                }
-                            }
-
-                            if (!bFound) {
-
-                                // (MV) Si el bloque aún no es visible en el DOM tras el refresco
-                                // (MV) se suscribe el manejador para ejecutarlo en el siguiente render
-                                oTable.attachEvent("rowsUpdated", fnExpandBlock);
-                            }
-
-                        } else {
-
-                            // (MV) Si el nodo raíz está colapsado se suscribe el segundo manejador
-                            // (MV) antes de expandir para que rowsUpdated active directamente el paso dos
-                            oTable.attachEvent("rowsUpdated", fnExpandBlock);
-
-                            // (MV) Se expande visualmente el nodo raíz para que sus hijos sean visibles
-                            oTable.expand(iIndex);
-                        }
-
-                        break;
-                    }
-                }
-            };
-
-            // (MV) Se suscribe el primer manejador al evento rowsUpdated del TreeTable
-            oTable.attachEvent("rowsUpdated", fnExpandRoot);
+            fnFindAndExpand();
         },
 
-        _findTreeParent: function (aNodes, oTarget) { // (MV) localiza el nodo padre real dentro del TreeTable
+        _expandCustomLoop: function (oTable, iMaxPasses, fnDone, sRootPath) {
+            if (iMaxPasses <= 0) {
+                if (fnDone) fnDone();
+                return;
+            }
 
-            for (let i = 0; i < aNodes.length; i++) {
+            const sModelName = this.tableModelName;
+            const aRows = oTable.getRows();
+            const aNodesToExpand = [];
 
-                const oNode = aNodes[i];
+            for (let i = 0; i < aRows.length; i++) {
+                const iIdx = aRows[i].getIndex();
+                if (iIdx < 0) continue;
 
-                if (oNode.children && oNode.children.includes(oTarget)) {
-                    return oNode;
-                }
+                const oCtx = aRows[i].getBindingContext(sModelName);
+                if (!oCtx) continue;
 
-                if (oNode.children && oNode.children.length > 0) {
-                    const oFound = this._findTreeParent(oNode.children, oTarget);
-                    if (oFound) return oFound;
+                if (sRootPath && !oCtx.getPath().startsWith(sRootPath + "/")) continue;
+
+                const oData = oCtx.getObject();
+                if (!oData) continue;
+
+                const bHasChildren = Array.isArray(oData.children) && oData.children.length > 0;
+                if (bHasChildren && !oTable.isExpanded(iIdx)) {
+                    aNodesToExpand.push(iIdx);
                 }
             }
 
-            return null;
-        },
-        _createNextBlockInsideParent: function (oSourceRow) {
-            const oModel = this.getView().getModel("corrientesModel");
-            const aData = oModel.getData();
-
-            // (MV) Si clona il contesto della riga che ha scatenato la creazione del blocco.
-            const oBase = JSON.parse(JSON.stringify(oSourceRow));
-            // (MV) Si rimuovono i flag tecnici del blocco precedente per evitare che
-            // (MV) il nuovo blocco erediti stati già consumati come __blockCreated.
-            delete oBase.__blockCreated;
-            delete oBase.__isCommitted;
-
-            // (MV) Seconda riga: figlia editabile con gli stessi valori del contesto.
-            const oEditableRow = Object.assign({}, oBase, {
-                __isCustom: true,
-                __isEditable: true,
-                __isSinProveedor: false,
-                children: []
-            });
-
-            // (MV) Prima riga: padre non editabile che contiene la riga editabile come figlia.
-            // (MV) La gerarchia è: oStaticRow (padre) → oEditableRow (figlia), 2 righe totali.
-            const oStaticRow = Object.assign({}, oBase, {
-                __isCustom: true,
-                __isEditable: false,
-                __isSinProveedor: true,
-                children: [oEditableRow]
-            });
-
-            // (MV) Si inserisce il padre direttamente nel nodo reale del TreeTable,
-            // (MV) senza un contenitore oNewBlock intermedio che genera la terza riga.
-            const oParent = this._findTreeParent(aData, oSourceRow);
-            if (!oParent) return;
-
-            if (!oParent.children) {
-                oParent.children = [];
+            if (aNodesToExpand.length === 0) {
+                if (fnDone) fnDone();
+                return;
             }
 
-            oParent.children.push(oStaticRow);
+            const fnAfterExpand = function () {
+                if (fnAfterExpand._fired) return;
+                fnAfterExpand._fired = true;
+                setTimeout(function () {
+                    this._expandCustomLoop(oTable, iMaxPasses - 1, fnDone, sRootPath);
+                }.bind(this), 30);
+            }.bind(this);
 
-            oModel.refresh(true);
-        },
+            oTable.attachEventOnce("rowsUpdated", fnAfterExpand);
+            setTimeout(fnAfterExpand, 200);
 
-        _getRootArray: function (aData) { // (MV) retorna el array raíz del modelo
-
-            return Array.isArray(aData) ? aData : [];
-        },
-        // (MV) Se sustituye el doble setTimeout por escucha del evento rowsUpdated,
-        // (MV) que se dispara cuando el TreeTable termina de renderizar las filas
-        _expandBlockWhenReady: function (oTable, sModelName, oRootRow, oBlockToExpand) {
-
-            // (MV) Se declara referencia a la función manejadora para poder desuscribirla
-            const fnHandler = function () {
-
-                const aRows = oTable.getRows();
-                let bRootExpanded = false;
-                let bBlockExpanded = false;
-
-                for (let i = 0; i < aRows.length; i++) {
-                    const oCtx = aRows[i].getBindingContext(sModelName);
-                    if (!oCtx) continue;
-                    const oObj = oCtx.getObject();
-
-                    // (MV) Se expande el nodo raíz si todavía no se ha expandido
-                    if (oObj === oRootRow && !bRootExpanded) {
-                        oTable.expand(aRows[i].getIndex());
-                        bRootExpanded = true;
-                    }
-
-                    // (MV) Se expande el bloque objetivo si ya es visible en el TreeTable
-                    if (oObj === oBlockToExpand && !bBlockExpanded) {
-                        oTable.expand(aRows[i].getIndex());
-                        bBlockExpanded = true;
-                    }
-                }
-
-                // (MV) Se desuscribe el evento una vez completadas ambas expansiones
-                // (MV) para evitar que el manejador se ejecute en futuros refrescos
-                if (bRootExpanded && bBlockExpanded) {
-                    oTable.detachEvent("rowsUpdated", fnHandler);
-                }
-            };
-
-            // (MV) Se suscribe el manejador al evento rowsUpdated del TreeTable
-            oTable.attachEvent("rowsUpdated", fnHandler);
+            aNodesToExpand.forEach(function (iIdx) {
+                oTable.expand(iIdx);
+            });
         },
 
         _highlightSinProveedor: function (oTable) {
             if (!oTable) return;
-
-            var aRows = oTable.getRows();
-            var iFirst = oTable.getFirstVisibleRow();
+            const aRows = oTable.getRows();
 
             aRows.forEach(function (oRow) {
-                // 1. Pulizia obbligatoria per evitare bug nello scroll
                 oRow.removeStyleClass("sinProveedorRow");
                 oRow.removeStyleClass("headerGrayRow");
+                oRow.removeStyleClass("agrupadorTotalRow");
 
-                var oContext = oRow.getBindingContext("corrientesModel");
+                const oContext = oRow.getBindingContext(this.tableModelName);
                 if (oContext) {
-                    var oData = oContext.getObject();
-
-                    // 2. Applichiamo la classe all'OGGETTO riga, non al DOM
-                    if (oData && oData.__isSinProveedor === true) {
+                    const oData = oContext.getObject();
+                    //    Se aplica amarillo si es bloque principal, bloque de agrupador o fila editable custom
+                    if (oData && (oData.__isSinProveedor === true || oData.__isSinAgrupador === true || oData.__isAgrupadorBlock === true)) {
                         oRow.addStyleClass("sinProveedorRow");
                     } else if (oData && oData.__isHeader === true) {
                         oRow.addStyleClass("headerGrayRow");
+                    } else if (oData && oData.__isAgrupadorTotal === true) {
+                        //   Fila de cabecera de grupo AGRUP con fondo gris claro y negrita
+                        oRow.addStyleClass("agrupadorTotalRow");
                     }
                 }
-            });
+            }.bind(this));
         },
         _applyBlockBorder: function (oTable) {
             if (!oTable) return;
+
+            var iColEndIndexFixed = -1;
+            var iColEndIndexScroll = -1;
+            var iFixedCount = oTable.getFixedColumnCount ? oTable.getFixedColumnCount() : 0;
+            var aColumns = oTable.getColumns();
+            var iVisibleTotal = 0;
+
+            for (var c = 0; c < aColumns.length; c++) {
+                if (!aColumns[c].getVisible()) continue;
+                iVisibleTotal++;
+                if (aColumns[c].getId && aColumns[c].getId().indexOf("colEnd") !== -1) {
+                    if (c < iFixedCount) {
+                        iColEndIndexFixed = iVisibleTotal;
+                    } else {
+                        iColEndIndexScroll = iVisibleTotal - iFixedCount;
+                    }
+                }
+            }
 
             var iFirst = oTable.getFirstVisibleRow();
             var aRows = oTable.getRows();
@@ -5912,11 +6122,13 @@ sap.ui.define([
 
                 oDom.querySelectorAll("td").forEach(function (td) {
                     td.style.borderBottom = "";
+                    td.style.borderRight = "";
                 });
                 var oFixed = document.getElementById(oDom.id + "-fixed");
                 if (oFixed) {
                     oFixed.querySelectorAll("td").forEach(function (td) {
                         td.style.borderBottom = "";
+                        td.style.borderRight = "";
                     });
                 }
 
@@ -5924,9 +6136,27 @@ sap.ui.define([
                 var oData = oCtx.getObject();
                 if (!oData) continue;
 
+                if (oData.__isCustom === true) {
+                    if (iColEndIndexScroll > 0) {
+                        var aTdsScroll = oDom.querySelectorAll("td");
+                        if (aTdsScroll[iColEndIndexScroll - 1]) {
+                            aTdsScroll[iColEndIndexScroll - 1].style.setProperty(
+                                "border-right", "2px solid #f3984e", "important"
+                            );
+                        }
+                    }
+                    if (iColEndIndexFixed > 0 && oFixed) {
+                        var aTdsFixed = oFixed.querySelectorAll("td");
+                        if (aTdsFixed[iColEndIndexFixed - 1]) {
+                            aTdsFixed[iColEndIndexFixed - 1].style.setProperty(
+                                "border-right", "2px solid #f3984e", "important"
+                            );
+                        }
+                    }
+                }
+
                 var oNextCtx = oTable.getContextByIndex(iFirst + i + 1);
                 var oNextData = oNextCtx && oNextCtx.getObject();
-
 
                 var bCurrentIsEditable = oData.__isEditable === true;
                 var bNextIsNotCustom = !oNextData || oNextData.__isCustom !== true;
@@ -5955,5 +6185,544 @@ sap.ui.define([
             };
         },
 
+        _updateCustomColsVisibility: function () {
+            //    Se obtiene la tabla principal del controlador activo.
+            var oTable = this.getControlTable();
+            if (!oTable) return;
+
+            var oBinding = oTable.getBinding("rows");
+            if (!oBinding) return;
+
+            //    Se recorre el binding completo buscando al menos una fila
+            // con el marcador __isCustom para determinar si hay bloques custom activos.
+            var bHasCustomRows = false;
+            var iLength = oBinding.getLength();
+            for (var i = 0; i < iLength; i++) {
+                var oCtx = oTable.getContextByIndex(i);
+                if (!oCtx) continue;
+                var oObj = oCtx.getObject();
+                if (oObj && oObj.__isCustom === true) {
+                    bHasCustomRows = true;
+                    break;
+                }
+            }
+
+            //    Se aplica la visibilidad calculada a todas las columnas
+            // que pertenecen exclusivamente a filas custom. Si no hay ninguna
+            // fila custom activa las columnas se ocultan para no mostrar
+            // celdas vacías que confunden al usuario.
+            var aCustomColIds = [
+                "colProveedor", "colTarifa",
+                "colFechaInicio", "colFechaFin",
+                "colNMeses", "colOtros"
+            ];
+            aCustomColIds.forEach(function (sId) {
+                var oCol = this.byId(sId);
+                if (oCol) oCol.setVisible(bHasCustomRows);
+            }.bind(this));
+        },
+        onTreetableToggleOpenState: function (oEvent) {
+            var bExpanded = oEvent.getParameter("expanded");
+            var iRowIndex = oEvent.getParameter("rowIndex");
+
+            var oTable = this.getControlTable();
+            if (!oTable) return;
+
+            this._buildGroupRanges();
+            this._applyCabeceraStyle();
+
+            if (!bExpanded) {
+                setTimeout(function () {
+                    this._updateCustomColsVisibility();
+                    this._highlightSinProveedor(oTable);
+                    this._applyBlockBorder(oTable);
+                }.bind(this), 50);
+                return;
+            }
+
+            var oCtx = oTable.getContextByIndex(iRowIndex);
+            if (!oCtx) return;
+
+            var oRowData = oCtx.getObject();
+            var sRootPath = oCtx.getPath();
+
+            var bIsCustomNode = oRowData && (
+                oRowData.__isCustom === true ||
+                oRowData.__isMainBlock === true ||
+                oRowData.__isSinAgrupador === true ||
+                oRowData.__isAgrupadorBlock === true ||
+                oRowData.__isProviderBlock === true
+            );
+
+
+            var bHasCustomDescendant = this._hasCustomDescendant(oRowData);
+
+            console.log("bIsCustomNode:", bIsCustomNode, "| bHasCustomDescendant:", bHasCustomDescendant);
+
+            if (!bIsCustomNode && !bHasCustomDescendant) {
+                setTimeout(function () {
+                    this._highlightSinProveedor(oTable);
+                    this._applyBlockBorder(oTable);
+                    this._updateCustomColsVisibility();
+                }.bind(this), 50);
+                return;
+            }
+
+            var bFired = false;
+            var fnCascade = function () {
+                if (bFired) return;
+                bFired = true;
+                this._expandCustomLoop(
+                    oTable,
+                    15,
+                    function () {
+                        this._highlightSinProveedor(oTable);
+                        this._applyBlockBorder(oTable);
+                        this._updateCustomColsVisibility();
+                    }.bind(this),
+                    sRootPath
+                );
+            }.bind(this);
+
+            oTable.attachEventOnce("rowsUpdated", fnCascade);
+            setTimeout(fnCascade, 200);
+        },
+        //   Se guarda el contexto de la fila seleccionada en el viewModel,
+        // se activa el panel inferior y se recalcula el número de filas visibles.
+        //   Se muestra el panel inferior con la fila padre no editable y una
+        // fila hija editable. Se excluye la columna AGRUP del contexto visible.
+        //   Se inicializa el mapa persistente de filas por proveedor si aun no existe.
+        // El mapa vive en la instancia del controlador y persiste hasta el reload de la pagina.
+        // Clave: nombre del proveedor. Valor: array de filas del panel para ese proveedor.
+        onProveedorRowAddPress: function (oEvent) {
+            const oButton = oEvent.getSource();
+            const oContext = oButton.getBindingContext(this.tableModelName);
+            if (!oContext) return;
+
+            const oRow = oContext.getObject();
+            const sProveedor = (oRow.Proveedor || "").trim();
+            if (!sProveedor) return;
+
+            //   Se inicializa el mapa si es la primera llamada en esta sesion de vista.
+            if (!this._mProveedorRows) {
+                this._mProveedorRows = {};
+            }
+
+            //   Se inicializa el array de filas para este proveedor si aun no existe.
+            if (!this._mProveedorRows[sProveedor]) {
+                this._mProveedorRows[sProveedor] = [];
+            }
+
+            //   Se construye la nueva fila editable asociada al proveedor pulsado.
+            const oNuevaFila = {
+                Proveedor: sProveedor,
+                Post1: "", AmoEje: "", AmoEjeAjus: "", AmoEjeReal: "",
+                AmoPen: "", AmoTot: "", Tipo: "MAN", PenPlan: "",
+                FEE: "", FINI: "", FFIN: "", NMES: "", Otros: ""
+            };
+
+            //   Se agrega la nueva fila al historico persistente del proveedor.
+            this._mProveedorRows[sProveedor].push(oNuevaFila);
+
+            //   Se sincroniza el flag __hasProviderRows en el modelo de la tabla
+            // para que la fila nieto cambie del Input editable al Link clicable.
+            const sPath = oContext.getPath();
+            const sRootPath = sPath.replace(/\/children\/\d+$/, "");
+            const oTableModel = this.getView().getModel(this.tableModelName);
+            const oRootRow = oTableModel.getProperty(sRootPath);
+            this._syncProviderRowFlags(oRootRow);
+            oTableModel.refresh(true);
+
+            const oPanelVBox = this.byId("panelVBox");
+            const oPanelLayout = this.byId("panelSplitterLayout");
+
+            //   Se determina si se esta cambiando de proveedor activo o si el panel estaba cerrado.
+            const bProveedorDistinto = this._sCurrentProveedor !== sProveedor;
+            const bPanelCerrado = !oPanelVBox || !oPanelVBox.getVisible();
+
+            //   Se guarda el proveedor actualmente visible en el panel.
+            this._sCurrentProveedor = sProveedor;
+
+            //   Se obtienen todas las filas guardadas para el proveedor activo
+            // y se actualiza el modelo del panel con ellas, descartando las del anterior.
+            const aFilasProveedor = this._mProveedorRows[sProveedor];
+
+            if (bPanelCerrado || bProveedorDistinto) {
+                //   Primera apertura o cambio de proveedor: se recrea el modelo del panel
+                // con las filas del proveedor seleccionado y se hace visible el panel.
+                const oPanelModel = new sap.ui.model.json.JSONModel({
+                    proveedor: sProveedor,
+                    rows: aFilasProveedor,
+                    rowCount: aFilasProveedor.length
+                });
+                this.getView().setModel(oPanelModel, "panelModel");
+
+                if (oPanelVBox) oPanelVBox.setVisible(true);
+
+                if (bPanelCerrado && oPanelLayout) {
+                    //   Solo se modifica el tamano del splitter si el panel estaba cerrado,
+                    // para no alterar el resize manual del usuario entre cambios de proveedor.
+                    oPanelLayout.setResizable(true);
+                    oPanelLayout.setSize("200px");
+                }
+
+                setTimeout(function () {
+                    this._calculateSplitterHeight();
+                }.bind(this), 30);
+
+            } else {
+                //   Mismo proveedor activo: se actualiza el modelo en sitio
+                // sin recrearlo para no perder el estado de scroll del panel.
+                const oPanelModel = this.getView().getModel("panelModel");
+                if (!oPanelModel) return;
+
+                oPanelModel.setProperty("/proveedor", sProveedor);
+                oPanelModel.setProperty("/rows", aFilasProveedor);
+                oPanelModel.setProperty("/rowCount", aFilasProveedor.length);
+            }
+        },
+
+        //   Se cierra el panel inferior y se restaura el número de filas
+        // visibles de la tabla al valor calculado sin offset.
+        onClosePanelPress: function () {
+            // 1. Se cierra el panel y se deshabilita el resize
+            const oPanelLayout = this.byId("panelSplitterLayout");
+            if (oPanelLayout) {
+                oPanelLayout.setSize("0px");
+                oPanelLayout.setResizable(false);
+            }
+
+            // 2. Se oculta el VBox y la barra divisoria desaparece
+            const oPanelVBox = this.byId("panelVBox");
+            if (oPanelVBox) oPanelVBox.setVisible(false);
+
+            // 3. Se restablece la altura del splitter: la TreeTable vuelve
+            //    a ocupar la pantalla como si el splitter no existiera
+            const oSplitter = this.byId("mainSplitter");
+            if (oSplitter) oSplitter.setHeight("");
+
+            setTimeout(function () {
+                this._calculateDynamicRows();
+            }.bind(this), 50);
+        },
+
+
+        onSplitterResize: function () {
+            // Cuando el usuario arrastra el divisor interno se recalculan
+            // solo las filas (la altura total del splitter no cambia).
+            setTimeout(function () {
+                this._calculateDynamicRows();
+            }.bind(this), 30);
+        },
+        //   Se abre el panel inferior mostrando las filas ya guardadas del proveedor
+        // de la fila pulsada, sin agregar una nueva fila. Permite visualizar el historico
+        // del proveedor sin necesidad de pulsar el boton "+".
+        onProveedorRowViewPress: function (oEvent) {
+            const oInput = oEvent.getSource();
+            const oContext = oInput.getBindingContext(this.tableModelName);
+            if (!oContext) return;
+
+            const oRow = oContext.getObject();
+            const sProveedor = (oRow.Proveedor || oRow.__providerName || "").trim();
+            if (!sProveedor) return;
+
+            if (!this._mProveedorRows) this._mProveedorRows = {};
+
+            const aFilasProveedor = this._mProveedorRows[sProveedor] || [];
+            const oPanelVBox = this.byId("panelVBox");
+            const oPanelLayout = this.byId("panelSplitterLayout");
+            const bPanelAbierto = oPanelVBox && oPanelVBox.getVisible();
+
+            //   Fix 3: si el proveedor no tiene filas en el panel se cierra el splitter
+            // independientemente de qué proveedor estuviera activo antes.
+            if (aFilasProveedor.length === 0) {
+                if (bPanelAbierto) {
+                    if (oPanelLayout) {
+                        oPanelLayout.setSize("0px");
+                        oPanelLayout.setResizable(false);
+                    }
+                    if (oPanelVBox) oPanelVBox.setVisible(false);
+                    const oSplitter = this.byId("mainSplitter");
+                    if (oSplitter) oSplitter.setHeight("");
+                    setTimeout(function () {
+                        this._calculateDynamicRows();
+                    }.bind(this), 50);
+                }
+                return;
+            }
+
+            //   Si el proveedor pulsado ya está activo y el panel está abierto no se hace nada.
+            if (bPanelAbierto && this._sCurrentProveedor === sProveedor) return;
+
+            this._sCurrentProveedor = sProveedor;
+
+            const oPanelModel = new sap.ui.model.json.JSONModel({
+                proveedor: sProveedor,
+                rows: aFilasProveedor,
+                rowCount: aFilasProveedor.length
+            });
+            this.getView().setModel(oPanelModel, "panelModel");
+
+            if (oPanelVBox) oPanelVBox.setVisible(true);
+
+            if (!bPanelAbierto && oPanelLayout) {
+                oPanelLayout.setResizable(true);
+                oPanelLayout.setSize("200px");
+                setTimeout(function () {
+                    this._calculateSplitterHeight();
+                }.bind(this), 30);
+            }
+        },
+
+        //   Se reorganizan los hijos del nodo raíz agrupándolos por el valor
+        // del campo AGRUP. Se insertan filas de totales no editables al inicio
+        // de cada grupo y se mantienen el header y las filas editables en su lugar.  
+        _reorganizeByAgrupador: function (oRootRow) {
+            if (!oRootRow || !Array.isArray(oRootRow.children)) return;
+
+            //   Header: siempre arriba, sin alterar.
+            const aHeader = oRootRow.children.filter(function (c) {
+                return c.__isHeader === true;
+            });
+
+            //   Editables SIN AGRUP: permanecen siempre bajo el header, antes que los grupos.
+            const aEditablesNoAgrup = oRootRow.children.filter(function (c) {
+                return c.__isEditable === true && !(c.AGRUP || "").trim();
+            });
+
+            //   Todo lo demás a agrupar: nietos + editables CON AGRUP.
+            // Se excluyen header, agrupadorTotal y editables sin AGRUP.
+            const aToGroup = oRootRow.children.filter(function (c) {
+                return (
+                    c.__isCustom === true &&
+                    c.__isHeader !== true &&
+                    c.__isAgrupadorTotal !== true &&
+                    !(c.__isEditable === true && !(c.AGRUP || "").trim())
+                );
+            });
+
+            console.log("[Reorg] aHeader:", aHeader.length,
+                "| editabiliSenzaAgrup:", aEditablesNoAgrup.length,
+                "| daRaggruppare:", aToGroup.length);
+
+            //   Si no hay nada que agrupar no se hace nada.
+            if (aToGroup.length === 0) {
+                console.warn("[Reorg] Nessuna riga con AGRUP trovata, uscita.");
+                return;
+            }
+
+            const mGroups = {};
+            const aOrder = [];
+            const aSinAgrup = []; //   Filas sin AGRUP que NO son editables puras
+
+            aToGroup.forEach(function (oRiga) {
+                const sAgrup = (oRiga.AGRUP || "").trim();
+                if (!sAgrup) {
+                    aSinAgrup.push(oRiga);
+                    return;
+                }
+                if (!mGroups[sAgrup]) {
+                    mGroups[sAgrup] = [];
+                    aOrder.push(sAgrup);
+                }
+                mGroups[sAgrup].push(oRiga);
+            });
+
+            aOrder.sort(function (a, b) {
+                const nA = parseFloat(a);
+                const nB = parseFloat(b);
+                if (!isNaN(nA) && !isNaN(nB)) return nA - nB;
+                return a.localeCompare(b);
+            });
+
+            console.log("[Reorg] Gruppi:", aOrder);
+
+            //   Orden final: header, editables sin AGRUP, [fila gris + miembros] y luego las que carecen de AGRUP
+            const aNew = [];
+            aHeader.forEach(function (h) { aNew.push(h); });
+            aEditablesNoAgrup.forEach(function (e) { aNew.push(e); });
+
+            aOrder.forEach(function (sAgrup) {
+                aNew.push({
+                    __isCustom: true,
+                    __isAgrupadorTotal: true,
+                    __agrupadorName: sAgrup,
+                    cabecera: false, expandible: false, isGroup: false, padre: false,
+                    PhPspnr: sAgrup,
+                    AGRUP: sAgrup,
+                    Post1: "Total Grupo: " + sAgrup,  //   Texto visible en la columna Descripción
+                    AmoEje: "", AmoEjeAjus: "", AmoEjeReal: "",
+                    AmoPen: "", AmoTot: "", Tipo: "", PenPlan: "",
+                    Proveedor: "", FEE: "", NMES: "", Otros: "",
+                    children: []
+                });
+                mGroups[sAgrup].forEach(function (n) { aNew.push(n); });
+            });
+
+            aSinAgrup.forEach(function (n) { aNew.push(n); });
+
+            oRootRow.children = aNew;
+        },
+
+        onAgrupadorButtonPress: function (oEvent) {
+            const oButton = oEvent.getSource();
+            const oContext = oButton.getBindingContext(this.tableModelName);
+            if (!oContext) return;
+
+            const sHeaderPath = oContext.getPath();
+            const sRootPath = sHeaderPath.replace(/\/children\/\d+$/, "");
+            const oModel = this.getView().getModel(this.tableModelName);
+            const oRootRow = oModel.getProperty(sRootPath);
+            const oHeaderRow = oModel.getProperty(sHeaderPath);
+            if (!oRootRow || !oHeaderRow) return;
+
+            const bWasActive = oHeaderRow.__agrupadorActive === true;
+
+            if (bWasActive) {
+                //   Se apaga: se eliminan todas las filas grises de grupo
+                // y se deja el orden actual sin alterar.
+                oHeaderRow.__agrupadorActive = false;
+                oRootRow.children = oRootRow.children.filter(function (c) {
+                    return c.__isAgrupadorTotal !== true;
+                });
+                console.log("[Agrupador] Modalità OFF: righe grigie rimosse.");
+            } else {
+                //   Se enciende: se limpian los posibles totales obsoletos y se
+                // reorganiza desde cero con los valores AGRUP actuales.
+                oHeaderRow.__agrupadorActive = true;
+                oRootRow.children = oRootRow.children.filter(function (c) {
+                    return c.__isAgrupadorTotal !== true;
+                });
+                this._reorganizeByAgrupador(oRootRow);
+                console.log("[Agrupador] Modalità ON: gruppi creati.");
+            }
+
+            oModel.setProperty(sHeaderPath, oHeaderRow);
+            oModel.setProperty(sRootPath, oRootRow);
+            oModel.refresh(true);
+
+            const oTable = this.getControlTable();
+            if (oTable) {
+                const fnExpand = function () {
+                    if (fnExpand._fired) return;
+                    fnExpand._fired = true;
+                    this._expandFullBlock(oTable, sRootPath, function () {
+                        this._highlightSinProveedor(oTable);
+                        this._applyBlockBorder(oTable);
+                        this._updateCustomColsVisibility();
+                    }.bind(this));
+                }.bind(this);
+                oTable.attachEventOnce("rowsUpdated", fnExpand);
+                setTimeout(fnExpand, 150);
+            }
+        },
+        //   Se invoca al change del input AGRUP de una fila editable o nieto.
+        // Si el valor cambia, la fila abandona el grupo actual y se reubica
+        // en el grupo correcto (o al final si el nuevo AGRUP aún no existe).
+        onAgrupadorFieldChange: function (oEvent) {
+            if (this._bAgrupadorChanging) return;
+
+            const oInput = oEvent.getSource();
+            const oContext = oInput.getBindingContext(this.tableModelName);
+            if (!oContext) return;
+
+            const oRow = oContext.getObject();
+            if (!oRow.__isCustom || oRow.__isHeader || oRow.__isAgrupadorTotal) return;
+
+            const sPath = oContext.getPath();
+            const sParentPath = sPath.replace(/\/children\/\d+$/, "");
+            const oModel = this.getView().getModel(this.tableModelName);
+            const oRootRow = oModel.getProperty(sParentPath);
+            if (!oRootRow || !Array.isArray(oRootRow.children)) return;
+
+            //   Si el modo agrupador no está activo no se hace nada.
+            const oHeaderRow = oRootRow.children.find(function (c) { return c.__isHeader === true; });
+            const bActive = oHeaderRow && oHeaderRow.__agrupadorActive === true;
+            if (!bActive) return;
+
+            this._bAgrupadorChanging = true;
+
+            try {
+                //   Se limpian los totales obsoletos y se reorganiza desde cero,
+                // exactamente como hace el botón. El valor AGRUP modificado
+                // ya está actualizado en el modelo a través del binding, por lo que
+                // _reorganizeByAgrupador leerá directamente el nuevo valor.
+                oRootRow.children = oRootRow.children.filter(function (c) {
+                    return c.__isAgrupadorTotal !== true;
+                });
+
+                this._reorganizeByAgrupador(oRootRow);
+
+                oModel.setProperty(sParentPath, oRootRow);
+                oModel.refresh(true);
+
+            } finally {
+                this._bAgrupadorChanging = false;
+            }
+
+            const oTable = this.getControlTable();
+            if (oTable) {
+                const fnExpand = function () {
+                    if (fnExpand._fired) return;
+                    fnExpand._fired = true;
+                    this._expandFullBlock(oTable, sParentPath, function () {
+                        this._highlightSinProveedor(oTable);
+                        this._applyBlockBorder(oTable);
+                        this._updateCustomColsVisibility();
+                    }.bind(this));
+                }.bind(this);
+                oTable.attachEventOnce("rowsUpdated", fnExpand);
+                setTimeout(fnExpand, 150);
+            }
+        },
+        //   Devuelve el índice de inserción para filas NO editables,
+        // es decir, justo tras el header y tras todas las filas editables existentes.
+        // Las editables permanecen siempre arriba, bajo el header.
+        _findInsertAfterEditables: function (aChildren) {
+            let iPos = 0;
+            //   Se salta el header si está presente.
+            if (aChildren[iPos] && aChildren[iPos].__isHeader) iPos++;
+            //   Se saltan todas las filas editables consecutivas.
+            while (iPos < aChildren.length && aChildren[iPos].__isEditable === true) {
+                iPos++;
+            }
+            return iPos;
+        },
+        //   Se recorre el modelo de la tabla y se actualiza el flag __hasProviderRows
+        // en todas las filas nieto cuyo proveedor tenga al menos una fila en el panel.
+        // Se invoca tras cada operacion que modifica _mProveedorRows.
+        _syncProviderRowFlags: function (oRootRow) {
+            if (!oRootRow || !Array.isArray(oRootRow.children)) return;
+
+            oRootRow.children.forEach(function (oChild) {
+                if (oChild.__isNieto === true && oChild.Proveedor) {
+                    const sProveedor = oChild.Proveedor.trim();
+                    const aRows = (this._mProveedorRows && this._mProveedorRows[sProveedor]) || [];
+                    oChild.__hasProviderRows = aRows.length > 0;
+                }
+                //   Se aplica recursivamente a los hijos de cada nodo.
+                this._syncProviderRowFlags(oChild);
+            }.bind(this));
+        },
+        //   Se verifica si todos los campos relevantes de una fila editable estan vacios.
+        // Solo cuando todos los campos esten sin valor se considera la fila eliminable.
+        // El campo Proveedor se evalua fuera de esta funcion porque actua como disparador
+        // del change, por lo que aqui se comprueba el resto del contexto de la fila.  
+        _isRowEmpty: function (oRow) {
+            var aCampos = [
+                "Post1", "AmoEje", "AmoEjeAjus", "AmoEjeReal",
+                "AmoPen", "AmoTot", "PenPlan", "FEE",
+                "FINI", "FFIN", "NMES", "Otros",
+                "AGRUP", "DESCRIP", "months",
+                "_linDateFrom", "_linDateTo"
+            ];
+            return aCampos.every(function (sCampo) {
+                var sVal = (oRow[sCampo] !== undefined && oRow[sCampo] !== null)
+                    ? oRow[sCampo].toString().trim()
+                    : "";
+                //   Se excluyen tambien el valor por defecto de Tipo (MAN) y el cero numerico.  
+                return sVal === "" || sVal === "MAN" || sVal === "0";
+            });
+        },
     });
 });

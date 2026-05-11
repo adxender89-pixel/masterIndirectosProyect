@@ -240,7 +240,19 @@
                                                 }"
                                                 class="sapUiMediumMarginEnd"
                                             />
-                                           
+                                           <!-- Checkboxes para filtrar por TipoInd -->
+                                            <CheckBox
+                                                id="checkboxInversion"
+                                                text="Inversión"
+                                                selected="true"
+                                                select="onFilterTipoIndChange"
+                                            />
+                                            <CheckBox
+                                                id="checkboxAmortizacion"
+                                                text="Amortización"
+                                                selected="true"
+                                                select="onFilterTipoIndChange"
+                                            />
                                             <ToolbarSpacer />
                                               <CheckBox
                                                 id="idEjecutadoCheckBox2"
@@ -273,12 +285,14 @@
                                                 press="onAddPress"
                                                 class="toolbarActionBtn"
                                                 tooltip="{i18n>anadir}"
+                                                enabled="{modeloBloqueo>/isBlocked}"
                                             />
                                             <Button
                                                 icon="sap-icon://delete"
                                                 press="onDeletePress"
                                                 class="toolbarActionBtn"
                                                 tooltip="{i18n>eliminar}"
+                                                enabled="{modeloBloqueo>/isBlocked}"
                                             />
                                             <Button
                                                 icon="sap-icon://shortcut"
@@ -317,9 +331,10 @@
                                                 <Input
                                                     width="8.5rem"
                                                     textAlign="Center"
-                                                    editable="false"
+                                                    editable="{= ${diferidosModel>isLevel3} &amp;&amp; ${diferidosModel>isNew} }"
                                                     value="{diferidosModel>PhPspnr}"
-                                                    class="flatCellInput yearCell"
+                                                    change="onPhPspnrChange"
+                                                    class="flatCellInput allowLetters"
                                                 />
                                             </VBox>
                                         </t:template>
@@ -342,9 +357,11 @@
                                                 <Input
                                                     value="{diferidosModel>Post1}"
                                                     width="9rem"
-                                                    editable="{= ${diferidosModel>isLevel3} === true || ${diferidosModel>isNew} === true}"
+                                                    type="Text"
+                                                    editable="{= ${diferidosModel>isLevel3} &amp;&amp; ${diferidosModel>isNew} }"
                                                     textAlign="Center"
-                                                    class="flatCellInput"
+                                                    change="onDescOperacionChange"
+                                                    class="flatCellInput allowLetters"
                                                 />
                                             </VBox>
                                         </t:template>
@@ -369,7 +386,7 @@
                                                     textAlign="Center"
                                                     editable="false"
                                                     value="{diferidosModel>TipoInd}"
-                                                    class="flatCellInput"
+                                                    class="flatCellInput allowLetters"
                                                 />
                                             </VBox>
                                         </t:template>
@@ -513,7 +530,7 @@
                                                     class="bottomFilter" width="0.9rem"
                                                     visible="{= ${cabecera} === true}">
                                                     <customData>
-                                                        <core:CustomData key="filterProp" value="AmoEje" />
+                                                        <core:CustomData key="filterProp" value="_Ejecutado" />
                                                     </customData>
                                                 </Button>
                                                 <vn:DecimalesInput
@@ -523,7 +540,7 @@
                                                     editable="false"
                                                     value="{
                                                         parts: [
-                                                            'diferidosModel>AmoEje',
+                                                            'diferidosModel>_Ejecutado',
                                                             'dashboardModel>/decimales',
                                                             'appData>/userData/CurrencyFormat'
                                                         ],
@@ -553,18 +570,18 @@
                                                     width="0.9rem" class="bottomFilter"
                                                     visible="{= ${cabecera} === true}">
                                                     <customData>
-                                                        <core:CustomData key="filterProp" value="AmoPen" />
+                                                        <core:CustomData key="filterProp" value="_Pendiente" />
                                                     </customData>
                                                 </Button>
                                                 <vn:DecimalesInput
                                                     width="4.2rem"
                                                     decimalNumbers="{dashboardModel>/decimales}"
                                                     textAlign="Center"
-                                                    editable="true"
+                                                    editable="{= ${diferidosModel>Estructura} === 'O' &amp;&amp; ${diferidosModel>TipoInd} === 'P' &amp;&amp; ${diferidosModel>isNew} === false &amp;&amp; ${modeloBloqueo>/isBlocked} === true }"
                                                     change="onAmoPenChange"
                                                     value="{
                                                         parts: [
-                                                            'diferidosModel>AmoPen',
+                                                            'diferidosModel>_Pendiente',
                                                             'dashboardModel>/decimales',
                                                             'appData>/userData/CurrencyFormat'
                                                         ],
@@ -600,7 +617,8 @@
                                                 <Input
                                                     value="{diferidosModel>PctjPenAmo}"
                                                     width="100%"
-                                                    editable="true"
+                                                    editable="{= ${diferidosModel>Estructura} === 'O' &amp;&amp; ${diferidosModel>TipoInd} === 'P' &amp;&amp; ${diferidosModel>isNew} === false &amp;&amp; ${modeloBloqueo>/isBlocked} === true }"
+                                                    change="onPercPenAmo"
                                                     class="flatCellInput"
                                                     textAlign="Center"
                                                 />
@@ -626,17 +644,18 @@
                                                     width="0.9rem" class="bottomFilter"
                                                     visible="{= ${cabecera} === true}">
                                                     <customData>
-                                                        <core:CustomData key="filterProp" value="AmoTot" />
+                                                        <core:CustomData key="filterProp" value="_Total" />
                                                     </customData>
                                                 </Button>
                                                 <vn:DecimalesInput
                                                     width="4.2rem"
                                                     decimalNumbers="{dashboardModel>/decimales}"
                                                     textAlign="Center"
-                                                    editable="false"
+                                                    editable="{= ${diferidosModel>Estructura} === 'O' &amp;&amp; ${diferidosModel>TipoInd} === 'P' &amp;&amp; ${diferidosModel>isNew} === false &amp;&amp; ${modeloBloqueo>/isBlocked} === true }"
+                                                    change="onAmoTotChange"
                                                     value="{
                                                         parts: [
-                                                            'diferidosModel>AmoTot',
+                                                            'diferidosModel>_Total',
                                                             'dashboardModel>/decimales',
                                                             'appData>/userData/CurrencyFormat'
                                                         ],
@@ -674,6 +693,7 @@
                                                     width="100%"
                                                     class="flatCellInput"
                                                     change="onRepartoChange"
+                                                    editable="{= ${diferidosModel>TipoInd} === 'P' &amp;&amp; ${diferidosModel>isNew} === false &amp;&amp; ${modeloBloqueo>/isBlocked} === true }"
                                                     items="{
                                                         path: 'diferidosModel>repartoItems',
                                                         templateShareable: false
@@ -709,12 +729,20 @@
                                                         <core:CustomData key="filterProp" value="PenPlan" />
                                                     </customData>
                                                 </Button>
-                                                <Input
-                                                    value="{diferidosModel>PenPlan}"
-                                                    editable="false"
-                                                    class="flatCellInput"
-                                                    width="{= ${cabecera} === true ? '4rem' : '5.5rem'}"
+                                                <vn:DecimalesInput
+                                                    width="4.2rem"
+                                                    decimalNumbers="{dashboardModel>/decimales}"
                                                     textAlign="Center"
+                                                    editable="false"
+                                                    value="{
+                                                        parts: [
+                                                            'diferidosModel>PenPlan',
+                                                            'dashboardModel>/decimales',
+                                                            'appData>/userData/CurrencyFormat'
+                                                        ],
+                                                        formatter: '.formatDecimales'
+                                                    }"
+                                                    class="flatCellInput"
                                                 />
                                             </HBox>
                                         </t:template>
@@ -773,12 +801,20 @@
                                                         <core:CustomData key="filterProp" value="pend" />
                                                     </customData>
                                                 </Button>
-                                                <Input
-                                                    value="{diferidosModel>pend}"
-                                                    editable="{= ${isGroup} !== true}"
+                                                <vn:DecimalesInput
+                                                    width="4.2rem"
+                                                    decimalNumbers="{dashboardModel>/decimales}"
                                                     textAlign="Center"
+                                                    editable="false"
+                                                    value="{
+                                                        parts: [
+                                                            'diferidosModel>pend',
+                                                            'dashboardModel>/decimales',
+                                                            'appData>/userData/CurrencyFormat'
+                                                        ],
+                                                        formatter: '.formatDecimales'
+                                                    }"
                                                     class="flatCellInput"
-                                                    width="{= ${cabecera} === true ? '3.5rem' : '70px'}"
                                                 />
                                             </HBox>
                                         </t:template>
