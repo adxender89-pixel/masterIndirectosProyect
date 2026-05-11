@@ -284,6 +284,22 @@ sap.ui.define([
         },
 
         /**
+         * Se impide que el usuario seleccione la fila "D" (OEO).
+         * Si el evento incluye la fila "D" entre las seleccionadas, se deselecciona.
+         */
+        onRowSelectionChange: function (oEvent) {
+            const oTable = oEvent.getSource();
+            const aSelectedIndices = oTable.getSelectedIndices();
+            for (let i = 0; i < aSelectedIndices.length; i++) {
+                const oContext = oTable.getContextByIndex(aSelectedIndices[i]);
+                const oRow = oContext && oContext.getObject();
+                if (oRow && oRow.PhPspnr === "D") {
+                    oTable.removeSelectionInterval(aSelectedIndices[i], aSelectedIndices[i]);
+                }
+            }
+        },
+
+        /**
          * Se gestiona la visibilidad de las columnas extendidas (meses, checkboxes)
          * al expandir o contraer nodos en la TreeTable.
          * Se marca además la variante activa como modificada al cambiar el estado del árbol.
@@ -471,7 +487,7 @@ sap.ui.define([
             var sEjercicioFromSelector = this._getSelectedEjercicio();
             var sEjercicioFallback = oDateStart.getFullYear().toString();
             var sEjercicio = sEjercicioFromSelector || sEjercicioFallback;
-            const token = this.getGlobalModel("appData").getProperty("/EvToken");
+            
 
 
             // Se realiza la llamada POST al servicio con el ejercicio correspondiente al tramo activo.
@@ -496,11 +512,27 @@ sap.ui.define([
                             decimales: "02",
                             ejercicio: sEjercicio,
                             pestana: "Corrientes",
-                            token: token
+                            
                         }
                     }
                 );
 
+                // Capturar el estado de bloqueo de la pestaña desde EvBloqueados
+                var sEvBloqueados = response.EvBloqueados || "";
+                var bIsBlocked = sEvBloqueados.trim().length > 0;
+                
+                // Crear o actualizar el modelo de bloqueo
+                var oModeloBloqueo = this.getView().getModel("modeloBloqueo");
+                if (!oModeloBloqueo) {
+                    oModeloBloqueo = new sap.ui.model.json.JSONModel({
+                        isBlocked: bIsBlocked
+                    });
+                    this.getView().setModel(oModeloBloqueo, "modeloBloqueo");
+                } else {
+                    oModeloBloqueo.setProperty("/isBlocked", bIsBlocked);
+                }
+
+                this._addComputedFields(response.NavDatosIndirectos.results);
                 const tree = this.buildTree(response.NavDatosIndirectos.results);
                 const oModel = new sap.ui.model.json.JSONModel(tree);
                 this.getView().setModel(oModel, "corrientesModel");
@@ -509,6 +541,20 @@ sap.ui.define([
             } catch (error) {
 
             }
+        },
+
+        _addComputedFields: function(aData) {
+            aData.forEach(function(item) {
+                if (item.TipoInd === "I") {
+                    item._Ejecutado = item.InvEje || "0";
+                    item._Pendiente = item.InvPen || "0";
+                    item._Total = item.InvTot || "0";
+                } else {
+                    item._Ejecutado = item.AmoEje || "0";
+                    item._Pendiente = item.AmoPen || "0";
+                    item._Total = item.AmoTot || "0";
+                }
+            });
         },
 
         /**
@@ -523,21 +569,36 @@ sap.ui.define([
 
             //    Se crea un mapa por clave PhPspnr manteniendo todos los campos originales
             data.forEach(item => {
+                const isD = item.PhPspnr === "D";
                 map[item.PhPspnr] = {
                     ...item, //    Se conservan todos los campos del backend (incluido Tipo)
                     children: [],
-                    _isSinProveedor: false, 
-                    isEditable: item.Estructura === "O",
-                    isSubcapitulo: item.Estructura === "S",
-                    isCapitulo: item.Estructura === "C",
-                    isVacio: item.Estructura === "",
+                    _isSinProveedor: false,
+                    //    La fila "D" no es editable y no se considera capítulo/subcapítulo/desglose
+                    isEditable: !isD && item.Estructura === "O",
+                    isSubcapitulo: !isD && item.Estructura === "S",
+                    isCapitulo: isD || item.Estructura === "C",
+                    isVacio: !isD && item.Estructura === "",
                 };
             });
 
             const roots = [];
 
-            //    Se construye la jerarquía padre-hijo
+            //    Primero: añadir el registro con PhPspnr = "D" como root sin hijos
             data.forEach(item => {
+                if (item.PhPspnr === "D") {
+                    map[item.PhPspnr].padre = true;
+                    map[item.PhPspnr].children = [];
+                    if (!roots.some(root => root.PhPspnr === "D")) {
+                        roots.push(map[item.PhPspnr]);
+                    }
+                }
+            });
+
+            //    Se construye la jerarquía padre-hijo (omitiendo "D")
+            data.forEach(item => {
+
+                if (item.PhPspnr === "D") return;
 
                 if (item.ParentPath === "I") {
 
@@ -631,18 +692,8 @@ sap.ui.define([
                 selectedYear: String(iYearStart)
             }), "yearsModel");
         },
-        /**
- * Se gestiona el envio al backend de la fila modificada en la vista Corrientes.
- * Se ejecuta automaticamente al final de onRowInputChange del BaseController
- * mediante el hook _onAfterRowInputChange, unicamente para inputs numericos
- * de mes, año o columna Resto. La rama LIN ya envia por su propio flujo
- * a traves de _confirmDateRange y _executeBatchLineal, por lo que no llega aqui.
- */
-        //    Se define el hook que el BaseController invoca al final de onRowInputChange
-        //    para que Corrientes pueda anadir su logica de envio al backend sin duplicar
-        //    la logica de resolucion del contexto que ya realiza el metodo padre.
-        //    Externos no define este hook porque no requiere envio de celdas al backend.
-        _onAfterRowInputChange: async function (oContext, oSource) {
+        
+       _onAfterRowInputChange: async function (oContext, oSource) {
 
             if (!oContext) {
                 return;
@@ -676,7 +727,14 @@ sap.ui.define([
                     sKey !== "padre" &&
                     sKey !== "isEditable" &&
                     sKey !== "_linDateFrom" &&
-                    sKey !== "_linDateTo") {
+                    sKey !== "_linDateTo" &&
+                    sKey !== "_Ejecutado" && 
+                    sKey !=="_Pendiente" &&
+                    sKey !== "_Total" &&
+                    sKey !== "_isSinProveedor" &&
+                    sKey !== "expanded" 
+                
+                ) {
                     oPayloadRow[sKey] = oRowData[sKey];
                 }
             });
@@ -684,151 +742,5 @@ sap.ui.define([
             //    Envío con CampoMod
             await this._enviarFilaAlBackend(oContext, oPayloadRow, sCampoMod);
         },
-        /* 22/04
-        onAddRow: function (oEvent) {
-            var oView = this.getView();
-            var oTreeTable = oView.byId("TreeTableBasic");
-            var oCorrModel = oView.getModel("corrientesModel");
-
-            var oButton = oEvent.getSource();
-            var oRow = oButton.getParent();
-            while (oRow && !(oRow instanceof sap.ui.table.Row)) {
-                oRow = oRow.getParent();
-            }
-
-            if (!oRow) return;
-
-            var iRowIndex = oRow.getIndex();
-            var oContext = oTreeTable.getContextByIndex(iRowIndex);
-            if (!oContext) return;
-
-            var sPath = oContext.getPath();
-
-            if (oTreeTable.isExpanded(iRowIndex)) {
-                oTreeTable.collapse(iRowIndex);
-                return;
-            }
-
-            // ── CABECERA (Agrupador) - HARDCODED NO EDITABLE ──
-            var oAgrupador = {
-                  type: "cabecera",
-                PhPspnr: "Agrupador",
-                Post1: "Puesto de trabajo",
-                AmoEje: "Persona",
-                AmoEjeAjus: "Ajuste",
-                AmoEjeReal: "Real",
-                AmoPen: "Coste pend",
-                AmoTot: "Tarifa",
-                Tipos: "Fecha de Inicio",
-                PenPlan: "Fecha de fin",
-                months: "Nºmeses",
-                pend: "Otros",
-                flag1Label: "Auto",
-                flag2Label: "Inflaz.",
-                cabecera: true,
-                noSelect: true,
-                isGroup: true,
-                // Forzamos false para que la cabecera no sea editable
-                isEditable: false,
-                isInputRow: true,
-                isSubcapitulo: true,
-                isCapitulo: true,
-                monthsData: []
-            };
-
-            // 1. Definimos los datos reales que irán dentro de la fila vacía
-            var aFilasDatos = [
-                {
-                    type: "row",
-                    PhPspnr: "Jefe de proyecto",
-                    Post1: "Nombre 1",
-                    AmoEje: "12.500,00",
-                    Tipos: "23/05/2000",
-                    isEditable: false,
-                    isInputRow: false,
-                    noSelect: true,
-                    isSubcapitulo: false,
-                    isCapitulo: false,
-                    hideButton: true, // Para que esta fila no tenga el botón "+"
-                    children: []      // Nivel final (hoja)
-                }
-            ];
-
-            // 2. Definimos la fila vacía y le asignamos los datos como hijos
-            var oFilaVacia = {
-                type: "row",
-                PhPspnr: "",
-                Post1: "Sin provedor",
-                AmoEje: "",
-                AmoEjeAjus: "",
-                AmoEjeReal: "",
-                AmoPen: "",
-                AmoTot: "",
-                Tipo: "",
-                PenPlan: "",
-                months: "",
-                pend: "",
-                flag1: false,
-                CheckInfla: false,
-                noSelect: true,
-                isGroup: false,
-                editable: false,
-                isEditable: true,  // Si quieres que el usuario escriba en esta, déjalo en true
-                isInputRow: true,
-                isSubcapitulo: true,
-                isCapitulo: true,
-                hideButton: true,  // También ocultamos el botón aquí
-
-                // --- ESTA ES LA CLAVE ---
-                children: aFilasDatos // Metemos el array de datos AQUÍ
-            };
-
-            // 3. Ensamblamos para el nodo principal (el que expandiste originalmente)
-            // Ahora solo pasamos el Agrupador y la FilaVacia (que ya lleva sus propios hijos)
-            var aChildren = [oAgrupador, oFilaVacia];
-
-            // 4. Actualizamos el modelo
-            oCorrModel.setProperty(sPath + "/children", aChildren);
-            oCorrModel.refresh(true);
-
-            setTimeout(function () {
-                oTreeTable.expand(iRowIndex);
-
-                // if (this._applyCabeceraStyle) {
-                //     this._applyCabeceraStyle("TreeTableBasic");
-                // }
-            }.bind(this), 100);
-        },
-        // 22/04
-       _attachRowStyle: function () {
-    const oTable = this.byId("TreeTableBasic");
-    if (!oTable) return;
-
-    oTable.addEventDelegate({
-        onAfterRendering: function () {
-
-            const aRows = oTable.getRows();
-
-            aRows.forEach(function (oRow) {
-
-                const oCtx = oRow.getBindingContext("corrientesModel");
-                if (!oCtx) return;
-
-                const oData = oCtx.getObject();
-
-                if (!oData) return;
-
-                const $row = oRow.$();
-                if (!$row || !$row.length) return;
-
-                $row.removeClass("cabeceraRow");
-
-                if (oData.cabecera === true) {
-                    $row.addClass("cabeceraRow");
-                }
-            });
-        }
-    });
-}*/
     });
 });

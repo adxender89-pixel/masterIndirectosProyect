@@ -106,6 +106,7 @@ sap.ui.define(
         delete tramo.__metadata;
         appDataModel.setProperty("/tramo", tramo);
 
+        this._lastSelectedKey = "dashboard";
         this._showView("dashboard");
       },
 
@@ -148,11 +149,16 @@ sap.ui.define(
             const oDatosTramos = response.NavTramosDatos.results[0];
 
             if (!oDatosTramos.Error) {
-              const norm = oDatosTramos.Norma;
-              const normModel = new JSONModel({
-                norma: norm
-              });
-              this.setGlobalModel(normModel, "normModel");
+              if(!this.getGlobalModel("normModel")){
+                const norm = oDatosTramos.Norma;
+                const normModel = new JSONModel({
+                  norma: norm
+                });
+                this.setGlobalModel(normModel, "normModel");
+              }
+              else{
+                this.getGlobalModel("normModel").setProperty("/norma",norm)
+              }
               if (response.NavTramosProy.results.length > 1) {
                 this.openSelectorDialog({
                   title: this.getTranslatedText("SELECCIONA_TRAMO"),
@@ -241,6 +247,11 @@ sap.ui.define(
           this._resetInmovilizadosColumns();
         }
         
+        // Se llama al servicio CambioPestIndirectosSet cuando se navega a dashboard (Inicio)
+        // pero solo si no es la primera carga de la aplicación
+        if (sNewKey === "dashboard" && this._lastSelectedKey) {
+          this._callCambioPestIndirectos();
+        }
 
         /* NO SE ESTA USANDO Se verifica si existen cambios sin guardar antes de abandonar la vista de "corrientes"
         if (sCurrentKey === "corrientes" && this._mViews["corrientes"]) {
@@ -268,6 +279,111 @@ sap.ui.define(
 
         this._lastSelectedKey = sNewKey;
         this._showView(sNewKey, sCurrentKey);
+      },
+
+      /**
+       * Llama al servicio CambioPestIndirectosSet con pestana vacía
+       * Solo muestra mensajes de error si ocurren
+       * @private
+       */
+      _callCambioPestIndirectos: function () {
+        var oAppData = this.getGlobalModel("appData").getData();
+        var oDashModel = this.getGlobalModel("dashboardModel");
+        // Obtener la versión activa
+        var versiones = oAppData.NavLtVersiones;
+        var flagSelectVersion = versiones.find(function (item) {
+          return item.Activo === "X";
+        });
+        
+        // Obtener Freal (ejercicio)
+        var sFreal = "";
+        if (oAppData && oAppData.tramo && oAppData.tramo.Freal) {
+          sFreal = oAppData.tramo.Freal;
+        } else if (oDashModel) {
+          sFreal = oDashModel.getProperty("/NavMasterLt/0/Freal");
+        }
+        
+        if (!sFreal) {
+          return; // No hacer nada si no hay fecha
+        }
+        
+        var oDateStart = this._parseODataDate(sFreal);
+        if (!oDateStart || isNaN(oDateStart.getTime())) {
+          return; // No hacer nada si la fecha es inválida
+        }
+        
+        var sEjercicio = oDateStart.getFullYear().toString();
+        const token = oAppData.EvToken;
+        
+        var that = this;
+        
+        this.post(
+          this.getGlobalModel("mainService"),
+          "/CambioPestIndirectosSet",
+          {
+            "NavSelProyecto": [oAppData.tramo],
+            "NavChanges": [],
+            "NavDatosIndirectos": [],
+            "EvBloqueados": "",
+            "NavMensajes": [],
+            "NavLtVersiones": [flagSelectVersion]
+          },
+          {
+            headers: {
+              ambito: oAppData.userData.initialNode,
+              lang: oAppData.userData.AplicationLangu,
+              bloqueado: oAppData.EvBloqueados || "",
+              decimales: oDashModel ? oDashModel.getData().decimales : "2",
+              ejercicio: sEjercicio,
+              pestana: "", // Pestana vacía para dashboard
+              token: token
+            }
+          }
+        ).then(function (response) {
+          // Capturar el estado de bloqueo de la pestaña desde EvBloqueados
+          var sEvBloqueados = response.EvBloqueados || "";
+          var bIsBlocked = sEvBloqueados.trim().length > 0;
+          that.getGlobalModel("appData").setProperty("/EvBloqueados", sEvBloqueados);
+          // Verificar si hay mensajes de error
+          var aMensajes = response.NavMensajes?.results || [];
+          var aMensajesError = aMensajes.filter(function(mensaje) {
+            return mensaje.Tipo === "E";
+          });
+          
+          if (aMensajesError.length > 0) {
+            that.createMessageDialog({
+              title: that.getTranslatedText("ERROR"),
+              textAccept: that.getTranslatedText("ACEPTAR"),
+              messages: aMensajesError.map(function(mensaje) {
+                return {
+                  text: mensaje.Mensaje || mensaje.Message || mensaje.text || "",
+                  type: "Error"
+                };
+              })
+            });
+          }
+        }).catch(function (error) {
+          // Mostrar error si la llamada falla
+          console.error("[_callCambioPestIndirectos] Error:", error);
+          MessageBox.error(
+            that.getTranslatedText("ERROR_SERVICIO") || "Error al llamar al servicio"
+          );
+        });
+      },
+      
+      /**
+       * Parsea una fecha en formato OData
+       * @param {string} sODataDate - Fecha en formato OData
+       * @returns {Date} Fecha parseada
+       * @private
+       */
+      _parseODataDate: function (sODataDate) {
+        if (!sODataDate) return null;
+        var oMatch = /\/Date\((\d+)\)\//.exec(sODataDate);
+        if (oMatch) {
+          return new Date(parseInt(oMatch[1], 10));
+        }
+        return new Date(sODataDate);
       },
 
       /**
@@ -509,7 +625,14 @@ sap.ui.define(
                   const tramosByObra = await this.getTramosByObra(oSelectedScope.profitCenter);
                   if (tramosByObra.NavTramosDatos.results.length > 0 && !tramosByObra.NavTramosDatos.results[0].Error) {
                     const norm = tramosByObra.NavTramosDatos.results[0].Norma;
-                    this.getGlobalModel("normModel").setProperty("/norma", norm);
+                    if(!this.getGlobalModel("normModel")){
+                      const normModel = new JSONModel({
+                        norma: norm
+                      });
+                      this.setGlobalModel(normModel, "normModel");
+                    }
+                    else
+                      this.getGlobalModel("normModel").setProperty("/norma", norm);
                   } else if (!!tramosByObra.NavTramosDatos.results[0].Error) {
                     this.getGlobalModel("normModel").setProperty("/norma", "");
                     this.createMessageDialog({
@@ -524,6 +647,7 @@ sap.ui.define(
                     });
                   }
                   this.setUserScopeData();
+                  this._showView("dashboard");
                 }.bind(this),
                 cancel: function () { },
                 close: function () {
@@ -647,6 +771,56 @@ sap.ui.define(
         // y de ser así, se ejecuta para que recargue los datos usando la nueva versión activa.
         if (currentView && currentView.getController().setInitData) {
           currentView.getController().setInitData();
+        }
+      },
+
+      /**
+       * Se gestiona el guardado manual de los datos de costes indirectos.
+       * Se envía la información del proyecto y versiones al backend mediante el endpoint GuardarIndirectosSet.
+       */
+      onSave: async function () {
+        try {
+          // Se obtiene el modelo global con los datos de la aplicación
+          const oAppDataModel = this.getGlobalModel("appData");
+          const oAppData = oAppDataModel.getData();
+
+          // Se obtiene el modelo del dashboard para acceder a decimales y bloqueado
+          const oDashboardModel = this.getGlobalModel("dashboardModel");
+          const oDashboardData = oDashboardModel ? oDashboardModel.getData() : {};
+
+          // Se prepara el objeto de datos para enviar al backend
+          const oPayload = {
+            // Se incluye la información del proyecto seleccionado
+            NavSelProyecto: oAppData.tramo ? [oAppData.tramo] : [],
+            // Se incluye la lista completa de versiones disponibles
+            NavLtVersiones: oAppData.NavLtVersiones || []
+          };
+
+          // Se preparan los parámetros del header como urlParameters
+          const oParams = {
+            urlParameters: {
+              amnito: oAppData.userData?.initialNode || "",
+              lang: oAppData.userData?.Langu || "",
+              decimales: oDashboardData.decimales || "2",
+              bloqueado: oDashboardData.bloqueado || ""
+            }
+          };
+
+          // Se realiza la llamada al servicio de guardado
+          await this.post(
+            this.getGlobalModel("mainService"),
+            "/GuardarIndirectosSet",
+            oPayload,
+            oParams
+          );
+
+          // Se muestra un mensaje de éxito al usuario
+          MessageToast.show(this.getTranslatedText("DATOS_GUARDADOS_CORRECTAMENTE") || "Datos guardados correctamente");
+
+        } catch (error) {
+          // Se captura y muestra cualquier error que ocurra durante el proceso
+          MessageBox.error(this.getTranslatedText("ERROR_AL_GUARDAR") || "Error al guardar los datos: " + error.message);
+          console.error("[onSave] Error al guardar:", error);
         }
       }
 

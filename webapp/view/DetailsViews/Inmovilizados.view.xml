@@ -240,7 +240,19 @@
                                                 }"
                                                 class="sapUiMediumMarginEnd"
                                             />
-                                           
+                                            <!-- Checkboxes para filtrar por TipoInd -->
+                                            <CheckBox
+                                                id="checkboxInversion"
+                                                text="Inversión"
+                                                selected="true"
+                                                select="onFilterTipoIndChange"
+                                            />
+                                            <CheckBox
+                                                id="checkboxAmortizacion"
+                                                text="Amortización"
+                                                selected="true"
+                                                select="onFilterTipoIndChange"
+                                            />
                                             <ToolbarSpacer />
                                               <CheckBox
                                                 id="idEjecutadoCheckBox2"
@@ -273,12 +285,14 @@
                                                 press="onAddPress"
                                                 class="toolbarActionBtn"
                                                 tooltip="{i18n>anadir}"
+                                                enabled="{modeloBloqueo>/isBlocked}"
                                             />
                                             <Button
                                                 icon="sap-icon://delete"
                                                 press="onDeletePress"
                                                 class="toolbarActionBtn"
                                                 tooltip="{i18n>eliminar}"
+                                                enabled="{modeloBloqueo>/isBlocked}"
                                             />
                                             <Button
                                                 icon="sap-icon://shortcut"
@@ -318,9 +332,10 @@
                                                 <Input
                                                     width="8.5rem"
                                                     textAlign="Center"
-                                                    editable="false"
+                                                    editable="{= ${inmovilizadosModel>isLevel3} &amp;&amp; ${inmovilizadosModel>isNew} }"
                                                     value="{inmovilizadosModel>PhPspnr}"
-                                                    class="flatCellInput yearCell"
+                                                    change="onPhPspnrChange"
+                                                    class="flatCellInput yearCell allowLetters"
                                                 />
                                             </VBox>
                                         </t:template>
@@ -345,9 +360,10 @@
                                                 <Input
                                                     value="{inmovilizadosModel>Post1}"
                                                     width="9rem"
-                                                    editable="{= ${inmovilizadosModel>isLevel3} === true || ${inmovilizadosModel>isNew} === true}"
+                                                    editable="{= ${inmovilizadosModel>isLevel3} === true &amp;&amp; ${inmovilizadosModel>isNew} === true}"
                                                     textAlign="Center"
-                                                    class="flatCellInput"
+                                                    change="onDescOperacionChange"
+                                                    class="flatCellInput allowLetters"
                                                 />
                                             </VBox>
                                         </t:template>
@@ -372,7 +388,7 @@
                                                     textAlign="Center"
                                                     editable="false"
                                                     value="{inmovilizadosModel>TipoInd}"
-                                                    class="flatCellInput"
+                                                    class="flatCellInput allowLetters"
                                                 />
                                             </VBox>
                                         </t:template>
@@ -516,7 +532,7 @@
                                                     class="bottomFilter" width="0.9rem"
                                                     visible="{= ${cabecera} === true}">
                                                     <customData>
-                                                        <core:CustomData key="filterProp" value="AmoEje" />
+                                                        <core:CustomData key="filterProp" value="_Ejecutado" />
                                                     </customData>
                                                 </Button>
                                                 <vn:DecimalesInput
@@ -526,7 +542,7 @@
                                                     editable="false"
                                                     value="{
                                                         parts: [
-                                                            'inmovilizadosModel>AmoEje',
+                                                            'inmovilizadosModel>_Ejecutado',
                                                             'dashboardModel>/decimales',
                                                             'appData>/userData/CurrencyFormat'
                                                         ],
@@ -558,18 +574,18 @@
                                                     width="0.9rem" class="bottomFilter"
                                                     visible="{= ${cabecera} === true}">
                                                     <customData>
-                                                        <core:CustomData key="filterProp" value="AmoPen" />
+                                                        <core:CustomData key="filterProp" value="_Pendiente" />
                                                     </customData>
                                                 </Button>
                                                 <vn:DecimalesInput
                                                     width="4.2rem"
                                                     decimalNumbers="{dashboardModel>/decimales}"
                                                     textAlign="Center"
-                                                    editable="true"
+                                                    editable="{= ${inmovilizadosModel>Estructura} === 'O' &amp;&amp; ${inmovilizadosModel>TipoInd} === 'I' &amp;&amp; ${inmovilizadosModel>isNew} === false &amp;&amp; ${modeloBloqueo>/isBlocked} === true }"
                                                     change="onAmoPenChange"
                                                     value="{
                                                         parts: [
-                                                            'inmovilizadosModel>AmoPen',
+                                                            'inmovilizadosModel>_Pendiente',
                                                             'dashboardModel>/decimales',
                                                             'appData>/userData/CurrencyFormat'
                                                         ],
@@ -601,17 +617,18 @@
                                                     width="0.9rem" class="bottomFilter"
                                                     visible="{= ${cabecera} === true}">
                                                     <customData>
-                                                        <core:CustomData key="filterProp" value="AmoTot" />
+                                                        <core:CustomData key="filterProp" value="_Total" />
                                                     </customData>
                                                 </Button>
                                                 <vn:DecimalesInput
                                                     width="4.2rem"
                                                     decimalNumbers="{dashboardModel>/decimales}"
                                                     textAlign="Center"
-                                                    editable="false"
+                                                    editable="{= ${inmovilizadosModel>Estructura} === 'O' &amp;&amp; ${inmovilizadosModel>TipoInd} === 'I' &amp;&amp; ${inmovilizadosModel>isNew} === false &amp;&amp; ${modeloBloqueo>/isBlocked} === true }"
+                                                    change="onAmoTotChange"
                                                     value="{
                                                         parts: [
-                                                            'inmovilizadosModel>AmoTot',
+                                                            'inmovilizadosModel>_Total',
                                                             'dashboardModel>/decimales',
                                                             'appData>/userData/CurrencyFormat'
                                                         ],
@@ -646,12 +663,21 @@
                                                         <core:CustomData key="filterProp" value="ValResidAmo" />
                                                     </customData>
                                                 </Button>
-                                                <Input
-                                                    value="{inmovilizadosModel>ValResidAmo}"
-                                                    editable="true"
-                                                    class="flatCellInput"
-                                                    width="100%"
+                                                <vn:DecimalesInput
+                                                    width="4.2rem"
+                                                    decimalNumbers="{dashboardModel>/decimales}"
                                                     textAlign="Center"
+                                                    editable="{= ${inmovilizadosModel>Estructura} === 'O' &amp;&amp; ${inmovilizadosModel>TipoInd} === 'I' &amp;&amp; ${inmovilizadosModel>isNew} === false &amp;&amp; ${modeloBloqueo>/isBlocked} === true }"
+                                                    change="onValResidChange"
+                                                    value="{
+                                                        parts: [
+                                                            'inmovilizadosModel>ValResidAmo',
+                                                            'dashboardModel>/decimales',
+                                                            'appData>/userData/CurrencyFormat'
+                                                        ],
+                                                        formatter: '.formatDecimales'
+                                                    }"
+                                                    class="flatCellInput"
                                                 />
                                             </HBox>
                                         </t:template>
@@ -682,7 +708,8 @@
                                                 </Button>
                                                 <Input
                                                     value="{inmovilizadosModel>PctjResidAmo}"
-                                                    editable="true"
+                                                    editable="{= ${inmovilizadosModel>Estructura} === 'O' &amp;&amp; ${inmovilizadosModel>TipoInd} === 'I' &amp;&amp; ${inmovilizadosModel>isNew} === false &amp;&amp; ${modeloBloqueo>/isBlocked} === true }"
+                                                    change="onPercValResidChange"
                                                     class="flatCellInput"
                                                     width="100%"
                                                     textAlign="Center"
@@ -719,6 +746,8 @@
                                                     width="100%"
                                                     class="flatCellInput"
                                                     change="onRepartoChange"
+                                                    editable="{= ${inmovilizadosModel>TipoInd} === 'I' &amp;&amp; ${inmovilizadosModel>isNew} === false &amp;&amp; ${modeloBloqueo>/isBlocked} === true }"
+                                                    
                                                     items="{
                                                         path: 'inmovilizadosModel>repartoItems',
                                                         templateShareable: false
@@ -756,12 +785,20 @@
                                                         <core:CustomData key="filterProp" value="PenPlan" />
                                                     </customData>
                                                 </Button>
-                                                <Input
-                                                    value="{inmovilizadosModel>PenPlan}"
-                                                    editable="false"
-                                                    class="flatCellInput"
-                                                    width="{= ${cabecera} === true ? '4rem' : '5.5rem'}"
+                                                <vn:DecimalesInput
+                                                    width="4.2rem"
+                                                    decimalNumbers="{dashboardModel>/decimales}"
                                                     textAlign="Center"
+                                                    editable="false"
+                                                    value="{
+                                                        parts: [
+                                                            'inmovilizadosModel>PenPlan',
+                                                            'dashboardModel>/decimales',
+                                                            'appData>/userData/CurrencyFormat'
+                                                        ],
+                                                        formatter: '.formatDecimales'
+                                                    }"
+                                                    class="flatCellInput"
                                                 />
                                             </HBox>
                                         </t:template>
@@ -824,12 +861,20 @@
                                                         <core:CustomData key="filterProp" value="pend" />
                                                     </customData>
                                                 </Button>
-                                                <Input
-                                                    value="{inmovilizadosModel>pend}"
-                                                    editable="{= ${isGroup} !== true}"
+                                                <vn:DecimalesInput
+                                                    width="4.2rem"
+                                                    decimalNumbers="{dashboardModel>/decimales}"
                                                     textAlign="Center"
+                                                    editable="false"
+                                                    value="{
+                                                        parts: [
+                                                            'inmovilizadosModel>pend',
+                                                            'dashboardModel>/decimales',
+                                                            'appData>/userData/CurrencyFormat'
+                                                        ],
+                                                        formatter: '.formatDecimales'
+                                                    }"
                                                     class="flatCellInput"
-                                                    width="{= ${cabecera} === true ? '3.5rem' : '70px'}"
                                                 />
                                             </HBox>
                                         </t:template>

@@ -42,10 +42,11 @@
     height: 1rem !important; 
     line-height: 1rem !important;
     font-size: 0.57rem !important;
-    padding: 0 0 0 0 !important; /* Simplificado top, right, bottom, left */
+    
     margin-left: -1rem;
     box-sizing: border-box;
 }
+/* padding: 0 0 0 0 !important; Simplificado top, right, bottom, left */
 .sapUiSizeCompact .noLabelOverride .sapMLabel {
     height: unset !important;
     line-height: unset !important;
@@ -99,6 +100,33 @@
     padding: 0 !important;
 }
 
+/* Reglas específicas SOLO para TreeTables */
+#TreeTableAnticipados,
+#TreeTableInmovilizados,
+#TreeTableDiferidos {
+    margin-bottom: 20px !important;
+}
+
+/* Forzar scroll horizontal visible SOLO en TreeTables */
+#TreeTableAnticipados .sapUiTableHSb,
+#TreeTableInmovilizados .sapUiTableHSb,
+#TreeTableDiferidos .sapUiTableHSb {
+    height: 18px !important;
+    min-height: 18px !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+/* Overflow para TreeTables */
+#TreeTableAnticipados .sapUiTableCnt,
+#TreeTableInmovilizados .sapUiTableCnt,
+#TreeTableDiferidos .sapUiTableCnt {
+    overflow-x: auto !important;
+}
+
 /* Agrupación de paddings en cero para celdas de tabla */
 .sapUiTableDataCell > .sapUiTableCellInner,
 .sapUiTableCreationRow .sapUiTableCreationRowForm .sapUiTableCell > .sapUiTableCellInner,
@@ -122,6 +150,11 @@
 
 .smallHeaderTable .sapUiTableHeaderRow { height: 24px !important; }
 
+.smallHeaderTable .sapMText,
+.smallHeaderTable .sapMLabel,
+.smallHeaderTable .sapMInputBaseInner {
+    font-size: 12px !important;
+}
 .sapUiTableHeaderDataCell {
     height: auto !important;
     overflow: visible !important;
@@ -166,27 +199,27 @@
     margin-left: -0.4rem !important;
 } */
 
-.flatCellInput .sapMInputBaseContentWrapper,
-.sapUiTableCell .flatCellInput .sapMInputBaseContentWrapper {
+.flatCellInput .sapMInputBaseContentWrapper, .sapUiTableCell .flatCellInput .sapMInputBaseContentWrapper {
+    min-height: 1rem;
     box-shadow: none !important;
-    margin-top: 0 !important;
+    /* margin-top: 0 !important; */
 }
 
 /* Corrección del FlatCellInput para evitar redundancias */
 .flatCellInput .sapMInputBaseInner,
 .sapUiTableCell .flatCellInput .sapMInputBaseInner {
-    padding: 0 !important;
     box-sizing: border-box !important;
 }
 
 .flatCellInput .sapMInputBaseInner { margin: 0.01rem !important; }
 
-/*.sapUiTableCell .flatCellInput { margin: 0.1rem 0.4rem !important; }*/
 .sapUiTableCell .flatCellInput .sapMInputBaseInner {
     margin: 0 !important;
     height: 1.6rem !important;
-    line-height: 1.6rem !important;
+    line-height: 1.2rem !important; /* <--- Abbassalo rispetto all'height */
     text-align: center !important;
+    padding-bottom: 0.5rem;
+    vertical-align: top !important; /* Aiuta l'allineamento */
 }
 
 .flatCellInput .sapMInputBaseIconContainer,
@@ -757,11 +790,6 @@ tr.rowVersionB .flatCellInput .sapMInputBaseInner {
 /* ========================================
    OCULTAR Operación y Descripción en filas B
    ======================================== */
-.sapUiTableCtrlScroll tr.rowVersionB td:nth-child(1) .flatCellInput,
-.sapUiTableCtrlScroll tr.rowVersionB td:nth-child(2) .flatCellInput {
-    visibility: hidden;
-}
-
 .sapUiTableCtrlFixed tr.rowVersionB td:nth-child(1) .flatCellInput,
 .sapUiTableCtrlFixed tr.rowVersionB td:nth-child(2) .flatCellInput {
     visibility: hidden;
@@ -797,10 +825,17 @@ tr.rowVersionB .flatCellInput .sapMInputBaseInner {
 .sapUiTableRowSelectionCell.hideCheckbox::after {
     display: none !important;
 }
-.sapUiTableDataCell:has(.borderRightPend),
+/* .sapUiTableDataCell:has(.borderRightPend),
 .sapUiTableHeaderDataCell:has(.borderRightPend) {
     border-right: 2px solid #f3984e !important;
-}
+} */
+ /* ========================================
+  Linea orange columna 8
+   ======================================== */
+ /* .sapUiTableDataCell:nth-child(8),
+.sapUiTableHeaderDataCell:nth-child(8) {
+    border-right: 2px solid #f3984e !important;
+} */
 
 .sapUiTable.KpiTable td{
     padding-right: 10px !important;
@@ -833,10 +868,6 @@ tr.rowVersionB .flatCellInput .sapMInputBaseInner {
     margin: 0 !important; /* Simplificado */
 }
 
-.borderColYears.sapMInput {
-    background: #fff !important;
-}
-
 .borderColYears .sapMInputBaseInner {
     text-align: center !important;     
     line-height: 1.8rem !important;     
@@ -853,7 +884,6 @@ tr.rowVersionB .flatCellInput .sapMInputBaseInner {
     border: none !important;
     box-shadow: none !important;
     margin-top: 0 !important;
-    background: transparent !important;
 }
 
 .sapUiTableCell .sapMInputBase.sapMInputBaseReadonly .sapMInputBaseInner,
@@ -876,15 +906,15 @@ tr.cabeceracolor-Group > td {
 }
 .sapUiTableTr.sinProveedorRow td,
 .sapUiTableTr.sinProveedorRow input {
-    background-color: #FFD700 !important;
+    background-color: #d9d9d9  !important;
     font-weight: bold;
     color: #000000;
 }
 .sapUiTableTr.sinProveedorRow td {
-    background-color: #FFD700 !important;
+    background-color: #d9d9d9  !important;
 }
 .sapUiTableTr.sinProveedorRow input {
-    background-color: #FFD700 !important;
+    background-color: #d9d9d9  !important;
     font-weight: bold;
     color: #000000;
 }
@@ -896,16 +926,15 @@ tr.cabeceracolor-Group > td {
     font-weight: bold;
     color: #000000;
 }
-/* Colora la riga, la cella e i wrapper degli input SAP */
 .sinProveedorRow, 
 .sinProveedorRow td, 
 .sinProveedorRow .sapMInputBaseContentWrapper, 
 .sinProveedorRow .sapMInputBaseInner {
-    background-color: #FFD700 !important;
+    background-color: #d9d9d9  !important;
     color: #000 !important;
     font-weight: bold !important;
 }
-
+/* color cabecera continua sin lineas blancas*/
 .headerGrayRow, 
 .headerGrayRow td, 
 .headerGrayRow .sapMInputBaseContentWrapper, 
@@ -913,4 +942,92 @@ tr.cabeceracolor-Group > td {
     background-color: #9e9b9b !important;
     color: #000 !important;
     font-weight: bold !important;
+}
+.headerGrayRow td,
+.headerGrayRow .sapUiTableDataCell {
+    background-color: #9e9b9b !important;
+    border-right: 1px solid #9e9b9b !important;
+    border-left: 1px solid #9e9b9b !important;
+}
+
+.sinProveedorRow td,
+.sinProveedorRow .sapUiTableDataCell {
+    background-color: #d9d9d9 !important;
+    border-right: 1px solid #d9d9d9 !important;
+    border-left: 1px solid #d9d9d9 !important;
+}
+/* Para que se quede la linea orange en la columna 8 */
+/* ========================================
+  Linea orange columna Pend a planificar
+   ======================================== */
+.sapUiTableDataCell:has(.borderRightPend),
+.sapUiTableHeaderDataCell:has(.borderRightPend) {
+    border-right: 2px solid #f3984e !important;
+}
+
+.headerGrayRow td:has(.borderRightPend),
+.sinProveedorRow td:has(.borderRightPend) {
+    border-right: 2px solid #f3984e !important;
+}
+.sapUiSizeCompact .sapMInputBaseHeightMargin {
+    margin: 0 !important;
+}
+.sapUiSizeCompact .sapMInputBase:not(.sapMInputBaseHasEndIcons):not(.sapMInputBaseHasBeginIcons) .sapMInputBaseContentWrapper {
+    min-width: 2.13rem;
+    background: transparent;
+}
+/*   Se aplica el gris #9e9b9b del headerGrayRow únicamente
+   a la cabecera de la tabla del panel, sin afectar al resto. */
+.panelDarkHeader .sapUiTableColHdrCnt,
+.panelDarkHeader .sapUiTableColHdr,
+.panelDarkHeader .sapUiTableColHdrTr > td,
+.panelDarkHeader .sapUiTableHeaderDataCell {
+    background-color: #9e9b9b !important;
+    border-right: 1px solid #9e9b9b !important;
+    border-left: 1px solid #9e9b9b !important;
+}
+
+/*   Se aplica negrita y color negro al texto de la cabecera. */
+.panelDarkHeader .sapUiTableColHdrTr .sapMLabel,
+.panelDarkHeader .sapUiTableColHdrTr .sapUiTableCellInner {
+    color: #000000 !important;
+    font-weight: bold !important;
+}
+
+/*   Se forza el tamaño del link para que coincida con el resto de celdas */
+.sapUiTable a,
+.sapUiTable .sapMLnk {
+    font-size: 10px !important;
+}
+.sapUiTable a,
+.sapUiTable .sapMLnk {
+    color: inherit !important;
+    text-decoration: none !important;
+}
+.agrupadorTotalRow td {
+    background-color: #e8f0f7 !important;
+    font-weight: bold;
+}
+
+/* ==========================================================================
+   Alineación de inputs numéricos
+   ========================================================================== */
+/* Alinear todos los inputs a la derecha por defecto (valores numéricos)  */
+.sapMInputBaseInner {
+    text-align: right !important;
+}
+
+/* Alineación específica para inputs en tablas */
+.sapUiTableCell .sapMInputBase .sapMInputBaseInner,
+.sapUiTableCell .sapMInputBase.sapMInputBaseReadonly .sapMInputBaseInner,
+.sapUiTableCell .sapMInputBase.sapMInputBaseDisabled .sapMInputBaseInner {
+    text-align: right !important;
+}
+
+/* Mantener alineación izquierda para campos de texto con clase allowLetters */
+.allowLetters .sapMInputBaseInner,
+.allowLetters.sapMInputBase .sapMInputBaseInner,
+.sapUiTableCell .allowLetters .sapMInputBaseInner,
+.sapUiTableCell .allowLetters.sapMInputBase .sapMInputBaseInner {
+    text-align: left !important;
 }

@@ -35,7 +35,7 @@ sap.ui.define([
          * Se inicializa la vista de Externos definiendo el estado de navegacion y visibilidad.
          * Se configura la tabla principal y se preparan las columnas anuales iniciales.
          */
-       setInitData: async function () {
+        setInitData: async function () {
             // Se inicia la carga de datos maestros y la inicializacion del modelo de externos.
             this._cargarDatosTabla();
             await this.initExternosModel();
@@ -251,33 +251,65 @@ sap.ui.define([
         buildTree: function (data) {
             const map = {};
 
-            //      Se crea un mapa por clave PhPspnr conservando todos los campos originales
-            //      del backend e incluyendo la propiedad isEditable derivada del campo Estructura.
             data.forEach(item => {
+                const isD = item.PhPspnr === "D";
+                const isC = !isD && item.Estructura === "C";
+                const isS = !isD && item.Estructura === "S";
+                const isO = !isD && item.Estructura === "O";
+                const isDesglose = !isD && item.Estructura === "";
+
                 map[item.PhPspnr] = {
                     ...item,
                     children: [],
-                    isEditable: item.Estructura === "O",
-                    isSubcapitulo: item.Estructura === "S",
-                    isCapitulo: item.Estructura === "C",
-                    isVacio: item.Estructura === "",
+                    isEditable: isO,
+                    isSubcapitulo: isS,
+                    isCapitulo: isC,
+                    isVacio: isDesglose,
+
+                    editPhPspnr: isDesglose,
+                    editPost1: isDesglose,
+                    //   Se condiciona la editabilidad de %Tasa al valor de TipoTasa.
+                    // Solo es editable cuando Estructura es O y TipoTasa es "X" (equivale a INT).
+                    editTasa: isO && item.TipoTasa === "X",
+                    editAmoEje: false,
+                    editAmoEjeAjus: false,
+                    editAmoEjeReal: false,
+                    editAmoPen: isDesglose,
+                    editAmoTot: isDesglose,
+                    editPepDest: isO,
+                    editTipo: isO || isDesglose,
+                    editPenPlan: false,
+                    editMonths: isDesglose,
+                    editPend: isDesglose,
+                    //   Se condiciona la editabilidad de Pendiente y Total al valor de TipoTasa.
+                    // Solo son editables cuando Estructura es O y TipoTasa está vacío (equivale a EXT).
+                    editCtotPen: isO && item.TipoTasa !== "X",
+                    editCtot: isO && item.TipoTasa !== "X"
                 };
             });
 
             const roots = [];
 
-            //      Se construye la jerarquia padre-hijo y se asigna la propiedad padre
-            //      necesaria para que el BaseController distinga nodos raiz de nodos hijos
-            //      en la logica del menu contextual, navegacion de teclado y sticky headers.
+            //   Primero: añadir el registro con PhPspnr = "D" como root sin hijos
             data.forEach(item => {
+                if (item.PhPspnr === "D") {
+                    map[item.PhPspnr].padre = true;
+                    map[item.PhPspnr].children = [];
+                    if (!roots.some(r => r.PhPspnr === "D")) {
+                        roots.push(map[item.PhPspnr]);
+                    }
+                }
+            });
+
+            data.forEach(item => {
+                if (item.PhPspnr === "D") return;
+
                 if (item.ParentPath === "I") {
-                    //      Se marca el nodo como raiz y se evitan duplicados en el array de raices.
                     map[item.PhPspnr].padre = true;
                     if (!roots.some(r => r.PhPspnr === item.PhPspnr)) {
                         roots.push(map[item.PhPspnr]);
                     }
                 } else {
-                    //      Se enlaza el nodo hijo con su padre correspondiente segun ParentPath.
                     const parent = map[item.ParentPath];
                     if (parent) {
                         map[item.PhPspnr].padre = false;
@@ -286,8 +318,6 @@ sap.ui.define([
                 }
             });
 
-            //      Se guarda una copia profunda de los datos originales del servidor
-            //      para el control de cambios y la restauracion del delta de variantes.
             this._originalServerData = JSON.parse(JSON.stringify(roots));
             return roots;
         },
@@ -313,6 +343,22 @@ sap.ui.define([
             //      para evitar el error cuando TreeTableExternos todavia no esta en el DOM.
             this._calculateDynamicRows();
             this._attachHeaderToggleListener();
+        },
+
+        /**
+         * Se impide que el usuario seleccione la fila "D" (OEO).
+         * Si el evento incluye la fila "D" entre las seleccionadas, se deselecciona.
+         */
+        onRowSelectionChange: function (oEvent) {
+            const oTable = oEvent.getSource();
+            const aSelectedIndices = oTable.getSelectedIndices();
+            for (let i = 0; i < aSelectedIndices.length; i++) {
+                const oContext = oTable.getContextByIndex(aSelectedIndices[i]);
+                const oRow = oContext && oContext.getObject();
+                if (oRow && oRow.PhPspnr === "D") {
+                    oTable.removeSelectionInterval(aSelectedIndices[i], aSelectedIndices[i]);
+                }
+            }
         },
 
         /**
