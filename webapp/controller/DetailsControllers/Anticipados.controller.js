@@ -47,6 +47,9 @@ sap.ui.define([
 
             this._initVariantManagement();
 
+            //  Se identifica esta vista como Anticipados para los headers de los servicios.
+            this._pestana = "Anticipados";
+
             this._initYearsModel();
             // Se delega la inicialización al método asíncrono para garantizar
             // que las columnas dinámicas se crean siempre después de las estáticas.
@@ -662,6 +665,8 @@ sap.ui.define([
                     } else if (sPhPspnr !== oRow.PhPspnr) {
                         this.createMessageDialog({
                             title: this.getTranslatedText("ERROR"),
+
+                            
                             textAccept: this.getTranslatedText("ACEPTAR"),
                             messages: [{
                                 text: this.getTranslatedText("ERROR_SOLO_UNA_LINEA"),
@@ -767,15 +772,14 @@ sap.ui.define([
             }
             
             // Recopilar las líneas seleccionadas para eliminar
+            //   Cada fila se sanea con _sanitizeRowForBackend para evitar propiedades cliente.
             var aLinesToDelete = [];
             aSelectedIndices.forEach(function(iIndex) {
                 var oContext = oTable.getContextByIndex(iIndex);
                 if (oContext) {
-                    var oRowData = oContext.getObject();
-                    // Añadir la línea completa al array
-                    aLinesToDelete.push(oRowData);
+                    aLinesToDelete.push(this._sanitizeRowForBackend(oContext.getObject()));
                 }
-            });
+            }.bind(this));
             
             if (aLinesToDelete.length === 0) {
                 this.createMessageDialog({

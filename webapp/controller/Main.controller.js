@@ -713,13 +713,28 @@ sap.ui.define(
         console.log("[setUserScopeData] Actualizando corrientes para tramo:",
           this.getGlobalModel("appData").getData().tramo.Prctr);
 
-        // Se reinicializa la vista de corrientes si esta en cache con los datos del nuevo tramo.
-        if (this._mViews["corrientes"]) {
+        // Se reinicializa la vista de corrientes si esta en cache con los datos
+        // del nuevo tramo, pero unicamente cuando NO es la pestana activa en
+        // ese momento. Cuando currentKey === "corrientes", la inicializacion
+        // ya se ha realizado un par de lineas mas arriba a traves de
+        // currentView.getController().setInitData(), que internamente llama a
+        // initCorrienteModel y por tanto dispara la POST a CambioPestIndirectosSet.
+        // Sin esta guardia, al confirmar un cambio de tramo desde el scope
+        // selector con Corrientes como pestana activa se enviaban DOS POST
+        // identicas y consecutivas al backend (mismo NavSelProyecto, misma
+        // version, mismo ejercicio, mismas cabeceras), duplicando la carga del
+        // servidor y la posible escritura en tablas temporales. La condicion
+        // currentKey !== "corrientes" garantiza que cuando Corrientes es la
+        // pestana activa se reciba una unica POST y cuando es una pestana
+        // distinta (Externos, Anticipados, ...) Corrientes en cache se siga
+        // re-inicializando para reflejar el nuevo tramo.
+        if (currentKey !== "corrientes" && this._mViews["corrientes"]) {
           const oCorrientesController = this._mViews["corrientes"].getController();
           if (oCorrientesController && oCorrientesController.initCorrienteModel) {
             await oCorrientesController.initCorrienteModel();
           }
         }
+      
       },
 
 
@@ -788,6 +803,46 @@ sap.ui.define(
           const oDashboardModel = this.getGlobalModel("dashboardModel");
           const oDashboardData = oDashboardModel ? oDashboardModel.getData() : {};
 
+          //   Mapeo de la clave del IconTabBar al texto largo que espera el backend
+          // en el header "pestana", alineado con el patron usado en _enviarFilaAlBackend
+          // y los _callDelIndirectosService de cada detail controller.
+          const oTabKeyToPestana = {
+            corrientes: "Corrientes",
+            externos: "Externos",
+            anticipados: "Anticipados",
+            diferidos: "Diferidos",
+            inmov: "Inmovilizados"
+          };
+          const oIconTabBar = this.byId("itb");
+          const sTabKey = oIconTabBar ? oIconTabBar.getSelectedKey() : "";
+          const sPestana = oTabKeyToPestana[sTabKey] || "";
+
+          //   Ejercicio: prioridad al selector de anio de la pestana activa
+          // (yearsModel/selectedYear vive en la view detalle, no en Main, asi que se
+          // lee atravesando _mViews). Fallback: anio de Freal del tramo o del dashboard.
+          // Mismo orden que aplican los detail controllers en _CambioPestIndirectosSet.
+          let sEjercicio = "";
+          const oActiveView = this._mViews && this._mViews[sTabKey];
+          if (oActiveView) {
+            const oYearsModel = oActiveView.getModel("yearsModel");
+            const sSelectedYear = oYearsModel && oYearsModel.getProperty("/selectedYear");
+            if (sSelectedYear) {
+              sEjercicio = String(sSelectedYear);
+            }
+          }
+          if (!sEjercicio) {
+            let sFreal = "";
+            if (oAppData && oAppData.tramo && oAppData.tramo.Freal) {
+              sFreal = oAppData.tramo.Freal;
+            } else if (oDashboardModel) {
+              sFreal = oDashboardModel.getProperty("/NavMasterLt/0/Freal");
+            }
+            const oFrealDate = this._parseODataDate(sFreal);
+            if (oFrealDate && !isNaN(oFrealDate.getTime())) {
+              sEjercicio = oFrealDate.getFullYear().toString();
+            }
+          }
+
           // Se prepara el objeto de datos para enviar al backend
           const oPayload = {
             // Se incluye la información del proyecto seleccionado
@@ -796,13 +851,18 @@ sap.ui.define(
             NavLtVersiones: oAppData.NavLtVersiones || []
           };
 
-          // Se preparan los parámetros del header como urlParameters
+          //   Cabeceras alineadas con el resto de llamadas del servicio:
+          // - "ambito" (no "amnito"): typo del codigo anterior, el backend ignoraba el filtro.
+          // - "AplicationLangu" en vez de "Langu" para coincidir con el idioma activo de la app.
+          // - "ejercicio" y "pestana" se anaden para que el backend sepa que contexto commit.
           const oParams = {
-            urlParameters: {
-              amnito: oAppData.userData?.initialNode || "",
-              lang: oAppData.userData?.Langu || "",
-              decimales: oDashboardData.decimales || "2",
-              bloqueado: oDashboardData.bloqueado || ""
+            headers: {
+              ambito: (oAppData.userData && oAppData.userData.initialNode) || "",
+              lang: (oAppData.userData && oAppData.userData.AplicationLangu) || "",
+              bloqueado: oDashboardData.bloqueado || "",
+              decimales: oDashboardData.decimales || "02",
+              ejercicio: sEjercicio,
+              pestana: sPestana
             }
           };
 

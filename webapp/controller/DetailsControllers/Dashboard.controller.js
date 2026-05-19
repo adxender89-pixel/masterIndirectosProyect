@@ -131,14 +131,16 @@ sap.ui.define([
             // Se registra el modelo como global para habilitar su acceso desde otras vistas.
             this.setGlobalModel(dashboardModel, "dashboardModel");
 
-            // (MV) Se persisten las fechas clave del tramo activo en appData para que otras vistas
-            // (MV) como Corrientes puedan leerlas sin depender del dashboardModel.
+            //  Se persisten las fechas clave del tramo activo en appData para que otras vistas
+            //  como Corrientes puedan leerlas sin depender del dashboardModel.
             var sFreal = (dashBoardData.NavMasterLt.results[0] || {}).Freal || "";
+            var sFrealiniobra = (dashBoardData.NavLsObra.results[0] || {}).Frealiniobra || "";
             var sFrealfinobra = (dashBoardData.NavLsObra.results[0] || {}).Frealfinobra || "";
             var sFrealsist = (dashBoardData.NavMasterLt.results[0] || {}).Frealsist || "";
 
 
             this.getGlobalModel("appData").setProperty("/Freal", sFreal);
+            this.getGlobalModel("appData").setProperty("/Frealiniobra", sFrealiniobra);
             this.getGlobalModel("appData").setProperty("/Frealfinobra", sFrealfinobra);
             this.getGlobalModel("appData").setProperty("/Frealsist", sFrealsist);
 

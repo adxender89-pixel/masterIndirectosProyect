@@ -140,7 +140,7 @@
                                     }"
                                     toggleOpenState="onToggleOpenState"
                                     rowSelectionChange="onRowSelectionChange"
-                                    class="sapUiSizeCompact"
+                                    class="sapUiSizeCompact mainTreeTable"
                                     fixedColumnCount="2"
                                     visibleRowCount="{viewModel>/dynamicRowCount}"
                                     filter="onTreeTableFilter"
@@ -148,9 +148,9 @@
                                 >
                                     <t:extension>
                                         <OverflowToolbar height="100%">
-                                            <!-- Se anade un campo de busqueda que filtra la columna OPERACION (PhPspnr) del TreeTable. (MV) -->
-                                            <!-- Se aplica la clase allowLetters para evitar el bloqueo global de letras en inputs de la tabla. (MV) -->
-                                            <!-- Se habilitan sugerencias para mostrar las opciones disponibles a partir de los datos cargados. (MV) -->
+                                            <!-- Se anade un campo de busqueda que filtra la columna OPERACION (PhPspnr) del TreeTable.  -->
+                                            <!-- Se aplica la clase allowLetters para evitar el bloqueo global de letras en inputs de la tabla.  -->
+                                            <!-- Se habilitan sugerencias para mostrar las opciones disponibles a partir de los datos cargados.  -->
                                             <SearchField
                                                 width="200px"
                                                 placeholder="{i18n>operacion}"
@@ -221,12 +221,14 @@
                                             <Button
                                                 icon="sap-icon://add"
                                                 press="onAddPress"
+                                                enabled="{= ${modeloBloqueo>/isBlocked} === true }"
                                                 class="toolbarActionBtn"
                                                 tooltip="{i18n>anadir}"
                                             />
                                             <Button
                                                 icon="sap-icon://delete"
                                                 press="onDeletePress"
+                                                enabled="{= ${modeloBloqueo>/isBlocked} === true }"
                                                 class="toolbarActionBtn"
                                                 tooltip="{i18n>eliminar}"
                                             />
@@ -487,7 +489,7 @@
                                                 <vn:DecimalesInput
                                                     decimalNumbers="{dashboardModel>/decimales}"
                                                     textAlign="Center"
-                                                    editable="{externosModel>editTasa}"
+                                                    editable="{= ${externosModel>editTasa} &amp;&amp; ${modeloBloqueo>/isBlocked} === true }"
                                                     value="{
                                                         parts: [
                                                             'externosModel>Tasa',
@@ -881,11 +883,12 @@
                                                             />
                                                         </customData>
                                                     </Button>
+                                                    <!--  Se anade la condicion PhPspnr !== 'D' para bloquear la edicion en la fila raiz "D" (Work Completed Objective). -->
                                                     <vn:DecimalesInput
                                                         width="100%"
                                                         decimalNumbers="{dashboardModel>/decimales}"
                                                         textAlign="Center"
-                                                        editable="{externosModel>editAmoPen}"
+                                                        editable="{= ${externosModel>editAmoPen} &amp;&amp; ${externosModel>PhPspnr} !== 'D' }"
                                                         value="{
                                                             parts: [
                                                                 'externosModel>AmoPen',
@@ -979,11 +982,12 @@
                                                             />
                                                         </customData>
                                                     </Button>
+                                                    <!--  Se anade la condicion PhPspnr !== 'D' para bloquear la edicion en la fila raiz "D". -->
                                                     <vn:DecimalesInput
                                                         width="100%"
                                                         decimalNumbers="{dashboardModel>/decimales}"
                                                         textAlign="Center"
-                                                        editable="{externosModel>editAmoTot}"
+                                                        editable="{= ${externosModel>editAmoTot} &amp;&amp; ${externosModel>PhPspnr} !== 'D' }"
                                                         value="{
                                                             parts: [
                                                                 'externosModel>AmoTot',
@@ -1056,11 +1060,12 @@
                                                             />
                                                         </customData>
                                                     </Button>
+                                                    <!--  Se anade la condicion PhPspnr !== 'D' para bloquear la edicion en la fila raiz "D". -->
                                                     <vn:DecimalesInput
                                                         width="100%"
                                                         decimalNumbers="{dashboardModel>/decimales}"
                                                         textAlign="Center"
-                                                        editable="{externosModel>editPepDest}"
+                                                        editable="{= ${externosModel>editPepDest} &amp;&amp; ${modeloBloqueo>/isBlocked} === true &amp;&amp; ${externosModel>PhPspnr} !== 'D' }"
                                                         value="{
                                                             parts: [
                                                                 'externosModel>PepDest',
@@ -1159,10 +1164,11 @@
                                                     </Button>
                                                     <!-- Filas normales: muestra Select con size2 -->
                                                     <HBox alignItems="Center">
+                                                        <!--  Se anade la condicion PhPspnr !== 'D' para bloquear el Select de reparto en la fila raiz "D". -->
                                                         <Select
                                                             selectedKey="{externosModel>Tipo}"
                                                             visible="{= ${cabecera} !== true}"
-                                                            
+                                                            enabled="{= ${modeloBloqueo>/isBlocked} === true &amp;&amp; ${externosModel>PhPspnr} !== 'D' }"
                                                             class="flatCellInput"
                                                             forceSelection="true"
                                                             change="onRowInputChange"
@@ -1187,9 +1193,11 @@
                                                                 />
                                                             </items>
                                                         </Select>
+                                                        <!--  Se anade enabled con PhPspnr !== 'D' para bloquear el datepicker en la fila raiz "D". -->
                                                         <Button
                                                             icon="sap-icon://calendar"
                                                             visible="{= ${externosModel>Tipo} === 'LIN'}"
+                                                            enabled="{= ${externosModel>PhPspnr} !== 'D' }"
                                                             type="Transparent"
                                                             press="onOpenRangePicker"
                                                             width="auto"
@@ -1380,11 +1388,12 @@
                                                             />
                                                         </customData>
                                                     </Button>
+                                                    <!--  Se anade la condicion PhPspnr !== 'D' para bloquear la edicion de los meses en la fila raiz "D". -->
                                                     <vn:DecimalesInput
                                                         width="100%"
                                                         decimalNumbers="0"
                                                         textAlign="Center"
-                                                        editable="{externosModel>editMonths}"
+                                                        editable="{= ${externosModel>editMonths} &amp;&amp; ${externosModel>PhPspnr} !== 'D' }"
                                                         value="{externosModel>months}"
                                                         class="flatCellInput"
                                                     />
@@ -1467,9 +1476,10 @@
                                                             />
                                                         </customData>
                                                     </Button>
+                                                    <!--  Se anade la condicion PhPspnr !== 'D' para bloquear la edicion en la fila raiz "D". -->
                                                     <Input
                                                         value="{externosModel>pend}"
-                                                        editable="{externosModel>editPend}"
+                                                        editable="{= ${externosModel>editPend} &amp;&amp; ${externosModel>PhPspnr} !== 'D' }"
                                                         textAlign="Center"
                                                         class="flatCellInput"
                                                         width="100%"

@@ -1040,14 +1040,35 @@ sap.ui.define([
                         : (i + 1).toString()
                     ) + subFijoYear;
 
-                    // Se utiliza _buildNumericBinding con editable en false para que el tipo Float
-                    // parsee correctamente el valor antes de formatearlo.
-                    const oInput = new sap.m.Input({
+                    // Se emplea DecimalesInput para que las celdas de meses ejecutados hereden
+                    //el mismo formateo, normalizacion de vacios y comportamiento de focus
+                    //que el resto de inputs numericos de la tabla, aunque sean de solo lectura.
+                    // Se usa el patron parts + formatter como en las vistas (binding one-way)
+                    //en lugar de _buildNumericBinding (que aplica un tipo Float two-way). El
+                    //tipo two-way reformatea el valor al modelo en cada pulsacion, lo que
+                    //reposicionaba el caret y dejaba escribir solo un digito; ademas
+                    //actualizaba el modelo antes de onRowInputChange, haciendo creer al
+                    //filtro de cambio que el valor no se habia modificado y abortando el
+                    //envio al backend.
+                    // IMPORTANTE: el formatter usado es this.formatDecimales (definido en
+                    //este mismo BaseController, no el de model/formatter.js). Es exactamente
+                    //el mismo que las vistas resuelven al hacer formatter: '.formatDecimales'
+                    //y usa parseFloat directamente sobre el valor del modelo, evitando los
+                    //problemas de los dos formateadores divergiendo en su tratamiento del
+                    //formato SAP ("11.00000") frente al formato de usuario ("11,00").
+                    const oInput = new masterindirectos.control.DecimalesInput({
                         width: "100%",
-                        value: this._buildNumericBinding(this.tableModelName + ">" + sValKey),
+                        decimalNumbers: "{dashboardModel>/decimales}",
+                        value: {
+                            parts: [
+                                this.tableModelName + ">" + sValKey,
+                                "dashboardModel>/decimales"
+                            ],
+                            formatter: this.formatDecimales.bind(this)
+                        },
                         textAlign: "Center",
                         editable: false,
-                        // enabled: "{modeloBloqueo>/isBlocked}",
+                        enabled: "{modeloBloqueo>/isBlocked}",
                     }).data("monthIdx", i)
                         .data("monthYear", sYear)
                         .addStyleClass("customYearInput sapUiSizeCompact");
@@ -1071,17 +1092,59 @@ sap.ui.define([
                             : (iIdx + 1).toString()
                         ) + subFijoYear;
 
-                        const oInput = new sap.m.Input({
+                        // Se utiliza DecimalesInput en lugar de sap.m.Input para que las celdas
+                        //de meses editables compartan la misma logica de formateo, seleccion
+                        //automatica al entrar en celdas con valor cero y normalizacion del
+                        //campo vacio a "0,00" que aplica al resto de inputs numericos.
+                        // Se usa el patron parts + formatter (one-way) en lugar de
+                        //_buildNumericBinding (type Float two-way). El two-way reformateaba
+                        //el valor al modelo en cada pulsacion: el caret se reposicionaba y
+                        //el usuario solo podia escribir un digito antes de que el input se
+                        //sobrescribiera; ademas el modelo se actualizaba antes de
+                        //onRowInputChange, por lo que el filtro "valor === modelo" abortaba
+                        //la llamada al backend al considerar que no habia habido cambios.
+                        // IMPORTANTE: el formatter es this.formatDecimales del propio
+                        // BaseController(el mismo que las vistas resuelven al usar
+                        //'.formatDecimales'), no el de model/formatter.js. Usar el de
+                        //formatter.js producia diferencias de formato visibles solo en las
+                        //celdas de meses: tras una edicion, el valor podia mostrarse como
+                        //"1.100,00" en lugar de "11,00" porque ese formatter aplicaba un
+                        //replace de millares incorrecto sobre el formato SAP del modelo.
+                        const oInput = new masterindirectos.control.DecimalesInput({
                             width: "100%",
-                            value: this._buildNumericBinding(this.tableModelName + ">" + sValKey),
+                            decimalNumbers: "{dashboardModel>/decimales}",
+                            value: {
+                                parts: [
+                                    this.tableModelName + ">" + sValKey,
+                                    "dashboardModel>/decimales"
+                                ],
+                                formatter: this.formatDecimales.bind(this)
+                            },
                             textAlign: "Center",
                             editable: {
-                                path: this.tableModelName + ">Tipo",
-                                formatter: function (sTipo) {
-                                    return sTipo !== "OEO";
+                                parts: [
+                                    { path: this.tableModelName + ">Tipo" },
+                                    { path: this.tableModelName + ">__isHeader" }
+                                ],
+                                formatter: function (sTipo, bIsHeader) {
+                                    //   La fila gris de cabecera de los bloques custom (__isHeader)
+                                    // no debe permitir escritura en las celdas de mes/año aunque
+                                    // su campo Tipo no sea OEO.
+                                    return bIsHeader !== true && sTipo !== "OEO";
                                 }
                             },
-                            change: this.onRowInputChange.bind(this)
+                            //   Mismo patron que el resto de inputs del proyecto: el input solo
+                            // queda habilitado cuando la pestaña esta en estado "blocked"
+                            // (modeloBloqueo>/isBlocked === true en convencion del proyecto).
+                            enabled: "{modeloBloqueo>/isBlocked}",
+                            //  Se utiliza onMonthInputChange en lugar de
+                            //  onRowInputChange para habilitar la entrada de
+                            //  porcentajes (ej. "50%") sobre las celdas mensuales
+                            //  editables. Dicho envoltorio interpreta el signo %
+                            //  como porcentaje del campo PenPlan de la misma fila
+                            //  y delega despues en onRowInputChange para el envio
+                            //  habitual al backend.
+                            change: this.onMonthInputChange.bind(this)
                         })
                             .data("monthIdx", iIdx)
                             .data("monthYear", iYr)
@@ -1187,6 +1250,15 @@ sap.ui.define([
                     }
                 } catch (e) { }
                 oTable.setBusy(false);
+
+                // Tras insertar las columnas dinamicas de meses, se reasocia el
+                //delegado de flechas a los inputs recien creados. El listener de
+                //rowsUpdated puede no dispararse al insertar columnas, por lo que
+                //sin esta llamada explicita las celdas de meses quedan sin el
+                //handler de _onInputKeyDown y la navegacion vertical no funciona.
+                if (typeof this._attachArrowDelegates === "function") {
+                    this._attachArrowDelegates(oTable);
+                }
             }.bind(this), 50);
         },
         //   Se gestiona el cambio de año en el selector de ejercicio.
@@ -2062,7 +2134,7 @@ sap.ui.define([
             if (oSplitter.getDomRef()) {
                 fnCompute();
             } else {
-                // Lo splitter non è ancora nel DOM: si aggancia l'evento
+                // El splitter aun no esta en el DOM: se engancha el evento
                 oSplitter.addEventDelegate({ onAfterRendering: fnCompute });
             }
         },
@@ -2139,15 +2211,81 @@ sap.ui.define([
             const oDomRef = oInput.getFocusDomRef();
             if (!oDomRef) return;
 
-            // Si se navega horizontalmente, se previene el salto nativo del cursor de texto para que podamos cambiar de celda en su lugar.
-            if (bLeft || bRight) oEvent.preventDefault();
+            // En las flechas horizontales el caret se desplaza primero dentro
+            //del texto del input antes de cambiar de celda. Las condiciones que
+            //disparan la navegacion son:
+            //  1) El caret esta colapsado en el borde correspondiente (posicion 0
+            //     para ArrowLeft, final del valor para ArrowRight).
+            //  2) El texto esta integramente seleccionado Y el valor representa
+            //     un cero. En las celdas "0,00" se asume que el usuario solo
+            //     quiere atravesarlas, asi que una sola pulsacion basta para
+            //     saltar a la siguiente. En cambio, si la seleccion total esta
+            //     sobre un numero distinto de cero, se deja al navegador
+            //     colapsar la seleccion para permitir al usuario desplazarse
+            //     cifra a cifra dentro del input y editar libremente.
+            const _bValueIsZero = (function () {
+                const sVal = oDomRef.value || "";
+                if (!sVal) return true;
+                const sNumeric = sVal.replace(/\./g, "").replace(",", ".").replace(/[^\d.-]/g, "");
+                const nVal = parseFloat(sNumeric);
+                return !isNaN(nVal) && nVal === 0;
+            })();
+            if (bLeft) {
+                const iSelStartL = oDomRef.selectionStart;
+                const iSelEndL = oDomRef.selectionEnd;
+                const iValLenL = (oDomRef.value || "").length;
+                const bAtStart = iSelStartL === 0 && iSelEndL === 0;
+                const bFullSelectionL = iSelStartL === 0 && iSelEndL === iValLenL && iValLenL > 0;
+                if (!bAtStart && !(bFullSelectionL && _bValueIsZero)) {
+                    // Aun queda margen dentro del propio input: se deja que
+                    //el navegador mueva el caret o colapse la seleccion sin
+                    //saltar de celda. Solo se considera "listo para navegar"
+                    //si el caret esta al inicio o si toda la celda con valor
+                    //cero esta seleccionada.
+                    return;
+                }
+            }
+            if (bRight) {
+                const iSelStartR = oDomRef.selectionStart;
+                const iSelEndR = oDomRef.selectionEnd;
+                const iValLenR = (oDomRef.value || "").length;
+                const bAtEnd = iSelStartR === iValLenR && iSelEndR === iValLenR;
+                const bFullSelectionR = iSelStartR === 0 && iSelEndR === iValLenR && iValLenR > 0;
+                if (!bAtEnd && !(bFullSelectionR && _bValueIsZero)) {
+                    // El caret aun no esta al final del texto y, si hay
+                    //seleccion total, el valor no es cero: se permite el
+                    //desplazamiento natural del cursor para editar cifra
+                    //a cifra sin cambiar de celda.
+                    return;
+                }
+            }
 
+            // En este punto sabemos con certeza que la pulsacion va a producir
+            //una navegacion entre celdas (no un simple desplazamiento de caret
+            //dentro del input). Se aplica el throttle solo aqui para evitar que
+            //los eventos focus/blur encadenados saturen el ciclo de renderizado
+            //al mantener pulsada una flecha. 50ms equivalen a ~20 navegaciones
+            //por segundo, suficientes para sentir el "hold" fluido. Aplicarlo
+            //antes del caret-first impediria al navegador desplazar el cursor
+            //entre las cifras del propio input.
+            const iNow = Date.now();
+            if (this._lastArrowNavTime && iNow - this._lastArrowNavTime < 50) {
+                oEvent.preventDefault();
+                oEvent.stopImmediatePropagation();
+                return;
+            }
+            this._lastArrowNavTime = iNow;
 
-
-            // Se sincroniza el valor del DOM con el control SAPUI5 para evitar la pérdida de datos introducidos parcialmente antes de cambiar de celda.
-            const sCurrentDomValue = oDomRef.value;
-            oInput.setValue(sCurrentDomValue);
-            if (oInput.updateModelProperty) oInput.updateModelProperty(sCurrentDomValue);
+            // Se elimina la sincronizacion manual del valor DOM->control en
+            //este punto. Antes se invocaba setValue + updateModelProperty
+            //cuando el DOM diferia del control, pero en un binding compuesto
+            //(parts + formatter, sin parser) updateModelProperty empujaba el
+            //valor crudo al modelo y la cadena de eventos posterior podia
+            //reinterpretarlo: una edicion "3" + tecla flecha producia
+            //"3.300,00" en vez de "33,00" por una lectura incorrecta del
+            //separador. El blur natural del input dispara attachChange con
+            //el valor DOM correcto, que es donde realmente se debe formatear
+            //y enviar al backend; aqui no es necesario hacer nada.
 
             // Se detiene la propagación del evento para que no interfiera con otras funcionalidades nativas del navegador.
             oEvent.preventDefault();
@@ -2253,12 +2391,19 @@ sap.ui.define([
             }
 
             // ── LÓGICA DE NAVEGACIÓN VERTICAL (ARRIBA / ABAJO) ────────────────────────────────────
+            // La navegacion vertical no se restringe a la misma columna: si la
+            //celda de la columna actual no es editable en la fila candidata, se
+            //busca en esa misma fila el input editable mas cercano por distancia
+            //de columna. De este modo se puede recorrer la tabla sin "agujeros"
+            //independientemente de la estructura del arbol (D, capitulos,
+            //desglose, custom, etc.) o de que algunas columnas solo sean
+            //editables en ciertos niveles.
             let iTargetRowIndex = null;
             let sTargetPath = null;
+            let iTargetFinalColIndex = iTargetColIndex;
             let iSearchIndex = iCurrentRowIndex;
             let iSearchSteps = 0;
 
-            // Se busca de forma iterativa la próxima fila válida saltando nodos padre y celdas no editables.
             while (true) {
                 // Se incrementa o decrementa el índice lógico en base a la dirección de la flecha.
                 iSearchIndex = bDown ? iSearchIndex + 1 : iSearchIndex - 1;
@@ -2283,32 +2428,56 @@ sap.ui.define([
                 const oData = oCtx.getObject();
                 if (!oData) continue;
 
-                // Se descartan los nodos raíz marcados como padre ya que no contienen inputs editables.
-                if (oData.padre === true) continue;
-
-                // Se verifica si la fila candidata es visible en el viewport actual para poder inspeccionar su input.
+                // Se busca, dentro de la fila candidata, el input editable mas
+                //cercano a la columna actual. Si la celda de iTargetColIndex es
+                //editable, se elige esa (distancia 0); en caso contrario se
+                //toma la columna editable mas proxima por distancia absoluta.
                 const iFirstVisCheck = oTable.getFirstVisibleRow();
                 const iVisIdxCheck = iSearchIndex - iFirstVisCheck;
 
                 if (iVisIdxCheck >= 0 && iVisIdxCheck < oTable.getRows().length) {
-                    // La fila es visible en pantalla, se inspecciona directamente si su celda contiene un input editable.
                     const oRowCheck = oTable.getRows()[iVisIdxCheck];
                     if (oRowCheck) {
-                        const oCellCheck = oRowCheck.getCells()[iTargetColIndex];
-                        // Se busca cualquier input visible ignorando editable para detectar su existencia.
-                        const oInputCheck = this._recursiveGetInput(oCellCheck, true);
-                        // Si no hay input o no es editable, se salta esta fila y se continúa la búsqueda.
-                        if (!oInputCheck || !oInputCheck.getEditable()) continue;
+                        const aCellsCheck = oRowCheck.getCells();
+                        let oBestInput = null;
+                        let iBestColIdx = -1;
+                        let iBestDistance = Infinity;
+
+                        for (let c = 0; c < aCellsCheck.length; c++) {
+                            const oInputCandidate = this._recursiveGetInput(aCellsCheck[c]);
+                            if (oInputCandidate && oInputCandidate.getVisible() && oInputCandidate.getEditable()) {
+                                const iDist = Math.abs(c - iTargetColIndex);
+                                if (iDist < iBestDistance) {
+                                    iBestDistance = iDist;
+                                    oBestInput = oInputCandidate;
+                                    iBestColIdx = c;
+                                }
+                            }
+                        }
+
+                        // Si en esta fila no hay ningun input editable visible
+                        //se continua la busqueda hacia arriba o abajo.
+                        if (!oBestInput) continue;
+
+                        // Se memoriza el indice de columna del input objetivo
+                        //para que la fase de scroll/focus encuentre exactamente
+                        //ese input y no el de la columna original.
+                        iTargetFinalColIndex = iBestColIdx;
                     }
                 }
-                // Si la fila no es visible aún porque requiere scroll, se acepta directamente como destino
-                // ya que no es posible inspeccionar inputs de filas no renderizadas en el DOM.
+                // Si la fila no esta renderizada todavia se acepta sin
+                //inspeccionar (la fase de focus tras el scroll fallara al input
+                //original en caso de que la fila no contenga editables).
 
                 // Se fija el índice y la ruta de la fila destino y se detiene la búsqueda.
                 iTargetRowIndex = iSearchIndex;
                 sTargetPath = oCtx.getPath();
                 break;
             }
+
+            // A partir de aqui las fases de scroll y focus usaran el indice
+            //de columna del input mas cercano encontrado, no el original.
+            iTargetColIndex = iTargetFinalColIndex;
 
             // ── LÓGICA DE SCROLL AUTOMÁTICO ───────────────────────────────────────────────────────
             const iFirstVisible = oTable.getFirstVisibleRow();
@@ -2423,7 +2592,12 @@ sap.ui.define([
                     if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
                         //     Se guarda el input destino en _pendingFocusTarget para que
                         //     _enviarFilaAlBackend pueda restaurarlo tras la llamada async.
-                        that._pendingFocusTarget = oTargetInput;
+                        // Se usa "this" en lugar de "that" porque el setTimeout esta
+                        //bindeado al controlador con .bind(this) abajo y "that" no
+                        //esta definido en este branch (solo existe en el branch con
+                        //scroll). Sin este fix, la navegacion vertical lanzaba
+                        // ReferenceError silencioso y el foco no se movia.
+                        this._pendingFocusTarget = oTargetInput;
                         oTargetInput.focus();
                         if (oTargetInput.select) oTargetInput.select();
                     } else {
@@ -3300,15 +3474,24 @@ sap.ui.define([
             this._oOperacionSearchBackups = this._oOperacionSearchBackups || {};
             var sTableId = oTable.getId();
 
-            // Si ya habia una busqueda activa se restaura primero el arbol original antes de aplicar la nueva.   
+            // Si ya habia una busqueda activa se restaura primero el arbol original antes de aplicar la nueva.
             if (this._oOperacionSearchBackups[sTableId]) {
                 oModel.setProperty("/", this._oOperacionSearchBackups[sTableId]);
                 delete this._oOperacionSearchBackups[sTableId];
             }
             oBinding.filter([]);
 
-            // Si no hay texto la tabla queda restaurada y no se aplica filtrado.   
-            if (!sQuery) return;
+            // Si no hay texto la tabla queda restaurada y no se aplica filtrado.
+            //   Tras restaurar el arbol original se reaplican las clases de estilo
+            // (headerGrayRow, sinProveedorRow, agrupadorTotalRow) y el borde
+            // naranja, ya que el re-render del binding las elimina.
+            if (!sQuery) {
+                setTimeout(function () {
+                    this._highlightSinProveedor(oTable);
+                    this._applyBlockBorder(oTable);
+                }.bind(this), 0);
+                return;
+            }
 
             // Se almacena la referencia del arbol original para poder restaurarlo al limpiar la busqueda.   
             var aOriginalRoot = oModel.getProperty("/");
@@ -3381,9 +3564,19 @@ sap.ui.define([
             var aNewRoot = buildFiltered(aOriginalRoot);
             oModel.setProperty("/", aNewRoot);
 
-            // Se expanden todos los niveles para que los hijos coincidentes sean visibles bajo sus padres reales.   
+            // Se expanden todos los niveles para que los hijos coincidentes sean visibles bajo sus padres reales.
+            //   Despues del expand se reaplican las clases de estilo de las filas
+            // (headerGrayRow, sinProveedorRow, agrupadorTotalRow) y el borde
+            // naranja, porque el re-render provocado por el cambio del modelo
+            // y por expandToLevel descarta las clases anadidas dinamicamente.
             if (typeof oTable.expandToLevel === "function") {
-                setTimeout(function () { oTable.expandToLevel(99); }, 0);
+                setTimeout(function () {
+                    oTable.expandToLevel(99);
+                    setTimeout(function () {
+                        this._highlightSinProveedor(oTable);
+                        this._applyBlockBorder(oTable);
+                    }.bind(this), 50);
+                }.bind(this), 0);
             }
         },
 
@@ -3451,15 +3644,24 @@ sap.ui.define([
             this._oOperacionSearchBackups = this._oOperacionSearchBackups || {};
             var aData = this._oOperacionSearchBackups[oTable.getId()] || oSourceModel.getProperty("/");
 
-            // Se recorre el arbol de forma recursiva acumulando codigos unicos en cualquier nivel.   
+            // Se recorre el arbol de forma recursiva acumulando codigos unicos en cualquier nivel.
+            //  Se excluyen las filas de cabecera gris (agrupadores con __isHeader o cabecera
+            //  a true, fila "Agrupador" dinamica y la raiz OEO "D") porque no son operaciones
+            //  reales sino etiquetas estructurales y no deben aparecer como sugerencia.
             var oSeen = {};
             var aItems = [];
+            function isHeaderNode(oNode) {
+                return oNode.__isHeader === true
+                    || oNode.cabecera === true
+                    || oNode.PhPspnr === "Agrupador"
+                    || oNode.PhPspnr === "D";
+            }
             function collect(aNodes) {
                 if (!Array.isArray(aNodes)) return;
                 aNodes.forEach(function (oNode) {
                     if (!oNode) return;
                     var sCode = oNode.PhPspnr;
-                    if (sCode !== undefined && sCode !== null && sCode !== "" && !oSeen[sCode]) {
+                    if (sCode !== undefined && sCode !== null && sCode !== "" && !oSeen[sCode] && !isHeaderNode(oNode)) {
                         oSeen[sCode] = true;
                         aItems.push({ code: String(sCode), desc: oNode.Post1 ? String(oNode.Post1) : "" });
                     }
@@ -5005,7 +5207,9 @@ sap.ui.define([
 
         /**
             * Se abre el popover de seleccion de rangos mensuales.
-            * Se utiliza CalendarMonthInterval para restringir la seleccion unicamente a meses y años.
+            * Se sustituye el CalendarMonthInterval horizontal por un grid 3x4 personalizado
+            * con navegacion por año, manteniendo el flujo posterior (onDateSelected →
+            * _confirmDateRange → _executeBatchLineal) intacto.
             */
         onOpenRangePicker: function (oEvent, oAnchorControl, oExternalContext) {
             var oAnchor = oAnchorControl || oEvent.getSource();
@@ -5014,33 +5218,224 @@ sap.ui.define([
             this._oActiveContext = oExternalContext || oAnchor.getBindingContext(this.tableModelName);
 
             if (!this._oRangePopover) {
-
-                this._oCalendar = new sap.ui.unified.CalendarMonthInterval({
-                    intervalSelection: true,
-                    select: this.onDateSelected.bind(this)
-                });
-                this._oRangePopover = new sap.m.ResponsivePopover({
-                    title: "Seleccionar Rango Mensual",
-                    placement: "Bottom",
-                    content: [this._oCalendar]
-                });
-                this.getView().addDependent(this._oRangePopover);
+                this._buildRangePopover();
             }
 
-            // Se obtiene el modelo usando tableModelName en lugar de corrientesModel hardcodeado.
+            //   Se rehidrata el estado interno (_linStart, _linEnd, _linYear) desde el modelo
+            // antes de abrir, para que el grid muestre la seleccion previa si existia.
             var oModel = this.getView().getModel(this.tableModelName);
             var sPath = this._oActiveContext.getPath();
             var dFrom = oModel.getProperty(sPath + "/_linDateFrom");
             var dTo = oModel.getProperty(sPath + "/_linDateTo");
 
-            this._oCalendar.removeAllSelectedDates();
-            if (dFrom && dTo) {
-                this._oCalendar.addSelectedDate(new sap.ui.unified.DateRange({
-                    startDate: dFrom,
-                    endDate: dTo
+            this._linStart = dFrom ? new Date(dFrom) : null;
+            this._linEnd = dTo ? new Date(dTo) : null;
+
+            //   Los limites del rango permitido salen de appData.Freal / Frealfinobra:
+            // el horizonte completo del tramo. Asi el LIN cubre desde el mes/año de
+            // Freal hasta el mes/año de Frealfinobra (p.ej. 28/02/2014 → 30/11/2017).
+            var oBounds = this._getLinRangeBounds();
+            var iDefaultYear = oBounds.minDate ? oBounds.minDate.getFullYear() : new Date().getFullYear();
+            this._linYear = this._linStart ? this._linStart.getFullYear() : iDefaultYear;
+
+            // Se restringe el año visible a [minYear, maxYear] por si el rango previo cayo fuera.
+            if (oBounds.minDate && this._linYear < oBounds.minDate.getFullYear()) {
+                this._linYear = oBounds.minDate.getFullYear();
+            }
+            if (oBounds.maxDate && this._linYear > oBounds.maxDate.getFullYear()) {
+                this._linYear = oBounds.maxDate.getFullYear();
+            }
+
+            this._refreshRangePopover();
+            this._oRangePopover.openBy(oAnchor);
+        },
+
+        //   Lee Freal/Frealfinobra de appData y devuelve {minDate, maxDate} con el
+        // primer dia del mes inicial y el ultimo dia del mes final. El horizonte permitido
+        // del LIN es Freal → Frealfinobra (p.ej. 28/02/2014 → 30/11/2017): el rango completo
+        // del tramo, no solo el periodo de obra real. Si alguna fecha no esta disponible
+        // ese limite queda como null (sin restriccion).
+        // Fallback: si appData.Frealfinobra no se ha persistido todavia, se lee de
+        // dashboardModel.NavLsObra[0] directamente.
+        _getLinRangeBounds: function () {
+            var oAppData;
+            try {
+                oAppData = this.getGlobalModel("appData").getData();
+            } catch (e) {
+                oAppData = null;
+            }
+            var oDashLsObra = null;
+            try {
+                var oDash = this.getGlobalModel("dashboardModel");
+                if (oDash) {
+                    oDashLsObra = oDash.getProperty("/NavLsObra/results/0") || null;
+                }
+            } catch (e) { /* sin dashboardModel: solo se usa appData */ }
+
+            var sIni = (oAppData && oAppData.Freal) || "";
+            var sFin = (oAppData && oAppData.Frealfinobra) || (oDashLsObra && oDashLsObra.Frealfinobra) || "";
+
+            var oMin = null;
+            var oMax = null;
+            if (sIni) {
+                var dIni = this._parseODataDate(sIni);
+                if (dIni && !isNaN(dIni.getTime())) {
+                    oMin = new Date(dIni.getFullYear(), dIni.getMonth(), 1);
+                }
+            }
+            if (sFin) {
+                var dFin = this._parseODataDate(sFin);
+                if (dFin && !isNaN(dFin.getTime())) {
+                    oMax = new Date(dFin.getFullYear(), dFin.getMonth() + 1, 0);
+                }
+            }
+            return { minDate: oMin, maxDate: oMax };
+        },
+
+        //   Construye una unica vez el popover con cabecera de año (<, año, >) y un grid
+        // 3x4 de meses. Los nombres de mes se obtienen via DateFormat para respetar el
+        // locale activo de la app.
+        _buildRangePopover: function () {
+            var that = this;
+            var oMonthFormat = sap.ui.core.format.DateFormat.getDateInstance({ pattern: "MMMM" });
+            var aMonthNames = [];
+            for (var iM = 0; iM < 12; iM++) {
+                var sName = oMonthFormat.format(new Date(2000, iM, 1));
+                aMonthNames.push(sName.charAt(0).toUpperCase() + sName.slice(1));
+            }
+
+            this._linYearTitle = new sap.m.Title({ text: "", level: "H4" });
+            //   Se almacenan las flechas en this para poder deshabilitarlas desde
+            // _refreshRangePopover cuando se llega al limite inferior o superior.
+            // Los handlers tambien validan el bound antes de decrementar/incrementar
+            // como defensa por si algun click llegara con el boton ya deshabilitado.
+            this._linPrevBtn = new sap.m.Button({
+                icon: "sap-icon://navigation-left-arrow",
+                type: "Transparent",
+                press: function () {
+                    var oB = that._getLinRangeBounds();
+                    if (oB.minDate && that._linYear <= oB.minDate.getFullYear()) return;
+                    that._linYear--;
+                    that._refreshRangePopover();
+                }
+            });
+            this._linNextBtn = new sap.m.Button({
+                icon: "sap-icon://navigation-right-arrow",
+                type: "Transparent",
+                press: function () {
+                    var oB = that._getLinRangeBounds();
+                    if (oB.maxDate && that._linYear >= oB.maxDate.getFullYear()) return;
+                    that._linYear++;
+                    that._refreshRangePopover();
+                }
+            });
+            var oHeader = new sap.m.HBox({
+                justifyContent: "Center",
+                alignItems: "Center",
+                items: [this._linPrevBtn, this._linYearTitle, this._linNextBtn]
+            }).addStyleClass("sapUiSmallMarginBottom");
+
+            this._linMonthBtns = [];
+            for (var i = 0; i < 12; i++) {
+                (function (iMonth) {
+                    that._linMonthBtns.push(new sap.m.Button({
+                        text: aMonthNames[iMonth],
+                        width: "6rem",
+                        press: function () { that._handleMonthPress(iMonth); }
+                    }).addStyleClass("sapUiTinyMargin"));
+                })(i);
+            }
+
+            var oGrid = new sap.m.VBox({ alignItems: "Center" });
+            for (var r = 0; r < 4; r++) {
+                oGrid.addItem(new sap.m.HBox({
+                    justifyContent: "Center",
+                    items: this._linMonthBtns.slice(r * 3, r * 3 + 3)
                 }));
             }
-            this._oRangePopover.openBy(oAnchor);
+
+            var oContent = new sap.m.VBox({
+                alignItems: "Center",
+                items: [oHeader, oGrid]
+            }).addStyleClass("sapUiSmallMargin");
+
+            this._oRangePopover = new sap.m.ResponsivePopover({
+                title: "Seleccionar Rango Mensual",
+                placement: "Bottom",
+                contentWidth: "22rem",
+                content: [oContent]
+            });
+            this.getView().addDependent(this._oRangePopover);
+        },
+
+        //   Refresca el titulo del año, el resaltado de cada boton de mes y la
+        // disponibilidad de las flechas/meses segun los limites del tramo
+        // (appData.Freal / Frealfinobra). Los meses fuera de rango quedan disabled.
+        _refreshRangePopover: function () {
+            this._linYearTitle.setText(String(this._linYear));
+            var oBounds = this._getLinRangeBounds();
+
+            //   Las flechas NO usan setEnabled: hacerlo justo despues del click cambia
+            // el foco al document.body y ResponsivePopover lo interpreta como "foco
+            // fuera del popover" → autoclose. En su lugar se atenuan con una clase CSS
+            // y el press handler ya bloquea el incremento si esta fuera de rango.
+            var bPrevAllowed = !oBounds.minDate || this._linYear > oBounds.minDate.getFullYear();
+            var bNextAllowed = !oBounds.maxDate || this._linYear < oBounds.maxDate.getFullYear();
+            this._linPrevBtn[bPrevAllowed ? "removeStyleClass" : "addStyleClass"]("linNavBtnDimmed");
+            this._linNextBtn[bNextAllowed ? "removeStyleClass" : "addStyleClass"]("linNavBtnDimmed");
+
+            for (var i = 0; i < 12; i++) {
+                var oMonthStart = new Date(this._linYear, i, 1);
+                var oMonthEnd = new Date(this._linYear, i + 1, 0);
+
+                // Mes fuera de [minDate, maxDate]: se deshabilita.
+                var bAllowed = true;
+                if (oBounds.minDate && oMonthEnd < oBounds.minDate) bAllowed = false;
+                if (oBounds.maxDate && oMonthStart > oBounds.maxDate) bAllowed = false;
+
+                var bInRange = false;
+                if (this._linStart && this._linEnd) {
+                    bInRange = oMonthEnd >= this._linStart && oMonthStart <= this._linEnd;
+                } else if (this._linStart) {
+                    bInRange = oMonthStart.getFullYear() === this._linStart.getFullYear() &&
+                               oMonthStart.getMonth() === this._linStart.getMonth();
+                }
+                this._linMonthBtns[i].setEnabled(bAllowed);
+                this._linMonthBtns[i].setType(bInRange ? "Emphasized" : "Default");
+            }
+        },
+
+        //   Gestor de pulsacion sobre un mes del grid: primer click fija el inicio, segundo
+        // cierra el rango, escribe en el modelo y dispara _confirmDateRange (mismo flujo
+        // que el CalendarMonthInterval anterior). Si el segundo click es anterior al
+        // primero, las fechas se intercambian para mantener Start <= End.
+        _handleMonthPress: function (iMonth) {
+            var oClicked = new Date(this._linYear, iMonth, 1);
+
+            // Primer click o reinicio tras rango completo: solo se fija el inicio.
+            if (!this._linStart || (this._linStart && this._linEnd)) {
+                this._linStart = oClicked;
+                this._linEnd = null;
+                this._refreshRangePopover();
+                return;
+            }
+
+            // Segundo click: se cierra el rango (ordenando Start/End si hace falta).
+            var oStart = oClicked < this._linStart ? oClicked : this._linStart;
+            var oEndMonth = oClicked < this._linStart ? this._linStart : oClicked;
+            var oEndLastDay = new Date(oEndMonth.getFullYear(), oEndMonth.getMonth() + 1, 0);
+
+            this._linStart = oStart;
+            this._linEnd = oEndLastDay;
+            this._refreshRangePopover();
+
+            var oModel = this.getView().getModel(this.tableModelName);
+            var sPath = this._oActiveContext.getPath();
+            oModel.setProperty(sPath + "/_linDateFrom", oStart);
+            oModel.setProperty(sPath + "/_linDateTo", oEndLastDay);
+            oModel.refresh(true);
+            this._oRangePopover.close();
+            this._confirmDateRange(oStart, oEndLastDay);
         },
 
         /**
@@ -5171,6 +5566,23 @@ sap.ui.define([
             return oBindingDef;
         },
 
+        //  Se expone el formatter toBoolean del modulo model/formatter en el
+        //  propio BaseController para que las vistas puedan invocarlo con la
+        //  convencion habitual del proyecto ".toBoolean", igual que ocurre con
+        //  formatDecimales. Sin este wrapper UI5 no encontraria la funcion al
+        //  resolver el binding y el CheckBox seguiria recibiendo el string ""
+        //  del backend, lanzando "expected boolean for property selected".
+        toBoolean: function (vValue) {
+            if (vValue === true) return true;
+            if (vValue === false || vValue === null || vValue === undefined) return false;
+            if (typeof vValue === "number") return vValue !== 0;
+            if (typeof vValue === "string") {
+                var sNorm = vValue.trim().toLowerCase();
+                return sNorm === "x" || sNorm === "true" || sNorm === "1";
+            }
+            return false;
+        },
+
         _parseFormattedNumber: function (vValue) {
             //   Se devuelve cero si el valor recibido está vacío o es nulo para
             //   evitar que se escriban valores indefinidos en el modelo de datos.
@@ -5255,6 +5667,110 @@ sap.ui.define([
             //   Se devuelve la cadena con el rango de fechas formateado y separado por guion.
             return oDateFormat.format(oFrom) + " - " + oDateFormat.format(oTo);
         },
+        //  Se envuelve el handler change de las celdas
+        //  mensuales editables para habilitar la entrada de
+        //  porcentajes. Cuando el usuario teclea una expresion
+        //  con signo % (ej. "50%") y abandona la celda, se
+        //  interpreta el valor como porcentaje del campo
+        //  PenPlan de la misma fila. El resultado calculado
+        //  (PenPlan * pct / 100) sustituye al valor mostrado
+        //  antes de delegar en onRowInputChange, que se encarga
+        //  del envio al backend con la logica habitual (filtro
+        //  de valor no cambiado, payload sanitizado y
+        //  restauracion de foco). Se inspecciona el parametro
+        //  original del evento ("newValue" o "value") porque
+        //  DecimalesInput ejecuta su attachChange antes que
+        //  este handler y elimina el signo % al normalizar el
+        //  value visible. Si PenPlan no es un numero valido se
+        //  interpreta como cero y el filtro de no-cambio de
+        //  onRowInputChange evita un POST redundante.
+        onMonthInputChange: function (oEvent) {
+            var oSource = oEvent.getSource();
+            var sRawValue = oEvent.getParameter("newValue");
+            if (sRawValue === undefined || sRawValue === null) {
+                sRawValue = oEvent.getParameter("value");
+            }
+            sRawValue = sRawValue === undefined || sRawValue === null ? "" : String(sRawValue);
+
+            if (sRawValue.indexOf("%") !== -1) {
+                //  Se leen los separadores reales del usuario
+                //  para parsear el numero anterior al %
+                //  respetando el formato regional.
+                var thousandSeparator = ".";
+                var decimalSeparator = ",";
+                try {
+                    var oAppData = this.getGlobalModel("appData");
+                    if (oAppData) {
+                        var sCurrencyFormat = oAppData.getProperty("/userData/CurrencyFormat");
+                        if (sCurrencyFormat && sCurrencyFormat.length >= 2) {
+                            thousandSeparator = sCurrencyFormat.charAt(0);
+                            decimalSeparator = sCurrencyFormat.charAt(1);
+                        }
+                    }
+                } catch (e) { }
+
+                var sPercentRaw = sRawValue.replace("%", "").trim();
+                var sParseable = sPercentRaw
+                    .split(thousandSeparator).join("")
+                    .split(decimalSeparator).join(".");
+                var fPercent = parseFloat(sParseable);
+
+                if (!isNaN(fPercent)) {
+                    //  Se localiza el contexto subiendo por
+                    //  los padres si el input no posee binding
+                    //  directo sobre la fila, mismo patron que
+                    //  onRowInputChange.
+                    var oContext = oSource.getBindingContext(this.tableModelName);
+                    var oParent = oSource;
+                    while (!oContext && oParent) {
+                        oParent = oParent.getParent();
+                        if (oParent && oParent.getBindingContext) {
+                            oContext = oParent.getBindingContext(this.tableModelName);
+                        }
+                    }
+
+                    if (oContext) {
+                        var vPenPlan = oContext.getModel().getProperty(oContext.getPath() + "/PenPlan");
+                        var sPenPlanSap = this._formatToSAPNumber(
+                            String(vPenPlan !== null && vPenPlan !== undefined ? vPenPlan : "")
+                        );
+                        var fPenPlan = parseFloat(sPenPlanSap);
+                        if (isNaN(fPenPlan)) {
+                            fPenPlan = 0;
+                        }
+
+                        var fResult = (fPenPlan * fPercent) / 100;
+
+                        var iDec = 2;
+                        if (oSource.getProperty) {
+                            var iCfgDec = parseInt(oSource.getProperty("decimalNumbers"), 10);
+                            if (!isNaN(iCfgDec)) {
+                                iDec = iCfgDec;
+                            }
+                        }
+
+                        var oFmt = sap.ui.core.format.NumberFormat.getFloatInstance({
+                            groupingEnabled: true,
+                            groupingSeparator: thousandSeparator,
+                            decimalSeparator: decimalSeparator,
+                            minFractionDigits: iDec,
+                            maxFractionDigits: iDec
+                        });
+                        var sFormatted = oFmt.format(fResult);
+
+                        oSource.setValue(sFormatted);
+                        //  Se sincroniza _lastProcessedValue de
+                        //  DecimalesInput con el valor calculado
+                        //  para que su fallback focusout no vuelva
+                        //  a disparar fireChange con newValue vacio.
+                        oSource._lastProcessedValue = sFormatted;
+                    }
+                }
+            }
+
+            return this.onRowInputChange(oEvent);
+        },
+
         onRowInputChange: async function (oEvent) {
 
             let oSource = oEvent.getSource();
@@ -5287,19 +5803,6 @@ sap.ui.define([
 
             let sNewValue;
             let sValorFormateado;
-
-            //     Se incluyen editCtotPen y editCtot en la lista de propiedades
-            // exclusivas del frontend que deben eliminarse antes de enviar al backend.
-            var aFrontendOnlyProps = [
-                "__metadata", "children", "parent", "padre", "isEditable",
-                "isSubcapitulo", "isCapitulo", "isVacio", "isGroup",
-                "expandible", "cabecera", "isNew", "_linDateFrom", "_linDateTo",
-                "_Ejecutado", "_Pendiente", "_Total", "_isSinProveedor", "expanded",
-                "editPhPspnr", "editPost1", "editTasa", "editAmoEje", "editAmoEjeAjus",
-                "editAmoEjeReal", "editAmoPen", "editAmoTot", "editPepDest",
-                "editTipo", "editPenPlan", "editMonths", "editPend",
-                "editCtotPen", "editCtot"
-            ];
 
             if (oSource.isA("sap.m.Select")) {
                 sNewValue = oSource.getSelectedKey();
@@ -5336,11 +5839,7 @@ sap.ui.define([
                 }
 
                 let oRow = oContext.getObject();
-                let oPayloadRow = JSON.parse(JSON.stringify(oRow));
-
-                aFrontendOnlyProps.forEach(function (sKey) {
-                    delete oPayloadRow[sKey];
-                });
+                let oPayloadRow = this._sanitizeRowForBackend(oRow);
 
                 oPayloadRow.Tipo = sNewValue;
                 this._enviarFilaAlBackend(oContext, oPayloadRow, "Tipo");
@@ -5351,23 +5850,24 @@ sap.ui.define([
             sValorFormateado = this._formatToSAPNumber(sNewValue);
 
             if (sCampoMod) {
+                // Se aplica el filtro de comparacion (valor nuevo vs valor actual
+                //en el modelo) tambien a los campos de mes. Originalmente los meses
+                //saltaban este filtro y enviaban siempre al backend en cada blur,
+                //lo que generaba una chain de llamadas async durante la navegacion
+                //rapida con flechas: cada celda atravesada disparaba un POST y la
+                //respuesta posterior intentaba restaurar el foco al target capturado
+                //al inicio de la llamada, provocando saltos eraticos cuando el
+                //usuario habia avanzado varias celdas. Con el filtro activo, una
+                //simple navegacion sin edicion no genera ninguna llamada al backend.
+                var sValorActualModelo = oContext.getModel().getProperty(oContext.getPath() + "/" + sCampoMod);
+                var sValorActualNormalizado = this._formatToSAPNumber(
+                    String(sValorActualModelo !== null && sValorActualModelo !== undefined ? sValorActualModelo : "")
+                );
 
-                // Identificamos si es un campo de meses (ej: Val001a2024)
-                const bIsMesField = /^Val\d{3}a\d+$/.test(sCampoMod);
-
-                // Si NO es un campo de mes, aplicamos el filtro de comparacion para evitar llamadas inutiles
-                if (!bIsMesField) {
-                    var sValorActualModelo = oContext.getModel().getProperty(oContext.getPath() + "/" + sCampoMod);
-                    var sValorActualNormalizado = this._formatToSAPNumber(
-                        String(sValorActualModelo !== null && sValorActualModelo !== undefined ? sValorActualModelo : "")
-                    );
-
-                    // Si el valor no ha cambiado realmente, abortamos envio
-                    if (sValorFormateado === sValorActualNormalizado) {
-                        return;
-                    }
+                // Si el valor no ha cambiado realmente, abortamos envio
+                if (sValorFormateado === sValorActualNormalizado) {
+                    return;
                 }
-                // Si ES un campo de mes (bIsMesField === true), saltamos la comparacion y seguimos al envio
             }
 
             // Actualizamos el modelo antes de generar el objeto final
@@ -5376,11 +5876,7 @@ sap.ui.define([
             }
 
             let oRow = oContext.getObject();
-            let oPayloadRow = JSON.parse(JSON.stringify(oRow));
-
-            aFrontendOnlyProps.forEach(function (sKey) {
-                delete oPayloadRow[sKey];
-            });
+            let oPayloadRow = this._sanitizeRowForBackend(oRow);
 
             if (sCampoMod && sValorFormateado !== null && sValorFormateado !== undefined && sValorFormateado !== "") {
                 oPayloadRow[sCampoMod] = sValorFormateado;
@@ -5417,15 +5913,59 @@ sap.ui.define([
                             bloqueado: "",
                             decimales: "02",
                             ejercicio: sEjercicio,
-                            pestana: this._pestana || "Corrientes",
+                            // Se envía la pestaña activa. Cada detail controller debe setear
+                            // this._pestana en su setInitData. Sin fallback hardcodeado: si falta
+                            // se envía vacío para que el backend rechace y el bug sea visible.
+                            pestana: this._pestana || "",
                             CampoMod: sCampoMod || ""
                         }
                     }
                 );
 
-                //     Se restaura el foco tras completar la llamada asincrona.
+                // Errores backend → diálogo, mismo patrón que initCorrienteModel/
+                // initExternosModel/initDiferidosModel. Sin esto el usuario edita una
+                // celda, el backend rechaza el cambio y no recibe ninguna señal.
+                var aMensajes = (response && response.NavMensajes && response.NavMensajes.results) || [];
+                var aMensajesError = aMensajes.filter(function (m) { return m.Tipo === "E"; });
+                if (aMensajesError.length > 0) {
+                    this.createMessageDialog({
+                        title: this.getTranslatedText("ERROR"),
+                        textAccept: this.getTranslatedText("ACEPTAR"),
+                        messages: aMensajesError.map(function (m) {
+                            return { text: m.Mensaje || m.Message || m.text || "", type: "Error" };
+                        })
+                    });
+                }
+
+                // El backend devuelve la jerarquía completa recalculada en
+                // NavDatosIndirectos.results: totales del padre, agregados Totala*,
+                // y cualquier fila dependiente del campo modificado. Se vuelcan los
+                // valores actualizados sobre el árbol local conservando children y
+                // los flags UI (editTasa, isEditable, _Total, …). Sin este merge el
+                // padre I.003 seguía mostrando los totales previos a la edición.
+                var aUpdatedRows = (response && response.NavDatosIndirectos && response.NavDatosIndirectos.results) || [];
+                if (aUpdatedRows.length > 0) {
+                    this._mergeBackendRowsIntoTree(oContext.getModel(), aUpdatedRows);
+                }
+
+                // Se restaura el foco tras completar la llamada asincrona, pero
+                //solo cuando el usuario sigue en el mismo destino. Si entre el
+                //envio y la respuesta el usuario ha navegado con flechas a otra
+                //celda, restaurar el foco al target original generaria saltos
+                //erraticos (el foco volveria a una celda anterior en mitad de la
+                //navegacion). Por eso se aborta la restauracion si el elemento
+                //activo actual ya esta dentro de un input/textarea distinto, lo
+                //que indica que el usuario ya esta editando otra celda.
                 if (oPendingFocus && oPendingFocus.getDomRef()) {
                     setTimeout(function () {
+                        var oTargetDom = oPendingFocus.getDomRef();
+                        var oActiveEl = document.activeElement;
+                        if (oActiveEl && oTargetDom && oActiveEl !== oTargetDom &&
+                            (oActiveEl.tagName === "INPUT" || oActiveEl.tagName === "TEXTAREA")) {
+                            // El usuario ya se ha movido a otro campo editable:
+                            //se respeta su posicion actual y no se devuelve el foco.
+                            return;
+                        }
                         oPendingFocus.focus();
                         if (oPendingFocus.select) oPendingFocus.select();
                     }, 50);
@@ -5440,6 +5980,62 @@ sap.ui.define([
                 //     Se limpia tambien en caso de error para evitar inconsistencias.
                 this._pendingFocusTarget = null;
             }
+        },
+
+        // Fusiona la respuesta del backend (NavDatosIndirectos.results, plana)
+        // sobre el árbol local del modelo (anidado por children) identificando cada
+        // fila por PhPspnr. Sólo se sobreescriben las claves SAP (las que empiezan
+        // por mayúscula); el resto — children, padre, isEditable, edit*, _Ejecutado,
+        // _Pendiente, _Total, _isSinProveedor, isNew, isLevel3 — son estado UI
+        // calculado en buildTree y deben preservarse. Tras el merge se recalculan
+        // _Ejecutado / _Pendiente / _Total con el mismo criterio que
+        // _addComputedFields / _addOperationsToTree y se refresca el modelo para
+        // que la TreeTable repinte padre e hijos con los totales recalculados.
+        _mergeBackendRowsIntoTree: function (oModel, aBackendRows) {
+            if (!oModel || !aBackendRows || aBackendRows.length === 0) return;
+
+            var oRoot = oModel.getData();
+            if (!oRoot) return;
+            var aRoots = Array.isArray(oRoot) ? oRoot : [oRoot];
+
+            var mNodesByPath = {};
+            var walk = function (aNodes) {
+                if (!aNodes) return;
+                for (var i = 0; i < aNodes.length; i++) {
+                    var oNode = aNodes[i];
+                    if (!oNode) continue;
+                    if (oNode.PhPspnr) mNodesByPath[oNode.PhPspnr] = oNode;
+                    if (oNode.children) walk(oNode.children);
+                }
+            };
+            walk(aRoots);
+
+            aBackendRows.forEach(function (oBackendRow) {
+                if (!oBackendRow || !oBackendRow.PhPspnr) return;
+                var oLocalNode = mNodesByPath[oBackendRow.PhPspnr];
+                if (!oLocalNode) return;
+
+                Object.keys(oBackendRow).forEach(function (sKey) {
+                    // __metadata viene de OData y no aporta valor en el modelo local.
+                    if (sKey === "__metadata") return;
+                    var sFirst = sKey.charAt(0);
+                    if (sFirst >= "A" && sFirst <= "Z") {
+                        oLocalNode[sKey] = oBackendRow[sKey];
+                    }
+                });
+
+                if (oLocalNode.TipoInd === "I") {
+                    oLocalNode._Ejecutado = oLocalNode.InvEje || "0";
+                    oLocalNode._Pendiente = oLocalNode.InvPen || "0";
+                    oLocalNode._Total = oLocalNode.InvTot || "0";
+                } else {
+                    oLocalNode._Ejecutado = oLocalNode.AmoEje || "0";
+                    oLocalNode._Pendiente = oLocalNode.AmoPen || "0";
+                    oLocalNode._Total = oLocalNode.AmoTot || "0";
+                }
+            });
+
+            oModel.refresh(true);
         },
 
 
@@ -5471,13 +6067,25 @@ sap.ui.define([
                 //     Se mantienen los separadores por defecto si el modelo no es accesible.
             }
 
-            //     Se elimina el separador de miles escapandolo para usarlo de forma segura
-            //     en la expresion regular sin que el punto actue como comodin.
-            var sEscapedThousand = thousandSeparator.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            sNormalized = sNormalized.replace(new RegExp(sEscapedThousand, "g"), "");
+            // Se distingue entre formato del usuario (con separador decimal
+            //"," y "." como miles) y formato SAP / interno (con punto como
+            //separador decimal y sin miles). Si la cadena contiene el
+            //separador decimal del usuario, esta en formato del usuario y
+            //se aplican los replace de millares y decimal; en caso
+            //contrario se asume formato SAP y parseFloat la interpreta
+            //directamente. Sin este chequeo, valores ya en formato SAP
+            //como "14.00000" pasaban por el replace de millares y se
+            //convertian erroneamente en "1400000.00000". Esto rompia el
+            //filtro de "valor === modelo" en onRowInputChange y disparaba
+            //un POST al backend cada vez que el usuario navegaba sobre
+            //una celda con valor previamente editado, ademas de provocar
+            //cambios visuales aleatorios en la celda atravesada.
+            if (sNormalized.indexOf(decimalSeparator) >= 0) {
+                var sEscapedThousand = thousandSeparator.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                sNormalized = sNormalized.replace(new RegExp(sEscapedThousand, "g"), "");
+                sNormalized = sNormalized.replace(decimalSeparator, ".");
+            }
 
-            //     Se sustituye el separador decimal del usuario por punto estandar SAP.
-            sNormalized = sNormalized.replace(decimalSeparator, ".");
             var fParsed = parseFloat(sNormalized);
             if (!isNaN(fParsed)) {
                 return fParsed.toFixed(5);
@@ -5485,6 +6093,437 @@ sap.ui.define([
 
             return sNormalized;
         },
+
+        //   Lista unica de propiedades exclusivas del frontend. Se mantiene aqui para que
+        // cualquier flujo que envie filas al backend pueda reutilizarla. Incluye banderas
+        // tecnicas y campos calculados que no existen en el EntityType del servicio OData.
+        _aFrontendOnlyProps: [
+            "__metadata", "children", "parent", "padre", "isEditable",
+            "isSubcapitulo", "isCapitulo", "isVacio", "isGroup",
+            "expandible", "cabecera", "isNew", "_linDateFrom", "_linDateTo",
+            "_Ejecutado", "_Pendiente", "_Total", "_isSinProveedor", "expanded",
+            "editPhPspnr", "editPost1", "editTasa", "editAmoEje", "editAmoEjeAjus",
+            "editAmoEjeReal", "editAmoPen", "editAmoTot", "editPepDest",
+            "editTipo", "editPenPlan", "editMonths", "editPend",
+            "editCtotPen", "editCtot"
+        ],
+
+        //   ─────────────────────────────────────────────────────────────────────
+        //   Flujo Add (catalogo + creacion de fila nivel 3) compartido por las
+        // vistas con modelo en arbol (Corrientes / Externos). Adaptado del flujo
+        // de Anticipados/Diferidos/Inmovilizados quitando la duplicacion TipoInd
+        // I/A y trabajando con el campo children[] en lugar de un array plano.
+        // Las 3 vistas que ya tienen su version propia siguen ejecutandola por
+        // override de subclase; estas funciones solo se invocan en las tree views.
+        //   ─────────────────────────────────────────────────────────────────────
+
+        //   Abre el dialogo del catalogo de operaciones para un capitulo (nivel 1).
+        // Llama a /CatalogoIndirectosSet, mapea {Code, Description} y abre el fragment.
+        _openOperationsCatalog: async function (oSelectedRow, oContext) {
+            this._selectedChapterRow = oSelectedRow;
+            this._selectedChapterContext = oContext;
+
+            var oAppData = this.getGlobalModel("appData").getData();
+            var oDashModel = this.getGlobalModel("dashboardModel");
+
+            if (!this._busyDialog) {
+                this._busyDialog = new sap.m.BusyDialog({
+                    text: this.getTranslatedText("CARGANDO_DATOS")
+                });
+            }
+            this._busyDialog.open();
+
+            try {
+                var response = await this.post(
+                    this.getGlobalModel("mainService"),
+                    "/CatalogoIndirectosSet",
+                    { "NavDatosCatalogo": [] },
+                    {
+                        headers: {
+                            norma: this.getGlobalModel("normModel").getData().norma || "",
+                            ambito: oAppData.userData.initialNode,
+                            lang: oAppData.userData.AplicationLangu,
+                            pestana: this._pestana || ""
+                        }
+                    }
+                );
+
+                this._busyDialog.close();
+
+                var aCatalogData = response.NavDatosCatalogo?.results || [];
+                if (aCatalogData.length === 0) {
+                    sap.m.MessageBox.information(
+                        "No hay operaciones disponibles para este capítulo",
+                        { title: this.getTranslatedText("CATALOGO_OPERACIONES_TITULO") }
+                    );
+                    return;
+                }
+
+                var aOperations = aCatalogData.map(function (item) {
+                    return {
+                        Code: item.PhPspnr || item.Codigo || "",
+                        Description: item.Post1 || item.Descripcion || ""
+                    };
+                });
+
+                this.getView().setModel(
+                    new sap.ui.model.json.JSONModel({ operations: aOperations }),
+                    "catalogModel"
+                );
+
+                this._openCatalogDialog();
+
+            } catch (error) {
+                this._busyDialog.close();
+                sap.m.MessageBox.error(
+                    this.getTranslatedText("CATALOGO_ERROR_SERVICIO") + "\n" + (error.message || error),
+                    { title: this.getTranslatedText("ERROR") }
+                );
+            }
+        },
+
+        _openCatalogDialog: function () {
+            if (!this._catalogDialog) {
+                this._catalogDialog = sap.ui.xmlfragment(
+                    "masterindirectos.fragments.OperationsCatalogDialog",
+                    this
+                );
+                this.getView().addDependent(this._catalogDialog);
+            }
+            this._catalogDialog.open();
+        },
+
+        onCloseCatalogDialog: function () {
+            if (this._catalogDialog) {
+                this._catalogDialog.close();
+                this._catalogDialog.destroy();
+                this._catalogDialog = null;
+            }
+        },
+
+        //   POST a /AddIndirectosSet para añadir/validar operaciones.
+        // pestana viene de this._pestana (Corrientes/Externos lo setean en setInitData).
+        _callAddIndirectosService: async function (aOperationsData) {
+            var oAppData = this.getGlobalModel("appData").getData();
+            var oDashModel = this.getGlobalModel("dashboardModel");
+
+            var versiones = oAppData.NavLtVersiones || [];
+            var flagSelectVersion = versiones.find(function (item) {
+                return item.Activo === "X";
+            });
+
+            var sFreal = "";
+            if (oAppData && oAppData.tramo && oAppData.tramo.Freal) {
+                sFreal = oAppData.tramo.Freal;
+            } else if (oDashModel) {
+                sFreal = oDashModel.getProperty("/NavMasterLt/0/Freal");
+            }
+            if (!sFreal) throw new Error("Fecha real no disponible");
+
+            var oDateStart = this._parseODataDate(sFreal);
+            if (!oDateStart || isNaN(oDateStart.getTime())) throw new Error("Fecha real inválida");
+
+            var sEjercicio = oDateStart.getFullYear().toString();
+            var sToken = oAppData.EvToken;
+
+            if (!this._busyDialog) {
+                this._busyDialog = new sap.m.BusyDialog({
+                    text: this.getTranslatedText("CARGANDO_DATOS")
+                });
+            }
+            this._busyDialog.open();
+
+            try {
+                var response = await this.post(
+                    this.getGlobalModel("mainService"),
+                    "/AddIndirectosSet",
+                    {
+                        "NavSelProyecto": [oAppData.tramo],
+                        "NavLtVersiones": [flagSelectVersion],
+                        "NavDatosCatalogo": aOperationsData,
+                        "NavMensajes": [],
+                        "NavDatosIndirectos": []
+                    },
+                    {
+                        headers: {
+                            ambito: oAppData.userData.initialNode,
+                            lang: oAppData.userData.AplicationLangu,
+                            decimales: oDashModel.getData().decimales,
+                            norma: this.getGlobalModel("normModel").getData().norma || "",
+                            ejercicio: sEjercicio,
+                            pestana: this._pestana || "",
+                            token: sToken
+                        }
+                    }
+                );
+                this._busyDialog.close();
+                return response;
+            } catch (error) {
+                this._busyDialog.close();
+                throw error;
+            }
+        },
+
+        //   Handler del boton "Añadir Seleccionados" del fragment del catalogo.
+        // Recoge la seleccion, llama al servicio, y al volver inserta las operaciones
+        // como hijos del capitulo seleccionado en el arbol.
+        onAddSelectedOperations: function () {
+            if (!this._catalogDialog) return;
+
+            var oCatalogTable = this._catalogDialog.getContent()[0].getItems()[1];
+            if (!oCatalogTable) {
+                sap.m.MessageBox.error("Error: Tabla del catálogo no encontrada");
+                return;
+            }
+
+            var aSelectedIndices = oCatalogTable.getSelectedIndices();
+            if (aSelectedIndices.length === 0) {
+                sap.m.MessageBox.warning("Debe seleccionar al menos una operación");
+                return;
+            }
+
+            var oCatalogModel = this.getView().getModel("catalogModel");
+            var aAllOperations = oCatalogModel.getProperty("/operations");
+            var aSelectedOperations = [];
+            aSelectedIndices.forEach(function (iIndex) {
+                if (aAllOperations[iIndex]) aSelectedOperations.push(aAllOperations[iIndex]);
+            });
+
+            var aOperationsToAdd = aSelectedOperations.map(function (oOp) {
+                return { PhPspnr: oOp.Code, Descripcion: oOp.Description };
+            });
+
+            this._callAddIndirectosService(aOperationsToAdd).then(function (response) {
+                var aMensajes = response.NavMensajes?.results || [];
+                var aMensajesError = aMensajes.filter(function (m) { return m.Tipo === "E"; });
+                if (aMensajesError.length > 0) {
+                    this.createMessageDialog({
+                        title: this.getTranslatedText("ERROR"),
+                        textAccept: this.getTranslatedText("ACEPTAR"),
+                        messages: aMensajesError.map(function (m) {
+                            return { text: m.Mensaje || m.Message || m.text || "", type: "Error" };
+                        })
+                    });
+                    return;
+                }
+
+                this.onCloseCatalogDialog();
+
+                var aCreatedOperations = response.NavDatosIndirectos?.results || [];
+                if (aCreatedOperations.length > 0) {
+                    this._addOperationsToTree(aCreatedOperations);
+                    sap.m.MessageToast.show(
+                        "Se han añadido " + aCreatedOperations.length + " operación(es) correctamente"
+                    );
+                }
+            }.bind(this)).catch(function (error) {
+                sap.m.MessageBox.error(
+                    "Error al añadir las operaciones: " + (error.message || error),
+                    { title: this.getTranslatedText("ERROR") }
+                );
+            }.bind(this));
+        },
+
+        //   Inserta las operaciones devueltas por el backend como hijos del capitulo
+        // seleccionado. Sin duplicacion I/A: una sola fila por operacion.
+        _addOperationsToTree: function (aCreatedOperations) {
+            if (!this._selectedChapterRow || !aCreatedOperations || aCreatedOperations.length === 0) return;
+
+            var oModel = this.getView().getModel(this.tableModelName);
+            if (!this._selectedChapterRow.children) {
+                this._selectedChapterRow.children = [];
+            }
+
+            aCreatedOperations.forEach(function (oOp) {
+                if (!oOp.children) oOp.children = [];
+                if (!oOp.Post1 && oOp.Descripcion) oOp.Post1 = oOp.Descripcion;
+                oOp.isNew = false;
+                oOp.isLevel3 = oOp.PhPspnr && oOp.PhPspnr.split(".").length === 4;
+                //   Computed fields: en modelos sin I/A se usan siempre los Amo*.
+                oOp._Ejecutado = oOp.AmoEje || "0";
+                oOp._Pendiente = oOp.AmoPen || "0";
+                oOp._Total = oOp.AmoTot || "0";
+                this._selectedChapterRow.children.push(oOp);
+            }.bind(this));
+
+            oModel.refresh(true);
+            if (this._markVariantDirty) this._markVariantDirty();
+        },
+
+        //   Crea UNA fila vacia de nivel 3 (desglose) bajo la operacion nivel 2
+        // seleccionada. Sin duplicacion I/A. La nueva fila es editable e isNew=true
+        // para que la UI permita rellenarla y luego validar/persistir.
+        _createLevel3Row: function (oParentRow, oContext) {
+            var oModel = this.getView().getModel(this.tableModelName);
+            var sParentCode = oParentRow.PhPspnr;
+            var aParentParts = sParentCode.split(".");
+
+            if (aParentParts.length !== 3) {
+                sap.m.MessageBox.error(this.getTranslatedText("ERROR_FORMATO_PADRE"));
+                return;
+            }
+
+            if (!oParentRow.children) oParentRow.children = [];
+
+            //   Buscar el numero mas alto entre los hijos existentes con formato nivel 3.
+            var iMaxNumber = 0;
+            oParentRow.children.forEach(function (oChild) {
+                if (!oChild || !oChild.PhPspnr) return;
+                var aChildParts = oChild.PhPspnr.split(".");
+                if (aChildParts.length !== 4) return;
+                var iN = parseInt(aChildParts[3], 10);
+                if (!isNaN(iN) && iN > iMaxNumber) iMaxNumber = iN;
+            });
+            var sNextCode = (iMaxNumber + 1).toString().padStart(3, "0");
+            var sNewCode = sParentCode + "." + sNextCode;
+
+            var oNewRow = {
+                PhPspnr: sNewCode,
+                Post1: "",
+                AmoEje: "0",
+                AmoPen: "0",
+                AmoTot: "0",
+                Tipo: oParentRow.Tipo || "MAN",
+                PenPlan: "",
+                FEE: "",
+                FINI: "",
+                FFIN: "",
+                NMES: "",
+                Otros: "",
+                _Ejecutado: "0",
+                _Pendiente: "0",
+                _Total: "0",
+                Estructura: "",
+                isLevel3: true,
+                isNew: true,
+                isEditable: true,
+                ParentCode: sParentCode,
+                PhPspnrEdited: false,
+                Post1Edited: false,
+                children: []
+            };
+
+            oParentRow.children.push(oNewRow);
+            oModel.refresh(true);
+
+            var sMessage = this.getTranslatedText("MSG_OPERACIONES_CREADAS").replace("{0}", sNewCode);
+            sap.m.MessageToast.show(sMessage);
+            if (this._markVariantDirty) this._markVariantDirty();
+        },
+
+        //   Determina el nivel de una operacion a partir del formato de PhPspnr:
+        // "D" o vacio → 0 (cabecera OEO), "XX" → 1 (capitulo), "XX.YY" → 2 (operacion),
+        // "XX.YY.ZZ" → 3 (desglose). Compartido por Corrientes/Externos onAddPress.
+        // Los detail controllers Anticipados/Diferidos/Inmovilizados tienen su propia
+        // copia (preexistente) que coincide; no se eliminan aqui para evitar regresiones.
+        _getOperationLevel: function (sPhPspnr) {
+            if (!sPhPspnr || sPhPspnr === "D") {
+                return 0;
+            }
+            var aParts = sPhPspnr.split(".");
+            return aParts.length - 1;
+        },
+
+        //   Devuelve una copia profunda de oRow lista para enviar al backend.
+        // Elimina los nombres listados en _aFrontendOnlyProps y cualquier campo
+        // cuyo nombre empiece por "__" (banderas de UI). El servicio ZFERR_MASTER_SRV
+        // rechaza con 400 cualquier propiedad ajena al EntityType, asi que toda fila
+        // saliente debe pasar por aqui antes del POST/DELETE.
+        _sanitizeRowForBackend: function (oRow) {
+            if (!oRow) return oRow;
+            var oClone = JSON.parse(JSON.stringify(oRow));
+            var aList = this._aFrontendOnlyProps;
+            Object.keys(oClone).forEach(function (sKey) {
+                if (aList.indexOf(sKey) !== -1 || sKey.indexOf("__") === 0) {
+                    delete oClone[sKey];
+                }
+            });
+            return oClone;
+        },
+
+        //   Recorre recursivamente un arbol con campo "children" y elimina in-place los
+        // nodos cuya pareja (PhPspnr, TipoInd) coincida con alguna fila de aLinesToDelete.
+        // Necesario porque en Corrientes y Externos el modelo es un arbol jerarquico:
+        // un splice plano sobre la raiz no encuentra filas anidadas.
+        _removeRowsFromTreeByKey: function (aTree, aLinesToDelete) {
+            if (!Array.isArray(aTree) || !Array.isArray(aLinesToDelete) || aLinesToDelete.length === 0) {
+                return aTree;
+            }
+            for (var i = aTree.length - 1; i >= 0; i--) {
+                var oNode = aTree[i];
+                var bMatches = aLinesToDelete.some(function (oLine) {
+                    return oNode.PhPspnr === oLine.PhPspnr && oNode.TipoInd === oLine.TipoInd;
+                });
+                if (bMatches) {
+                    aTree.splice(i, 1);
+                    continue;
+                }
+                if (Array.isArray(oNode.children) && oNode.children.length > 0) {
+                    this._removeRowsFromTreeByKey(oNode.children, aLinesToDelete);
+                }
+            }
+            return aTree;
+        },
+
+        //   Formatter de NMES para el binding de la celda Nº Meses.
+        // Devuelve el numero de meses inclusivo entre FINI y FFIN: ene→mar = 3.
+        // Acepta formato OData "/Date(ms)/" e ISO "yyyy-MM-dd". Devuelve "" si falta
+        // alguna fecha o son invalidas para no mostrar un 0 confuso en la UI.
+        formatNMeses: function (sFini, sFfin) {
+            if (!sFini || !sFfin) return "";
+            var oFini = this._parseODataDate(sFini);
+            var oFfin = this._parseODataDate(sFfin);
+            if (!oFini || !oFfin || isNaN(oFini.getTime()) || isNaN(oFfin.getTime())) return "";
+            var iN = (oFfin.getFullYear() - oFini.getFullYear()) * 12
+                + (oFfin.getMonth() - oFini.getMonth()) + 1;
+            return iN < 0 ? "" : String(iN);
+        },
+
+        //   Recalcula NMES (numero de meses) como diferencia inclusiva entre FINI y FFIN
+        // de la fila a la que pertenece oEvent: ene→mar = 3. Si falta alguna fecha o son
+        // invalidas, NMES queda en 0. Se acepta formato OData "/Date(ms)/" e ISO "yyyy-MM-dd".
+        // Helper compartido por los handlers onFiniDatePickerChange / onFfinDatePickerChange.
+        _recalcNMESFromRange: function (oEvent) {
+            var oSource = oEvent.getSource();
+            var sModelName = this.tableModelName;
+
+            //   Se sube por la cadena de padres hasta encontrar binding context,
+            // igual que onRowInputChange: el DatePicker vive dentro de VBox/HBox anidados
+            // y no siempre tiene binding context directo.
+            var oContext = oSource.getBindingContext(sModelName);
+            var oParent = oSource;
+            while (!oContext && oParent) {
+                oParent = oParent.getParent();
+                if (oParent && oParent.getBindingContext) {
+                    oContext = oParent.getBindingContext(sModelName);
+                }
+            }
+            if (!oContext) return;
+
+            var oModel = oContext.getModel();
+            var sPath = oContext.getPath();
+            var oRow = oModel.getProperty(sPath);
+            var iN = 0;
+            if (oRow && oRow.FINI && oRow.FFIN) {
+                var oFini = this._parseODataDate(oRow.FINI);
+                var oFfin = this._parseODataDate(oRow.FFIN);
+                if (oFini && oFfin && !isNaN(oFini.getTime()) && !isNaN(oFfin.getTime())) {
+                    iN = (oFfin.getFullYear() - oFini.getFullYear()) * 12
+                        + (oFfin.getMonth() - oFini.getMonth()) + 1;
+                    if (iN < 0) iN = 0;
+                }
+            }
+            oModel.setProperty(sPath + "/NMES", iN);
+        },
+
+        onFiniDatePickerChange: function (oEvent) {
+            this._recalcNMESFromRange(oEvent);
+        },
+
+        onFfinDatePickerChange: function (oEvent) {
+            this._recalcNMESFromRange(oEvent);
+        },
+
         _executeBatchLineal: async function (oStartDate, oEndDate) {
 
             var oContext = this._oActiveContext;
@@ -5495,25 +6534,7 @@ sap.ui.define([
             var oRowData = oModel.getProperty(sPath);
             if (!oRowData) return;
 
-            //     Se incluyen editCtotPen y editCtot en la lista de propiedades
-            // exclusivas del frontend que deben excluirse del payload enviado al backend.
-            var aFrontendOnlyProps = [
-                "__metadata", "children", "parent", "padre", "isEditable",
-                "isSubcapitulo", "isCapitulo", "isVacio", "isGroup",
-                "expandible", "cabecera", "isNew", "_linDateFrom", "_linDateTo",
-                "_Ejecutado", "_Pendiente", "_Total", "_isSinProveedor", "expanded",
-                "editPhPspnr", "editPost1", "editTasa", "editAmoEje", "editAmoEjeAjus",
-                "editAmoEjeReal", "editAmoPen", "editAmoTot", "editPepDest",
-                "editTipo", "editPenPlan", "editMonths", "editPend",
-                "editCtotPen", "editCtot"
-            ];
-
-            var oPayloadRow = {};
-            Object.keys(oRowData).forEach(function (sKey) {
-                if (aFrontendOnlyProps.indexOf(sKey) === -1) {
-                    oPayloadRow[sKey] = oRowData[sKey];
-                }
-            });
+            var oPayloadRow = this._sanitizeRowForBackend(oRowData);
 
             // Se construyen Fini y Ffin a partir de los componentes ano/mes en UTC para evitar el desfase del huso horario local.   
             // Fini se ancla siempre al dia 1 del mes inicial seleccionado y Ffin al ultimo dia del mes final (dia 0 del mes siguiente).   
@@ -5909,16 +6930,10 @@ sap.ui.define([
                 });
 
                 if (iTargetTotal !== -1) {
-                    //   Se inserta tras el último miembro del grupo.
-                    let iInsert = iTargetTotal + 1;
-                    while (
-                        iInsert < oRootRow.children.length &&
-                        oRootRow.children[iInsert].__isAgrupadorTotal !== true &&
-                        oRootRow.children[iInsert].__isHeader !== true &&
-                        oRootRow.children[iInsert].__isEditable !== true
-                    ) {
-                        iInsert++;
-                    }
+                    //   Se inserta justo despues del header del grupo, antes del resto
+                    // de miembros, para que el nuevo proveedor quede como primero
+                    // del agrupador.
+                    const iInsert = iTargetTotal + 1;
                     oRootRow.children.splice(iInsert, 0, oNieto);
                 } else {
                     //   Grupo aún no existente: se sitúa al final, antes de las editables.
@@ -6070,22 +7085,45 @@ sap.ui.define([
             if (!oTable) return;
             const aRows = oTable.getRows();
 
+            // Se define un helper local que aplica/quita una clase a la fila scrollable, a la fila fixed y al selector, para que el styling sea uniforme entre las columnas fijas y las desplazables
+            const fnSyncClassAllParts = function (oRow, sClass, bAdd) {
+                if (bAdd) {
+                    oRow.addStyleClass(sClass);
+                } else {
+                    oRow.removeStyleClass(sClass);
+                }
+                const oFixed = oRow.getDomRef && oRow.getDomRef("fixed");
+                const oSel = oRow.getDomRef && oRow.getDomRef("rowselector");
+                const oAct = oRow.getDomRef && oRow.getDomRef("rowaction");
+                [oFixed, oSel, oAct].forEach(function (oDom) {
+                    if (!oDom) return;
+                    if (bAdd) oDom.classList.add(sClass);
+                    else oDom.classList.remove(sClass);
+                });
+            };
+
             aRows.forEach(function (oRow) {
-                oRow.removeStyleClass("sinProveedorRow");
-                oRow.removeStyleClass("headerGrayRow");
-                oRow.removeStyleClass("agrupadorTotalRow");
+                // Se limpian todas las clases de estilo en ambos lados (fijo y scrollable) antes de re-evaluar
+                fnSyncClassAllParts(oRow, "sinProveedorRow", false);
+                fnSyncClassAllParts(oRow, "headerGrayRow", false);
+                fnSyncClassAllParts(oRow, "agrupadorTotalRow", false);
+                fnSyncClassAllParts(oRow, "blockCustomRow", false);
 
                 const oContext = oRow.getBindingContext(this.tableModelName);
                 if (oContext) {
                     const oData = oContext.getObject();
                     //    Se aplica amarillo si es bloque principal, bloque de agrupador o fila editable custom
                     if (oData && (oData.__isSinProveedor === true || oData.__isSinAgrupador === true || oData.__isAgrupadorBlock === true)) {
-                        oRow.addStyleClass("sinProveedorRow");
+                        fnSyncClassAllParts(oRow, "sinProveedorRow", true);
                     } else if (oData && oData.__isHeader === true) {
-                        oRow.addStyleClass("headerGrayRow");
+                        fnSyncClassAllParts(oRow, "headerGrayRow", true);
                     } else if (oData && oData.__isAgrupadorTotal === true) {
-                        //   Fila de cabecera de grupo AGRUP con fondo gris claro y negrita
-                        oRow.addStyleClass("agrupadorTotalRow");
+                        //   Fila de cabecera de grupo AGRUP: se aplica blockCustomRow para que herede el gris claro, altura y cuadrícula del bloque, y se mantiene agrupadorTotalRow sólo para la negrita
+                        fnSyncClassAllParts(oRow, "blockCustomRow", true);
+                        fnSyncClassAllParts(oRow, "agrupadorTotalRow", true);
+                    } else if (oData && oData.__isCustom === true) {
+                        // Se aplica un gris más claro a las filas custom del bloque (editables, nietos, bloques de proveedor) que quedan bajo la cabecera gris
+                        fnSyncClassAllParts(oRow, "blockCustomRow", true);
                     }
                 }
             }.bind(this));
@@ -6302,6 +7340,8 @@ sap.ui.define([
             const oRow = oContext.getObject();
             const sProveedor = (oRow.Proveedor || "").trim();
             if (!sProveedor) return;
+            // Se obtiene la descripción de la fila desde la que se ha pulsado el botón + para usarla en el título del panel
+            const sDescripcion = (oRow.DESCRIP || "").trim();
 
             //   Se inicializa el mapa si es la primera llamada en esta sesion de vista.
             if (!this._mProveedorRows) {
@@ -6320,6 +7360,9 @@ sap.ui.define([
                 AmoPen: "", AmoTot: "", Tipo: "MAN", PenPlan: "",
                 FEE: "", FINI: "", FFIN: "", NMES: "", Otros: ""
             };
+
+            // Se copian los campos anuales (Totala{N}) y mensuales (Val0{MM}a{N}) de la fila origen al registro nuevo, para que las columnas dinamicas del panel partan de los datos del padre sin requerir llamada al backend
+            this._copyYearMonthFieldsFromParent(oRow, oNuevaFila);
 
             //   Se agrega la nueva fila al historico persistente del proveedor.
             this._mProveedorRows[sProveedor].push(oNuevaFila);
@@ -6352,12 +7395,17 @@ sap.ui.define([
                 // con las filas del proveedor seleccionado y se hace visible el panel.
                 const oPanelModel = new sap.ui.model.json.JSONModel({
                     proveedor: sProveedor,
+                    // Se incluye la descripción de la fila origen para el título "{Descripcion} - {Proveedor}" del panel
+                    descripcion: sDescripcion,
                     rows: aFilasProveedor,
                     rowCount: aFilasProveedor.length
                 });
                 this.getView().setModel(oPanelModel, "panelModel");
 
                 if (oPanelVBox) oPanelVBox.setVisible(true);
+
+                // Se reconstruyen las columnas dinamicas de anyo/mes en el t:Table del panel a partir de los anyos visibles en la tabla principal, replicando el aspecto del header sin disparar llamadas al backend
+                this._renderPanelYearColumns(oRow);
 
                 if (bPanelCerrado && oPanelLayout) {
                     //   Solo se modifica el tamano del splitter si el panel estaba cerrado,
@@ -6377,9 +7425,263 @@ sap.ui.define([
                 if (!oPanelModel) return;
 
                 oPanelModel.setProperty("/proveedor", sProveedor);
+                // Se actualiza también la descripción para reflejar la fila concreta pulsada                oPanelModel.setProperty("/descripcion", sDescripcion);
                 oPanelModel.setProperty("/rows", aFilasProveedor);
                 oPanelModel.setProperty("/rowCount", aFilasProveedor.length);
             }
+
+            // Se guarda el __uid de la fila origen del panel para poder sincronizar el título cuando el usuario edita la descripción de esa misma fila
+            this._sCurrentPanelRowUid = oRow.__uid || null;
+            // Se publica el __uid activo en viewModel para que el binding del boton lupa de la primera celda muestre el estado on/off (Emphasized/Transparent) en la fila correspondiente
+            this._syncPanelRowUidToView();
+        },
+
+        // Se propaga el valor de this._sCurrentPanelRowUid al viewModel para que las bindings de UI (p.ej. el tipo del boton lupa en la primera celda) reflejen automaticamente que fila esta actualmente mostrando su panel
+        _syncPanelRowUidToView: function () {
+            const oViewModel = this.getView().getModel("viewModel");
+            if (!oViewModel) return;
+            oViewModel.setProperty("/currentPanelRowUid", this._sCurrentPanelRowUid || null);
+        },
+
+        // Se copian los campos Totala{N} (totales anuales) y Val0{MM}a{N} (valores mensuales) desde la fila origen al registro destino del panelModel. Asi cada fila del panel arranca con los mismos importes que su padre y las columnas dinamicas tienen donde leer sin necesidad de binding al tableModel
+        _copyYearMonthFieldsFromParent: function (oParent, oTarget) {
+            if (!oParent || !oTarget) return;
+            // Se itera sobre todas las claves del padre y solo se copian las que casan con los patrones Totala{N} o Val0{MM}a{N}, para no traspasar campos ajenos
+            Object.keys(oParent).forEach(function (sKey) {
+                if (/^Totala\d+$/.test(sKey) || /^Val\d{3}a\d+$/.test(sKey)) {
+                    oTarget[sKey] = oParent[sKey];
+                }
+            });
+        },
+
+        // Se generan las columnas dinamicas del panel replicando la estructura del header de la tabla principal: primero los meses desplegados y al final la columna anyo clicable. La primera celda mensual incluye el boton flecha que cierra los meses, y la cabecera del anyo es un boton transparente que los reabre. El anyo y el sufijo (a1, a2, ...) se resuelven desde el contexto de la tabla principal (anyo abierto en su defecto el primero del rango) y todos los enlaces van a panelModel sin handler change para no propagar cambios al backend
+        _renderPanelYearColumns: function (oParentRow) {
+            const oPanelTable = this.byId("idPanelTable");
+            if (!oPanelTable) return;
+
+            // Se eliminan las columnas dinamicas previas (anyo y mes) para evitar duplicados al reabrir o cambiar de proveedor
+            const aCols = oPanelTable.getColumns();
+            for (let i = aCols.length - 1; i >= 0; i--) {
+                const oCol = aCols[i];
+                if (oCol.data("dynamicYear") === true || oCol.data("dynamicMonth") === true) {
+                    oPanelTable.removeColumn(oCol);
+                }
+            }
+
+            // Se obtienen las columnas anyo de la tabla principal para resolver el anyo y su sufijo (a1, a2, ...) a partir del contexto activo
+            const oMainTable = this.getControlTable();
+            if (!oMainTable) return;
+            const aMainYearCols = oMainTable.getColumns().filter(function (c) {
+                return c.data("dynamicYear") === true;
+            });
+            if (aMainYearCols.length === 0) return;
+
+            // Se elige el anyo a mostrar: si la tabla principal tiene un anyo desplegado se usa ese, en otro caso se cae al primer anyo del rango. De esta forma el panel siempre refleja el contexto que el usuario esta mirando arriba
+            let oTargetCol = null;
+            if (this._openedYear) {
+                oTargetCol = aMainYearCols.find(function (c) {
+                    return parseInt(c.data("year"), 10) === parseInt(this._openedYear, 10);
+                }.bind(this));
+            }
+            if (!oTargetCol) oTargetCol = aMainYearCols[0];
+
+            const iYear = parseInt(oTargetCol.data("year"), 10);
+            const sSubFijo = oTargetCol.data("subFijoYear");
+            if (!iYear || !sSubFijo) return;
+
+            // Se anyade la columna anyo al final, con cabecera clicable que reabre los meses cuando se han cerrado mediante la flecha            oPanelTable.addColumn(this._buildPanelYearColumn(iYear, sSubFijo));
+
+            // Se insertan los meses justo antes de la columna anyo, respetando la misma regla de inicio que la tabla principal: si el anyo es el actual se arranca en el mes corriente, en otro caso desde enero
+            this._insertPanelMonths(iYear, sSubFijo);
+        },
+
+        // Se construye la columna anyo del panel: header con boton transparente que muestra el numero del anyo (alterna la apertura/cierre de los meses) y celda con Input no editable enlazado a panelModel>Totala{N}
+        _buildPanelYearColumn: function (iYear, sSubFijo) {
+            const oYearLabel = new sap.m.VBox({
+                width: "100%",
+                height: "100%",
+                renderType: "Bare",
+                items: [
+                    new sap.m.Button({
+                        text: iYear.toString(),
+                        type: "Transparent",
+                        width: "100%",
+                        press: this._onPanelMonthsToggle.bind(this)
+                    }).addStyleClass("yearButton").addStyleClass("nopadding")
+                        .data("subFijoYear", sSubFijo)
+                        .data("year", iYear)
+                ]
+            }).addStyleClass("fullWidthHeader");
+
+            const oYearTpl = new sap.m.HBox({
+                renderType: "Bare",
+                justifyContent: "Center",
+                alignItems: "Center",
+                items: [
+                    new sap.m.Input({
+                        editable: false,
+                        textAlign: "Center",
+                        value: "{panelModel>Total" + sSubFijo + "}",
+                        width: "100%"
+                    }).addStyleClass("customYearInput sapUiSizeCompact")
+                ]
+            }).addStyleClass("yearCell sapUiTinyMarginBegin sapUiTinyMarginEnd");
+
+            const oYearCol = new sap.ui.table.Column({
+                width: "8rem",
+                minWidth: 60,
+                autoResizable: true,
+                label: oYearLabel,
+                template: oYearTpl
+            });
+            oYearCol.data("dynamicYear", true);
+            oYearCol.data("year", iYear);
+            oYearCol.data("subFijoYear", sSubFijo);
+            return oYearCol;
+        },
+
+        // Se insertan las columnas mensuales del anyo indicado justo a la izquierda de su columna anyo. La cabecera lleva el texto "mes anyo" (p.ej. "abr 2026") y la primera celda incluye un boton flecha que cierra los meses, replicando el comportamiento del header de la tabla principal. Los Input mensuales son editables pero NO registran handler change para no propagar cambios al backend
+        _insertPanelMonths: function (iYear, sSubFijo) {
+            const oPanelTable = this.byId("idPanelTable");
+            if (!oPanelTable) return;
+
+            // Se localiza la columna anyo correspondiente para usar su indice actual como punto de insercion de los meses
+            const oYearCol = oPanelTable.getColumns().find(function (c) {
+                return c.data("dynamicYear") === true && c.data("subFijoYear") === sSubFijo;
+            });
+            if (!oYearCol) return;
+            const iYearIdx = oPanelTable.indexOfColumn(oYearCol);
+
+            // Se calcula el mes de inicio aplicando la misma regla que onCreateMonthsTable de la tabla principal: si el anyo coincide con el actual, se arranca en el mes corriente; en otro caso, desde enero
+            const oRefDate = this._effectiveDate || new Date();
+            const iCurrentYear = oRefDate.getFullYear();
+            const iCurrentMonth = oRefDate.getMonth();
+            const iStartIdx = (iYear === iCurrentYear) ? iCurrentMonth : 0;
+
+            // Se generan los nombres abreviados de los meses en castellano, alineados con la tabla principal
+            const aMonthNames = [];
+            for (let i = 0; i < 12; i++) {
+                const d = new Date(2000, i, 1);
+                aMonthNames.push(d.toLocaleString("es-ES", { month: "short" }));
+            }
+
+            // Se itera desde iStartIdx hasta diciembre insertando cada mes en la posicion del anyo. Tras cada insercion la columna anyo se desplaza hacia la derecha de modo que iYearIdx+iOffset mantiene el orden correcto y la columna anyo termina al final del rango mensual
+            let iOffset = 0;
+            for (let i = iStartIdx; i < 12; i++) {
+                const sNum = (i + 1).toString().length === 1 ? "0" + (i + 1) : (i + 1).toString();
+                const sValKey = "Val0" + sNum + sSubFijo;
+                const sMonthLabel = aMonthNames[i] + " " + iYear;
+
+                // Se construye el titulo del mes: el primer mes lleva en el header el boton flecha que cierra los meses, los demas solo el Label
+                let oTitleControl;
+                if (i === iStartIdx) {
+                    oTitleControl = new sap.m.HBox({
+                        alignItems: "Center",
+                        justifyContent: "Center",
+                        renderType: "Bare",
+                        width: "100%",
+                        items: [
+                            new sap.m.Label({
+                                text: sMonthLabel,
+                                design: "Bold",
+                                textAlign: "Center"
+                            }).addStyleClass("testBold titleGrande"),
+                            new sap.m.Button({
+                                type: "Transparent",
+                                icon: "sap-icon://slim-arrow-right",
+                                press: this._onPanelMonthsToggle.bind(this)
+                            }).data("year", iYear)
+                                .data("subFijoYear", sSubFijo)
+                                .addStyleClass("iconOnlyBtn lineHeightArrowIcon")
+                        ]
+                    }).addStyleClass("monthHeaderHBox");
+                } else {
+                    oTitleControl = new sap.m.Label({
+                        text: sMonthLabel,
+                        design: "Bold",
+                        textAlign: "Center",
+                        width: "100%"
+                    }).addStyleClass("testBold titleGrande");
+                }
+
+                const oColLabel = new sap.m.VBox({
+                    width: "100%",
+                    items: [oTitleControl]
+                }).addStyleClass("fullWidthHeader");
+
+                // Se construye la celda mensual: Input editable enlazado a panelModel>Val0{MM}a{N}. Se omite el handler change para no llamar al backend (requisito actual del panel)
+                const oInput = new sap.m.Input({
+                    value: "{panelModel>" + sValKey + "}",
+                    editable: true,
+                    textAlign: "Center",
+                    width: "100%"
+                }).addStyleClass("customYearInput sapUiSizeCompact");
+
+                const oTpl = new sap.m.HBox({
+                    renderType: "Bare",
+                    justifyContent: "Center",
+                    alignItems: "Center",
+                    items: [oInput]
+                }).addStyleClass("sapUiTinyMarginBegin sapUiTinyMarginEnd");
+
+                const oMonthCol = new sap.ui.table.Column({
+                    width: "130px",
+                    hAlign: "Center",
+                    label: oColLabel,
+                    template: oTpl
+                });
+                oMonthCol.data("dynamicMonth", true);
+                oMonthCol.data("subFijoYear", sSubFijo);
+                oMonthCol.data("year", iYear);
+                oMonthCol.data("monthIdx", i);
+
+                oPanelTable.insertColumn(oMonthCol, iYearIdx + iOffset);
+                iOffset++;
+            }
+        },
+
+        // Se alterna la visibilidad de las columnas mensuales del panel. Se invoca tanto desde el boton anyo de la cabecera como desde el boton flecha del primer mes; ambos llevan en data el anyo y el sufijo del rango afectado. Si hay meses visibles para ese sufijo se eliminan; en otro caso se reinsertan con _insertPanelMonths
+        _onPanelMonthsToggle: function (oEvent) {
+            const oSource = oEvent.getSource();
+            const iYear = parseInt(oSource.data("year"), 10);
+            const sSubFijo = oSource.data("subFijoYear");
+            if (!iYear || !sSubFijo) return;
+
+            const oPanelTable = this.byId("idPanelTable");
+            if (!oPanelTable) return;
+
+            const aMonths = oPanelTable.getColumns().filter(function (c) {
+                return c.data("dynamicMonth") === true && c.data("subFijoYear") === sSubFijo;
+            });
+
+            if (aMonths.length > 0) {
+                aMonths.forEach(function (c) { oPanelTable.removeColumn(c); });
+            } else {
+                this._insertPanelMonths(iYear, sSubFijo);
+            }
+        },
+
+        // Se sincroniza el título del Panel del proveedor cuando el usuario edita la descripción de la fila que abrió el panel. Sólo actúa si el panel está abierto y el __uid coincide con la fila origen guardada
+        onDescripInputLiveChange: function (oEvent) {
+            const oInput = oEvent.getSource();
+            const oContext = oInput.getBindingContext(this.tableModelName);
+            if (!oContext) return;
+
+            const oRow = oContext.getObject();
+            if (!oRow || !oRow.__uid) return;
+
+            // Se aborta si la fila editada no es la que originó la apertura del panel
+            if (!this._sCurrentPanelRowUid || oRow.__uid !== this._sCurrentPanelRowUid) return;
+
+            const oPanelVBox = this.byId("panelVBox");
+            if (!oPanelVBox || !oPanelVBox.getVisible()) return;
+
+            const oPanelModel = this.getView().getModel("panelModel");
+            if (!oPanelModel) return;
+
+            // Se actualiza la descripción del título del panel con el valor en vivo del input
+            const sNewValue = (oEvent.getParameter("value") || "").trim();
+            oPanelModel.setProperty("/descripcion", sNewValue);
         },
 
         //   Se cierra el panel inferior y se restaura el número de filas
@@ -6395,6 +7697,13 @@ sap.ui.define([
             // 2. Se oculta el VBox y la barra divisoria desaparece
             const oPanelVBox = this.byId("panelVBox");
             if (oPanelVBox) oPanelVBox.setVisible(false);
+
+            // Se limpia el __uid de la fila origen del panel para que el siguiente liveChange de descripción no actualice un título cerrado
+            this._sCurrentPanelRowUid = null;
+            // Se propaga el null al viewModel para que el boton lupa de todas las filas vuelva al estado Transparent (off) cuando el panel queda cerrado
+            this._syncPanelRowUidToView();
+            // Se libera tambien el proveedor activo: si el usuario vuelve a pulsar la lupa de una fila cuyo proveedor coincidia con el ultimo mostrado, el flujo de apertura volvera a recrear el panelModel correctamente en lugar de salir por el corto-circuito de proveedor identico con panel cerrado
+            this._sCurrentProveedor = null;
 
             // 3. Se restablece la altura del splitter: la TreeTable vuelve
             //    a ocupar la pantalla como si el splitter no existiera
@@ -6425,6 +7734,8 @@ sap.ui.define([
             const oRow = oContext.getObject();
             const sProveedor = (oRow.Proveedor || oRow.__providerName || "").trim();
             if (!sProveedor) return;
+            // Se obtiene la descripción de la fila pulsada para mostrarla en el título del panel
+            const sDescripcion = (oRow.DESCRIP || "").trim();
 
             if (!this._mProveedorRows) this._mProveedorRows = {};
 
@@ -6432,6 +7743,12 @@ sap.ui.define([
             const oPanelVBox = this.byId("panelVBox");
             const oPanelLayout = this.byId("panelSplitterLayout");
             const bPanelAbierto = oPanelVBox && oPanelVBox.getVisible();
+
+            // Toggle: si se vuelve a pulsar la lupa de la misma fila cuyo panel ya esta abierto, se cierra el panel y se libera el indicador on/off para que la lupa vuelva al estado Transparent
+            if (bPanelAbierto && oRow.__uid && this._sCurrentPanelRowUid === oRow.__uid) {
+                this.onClosePanelPress();
+                return;
+            }
 
             //   Fix 3: si el proveedor no tiene filas en el panel se cierra el splitter
             // independientemente de qué proveedor estuviera activo antes.
@@ -6451,6 +7768,10 @@ sap.ui.define([
                 return;
             }
 
+            // Se actualiza el __uid de la fila activa antes del corto-circuito por proveedor identico, de modo que cuando dos filas distintas comparten el mismo Proveedor el indicador on/off conmute igualmente entre ellas aunque el contenido del panel sea el mismo
+            this._sCurrentPanelRowUid = oRow.__uid || null;
+            this._syncPanelRowUidToView();
+
             //   Si el proveedor pulsado ya está activo y el panel está abierto no se hace nada.
             if (bPanelAbierto && this._sCurrentProveedor === sProveedor) return;
 
@@ -6458,6 +7779,8 @@ sap.ui.define([
 
             const oPanelModel = new sap.ui.model.json.JSONModel({
                 proveedor: sProveedor,
+                // Se añade la descripción para componer el título "{Descripcion} - {Proveedor}" del panel
+                descripcion: sDescripcion,
                 rows: aFilasProveedor,
                 rowCount: aFilasProveedor.length
             });
@@ -6474,9 +7797,310 @@ sap.ui.define([
             }
         },
 
+        //  Se abre el dialog de Busqueda de Proveedores cuando el usuario pulsa
+        //  el icono de value help del input Proveedor de la fila nieto. Se
+        //  preserva el contexto de la fila origen para que la seleccion posterior
+        //  pueda actualizar su campo Proveedor y abrir el panel correspondiente.
+        onProveedorValueHelpRequest: function (oEvent) {
+            var oInput = oEvent.getSource();
+            //  El value help puede dispararse desde dos celdas Proveedor
+            //  distintas: la del treetable principal (binding contra
+            //  this.tableModelName) o la del panel inferior (binding contra
+            //  "panelModel"). Se prueba primero el modelo principal y, si no
+            //  resuelve contexto, se cae al panelModel. El nombre del modelo
+            //  resuelto se memoriza en _sProveedorVHTableModel para que la
+            //  seleccion posterior actualice la fila correcta.
+            var sModelName = this.tableModelName;
+            var oContext = oInput.getBindingContext(sModelName);
+            if (!oContext) {
+                sModelName = "panelModel";
+                oContext = oInput.getBindingContext(sModelName);
+            }
+            if (!oContext) {
+                return;
+            }
+
+            //  Se guarda el path en lugar del contexto para no quedarse con una
+            //  referencia obsoleta si el binding se recicla entre filas.
+            this._sProveedorVHRowPath = oContext.getPath();
+            this._sProveedorVHTableModel = sModelName;
+
+            var oView = this.getView();
+
+            if (!this._pBusquedaProveedoresDialog) {
+                //  Se inicializa el modelo del dialog vacio antes de cargarlo para
+                //  que los bindings de la tabla resuelvan sin avisos al abrirlo
+                //  por primera vez.
+                var oDialogModel = new sap.ui.model.json.JSONModel({ results: [] });
+                oView.setModel(oDialogModel, "busquedaProveedoresModel");
+
+                //  Se crea un modelo independiente proveedoresFiltrosModel para
+                //  los tres filtros del dialog (Name1, Lifnr, Stcd1). Mantenerlo
+                //  separado de busquedaProveedoresModel permite distinguir con
+                //  claridad el estado de los inputs respecto al estado de los
+                //  resultados y leer los filtros desde el controller sin recurrir
+                //  a Fragment.byId.
+                var oFiltrosModel = new sap.ui.model.json.JSONModel({ Name1: "", Lifnr: "", Stcd1: "" });
+                oView.setModel(oFiltrosModel, "proveedoresFiltrosModel");
+
+                this._pBusquedaProveedoresDialog = sap.ui.core.Fragment.load({
+                    id: oView.getId(),
+                    name: "masterindirectos.fragments.BusquedaProveedoresDialog",
+                    controller: this
+                }).then(function (oDialog) {
+                    oView.addDependent(oDialog);
+                    return oDialog;
+                });
+            }
+
+            this._pBusquedaProveedoresDialog.then(function (oDialog) {
+                //  Se limpian los filtros y la lista de resultados cada vez que se
+                //  abre el dialog para evitar arrastrar el estado de la busqueda
+                //  anterior. La lectura de /ProveedoresSet para poblar la tabla
+                //  no se ejecuta hasta que el usuario pulse Buscar o haga submit
+                //  en alguno de los inputs.
+                this._resetBusquedaProveedores();
+                oDialog.open();
+
+                //  Log de inspeccion: se vuelca por consola el contenido actual
+                //  de proveedoresFiltrosModel (los tres filtros, vacios al abrir)
+                //  y se lanza una lectura puntual de /ProveedoresSet pasando los
+                //  cinco headers que espera el backend (Ambito, Lang, Nombre,
+                //  Codigo, Cif), todos con wildcard "%" en Nombre/Codigo/Cif por
+                //  estar el popover recien abierto. Sirve para ver desde consola
+                //  los proveedores disponibles y por que valores se puede
+                //  filtrar. La llamada no toca busquedaProveedoresModel, asi
+                //  que la tabla del dialog sigue vacia hasta pulsar Buscar.
+                //  Bloque pensado para depuracion: retirar antes de productivo.
+                var oView = this.getView();
+                var oFiltrosModel = oView.getModel("proveedoresFiltrosModel");
+                console.log("[BusquedaProveedores] proveedoresFiltrosModel:", oFiltrosModel && oFiltrosModel.getData());
+
+                var oMainService = this.getGlobalModel("mainService");
+                if (oMainService) {
+                    var oHeadersDebug = this._buildProveedoresHeaders({});
+                    console.log("[BusquedaProveedores] headers que se mandan:", oHeadersDebug);
+                    this.get(oMainService, "/ProveedoresSet", { headers: oHeadersDebug, filters: [] })
+                        .then(function (oData) {
+                            //  Se vuelca la respuesta cruda y se intentan
+                            //  varias formas habituales del payload OData
+                            //  (oData.results, oData.d.results, array a
+                            //  pelo) para poder diagnosticar cuando la
+                            //  longitud salga a 0 si es por shape o por
+                            //  EntitySet vacio.
+                            var aDirect = Array.isArray(oData) ? oData : null;
+                            var aResults = oData && oData.results ? oData.results : null;
+                            var aDeepResults = oData && oData.d && oData.d.results ? oData.d.results : null;
+                            console.log("[BusquedaProveedores] /ProveedoresSet raw:", oData);
+                            console.log("[BusquedaProveedores] /ProveedoresSet array directo:", aDirect && aDirect.length, aDirect);
+                            console.log("[BusquedaProveedores] /ProveedoresSet oData.results:", aResults && aResults.length, aResults);
+                            console.log("[BusquedaProveedores] /ProveedoresSet oData.d.results:", aDeepResults && aDeepResults.length, aDeepResults);
+                        })
+                        .catch(function (oError) {
+                            console.log("[BusquedaProveedores] Error leyendo /ProveedoresSet:", oError);
+                        });
+                }
+            }.bind(this));
+        },
+
+        //  Se vacian los tres filtros del modelo proveedoresFiltrosModel y la
+        //  tabla de resultados de busquedaProveedoresModel. Al estar los inputs
+        //  bindados al modelo, no hace falta limpiarlos uno a uno via
+        //  Fragment.byId: basta con resetear las propiedades del modelo y la
+        //  vista se actualiza sola.
+        _resetBusquedaProveedores: function () {
+            var oView = this.getView();
+            var oResultadosModel = oView.getModel("busquedaProveedoresModel");
+            if (oResultadosModel) {
+                oResultadosModel.setProperty("/results", []);
+            }
+            var oFiltrosModel = oView.getModel("proveedoresFiltrosModel");
+            if (oFiltrosModel) {
+                oFiltrosModel.setData({ Name1: "", Lifnr: "", Stcd1: "" });
+            }
+        },
+
+        //  Se valida que al menos un filtro tenga valor y se lanza la lectura
+        //  contra /ProveedoresSet. Los tres valores se leen del modelo
+        //  proveedoresFiltrosModel y se entregan tal cual a _loadProveedores,
+        //  que los traduce a las cabeceras Nombre/Codigo/Cif que el backend
+        //  usa como filtro real (los campos vacios se envian como "%").
+        onBusquedaProveedoresBuscar: function () {
+            var oView = this.getView();
+            var oFiltrosModel = oView.getModel("proveedoresFiltrosModel");
+            var oFiltros = (oFiltrosModel && oFiltrosModel.getData()) || {};
+
+            var sNombre = (oFiltros.Name1 || "").trim();
+            var sId = (oFiltros.Lifnr || "").trim();
+            var sCif = (oFiltros.Stcd1 || "").trim();
+
+            if (!sNombre && !sId && !sCif) {
+                this.createMessageDialog({
+                    title: this.getTranslatedText("busquedaProveedoresErrorTitulo"),
+                    textAccept: this.getTranslatedText("busquedaProveedoresAceptar"),
+                    messages: [{
+                        text: this.getTranslatedText("busquedaProveedoresFiltroVacio"),
+                        type: "Error"
+                    }]
+                });
+                return;
+            }
+
+            this._loadProveedores(oFiltros);
+        },
+
+        //  Se centraliza la lectura de /ProveedoresSet. El backend espera los
+        //  filtros como cabeceras HTTP (Ambito, Lang, Nombre, Codigo, Cif) en
+        //  lugar de como $filter en URL, por eso ya no se construyen objetos
+        //  sap.ui.model.Filter sino que se delega en _buildProveedoresHeaders
+        //  el mapeo "valores del popover -> headers". En cualquier rama de
+        //  error o de ausencia de datos se vacia la tabla para que el
+        //  noDataText siga visible.
+        _loadProveedores: function (oFilterValues) {
+            var oView = this.getView();
+            var oModel = oView.getModel("busquedaProveedoresModel");
+            var oMainService = this.getGlobalModel("mainService");
+            if (!oMainService) {
+                if (oModel) oModel.setProperty("/results", []);
+                return;
+            }
+
+            var oHeaders = this._buildProveedoresHeaders(oFilterValues);
+            this.get(oMainService, "/ProveedoresSet", { headers: oHeaders, filters: [] })
+                .then(function (oData) {
+                    var aResults = (oData && oData.results) ? oData.results : [];
+                    if (oModel) {
+                        oModel.setProperty("/results", aResults);
+                    }
+                })
+                .catch(function () {
+                    if (oModel) {
+                        oModel.setProperty("/results", []);
+                    }
+                });
+        },
+
+        //  Se construye el bloque de cabeceras esperado por /ProveedoresSet:
+        //  Ambito y Lang vienen del global model appData (contexto de sesion
+        //  del usuario, mismo origen que usan el resto de llamadas this.get/
+        //  this.post del proyecto). Nombre, Codigo y Cif vienen de los tres
+        //  inputs del popover (modelo proveedoresFiltrosModel) y se sustituyen
+        //  por "%" cuando estan vacios, que es el wildcard que acepta el
+        //  backend para indicar "sin filtro sobre ese campo". Se mantienen
+        //  las mayusculas tal cual aparecen en la request original.
+        _buildProveedoresHeaders: function (oFilterValues) {
+            var oFV = oFilterValues || {};
+            var sNombre = (oFV.Name1 || "").trim();
+            var sCodigo = (oFV.Lifnr || "").trim();
+            var sCif    = (oFV.Stcd1 || "").trim();
+
+            var oAppDataModel = this.getGlobalModel("appData");
+            var oAppData = (oAppDataModel && oAppDataModel.getData()) || {};
+            var oUser = oAppData.userData || {};
+
+            return {
+                Ambito: oUser.initialNode || "",
+                Lang:   oUser.AplicationLangu || "",
+                Nombre: sNombre || "%",
+                Codigo: sCodigo || "%",
+                Cif:    sCif    || "%"
+            };
+        },
+
+        //  Se gestiona la seleccion de un proveedor en la tabla del dialog: se
+        //  escribe Name1 en el campo Proveedor de la fila origen (clave usada
+        //  por _mProveedorRows) y se delega en onProveedorRowAddPress para que
+        //  abra el panel y agregue la fila inicial del nuevo proveedor. La
+        //  aplicacion real se delega en _aplicarProveedorSeleccionado para
+        //  poder reusarla desde el autocompletado del Input.
+        onBusquedaProveedoresSeleccion: function (oEvent) {
+            var oItem = oEvent.getParameter("listItem");
+            if (!oItem) return;
+
+            var oCtx = oItem.getBindingContext("busquedaProveedoresModel");
+            if (!oCtx) return;
+
+            this._aplicarProveedorSeleccionado(oCtx.getObject() || {});
+        },
+
+        //  Se centraliza la aplicacion de un proveedor seleccionado en la
+        //  tabla de resultados: actualiza el Proveedor de la fila origen,
+        //  sincroniza los flags del padre, cierra el dialog y reaprovecha
+        //  onProveedorRowAddPress para abrir el panel y crear la fila
+        //  inicial. Si la peticion de value help vino del Input Proveedor del
+        //  panel inferior (sTableModel === "panelModel"), se omite la rama
+        //  de creacion de panel: alli basta con actualizar el Proveedor de
+        //  la fila del panel y cerrar el dialog, sin crear filas nuevas en
+        //  _mProveedorRows ni reabrir nada.
+        _aplicarProveedorSeleccionado: function (oProveedor) {
+            var sNuevoProveedor = ((oProveedor && (oProveedor.Name1 || oProveedor.Lifnr)) || "").trim();
+            if (!sNuevoProveedor) return;
+
+            var sTableModel = this._sProveedorVHTableModel || this.tableModelName;
+            var oTableModel = this.getView().getModel(sTableModel);
+            var sPath = this._sProveedorVHRowPath;
+            if (!oTableModel || !sPath) return;
+
+            //  Se actualiza el Proveedor de la fila origen. En el treetable
+            //  principal esto sirve ademas de disparador para los flags
+            //  __hasProveedor/__hasProviderRows del padre.            oTableModel.setProperty(sPath + "/Proveedor", sNuevoProveedor);
+
+            //  Se cierra el dialog en ambas ramas antes de cualquier
+            //  apertura de panel, para evitar solapes visuales.
+            if (this._pBusquedaProveedoresDialog) {
+                this._pBusquedaProveedoresDialog.then(function (oDialog) {
+                    if (oDialog && oDialog.isOpen()) {
+                        oDialog.close();
+                    }
+                });
+            }
+
+            //  Rama panel: la celda Proveedor del panel inferior solo
+            //  necesita reflejar el nuevo valor; no hay flags __hasProveedor
+            //  que sincronizar ni panel que abrir, por lo que se termina
+            //  aqui tras refrescar el binding.
+            if (sTableModel === "panelModel") {
+                oTableModel.refresh(true);
+                return;
+            }
+
+            //  Rama treetable principal: se sincronizan los flags
+            //  __hasProveedor/__hasProviderRows del padre para que la celda
+            //  refleje el nuevo estado antes de abrir el panel.
+            var sRootPath = sPath.replace(/\/children\/\d+$/, "");
+            var oRootRow = oTableModel.getProperty(sRootPath);
+            if (oRootRow && typeof this._syncProviderRowFlags === "function") {
+                this._syncProviderRowFlags(oRootRow);
+            }
+            oTableModel.refresh(true);
+
+            //  Se construye un evento sintetico con un getSource que devuelve un
+            //  control falso cuyo getBindingContext apunta a la fila actualizada.
+            //  De este modo se reaprovecha integramente onProveedorRowAddPress sin
+            //  duplicar la logica de creacion de fila y apertura del panel.
+            var oFakeSource = {
+                getBindingContext: function () {
+                    return oTableModel.getContext(sPath);
+                }
+            };
+            this.onProveedorRowAddPress({
+                getSource: function () { return oFakeSource; }
+            });
+        },
+
+        //  Se cierra el dialog de Busqueda de Proveedores sin aplicar cambios.
+        onBusquedaProveedoresCerrar: function () {
+            if (!this._pBusquedaProveedoresDialog) return;
+            this._pBusquedaProveedoresDialog.then(function (oDialog) {
+                if (oDialog && oDialog.isOpen()) {
+                    oDialog.close();
+                }
+            });
+        },
+
         //   Se reorganizan los hijos del nodo raíz agrupándolos por el valor
         // del campo AGRUP. Se insertan filas de totales no editables al inicio
-        // de cada grupo y se mantienen el header y las filas editables en su lugar.  
+        // de cada grupo y se mantienen el header y las filas editables en su lugar.
         _reorganizeByAgrupador: function (oRootRow) {
             if (!oRootRow || !Array.isArray(oRootRow.children)) return;
 
@@ -6682,8 +8306,11 @@ sap.ui.define([
             let iPos = 0;
             //   Se salta el header si está presente.
             if (aChildren[iPos] && aChildren[iPos].__isHeader) iPos++;
-            //   Se saltan todas las filas editables consecutivas.
-            while (iPos < aChildren.length && aChildren[iPos].__isEditable === true) {
+            //   Se saltan solo las filas de input principal (__isMainEditable).
+            // Los nietos también tienen __isEditable=true por _cloneEditableRow,
+            // pero NO deben saltarse: el nuevo proveedor debe quedar antes que ellos
+            // para aparecer como primero del listado.
+            while (iPos < aChildren.length && aChildren[iPos].__isMainEditable === true) {
                 iPos++;
             }
             return iPos;

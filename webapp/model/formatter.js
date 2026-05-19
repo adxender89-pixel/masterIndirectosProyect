@@ -35,6 +35,25 @@ sap.ui.define([], function () {
             return "Success"; // Verde
         },
 
+        /**
+         * Se convierte cualquier valor del modelo a un boolean estricto para
+         * usar en propiedades tipadas como sap.m.CheckBox.selected. Se considera
+         * true si el valor es true, "X", "x", "true", "1" o un numero distinto
+         * de cero. Cualquier otro valor (incluido el string vacio "" tipico de
+         * los flags SAP no marcados) se trata como false, evitando el error
+         * "expected boolean" que UI5 lanza al validar la propiedad. 
+         */
+        toBoolean: function (vValue) {
+            if (vValue === true) return true;
+            if (vValue === false || vValue === null || vValue === undefined) return false;
+            if (typeof vValue === "number") return vValue !== 0;
+            if (typeof vValue === "string") {
+                var sNorm = vValue.trim().toLowerCase();
+                return sNorm === "x" || sNorm === "true" || sNorm === "1";
+            }
+            return false;
+        },
+
          formatDecimales: function (numStr, decStr, sepStr) {
             // Se verifica que sepStr esté disponible y tenga al menos dos caracteres.
             // Si el modelo aún no ha cargado este valor se devuelve el original
@@ -57,21 +76,28 @@ sap.ui.define([], function () {
             // nativo de JavaScript en lugar de como string desde el modelo OData.
             let sVal = String(numStr);
 
-            // Se normaliza la cadena a formato con punto decimal para que
-            // parseFloat pueda interpretarla correctamente independientemente
-            // del formato regional del usuario.
+            //  Se normaliza la cadena a formato con punto decimal para que
+            //  parseFloat pueda interpretarla correctamente. Es necesario
+            //  distinguir entre formato del usuario (ej. "1.846,00" con coma
+            //  decimal y punto de millar) y formato SAP / interno (ej.
+            //  "2.00000" con punto decimal y sin separador de millar).
+            //  La logica anterior eliminaba indiscriminadamente todos los
+            //  puntos cuando decimalSep era ",", convirtiendo "2.00000" en
+            //  "200000" y por tanto mostrando "200.000,00" tras una edicion.
+            //  Heuristica: si la cadena contiene el separador decimal del
+            //  usuario, esta en formato del usuario y se aplica la antigua
+            //  normalizacion; en caso contrario se asume formato con punto
+            //  decimal estandar y parseFloat la interpreta directamente.
             if (decimalSep === ",") {
-                // Se eliminan todos los puntos de millar con expresión regular global
-                // y se sustituye la coma decimal por punto para el parseo interno.
-                // Ejemplo: "1.846,00" → "1846.00"
-                // Ejemplo del servidor: "1846.00000" → "184600.00000" (sin puntos de millar)
-                // → parseFloat lo interpreta correctamente como 1846.00
-                sVal = sVal.replace(/\./g, "").replace(",", ".");
+                if (sVal.indexOf(",") >= 0) {
+                    sVal = sVal.replace(/\./g, "").replace(",", ".");
+                }
+                //  Sin coma -> formato SAP "X.XXX" -> parseFloat funciona tal cual.
             } else {
-                // Se eliminan las comas de millar para el formato en-US donde
-                // el punto es el separador decimal.
-                // Ejemplo: "1,846.00" → "1846.00"
-                sVal = sVal.replace(/,/g, "");
+                if (sVal.indexOf(",") >= 0) {
+                    sVal = sVal.replace(/,/g, "");
+                }
+                //  Sin coma -> formato SAP "X.XXX" -> parseFloat funciona tal cual.
             }
 
             // Se convierte la cadena normalizada a número flotante nativo.

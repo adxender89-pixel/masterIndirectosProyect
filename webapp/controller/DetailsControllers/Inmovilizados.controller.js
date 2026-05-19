@@ -41,7 +41,11 @@ sap.ui.define([
                 storageKey: "Inmovilizados_variants"  // Clave única en localStorage 
             });
 
-            this._initVariantManagement(); // Ahora se llama sin parámetros 
+            this._initVariantManagement(); // Ahora se llama sin parámetros
+
+            //  Se identifica esta vista como Inmovilizados para los headers de los servicios.
+            this._pestana = "Inmovilizados";
+
             this._initYearsModel();
             //this.initInmovilizadosModel(this._previousTabKey);
             this.getView().setModel(new JSONModel({
@@ -159,7 +163,7 @@ sap.ui.define([
                 return item.Activo === "X";
             });
 
-            // (MV) Se intenta obtener Freal desde appData.tramo como fuente principal.
+            //  Se intenta obtener Freal desde appData.tramo como fuente principal.
             if (oAppData && oAppData.tramo && oAppData.tramo.Freal) {
                 sFreal = oAppData.tramo.Freal;
             } else if (oDashModel) {
@@ -709,15 +713,14 @@ sap.ui.define([
             }
             
             // Recopilar las líneas seleccionadas para eliminar
+            //   Cada fila se sanea con _sanitizeRowForBackend para evitar propiedades cliente.
             var aLinesToDelete = [];
             aSelectedIndices.forEach(function(iIndex) {
                 var oContext = oTable.getContextByIndex(iIndex);
                 if (oContext) {
-                    var oRowData = oContext.getObject();
-                    // Añadir la línea completa al array
-                    aLinesToDelete.push(oRowData);
+                    aLinesToDelete.push(this._sanitizeRowForBackend(oContext.getObject()));
                 }
-            });
+            }.bind(this));
             
             if (aLinesToDelete.length === 0) {
                 this.createMessageDialog({

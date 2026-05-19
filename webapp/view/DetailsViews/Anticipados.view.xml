@@ -194,20 +194,21 @@
                                     rowSelectionChange="onRowSelectionChange"
                                     visibleRowCount="{viewModel>/dynamicRowCount}"
                                     fixedColumnCount ="2"
-                                    class="sapUiSizeCompact"
+                                    class="sapUiSizeCompact mainTreeTable"
                                     width="100%"
                                 >
                                       <t:extension>
                                         <OverflowToolbar height="100%">
-                                            <!-- Se sustituye el ComboBox de operacion por el selector de variantes de la tabla. -->
-                                            <Button
-                                                id="btnVariantSelector"
-                                                text="{variantModel>/displayLabel}"
-                                                iconFirst="false"
-                                                type="Transparent"
-                                                press="onOpenVariantPopover"
+                                            <!-- SearchField de operacion (mismo patron que Corrientes/Externos). -->
+                                            <SearchField
+                                                width="200px"
+                                                placeholder="{i18n>operacion}"
+                                                class="allowLetters"
+                                                enableSuggestions="true"
+                                                suggest="onOperacionSuggest"
+                                                liveChange="onOperacionLiveChange"
+                                                search="onOperacionSearch"
                                             />
-                                            <ToolbarSeparator />
                                             <Button
                                                 width="8%"
                                                 text="{i18n>TBorigen}"
@@ -306,6 +307,15 @@
                                                 press="onProcessPress"
                                                 class="toolbarActionBtn"
                                                 tooltip="{i18n>subirDesglose}"
+                                            />
+                                            <ToolbarSeparator />
+                                            <!-- Selector de variantes alineado con el orden de Corrientes/Externos. -->
+                                            <Button
+                                                id="btnVariantSelector"
+                                                text="{variantModel>/displayLabel}"
+                                                iconFirst="false"
+                                                type="Transparent"
+                                                press="onOpenVariantPopover"
                                             />
                                         </OverflowToolbar>
                                     </t:extension>

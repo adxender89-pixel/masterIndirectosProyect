@@ -233,10 +233,47 @@ sap.ui.define([
                     }
                 );
 
+                //   Mismo manejo de mensajes que Diferidos/Inmovilizados/Corrientes: se
+                // recogen los mensajes de error de NavMensajes y se muestran en un dialog.
+                // Sin este bloque, errores como "Chapter X cannot be modified, blocked by ..."
+                // no llegaban nunca al usuario aunque el backend los devolviera.
+                var aMensajes = response.NavMensajes?.results || [];
+                var aMensajesError = aMensajes.filter(function (mensaje) {
+                    return mensaje.Tipo === "E";
+                });
+
+                if (aMensajesError.length > 0) {
+                    this.createMessageDialog({
+                        title: this.getTranslatedText("ERROR"),
+                        textAccept: this.getTranslatedText("ACEPTAR"),
+                        messages: aMensajesError.map(function (mensaje) {
+                            return {
+                                text: mensaje.Mensaje || mensaje.Message || mensaje.text || "",
+                                type: "Error"
+                            };
+                        })
+                    });
+                }
+
+                //   Estado de bloqueo de la pestana: el header backend EvBloqueados llega
+                // vacio si la pestana se puede editar y con contenido si esta bloqueada.
+                // El modelo modeloBloqueo se consume desde la view para habilitar/deshabilitar
+                // controles (Add, Delete, PepDest, Reparto, etc). Mismo patron que Corrientes.
+                var sEvBloqueados = response.EvBloqueados || "";
+                var bIsBlocked = sEvBloqueados.trim().length > 0;
+
+                var oModeloBloqueo = this.getView().getModel("modeloBloqueo");
+                if (!oModeloBloqueo) {
+                    oModeloBloqueo = new sap.ui.model.json.JSONModel({
+                        isBlocked: bIsBlocked
+                    });
+                    this.getView().setModel(oModeloBloqueo, "modeloBloqueo");
+                } else {
+                    oModeloBloqueo.setProperty("/isBlocked", bIsBlocked);
+                }
+
                 const tree = this.buildTree(response.NavDatosIndirectos.results);
                 this.getView().setModel(new sap.ui.model.json.JSONModel(tree), "externosModel");
-                //Prueba editabilidad
-                //oModel.setProperty("/EvBloqueados", "X");
 
             } catch (error) {
                 // Se omite el manejo del error para no interrumpir el flujo de la vista.
@@ -346,18 +383,128 @@ sap.ui.define([
         },
 
         /**
-         * Se impide que el usuario seleccione la fila "D" (OEO).
-         * Si el evento incluye la fila "D" entre las seleccionadas, se deselecciona.
+         *   Se permite seleccionar cualquier fila incluida la "D" (OEO).
+         * El bloqueo de D ya no se hace aqui silenciosamente: la validacion vive en
+         * onAddPress y muestra el mensaje ERROR_NO_ANADIR_OEO al usuario, igual
+         * que Anticipados/Diferidos/Inmovilizados.
          */
         onRowSelectionChange: function (oEvent) {
-            const oTable = oEvent.getSource();
-            const aSelectedIndices = oTable.getSelectedIndices();
-            for (let i = 0; i < aSelectedIndices.length; i++) {
-                const oContext = oTable.getContextByIndex(aSelectedIndices[i]);
-                const oRow = oContext && oContext.getObject();
-                if (oRow && oRow.PhPspnr === "D") {
-                    oTable.removeSelectionInterval(aSelectedIndices[i], aSelectedIndices[i]);
+            // Hook conservado por si en el futuro se necesita logica de seleccion.
+        },
+
+        /**
+         * Validaciones previas a la creacion de filas en la TreeTable de Externos.
+         * Por ahora solo se implementan las validaciones (letras + mensajes), sin la
+         * logica de crear/abrir popups que llegara en una iteracion posterior.
+         */
+        onAddPress: function () {
+            var oTable = this.byId("TreeTableExternos");
+            var aSelectedIndices = oTable.getSelectedIndices();
+
+            // Validacion 1: al menos una linea seleccionada.
+            if (aSelectedIndices.length === 0) {
+                this.createMessageDialog({
+                    title: this.getTranslatedText("ERROR"),
+                    textAccept: this.getTranslatedText("ACEPTAR"),
+                    messages: [{
+                        text: this.getTranslatedText("ERROR_SELECCIONE_LINEA"),
+                        type: "Error"
+                    }]
+                });
+                return;
+            }
+
+            // Validacion 2: todas las lineas seleccionadas deben tener el mismo PhPspnr.
+            var aSelectedRows = [];
+            var sPhPspnr = null;
+            for (var i = 0; i < aSelectedIndices.length; i++) {
+                var oContext = oTable.getContextByIndex(aSelectedIndices[i]);
+                if (!oContext) continue;
+                var oRow = oContext.getObject();
+                aSelectedRows.push(oRow);
+                if (sPhPspnr === null) {
+                    sPhPspnr = oRow.PhPspnr;
+                } else if (sPhPspnr !== oRow.PhPspnr) {
+                    this.createMessageDialog({
+                        title: this.getTranslatedText("ERROR"),
+                        textAccept: this.getTranslatedText("ACEPTAR"),
+                        messages: [{
+                            text: this.getTranslatedText("ERROR_SOLO_UNA_LINEA"),
+                            type: "Error"
+                        }]
+                    });
+                    return;
                 }
+            }
+
+            var oSelectedRow = aSelectedRows[0];
+            if (!oSelectedRow) return;
+
+            // Validacion 3: la fila "D" (OEO) no es valida.
+            if (sPhPspnr === "D") {
+                this.createMessageDialog({
+                    title: this.getTranslatedText("ERROR"),
+                    textAccept: this.getTranslatedText("ACEPTAR"),
+                    messages: [{
+                        text: this.getTranslatedText("ERROR_NO_ANADIR_OEO"),
+                        type: "Error"
+                    }]
+                });
+                return;
+            }
+
+            // Validacion 4: nivel 3 (desglose) no se puede seleccionar.
+            var iLevel = this._getOperationLevel(sPhPspnr);
+            if (iLevel === 3) {
+                this.createMessageDialog({
+                    title: this.getTranslatedText("ERROR"),
+                    textAccept: this.getTranslatedText("ACEPTAR"),
+                    messages: [{
+                        text: this.getTranslatedText("ERROR_NO_ANADIR_NIVEL3"),
+                        type: "Error"
+                    }]
+                });
+                return;
+            }
+
+            //   Recuperar el contexto para pasarlo a los helpers (mismo que se usa
+            // para localizar la fila en el arbol al insertar children).
+            var oContextForAdd = oTable.getContextByIndex(aSelectedIndices[0]);
+
+            // Nivel 1 (capitulo): abrir popup con el catalogo de operaciones.
+            if (iLevel === 1) {
+                this._openOperationsCatalog(oSelectedRow, oContextForAdd);
+                return;
+            }
+
+            // Nivel 2 (operacion): validar precondiciones y crear fila nivel 3.
+            if (iLevel === 2) {
+                // Validacion 5: no se puede si ya tiene desgloses (children).
+                if (oSelectedRow.children && oSelectedRow.children.length > 0) {
+                    this.createMessageDialog({
+                        title: this.getTranslatedText("ERROR"),
+                        textAccept: this.getTranslatedText("ACEPTAR"),
+                        messages: [{
+                            text: this.getTranslatedText("ERROR_NO_ANADIR_CON_DESGLOSES"),
+                            type: "Error"
+                        }]
+                    });
+                    return;
+                }
+                // Validacion 6: no se puede si tiene importes ejecutados.
+                var fAmoEje = parseFloat(oSelectedRow.AmoEje) || 0;
+                if (fAmoEje > 0) {
+                    this.createMessageDialog({
+                        title: this.getTranslatedText("ERROR"),
+                        textAccept: this.getTranslatedText("ACEPTAR"),
+                        messages: [{
+                            text: this.getTranslatedText("ERROR_NO_ANADIR_CON_EJECUTADO"),
+                            type: "Error"
+                        }]
+                    });
+                    return;
+                }
+                this._createLevel3Row(oSelectedRow, oContextForAdd);
             }
         },
 
@@ -485,6 +632,203 @@ sap.ui.define([
                 $(window).off("resize", this._boundResizeHandler);
             }
         },  */
+
+        //  Se gestiona la pulsación del botón de eliminar para recoger las líneas
+        // seleccionadas en la tabla y delegar la baja al servicio DelIndirectosSet.
+        onDeletePress: async function () {
+            //  Se obtiene la tabla y los índices seleccionados sobre el modelo de Externos.
+            var oTable = this.byId("TreeTableExternos");
+            var aSelectedIndices = oTable.getSelectedIndices();
+
+            //  Se valida que al menos una línea haya sido seleccionada antes de continuar.
+            if (aSelectedIndices.length === 0) {
+                this.createMessageDialog({
+                    title: this.getTranslatedText("ERROR"),
+                    textAccept: this.getTranslatedText("ACEPTAR"),
+                    messages: [{
+                        text: this.getTranslatedText("ERROR_SELECCIONE_LINEA"),
+                        type: "Error"
+                    }]
+                });
+                return;
+            }
+
+            //  Se recopilan los datos completos de cada línea seleccionada para el envío.
+            //   Cada fila se sanea con _sanitizeRowForBackend para evitar propiedades cliente.
+            var aLinesToDelete = [];
+            aSelectedIndices.forEach(function (iIndex) {
+                var oContext = oTable.getContextByIndex(iIndex);
+                if (oContext) {
+                    aLinesToDelete.push(this._sanitizeRowForBackend(oContext.getObject()));
+                }
+            }.bind(this));
+
+            //  Se verifica que la recolección de contextos haya producido datos válidos.
+            if (aLinesToDelete.length === 0) {
+                this.createMessageDialog({
+                    title: this.getTranslatedText("ERROR"),
+                    textAccept: this.getTranslatedText("ACEPTAR"),
+                    messages: [{
+                        text: "No se pudieron obtener los datos de las líneas seleccionadas",
+                        type: "Error"
+                    }]
+                });
+                return;
+            }
+
+            //  Se invoca el servicio de eliminación y se notifica cualquier excepción al usuario.
+            try {
+                await this._callDelIndirectosService(aLinesToDelete);
+            } catch (error) {
+                sap.m.MessageBox.error(
+                    "Error al eliminar las operaciones: " + (error.message || error),
+                    {
+                        title: this.getTranslatedText("ERROR")
+                    }
+                );
+            }
+        },
+
+        /**
+         *  Se invoca el servicio DelIndirectosSet para dar de baja las operaciones
+         * seleccionadas en la pestaña de Externos.
+         * @param {array} aLinesToDelete - Conjunto de líneas a eliminar.
+         * @returns {Promise} - Promesa con la respuesta del servicio.
+         */
+        _callDelIndirectosService: async function (aLinesToDelete) {
+            //  Se obtienen los modelos globales necesarios para construir la petición.
+            var oAppData = this.getGlobalModel("appData").getData();
+            var oDashModel = this.getGlobalModel("dashboardModel");
+
+            //  Se localiza la versión marcada como activa dentro del modelo de versiones.
+            var versiones = oAppData.NavLtVersiones;
+            var flagSelectVersion = versiones.find(function (item) {
+                return item.Activo === "X";
+            });
+
+            //  Se determina la fecha real del tramo, con respaldo en el modelo de dashboard.
+            var sFreal = "";
+            if (oAppData && oAppData.tramo && oAppData.tramo.Freal) {
+                sFreal = oAppData.tramo.Freal;
+            } else if (oDashModel) {
+                sFreal = oDashModel.getProperty("/NavMasterLt/0/Freal");
+            }
+
+            if (!sFreal) {
+                throw new Error("Fecha real no disponible");
+            }
+
+            //  Se parsea la fecha OData y se extrae el ejercicio que viaja en cabeceras.
+            var oDateStart = this._parseODataDate(sFreal);
+            if (!oDateStart || isNaN(oDateStart.getTime())) {
+                throw new Error("Fecha real inválida");
+            }
+
+            var sEjercicio = oDateStart.getFullYear().toString();
+            const token = oAppData.EvToken;
+
+            //  Se muestra el diálogo ocupado mientras dura la llamada al servicio.
+            if (!this._busyDialog) {
+                this._busyDialog = new sap.m.BusyDialog({
+                    text: this.getTranslatedText("ELIMINANDO_DATOS") || "Eliminando..."
+                });
+            }
+            this._busyDialog.open();
+
+            try {
+                //  Se ejecuta la llamada POST contra el servicio principal con los headers requeridos.
+                var response = await this.post(
+                    this.getGlobalModel("mainService"),
+                    "/DelIndirectosSet",
+                    {
+                        "NavSelProyecto": [oAppData.tramo],
+                        "NavLtVersiones": [flagSelectVersion],
+                        "NavDatosIndirectos": aLinesToDelete,
+                        "NavMensajes": []
+                    },
+                    {
+                        headers: {
+                            ambito: oAppData.userData.initialNode,
+                            lang: oAppData.userData.AplicationLangu,
+                            decimales: oDashModel.getData().decimales,
+                            norma: this.getGlobalModel("normModel").getData().norma || "",
+                            ejercicio: sEjercicio,
+                            pestana: "Externos",
+                            token: token
+                        }
+                    }
+                );
+
+                this._busyDialog.close();
+
+                //  Se inspeccionan los mensajes devueltos por el servicio en busca de errores.
+                var aMensajes = response.NavMensajes?.results || [];
+                var aMensajesError = aMensajes.filter(function (mensaje) {
+                    return mensaje.Tipo === "E";
+                });
+
+                if (aMensajesError.length > 0) {
+                    this.createMessageDialog({
+                        title: this.getTranslatedText("ERROR"),
+                        textAccept: this.getTranslatedText("ACEPTAR"),
+                        messages: aMensajesError.map(function (mensaje) {
+                            return {
+                                text: mensaje.Mensaje || mensaje.Message || mensaje.text || "",
+                                type: "Error"
+                            };
+                        })
+                    });
+                    return;
+                }
+
+                //  Si no se devuelven errores, se eliminan las líneas del modelo local de Externos.
+                //   El modelo es un arbol con children anidados, asi que se borra recursivamente
+                // via _removeRowsFromTreeByKey (BaseController) en vez de un splice plano.
+                var oModel = this.getView().getModel("externosModel");
+                this._removeRowsFromTreeByKey(oModel.getData(), aLinesToDelete);
+                oModel.refresh(true);
+
+                var oTable = this.byId("TreeTableExternos");
+                oTable.clearSelection();
+
+                //  Se marca la variante activa como modificada tras la operación de borrado.
+                this._markVariantDirty();
+
+                //  Se informa al usuario del número de líneas eliminadas con éxito.
+                sap.m.MessageToast.show(
+                    "Se han eliminado " + aLinesToDelete.length + " línea(s) correctamente"
+                );
+
+                //  Se muestran, si existen, los mensajes informativos, de aviso o de éxito devueltos.
+                var aMensajesInfo = aMensajes.filter(function (mensaje) {
+                    return mensaje.Tipo === "S" || mensaje.Tipo === "I" || mensaje.Tipo === "W";
+                });
+
+                if (aMensajesInfo.length > 0) {
+                    this.createMessageDialog({
+                        title: this.getTranslatedText("INFORMACION") || "Información",
+                        textAccept: this.getTranslatedText("ACEPTAR"),
+                        messages: aMensajesInfo.map(function (mensaje) {
+                            var sType = "Information";
+                            if (mensaje.Tipo === "W") sType = "Warning";
+                            if (mensaje.Tipo === "S") sType = "Success";
+
+                            return {
+                                text: mensaje.Mensaje || mensaje.Message || mensaje.text || "",
+                                type: sType
+                            };
+                        })
+                    });
+                }
+
+                return response;
+
+            } catch (error) {
+                //  Se garantiza el cierre del diálogo ocupado ante cualquier error inesperado.
+                this._busyDialog.close();
+                throw error;
+            }
+        },
 
 
     });

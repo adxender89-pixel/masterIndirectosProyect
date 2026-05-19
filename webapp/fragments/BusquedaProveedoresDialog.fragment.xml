@@ -1,0 +1,81 @@
+<!-- Dialog de busqueda de proveedores. Replica la cabecera con tres filtros (Nombre, ID, C.I.F) y la tabla de resultados conectada a ProveedoresSet. Se invoca como value help desde la celda Proveedor del treetable de Corrientes -->
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:l="sap.ui.layout">
+    <Dialog
+        id="busquedaProveedoresDialog"
+        title="{i18n>busquedaProveedores}"
+        contentWidth="640px"
+        contentHeight="520px"
+        resizable="true"
+        draggable="true">
+        <content>
+            <VBox class="sapUiSmallMargin">
+                <!-- Bloque superior con los tres filtros y el boton Buscar -->
+                <l:Grid
+                    defaultSpan="L4 M4 S12"
+                    hSpacing="1"
+                    vSpacing="1"
+                    class="sapUiSmallMarginBottom">
+                    <!-- Los tres inputs estan bindados al modelo proveedoresFiltrosModel, que vive aparte de busquedaProveedoresModel (resultados) y centraliza Name1, Lifnr y Stcd1. La lectura de /ProveedoresSet con los filtros se ejecuta unicamente al pulsar Buscar o al hacer submit (Intro) sobre cualquiera de los tres campos -->
+                    <VBox>
+                        <Label text="{i18n>nombreProveedor}" />
+                        <Input id="busquedaProveedoresNombre" value="{proveedoresFiltrosModel>/Name1}" submit="onBusquedaProveedoresBuscar" />
+                    </VBox>
+                    <VBox>
+                        <Label text="{i18n>idProveedor}" />
+                        <Input id="busquedaProveedoresId" value="{proveedoresFiltrosModel>/Lifnr}" submit="onBusquedaProveedoresBuscar" />
+                    </VBox>
+                    <VBox>
+                        <Label text="{i18n>cif}" />
+                        <Input id="busquedaProveedoresCif" value="{proveedoresFiltrosModel>/Stcd1}" submit="onBusquedaProveedoresBuscar" />
+                    </VBox>
+                </l:Grid>
+                <HBox justifyContent="End" class="sapUiSmallMarginBottom">
+                    <Button
+                        text="{i18n>buscar}"
+                        type="Emphasized"
+                        icon="sap-icon://search"
+                        press="onBusquedaProveedoresBuscar" />
+                </HBox>
+                <!-- Tabla de resultados: clic en una fila selecciona el proveedor y abre el panel -->
+                <Table
+                    id="busquedaProveedoresTable"
+                    items="{busquedaProveedoresModel>/results}"
+                    growing="true"
+                    growingThreshold="50"
+                    mode="SingleSelectMaster"
+                    selectionChange="onBusquedaProveedoresSeleccion"
+                    noDataText="{i18n>busquedaProveedoresVacia}"
+                    class="sapUiSizeCompact">
+                    <columns>
+                        <Column>
+                            <Text text="{i18n>nombreProveedor}" />
+                        </Column>
+                        <Column>
+                            <Text text="{i18n>idProveedor}" />
+                        </Column>
+                        <Column>
+                            <Text text="{i18n>cif}" />
+                        </Column>
+                    </columns>
+                    <items>
+                        <ColumnListItem>
+                            <cells>
+                                <Text text="{busquedaProveedoresModel>Name1}" />
+                                <Text text="{busquedaProveedoresModel>Lifnr}" />
+                                <Text text="{busquedaProveedoresModel>Stcd1}" />
+                            </cells>
+                        </ColumnListItem>
+                    </items>
+                </Table>
+            </VBox>
+        </content>
+        <endButton>
+            <Button
+                text="{i18n>cancelar}"
+                press="onBusquedaProveedoresCerrar" />
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

@@ -216,7 +216,7 @@
 .sapUiTableCell .flatCellInput .sapMInputBaseInner {
     margin: 0 !important;
     height: 1.6rem !important;
-    line-height: 1.2rem !important; /* <--- Abbassalo rispetto all'height */
+    line-height: 1.2rem !important; /* Se baja respecto a la altura */
     text-align: center !important;
     padding-bottom: 0.5rem;
     vertical-align: top !important; /* Aiuta l'allineamento */
@@ -225,6 +225,19 @@
 .flatCellInput .sapMInputBaseIconContainer,
 .sapUiTableCell .flatCellInput .sapMInputBaseIconContainer {
     display: none !important;
+}
+
+/* Se restaura el iconContainer cuando el input expone explicitamente un value help: la regla anterior oculta todos los iconos del flatCellInput, lo que tambien suprimiria los cuadrados del showValueHelp. Esta excepcion los vuelve visibles solo en los inputs marcados con la clase proveedorVHInput (celda Proveedor del treetable). */
+.flatCellInput.proveedorVHInput .sapMInputBaseIconContainer,
+.sapUiTableCell .flatCellInput.proveedorVHInput .sapMInputBaseIconContainer {
+    display: flex !important;
+}
+
+/* Flechas < / > del picker LIN cuando estamos al borde del rango permitido.
+   Se atenuan via clase en vez de setEnabled(false) porque deshabilitar el
+   boton just-clicked dispara el autoclose del ResponsivePopover por focus loss. */
+.linNavBtnDimmed {
+    opacity: 0.35 !important;
 }
 /* 
 .cabeceracolor-Group td {
@@ -576,6 +589,37 @@
     outline: none !important;
 }
 .iconOnlyBtn .sapMBtnInner:hover { background: transparent !important; border: none !important; }
+
+/* Boton lupa de la primera celda. Se mantiene la huella reducida del iconOnlyBtn pero se preservan el fondo y el borde cuando el tipo es Emphasized, para que el azul corporativo aparezca al activar la fila (mismo comportamiento que el boton Agrupar/Desagrupar). El reset de fondo solo se aplica al estado Transparent */
+/* Se reduce el tamano del boton lupa a 1rem (16px) y se centra el icono mediante flex para que quede alineado verticalmente con el input AGRUP contiguo dentro de la celda Agrupador. Tambien se reduce el font-size del icono y se rebaja el margen derecho a 2px para que ocupe lo minimo posible. */
+.lensBtn.sapMBtn {
+    height: 1rem !important;
+    min-width: 1rem !important;
+    width: 1rem !important;
+    /* Se aplica un margen superior negativo de 3px para subir ligeramente la lupa y alinearla con el centro vertical del Input AGRUP contiguo, que por su altura efectiva quedaba unos pixeles mas abajo que el icono. */
+    margin: -3px 2px 0 0 !important;
+}
+.lensBtn .sapMBtnInner {
+    padding: 0 !important;
+    min-width: 1rem !important;
+    min-height: 1rem !important;
+    height: 1rem !important;
+    width: 1rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+.lensBtn .sapMBtnIcon {
+    font-size: 0.75rem !important;
+    line-height: 1rem !important;
+}
+.lensBtn.sapMBtnTransparent .sapMBtnInner,
+.lensBtn.sapMBtnTransparent .sapMBtnInner:hover {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
 
 /* Botones de jerarquía y años */
 .childHeaderBtn.sapMBtn { height: 1.1rem !important; min-height: 1.1rem !important; }
@@ -987,6 +1031,12 @@ tr.cabeceracolor-Group > td {
     border-left: 1px solid #9e9b9b !important;
 }
 
+/* Se restituye el borde naranja a las cabeceras grises del panel cuyo contenido lleva la clase borderRightPend. La regla anterior (.panelDarkHeader .sapUiTableHeaderDataCell) sobreescribe el borde con #9e9b9b por mayor especificidad; este selector combina ambas condiciones para ganarle y conservar la linea vertical naranja tambien sobre el header gris */
+.panelDarkHeader .sapUiTableColHdrTr > td:has(.borderRightPend),
+.panelDarkHeader .sapUiTableHeaderDataCell:has(.borderRightPend) {
+    border-right: 2px solid #f3984e !important;
+}
+
 /*   Se aplica negrita y color negro al texto de la cabecera. */
 .panelDarkHeader .sapUiTableColHdrTr .sapMLabel,
 .panelDarkHeader .sapUiTableColHdrTr .sapUiTableCellInner {
@@ -1004,9 +1054,9 @@ tr.cabeceracolor-Group > td {
     color: inherit !important;
     text-decoration: none !important;
 }
+/* Se elimina el fondo azul claro original de las filas Total Grupo; ahora heredan el gris #ececec de blockCustomRow y conservan aquí únicamente la negrita */
 .agrupadorTotalRow td {
-    background-color: #e8f0f7 !important;
-    font-weight: bold;
+    font-weight: bold !important;
 }
 
 /* ==========================================================================
@@ -1030,4 +1080,214 @@ tr.cabeceracolor-Group > td {
 .sapUiTableCell .allowLetters .sapMInputBaseInner,
 .sapUiTableCell .allowLetters.sapMInputBase .sapMInputBaseInner {
     text-align: left !important;
+}
+
+/* Se centran los textos de la cabecera gris del bloque (selectores reforzados para ganar a la regla numérica de tabla) */
+.headerGrayRow .sapMInputBaseInner,
+.sapUiTableCell .headerGrayRow .sapMInputBaseInner,
+.headerGrayRow .sapMInputBase .sapMInputBaseInner,
+.headerGrayRow .sapMInputBase.sapMInputBaseReadonly .sapMInputBaseInner,
+.headerGrayRow .sapMInputBase.sapMInputBaseDisabled .sapMInputBaseInner,
+.headerGrayRow .allowLetters .sapMInputBaseInner,
+.headerGrayRow .sapUiTableDataCell .sapMInputBaseInner {
+    text-align: center !important;
+}
+
+/* Se aplica un gris más claro al fondo de las celdas de las filas custom del bloque situadas bajo la cabecera gris */
+.sapUiTableTr.blockCustomRow td,
+.blockCustomRow td,
+.blockCustomRow .sapUiTableDataCell {
+    background-color: #ececec !important;
+}
+/* Se extiende el mismo gris claro al row header (zona del checkbox) y al row action de las filas del bloque, ya que viven en <div>s separados del <tr> y no heredan el fondo de las celdas */
+.sapUiTableRowHdr.blockCustomRow,
+.sapUiTableRowAction.blockCustomRow {
+    background-color: #ececec !important;
+}
+/* Se extiende el gris oscuro del header gris al row header y row action correspondientes para que la cabecera del bloque ocupe también la zona del checkbox */
+.sapUiTableRowHdr.headerGrayRow,
+.sapUiTableRowAction.headerGrayRow {
+    background-color: #9e9b9b !important;
+}
+/* Se deja transparente el wrapper exterior del Input (sapMInputBase) para que la celda gris se vea como padding alrededor de la caja blanca */
+.blockCustomRow .sapMInputBase {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+/* Se pinta en blanco únicamente el contenido interior de los inputs EDITABLES del bloque. Se excluyen los inputs en modo readonly/disabled para que conserven el gris de la celda */
+.sapUiSizeCompact .blockCustomRow .sapMInputBase:not(.sapMInputBaseReadonly):not(.sapMInputBaseDisabled):not(.sapMInputBaseHasEndIcons):not(.sapMInputBaseHasBeginIcons) .sapMInputBaseContentWrapper,
+.sapUiSizeCompact .blockCustomRow .sapMInputBase:not(.sapMInputBaseReadonly):not(.sapMInputBaseDisabled) .sapMInputBaseInner,
+.blockCustomRow .sapMInputBase:not(.sapMInputBaseReadonly):not(.sapMInputBaseDisabled) .sapMInputBaseContentWrapper,
+.blockCustomRow .sapMInputBase:not(.sapMInputBaseReadonly):not(.sapMInputBaseDisabled) .sapMInputBaseInner {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+}
+/* Se fuerza el fondo gris claro para los inputs no editables (readonly/disabled) del bloque, anulando la regla compact transparent */
+.sapUiSizeCompact .blockCustomRow .sapMInputBase.sapMInputBaseReadonly .sapMInputBaseContentWrapper,
+.sapUiSizeCompact .blockCustomRow .sapMInputBase.sapMInputBaseDisabled .sapMInputBaseContentWrapper,
+.blockCustomRow .sapMInputBase.sapMInputBaseReadonly .sapMInputBaseInner,
+.blockCustomRow .sapMInputBase.sapMInputBaseDisabled .sapMInputBaseInner {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+/* Se preserva el borde naranja de la columna Pend a planificar también en las filas claras del bloque */
+.blockCustomRow td:has(.borderRightPend) {
+    border-right: 2px solid #f3984e !important;
+}
+
+/* Se reducen la altura y el padding vertical de las filas del bloque (header gris y filas custom) cubriendo ambos contenedores (Fixed y Scroll) y los row header/action para mantener la misma altura entre columnas fijas y desplazables */
+.sapUiTableCtrlFixed tr.blockCustomRow,
+.sapUiTableCtrlScroll tr.blockCustomRow,
+.sapUiTableCtrlFixed tr.headerGrayRow,
+.sapUiTableCtrlScroll tr.headerGrayRow,
+.sapUiTableRowHdr.blockCustomRow,
+.sapUiTableRowHdr.headerGrayRow,
+.sapUiTableRowAction.blockCustomRow,
+.sapUiTableRowAction.headerGrayRow,
+tr.blockCustomRow,
+tr.headerGrayRow {
+    height: 26px !important;
+    min-height: 0 !important;
+    max-height: 26px !important;
+}
+.sapUiTableCtrlFixed tr.blockCustomRow > td,
+.sapUiTableCtrlScroll tr.blockCustomRow > td,
+.sapUiTableCtrlFixed tr.headerGrayRow > td,
+.sapUiTableCtrlScroll tr.headerGrayRow > td,
+tr.blockCustomRow > td,
+tr.headerGrayRow > td,
+.blockCustomRow .sapUiTableCellInner,
+.headerGrayRow .sapUiTableCellInner {
+    height: 26px !important;
+    max-height: 26px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    /* Se centra verticalmente el contenido (Inputs, Selects, etc.) dentro de la celda reducida */
+    vertical-align: middle !important;
+}
+
+/* Se reduce la altura del Select (Reparto) y se le aplica un pequeño margin-top para alinearlo verticalmente con los Inputs vecinos en toda la mainTreeTable (no sólo en el bloque) */
+.mainTreeTable .sapMSlt {
+    height: 20px !important;
+    min-height: 20px !important;
+    line-height: 20px !important;
+    margin-top: 3px !important;
+}
+/* Se alinean también las partes internas del Select (label y flecha) a la nueva altura para que el contenido no se desborde */
+.mainTreeTable .sapMSlt .sapMSltLabel,
+.mainTreeTable .sapMSlt .sapMSltArrow {
+    line-height: 20px !important;
+    height: 20px !important;
+}
+
+/* Se reduce la altura de TODAS las filas de la mainTreeTable a 26px para uniformar el grosor entre filas normales y filas del bloque, incluyendo los estados selected/hover/focus que de otro modo pueden sobrescribir la altura */
+.sapUiTableCtrlFixed.mainTreeTable tr.sapUiTableTr,
+.sapUiTableCtrlScroll.mainTreeTable tr.sapUiTableTr,
+.mainTreeTable .sapUiTableCtrlFixed tr.sapUiTableTr,
+.mainTreeTable .sapUiTableCtrlScroll tr.sapUiTableTr,
+.mainTreeTable tr.sapUiTableTr,
+.mainTreeTable tr.sapUiTableTr.sapUiTableRowSel,
+.mainTreeTable tr.sapUiTableTr.sapUiTableRowHvr,
+.mainTreeTable tr.sapUiTableTr.sapUiTableRowSelected {
+    height: 26px !important;
+    min-height: 0 !important;
+    max-height: 26px !important;
+}
+/* Se mantiene el row selector (zona del checkbox) y el row action a la misma altura que el tr de la fila (26px) para evitar un escalón visible entre el checkbox y el contenido de la fila */
+.mainTreeTable .sapUiTableRowHdr,
+.mainTreeTable .sapUiTableRowHdr.sapUiTableRowSel,
+.mainTreeTable .sapUiTableRowHdr.sapUiTableRowHvr,
+.mainTreeTable .sapUiTableRowAction,
+.mainTreeTable .sapUiTableRowAction.sapUiTableRowSel,
+.mainTreeTable .sapUiTableRowAction.sapUiTableRowHvr {
+    height: 26px !important;
+    min-height: 0 !important;
+    max-height: 26px !important;
+    /* Se centra verticalmente el contenido (checkbox o icono) dentro del row header con flex, ya que la regla anterior solo fijaba la altura del contenedor pero no la posicion del checkbox interno, que aparecia alineado en la parte superior y desfasado respecto al texto de la fila correspondiente. */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+}
+/* Se aplican las mismas reglas al pseudo-elemento ::after que UI5 usa para pintar el icono del checkbox, asegurando que tambien quede vertical y horizontalmente centrado dentro del row header de 26px. */
+.mainTreeTable .sapUiTableRowSelectionCell {
+    height: 26px !important;
+    min-height: 0 !important;
+    max-height: 26px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+}
+/* Se desplaza el glifo del checkbox (pseudo-elemento ::after que UI5 dibuja como icono) 1px hacia abajo para compensar el desfase residual que dejaba el checkbox visualmente algo mas arriba que el contenido de su fila correspondiente. Se aumenta tambien su font-size a 1rem para que el icono ocupe practicamente la altura util de la fila (26px) y no quede visualmente mas corto que la celda de datos seleccionada. */
+.mainTreeTable .sapUiTableRowSelectionCell::after {
+    position: relative !important;
+    top: 1px !important;
+    font-size: 1rem !important;
+    line-height: 1rem !important;
+    height: 1rem !important;
+    width: 1rem !important;
+}
+.mainTreeTable .sapUiTableCtrlFixed tr.sapUiTableTr > td,
+.mainTreeTable .sapUiTableCtrlScroll tr.sapUiTableTr > td,
+.mainTreeTable tr.sapUiTableTr > td,
+.mainTreeTable .sapUiTableCellInner {
+    height: 26px !important;
+    max-height: 26px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    vertical-align: middle !important;
+}
+/* Se ajusta también la altura mínima de los Inputs en toda la mainTreeTable para que encajen en 26px sin desbordar */
+.mainTreeTable .sapMInputBase,
+.mainTreeTable .sapMInputBaseContentWrapper {
+    min-height: 20px !important;
+}
+
+.blockCustomRow .sapMInputBase,
+.headerGrayRow .sapMInputBase,
+.blockCustomRow .sapMInputBaseContentWrapper,
+.headerGrayRow .sapMInputBaseContentWrapper {
+    min-height: 20px !important;
+}
+
+/* Se aplica una cuadrícula completa (vertical + horizontal) con tono suave tipo defecto en las filas del header gris y del bloque, sustituyendo los bordes originales del mismo color que el fondo */
+.sapUiTableCtrlFixed tr.headerGrayRow > td,
+.sapUiTableCtrlScroll tr.headerGrayRow > td,
+tr.headerGrayRow > td,
+.headerGrayRow .sapUiTableDataCell {
+    border-right: 1px solid rgba(0, 0, 0, 0.2) !important;
+    border-left: 1px solid rgba(0, 0, 0, 0.2) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.2) !important;
+}
+.sapUiTableCtrlFixed tr.blockCustomRow > td,
+.sapUiTableCtrlScroll tr.blockCustomRow > td,
+tr.blockCustomRow > td,
+.blockCustomRow .sapUiTableDataCell {
+    border-right: 1px solid rgba(0, 0, 0, 0.08) !important;
+    border-left: 1px solid rgba(0, 0, 0, 0.08) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Se aplica negrita al título del Panel del proveedor mediante la clase panelTitleBold */
+.panelTitleBold .sapMTitle,
+.panelTitleBold .sapMTitleInner,
+.panelTitleBold span {
+    font-weight: bold !important;
+}
+
+/* Se pinta la barra divisoria del Splitter en un naranja corporativo mas opaco/apagado (#cc7a3a) para reducir la luminosidad del tono original #f3984e y suavizar el contraste con el contenido */
+.sapUiLoSplitterBar,
+.sapUiLoSplitterBarH,
+.sapUiLoSplitterBarV,
+.sapUiLoSplitterBar:hover,
+.sapUiLoSplitterBar:focus,
+.sapUiLoSplitterBarActive {
+    background-color: #cc7a3a !important;
+    border-color: #cc7a3a !important;
+}
+/* Se mantiene visible el icono del grip de la barra del splitter sobre el naranja */
+.sapUiLoSplitterBar .sapUiLoSplitterBarIcon,
+.sapUiLoSplitterBar .sapUiLoSplitterBarGrip {
+    color: #ffffff !important;
 }
