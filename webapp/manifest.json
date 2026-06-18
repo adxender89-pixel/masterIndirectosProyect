@@ -1,7 +1,7 @@
 {
   "_version": "1.17.0",
   "sap.app": {
-    "id": "masterindirectos",
+    "id": "zindirect_costs",
     "type": "application",
     "i18n": "i18n/i18n.properties",
     "applicationVersion": {
@@ -76,7 +76,7 @@
       "i18n": {
         "type": "sap.ui.model.resource.ResourceModel",
         "settings": {
-          "bundleName": "masterindirectos.i18n.i18n"
+          "bundleName": "zindirect_costs.i18n.i18n"
         }
       }
     },
@@ -92,7 +92,7 @@
         "routerClass": "sap.m.routing.Router",
         "viewType": "XML",
         "async": true,
-        "viewPath": "masterindirectos.view",
+        "viewPath": "zindirect_costs.view",
         "controlAggregation": "pages",
         "controlId": "app",
         "clearControlAggregation": false
@@ -117,7 +117,7 @@
       }
     },
     "rootView": {
-      "viewName": "masterindirectos.view.App",
+      "viewName": "zindirect_costs.view.App",
       "type": "XML",
       "async": true,
       "id": "App"

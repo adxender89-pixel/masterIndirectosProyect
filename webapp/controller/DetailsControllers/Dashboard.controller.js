@@ -4,8 +4,8 @@ sap.ui.define([
     "sap/m/Input",
     "sap/m/Button",
     "sap/m/Label",
-    "masterindirectos/controller/BaseController",
-    "masterindirectos/model/formatter"
+    "zindirect_costs/controller/BaseController",
+    "zindirect_costs/model/formatter"
 ], function (
     JSONModel,
     Column,
@@ -17,7 +17,7 @@ sap.ui.define([
 ) {
     "use strict";
 
-    return BaseController.extend("masterindirectos.controller.DetailsControllers.Dashboard", {
+    return BaseController.extend("zindirect_costs.controller.DetailsControllers.Dashboard", {
         /**
                   * Se inicializa el controlador del Dashboard y se invoca la carga inicial de datos.
                   */
@@ -33,6 +33,16 @@ sap.ui.define([
          */
         setInitData: async function () {
             const dashBoardData = await this.getDashboardData();
+            //   Se captura la moneda de la obra (Waers) ANTES de formatear los importes,
+            // para que formatDecimales aplique 0 decimales y redondeo hacia arriba en monedas
+            // sin decimales (CLP/CL1, etc.). Se buscan varias fuentes porque no todas las
+            // colecciones del dashboard traen Waers; la primera fila que lo tenga sirve.
+            this._setWaersFromData([].concat(
+                (dashBoardData.NavResumenIndirectos && dashBoardData.NavResumenIndirectos.results) || [],
+                (dashBoardData.NavKpisIndirectos && dashBoardData.NavKpisIndirectos.results) || [],
+                (dashBoardData.NavLsObra && dashBoardData.NavLsObra.results) || [],
+                (dashBoardData.NavMasterLt && dashBoardData.NavMasterLt.results) || []
+            ));
             // Se formatean los valores numéricos de los KPIs aplicando los decimales configurados en el sistema.
             Object.keys(dashBoardData.NavKpisIndirectos.results[0]).forEach(key => {
                 if (!isNaN(parseFloat(dashBoardData.NavKpisIndirectos.results[0][key])) && isFinite(dashBoardData.NavKpisIndirectos.results[0][key])) {
@@ -131,8 +141,8 @@ sap.ui.define([
             // Se registra el modelo como global para habilitar su acceso desde otras vistas.
             this.setGlobalModel(dashboardModel, "dashboardModel");
 
-            //  Se persisten las fechas clave del tramo activo en appData para que otras vistas
-            //  como Corrientes puedan leerlas sin depender del dashboardModel.
+            //   Se persisten las fechas clave del tramo activo en appData para que otras vistas
+            //   como Corrientes puedan leerlas sin depender del dashboardModel.
             var sFreal = (dashBoardData.NavMasterLt.results[0] || {}).Freal || "";
             var sFrealiniobra = (dashBoardData.NavLsObra.results[0] || {}).Frealiniobra || "";
             var sFrealfinobra = (dashBoardData.NavLsObra.results[0] || {}).Frealfinobra || "";
@@ -167,13 +177,15 @@ sap.ui.define([
                 total: kpi.CdirTot
             }];
 
-            // Se instancia el modelo para los gráficos de tipo tarta (Pie Charts).
+            //   Se traducen las etiquetas del grafico de tarta via
+            // i18n (claves ejecutado/pendiente ya existentes) para soportar EN/FR.  
             const tartasModel = {
-                labels: ["Ejecutado", "Pendiente"],
+                labels: [this.getTranslatedText("ejecutado"), this.getTranslatedText("pendiente")],
                 datasets: [oDataCosteTotal[0], oDataObraNeta[0], oDataCosteDirecto[0]].map(item => ({
                     data: [parseFloat(item.ejecutado), parseFloat(item.pendiente)]
                 }))
             };
+            //  
             let modelUser = this.getGlobalModel("appData").getData().userData;
             let currencyFormat = modelUser.CurrencyFormat;
             let thousandSeparator = currencyFormat.charAt(0)
@@ -184,13 +196,16 @@ sap.ui.define([
             // dataGraphicBar = dataGraphicBar.filter(item => item.Post1 && item.Post1 !== "RESULTADO");
             dataGraphicBar = dataGraphicBar.filter(item => !!parseFloat(item.Psphi));
 
+            //   Se traducen las leyendas del grafico de barras via
+            // i18n (claves impEject/impPend/ImpTot ya existentes) para soportar EN/FR.  
             const oGraphicBarData = {
                 labelsData: dataGraphicBar.map(item => item.Post1),
                 labelsBar: [
-                    "Importe Ejecutado",
-                    "Importe Pendiente",
-                    "Importe Total"
+                    this.getTranslatedText("impEject"),
+                    this.getTranslatedText("impPend"),
+                    this.getTranslatedText("ImpTot")
                 ],
+                //  
                 datasetsData: [
                     [
                         dataGraphicBar.map(item => parseFloat(item.ImpEje.replaceAll(thousandSeparator, "").replace(decimalSeparator, ".")))

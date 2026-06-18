@@ -4,11 +4,11 @@ sap.ui.define([
     "sap/m/Input",
     "sap/m/Button",
     "sap/m/Label",
-    "masterindirectos/controller/BaseController",
+    "zindirect_costs/controller/BaseController",
     "sap/ui/model/Filter",
     "sap/ui/model/FilterOperator",
     "sap/ui/core/Fragment",
-    "masterindirectos/model/formatter"
+    "zindirect_costs/model/formatter"
 ], function (
     JSONModel,
     Column,
@@ -23,7 +23,7 @@ sap.ui.define([
 ) {
     "use strict";
 
-    return BaseController.extend("masterindirectos.controller.DetailsControllers.Corrientes", {
+    return BaseController.extend("zindirect_costs.controller.DetailsControllers.Corrientes", {
 
         formatter: formatter,
         /**
@@ -62,7 +62,7 @@ sap.ui.define([
 
             this.setupDynamicTreeTable("TreeTableBasic");
 
-            this._initVariantManagement("masterindirectos_corrientes_variants");
+            this._initVariantManagement("zindirect_costs_corrientes_variants");
 
             setTimeout(function () {
                 const oTableForVariant = this.byId("TreeTableBasic");
@@ -380,8 +380,17 @@ sap.ui.define([
 
             // Nivel 2 (operacion): validar precondiciones y crear fila nivel 3.
             if (iLevel === 2) {
-                // Validacion 5: no se puede si ya tiene desgloses (children).
-                if (oSelectedRow.children && oSelectedRow.children.length > 0) {
+                // Validacion 5: solo se bloquea si la operacion tiene desgloses
+                // PRE-EXISTENTES (cargados del backend). Los desgloses creados por el
+                // usuario en esta misma sesion (isNew === true) NO cuentan: una vez que se
+                // ha empezado a desglosar una operacion debe poderse anadir mas hermanos de
+                // nivel 3 (y seguir editando los ya creados). _createLevel3Row ya numera el
+                // siguiente sufijo a partir de los hijos existentes.
+               /* var aDesgloses = oSelectedRow.children || [];
+                var bTieneDesglosesBackend = aDesgloses.some(function (oChild) {
+                    return oChild && oChild.isNew !== true;
+                });
+                if (bTieneDesglosesBackend) {
                     this.createMessageDialog({
                         title: this.getTranslatedText("ERROR"),
                         textAccept: this.getTranslatedText("ACEPTAR"),
@@ -391,7 +400,7 @@ sap.ui.define([
                         }]
                     });
                     return;
-                }
+                }*/
                 // Validacion 6: no se puede si tiene importes ejecutados.
                 var fAmoEje = parseFloat(oSelectedRow.AmoEje) || 0;
                 if (fAmoEje > 0) {
@@ -609,7 +618,11 @@ sap.ui.define([
                         "NavSelProyecto": [this.getGlobalModel("appData").getData().tramo],
                         "NavChanges": [],
                         "NavDatosIndirectos": [],
-                        "EvBloqueados": "",
+                         "NavKpisIndirectos":[],
+                        //   Se envía en el body el capítulo ya bloqueado por el usuario para evitar
+                        //      que el backend lo intente bloquear de nuevo y dispare el error de
+                        //      bloqueo propio al cambiar de año en el selector.
+                        "EvBloqueados": this.getGlobalModel("appData").getProperty("/EvBloqueados") || "",
                         "NavMensajes": [],
                         // Se envía únicamente la versión activa aislada anteriormente.
                         "NavLtVersiones": [flagSelectVersion]
@@ -618,7 +631,7 @@ sap.ui.define([
                         headers: {
                             ambito: this.getGlobalModel("appData").getData().userData.initialNode,
                             lang: this.getGlobalModel("appData").getData().userData.AplicationLangu,
-                            bloqueado: "",
+                            bloqueado: this.getGlobalModel("appData").getProperty("/EvBloqueados") || "",
                             decimales: "02",
                             ejercicio: sEjercicio,
                             pestana: "Corrientes",
@@ -649,31 +662,221 @@ sap.ui.define([
                     });
                 }
 
-                // // Capturar el estado de bloqueo de la pestaña desde EvBloqueados
-                // var sEvBloqueados = response.EvBloqueados || "";
-                // var bIsBlocked = sEvBloqueados.trim().length > 0;
+                //   Se descomenta el bloque de instanciacion de modeloBloqueo: sin este modelo, los bindings ${modeloBloqueo>/isBlocked} de la view caian al valor por defecto (editable=true) y los campos seguian siendo editables aunque la pestana estuviera bloqueada por otro usuario. Es el bug reportado por Raquel: bloqueo "Lo tiene Liher" pero los inputs permanecen editables.
+                //   Estado de bloqueo de la pestana: el header backend EvBloqueados llega con
+                // el capitulo bloqueado. Si el usuario es el propietario del bloqueo viene
+                // contenido y NO hay errores; si el bloqueo es de otro usuario el backend
+                // devuelve igualmente contenido en EvBloqueados PERO acompanyado de un mensaje
+                // de error tipo "E" ("Chapter X cannot be modified, its blocked by ...").
+                //   Por eso isBlocked solo es true cuando hay contenido en EvBloqueados Y
+                // NO hay errores en la respuesta: asi se distingue "tu tienes el lock"
+                // (isBlocked=true → UI editable) de "otro tiene el lock" (isBlocked=false →
+                // UI no editable). Sin esta proteccion, cuando otro usuario tenia el bloqueo
+                // la treetable seguia editable porque EvBloqueados llegaba con contenido y
+                // el codigo lo interpretaba como "el usuario actual tiene el lock".
+                var sEvBloqueados = response.EvBloqueados || "";
+                var bIsBlocked = sEvBloqueados.trim().length > 0 && aMensajesError.length === 0;
+                this.getGlobalModel("appData").setProperty("/EvBloqueados", sEvBloqueados);
 
-                // // Crear o actualizar el modelo de bloqueo
-                // var oModeloBloqueo = this.getView().getModel("modeloBloqueo");
-                // if (!oModeloBloqueo) {
-                //     oModeloBloqueo = new sap.ui.model.json.JSONModel({
-                //         isBlocked: bIsBlocked
-                //     });
-                //     this.getView().setModel(oModeloBloqueo, "modeloBloqueo");
-                // } else {
-                //     oModeloBloqueo.setProperty("/isBlocked", bIsBlocked);
-                // }
-
+                //   Se reemplaza SIEMPRE modeloBloqueo con una instancia JSONModel nueva en lugar de actualizar la existente via setProperty. setProperty+refresh no propagaba a las expression bindings de las columnas dinamicas instanciadas dinamicamente desde BaseController (botones Add/Delete, Select Reparto, meses, etc.): cuando se cambiaba de pestana y volvia con el backend devolviendo bloqueo, los campos quedaban editable=true. Con setModel todas las bindings se vuelven a atar a la nueva instancia y el isBlocked se propaga correctamente.
+                var oModeloBloqueo = new sap.ui.model.json.JSONModel({
+                    isBlocked: bIsBlocked
+                });
+                this.getView().setModel(oModeloBloqueo, "modeloBloqueo");
+                
+                this._setWaersFromData(response.NavDatosIndirectos.results); //   captura la moneda de la obra para formatDecimales
                 this._addComputedFields(response.NavDatosIndirectos.results);
                 const tree = this.buildTree(response.NavDatosIndirectos.results);
-                const oModel = new sap.ui.model.json.JSONModel(tree);
-                this.getView().setModel(oModel, "corrientesModel");
-
-                //Prueba editabilidad
+                 //   Si el modelo ya existe se actualizan sus datos in-place con setData en lugar de instanciar un JSONModel nuevo y reemplazarlo con setModel. Reemplazar el modelo en cambios de pestana provocaba que las columnas dinamicas perdieran momentaneamente su contexto de binding y que las columnas estaticas se reordenaran. Manteniendo la misma instancia las bindings se preservan y solo se refrescan los datos.
+                var oCorrientesModel = this.getView().getModel("corrientesModel");
+                if (oCorrientesModel) {
+                    oCorrientesModel.setData(tree);
+                } else {
+                    this.getView().setModel(new sap.ui.model.json.JSONModel(tree), "corrientesModel");
+                }
+              //Prueba editabilidad
                 //oModel.setProperty("/EvBloqueados", "X");
             } catch (error) {
 
             }
+        },
+
+        //     Se anade _snapshotCustomBlocks para capturar todos los bloques
+        // proveedor creados localmente por el usuario (filas con __isCustom: true)
+        // antes de que initCorrienteModel haga setData con el arbol fresco del
+        // backend. Sin esta captura las filas custom (header gris + editables) se
+        // perderian al volver a la pestana porque el backend no las conoce. La
+        // funcion devuelve un array de snapshots; cada uno contiene el PhPspnr del
+        // padre (identificador estable que sobrevive al rebuild del arbol), la
+        // copia profunda de los hijos custom y el estado expanded del padre. El
+        // restore se hace despues con _restoreCustomBlocks pasando este array.
+        _snapshotCustomBlocks: function () {
+            //     Se obtiene el modelo via tableModelName ("corrientesModel").
+            var oModel = this.getView().getModel(this.tableModelName);
+            //     Se devuelve array vacio defensivamente si el modelo no existe.
+            if (!oModel) return [];
+            //     Se acumulan los snapshots en aSnapshots durante la traversia.
+            var aSnapshots = [];
+            this._collectCustomBlocksFrom(oModel.getData(), aSnapshots);
+            return aSnapshots;
+        },
+
+        //     Se anade el helper recursivo que recorre el arbol del modelo y
+        // empuja un snapshot en aSnapshots por cada nodo padre que contenga al
+        // menos un hijo con __isCustom: true. Se hace deep clone (JSON parse+
+        // stringify) de los hijos custom para desligarlos del modelo viejo y
+        // evitar referencias compartidas con el arbol que setData va a reemplazar.
+        _collectCustomBlocksFrom: function (oNode, aSnapshots) {
+            //     Se sale si el nodo no es un objeto valido.
+            if (!oNode || typeof oNode !== "object") return;
+            //     Se recorren todos los elementos del array y se delega.
+            if (Array.isArray(oNode)) {
+                for (var i = 0; i < oNode.length; i++) {
+                    this._collectCustomBlocksFrom(oNode[i], aSnapshots);
+                }
+                return;
+            }
+            //     Se procesa el nodo cuando tiene PhPspnr (identificador estable
+            // necesario para el restore) y un array children no vacio.
+            if (oNode.PhPspnr && Array.isArray(oNode.children)) {
+                //     Se separan los hijos en custom (a guardar) y no custom
+                // (a recorrer recursivamente para detectar bloques anidados).
+                var aCustom = [];
+                var aNonCustom = [];
+                oNode.children.forEach(function (c) {
+                    if (c && c.__isCustom === true) {
+                        aCustom.push(c);
+                    } else {
+                        aNonCustom.push(c);
+                    }
+                });
+                //     Se guarda el snapshot solo si hay hijos custom efectivos.
+                if (aCustom.length > 0) {
+                    aSnapshots.push({
+                        parentPhPspnr: oNode.PhPspnr,
+                        customChildren: JSON.parse(JSON.stringify(aCustom)),
+                        parentExpanded: oNode.expanded === true
+                    });
+                }
+                //     Se desciende en los hijos no custom por si tienen sus
+                // propios bloques (caso teorico, defensivo).
+                for (var j = 0; j < aNonCustom.length; j++) {
+                    this._collectCustomBlocksFrom(aNonCustom[j], aSnapshots);
+                }
+                return;
+            }
+            //     Se recorren las propiedades restantes por compatibilidad con
+            // raices que sean mapas (no usado por buildTree actual, defensivo).
+            for (var sKey in oNode) {
+                if (!Object.prototype.hasOwnProperty.call(oNode, sKey)) continue;
+                if (sKey === "children") continue;
+                var oChild = oNode[sKey];
+                if (oChild && typeof oChild === "object") {
+                    this._collectCustomBlocksFrom(oChild, aSnapshots);
+                }
+            }
+        },
+
+        //     Se anade _restoreCustomBlocks para reinyectar los bloques custom
+        // capturados por _snapshotCustomBlocks en el arbol nuevo que dejo
+        // initCorrienteModel. Se localiza cada padre por PhPspnr en el modelo
+        // recien cargado y se hace push de los customChildren al final de su
+        // array children, restaurando ademas el flag expanded. Si el padre no
+        // existe en el arbol nuevo (caso raro: cambio de tramo, datos backend
+        // distintos) el snapshot correspondiente se ignora silenciosamente.
+        // Al final se invoca refresh(true) sobre el modelo para que la TreeTable
+        // recoja los nuevos hijos y actualice bindings/expression bindings de las
+        // celdas custom (Proveedor, Tarifa, fechas, etc.).
+        //   Tras el refresh se reaplica el CSS de bloque (_applyBlockBorder y
+        // _highlightSinProveedor) y la visibilidad de columnas custom porque
+        // estos helpers manipulan el DOM directamente y no son driven por
+        // bindings: sin esta reaplicacion el borde negro del bloque agrupador
+        // desaparece al volver a la pestana hasta que el usuario hace scroll o
+        // inserta una fila (eventos que disparan rowsUpdated y reaplican el
+        // CSS). Se usa el mismo patron que onToggleCustomExpand: attachEventOnce
+        // sobre rowsUpdated mas un setTimeout de respaldo de 150ms, con guard
+        // _fired para no ejecutar la callback dos veces si ambos disparan.
+        _restoreCustomBlocks: function (aSnapshots) {
+            //     Se sale rapido si no hay snapshots que restaurar.
+            if (!aSnapshots || aSnapshots.length === 0) return;
+            var oModel = this.getView().getModel(this.tableModelName);
+            if (!oModel) return;
+            var oData = oModel.getData();
+            var that = this;
+            var bAnyRestored = false;
+            aSnapshots.forEach(function (oSnap) {
+                //     Se busca el nodo padre por PhPspnr en el arbol nuevo.
+                var oParent = that._findNodeByPhPspnr(oData, oSnap.parentPhPspnr);
+                if (!oParent) return;
+                //     Se inicializa el array children si por algun motivo
+                // viene undefined en el arbol fresco.
+                if (!Array.isArray(oParent.children)) oParent.children = [];
+                //     Se reinyectan los hijos custom al final del array para
+                // mantener el orden relativo con los hijos del backend.
+                for (var i = 0; i < oSnap.customChildren.length; i++) {
+                    oParent.children.push(oSnap.customChildren[i]);
+                }
+                //     Se restaura el estado expanded del padre.
+                if (oSnap.parentExpanded) {
+                    oParent.expanded = true;
+                }
+                bAnyRestored = true;
+            });
+            //     Se sale sin disparar refrescos si no se restauro nada.
+            if (!bAnyRestored) return;
+            //     Se notifica al modelo para que la TreeTable recoja los hijos
+            // nuevos. Sin refresh la tabla no muestra las filas custom restauradas.
+            oModel.refresh(true);
+            //     Se obtiene la tabla para reaplicar el CSS de bloque tras el
+            // ciclo de render que dispara el refresh.
+            var oTable = this.getControlTable();
+            if (!oTable) return;
+            //     Se define la callback que reaplica el CSS de bloque, el
+            // highlight de sin proveedor y la visibilidad de columnas custom.
+            // El guard _fired evita doble ejecucion si tanto rowsUpdated como
+            // el setTimeout de respaldo disparan la callback.
+            var fnReapplyBlockCss = function () {
+                if (fnReapplyBlockCss._fired) return;
+                fnReapplyBlockCss._fired = true;
+                if (typeof that._highlightSinProveedor === "function") {
+                    that._highlightSinProveedor(oTable);
+                }
+                if (typeof that._applyBlockBorder === "function") {
+                    that._applyBlockBorder(oTable);
+                }
+                if (typeof that._updateCustomColsVisibility === "function") {
+                    that._updateCustomColsVisibility();
+                }
+            };
+            //     Se engancha la callback al evento rowsUpdated (disparado
+            // por la TreeTable cuando termina de redibujar las filas tras el
+            // refresh) y se programa un setTimeout de 150ms como respaldo por
+            // si rowsUpdated no llega a dispararse (mismo patron defensivo que
+            // onToggleCustomExpand en BaseController).
+            oTable.attachEventOnce("rowsUpdated", fnReapplyBlockCss);
+            setTimeout(fnReapplyBlockCss, 150);
+        },
+
+        //     Se anade el helper de busqueda por PhPspnr en el arbol nuevo.
+        // Devuelve el primer nodo cuyo PhPspnr coincida o null. Se hace DFS
+        // descendiendo por .children y soportando array y objeto en la raiz.
+        _findNodeByPhPspnr: function (oNode, sTarget) {
+            if (!oNode || typeof oNode !== "object") return null;
+            if (Array.isArray(oNode)) {
+                for (var i = 0; i < oNode.length; i++) {
+                    var oFoundInArr = this._findNodeByPhPspnr(oNode[i], sTarget);
+                    if (oFoundInArr) return oFoundInArr;
+                }
+                return null;
+            }
+            if (oNode.PhPspnr === sTarget) return oNode;
+            if (Array.isArray(oNode.children)) {
+                for (var j = 0; j < oNode.children.length; j++) {
+                    var oFoundInCh = this._findNodeByPhPspnr(oNode.children[j], sTarget);
+                    if (oFoundInCh) return oFoundInCh;
+                }
+            }
+            return null;
         },
 
         _addComputedFields: function(aData) {
@@ -771,60 +974,12 @@ sap.ui.define([
             }
             return new Date(sODataDate);
         },
-        /**
-      * Se inicializa el modelo de años disponibles para el selector de ejercicio,
-      * calculando el rango desde el año de Freal hasta el año de Frealfinobra, ambos inclusive.
-      * Se leen ambas fechas directamente desde el modelo global dashboardModel.
-      */
-        _initYearsModel: function () {
-            // Se leen ambas fechas desde appData en lugar de dashboardModel.
-            var oAppData = this.getGlobalModel("appData").getData();
-            var sFreal = oAppData.Freal;
-            var sFrealfinobra = oAppData.Frealfinobra;
-
-            // Se verifica que ambas fechas esten disponibles antes de continuar.
-            // Si aun no lo estan se reintenta tras 500ms esperando que el dashboard las haya persistido.
-            //  Se verifica que ambas fechas esten disponibles en appData antes de continuar.
-            if (!sFreal || !sFrealfinobra) {
-                setTimeout(function () { this._initYearsModel(); }.bind(this), 500);
-                return;
-            }
-
-            // Se parsean las fechas obtenidas al formato Date de JavaScript.
-            var oDateStart = this._parseODataDate(sFreal);
-            var oDateEnd = this._parseODataDate(sFrealfinobra);
-
-            // Se verifica que ambas fechas sean validas antes de continuar.
-            if (!oDateStart || !oDateEnd || isNaN(oDateStart) || isNaN(oDateEnd)) {
-                return;
-            }
-
-            var iYearStart = oDateStart.getFullYear();
-            var iYearEnd = oDateEnd.getFullYear();
-
-            // Se garantiza que el rango tenga siempre al menos 2 anos visibles.
-            // Si Frealfinobra es anterior o igual a Freal los datos son inconsistentes
-            // y se aplica un rango minimo para evitar que el selector quede vacio.
-            if (iYearEnd <= iYearStart) {
-                iYearEnd = iYearStart + 2;
-            }
-
-            // Se guardan el ano de inicio y fin para usarlos al crear las columnas dinamicas.
-            this._iYearStart = iYearStart;
-            this._iYearEnd = iYearEnd;
-
-            // Se construye el array de anos para el selector de ejercicio.
-            var aYears = [];
-            for (var i = iYearStart; i <= iYearEnd; i++) {
-                aYears.push({ year: String(i) });
-            }
-
-            // Se asigna el modelo de anos a la vista con el primer ano como seleccionado por defecto.
-            this.getView().setModel(new JSONModel({
-                years: aYears,
-                selectedYear: String(iYearStart)
-            }), "yearsModel");
-        },
+    // (INICIO)
+        //   Se elimina la copia local de _initYearsModel: ahora se hereda directamente
+        //   la version unica de BaseController.js, que incluye la logica de
+        //   ValueState=Error + valueStateText con los nombres de campo (Freal/Frealfinobra)
+        //   y las fechas formateadas cuando el rango es invalido.
+        // (FIN)
         
        _onAfterRowInputChange: async function (oContext, oSource) {
 
@@ -876,14 +1031,14 @@ sap.ui.define([
             await this._enviarFilaAlBackend(oContext, oPayloadRow, sCampoMod);
         },
 
-        //  Se gestiona la pulsación del botón de eliminar para recoger las líneas
+        //   Se gestiona la pulsación del botón de eliminar para recoger las líneas
         // seleccionadas en la tabla y delegar la baja al servicio DelIndirectosSet.
         onDeletePress: async function () {
-            //  Se obtiene la tabla y los índices seleccionados sobre el modelo de Corrientes.
+            //   Se obtiene la tabla y los índices seleccionados sobre el modelo de Corrientes.
             var oTable = this.byId("TreeTableBasic");
             var aSelectedIndices = oTable.getSelectedIndices();
 
-            //  Se valida que al menos una línea haya sido seleccionada antes de continuar.
+            //   Se valida que al menos una línea haya sido seleccionada antes de continuar.
             if (aSelectedIndices.length === 0) {
                 this.createMessageDialog({
                     title: this.getTranslatedText("ERROR"),
@@ -896,7 +1051,7 @@ sap.ui.define([
                 return;
             }
 
-            //  Se recopilan los datos completos de cada línea seleccionada para el envío.
+            //   Se recopilan los datos completos de cada línea seleccionada para el envío.
             //   Cada fila se sanea con _sanitizeRowForBackend para evitar propiedades cliente.
             var aLinesToDelete = [];
             aSelectedIndices.forEach(function (iIndex) {
@@ -906,7 +1061,7 @@ sap.ui.define([
                 }
             }.bind(this));
 
-            //  Se verifica que la recolección de contextos haya producido datos válidos.
+            //   Se verifica que la recolección de contextos haya producido datos válidos.
             if (aLinesToDelete.length === 0) {
                 this.createMessageDialog({
                     title: this.getTranslatedText("ERROR"),
@@ -919,7 +1074,7 @@ sap.ui.define([
                 return;
             }
 
-            //  Se invoca el servicio de eliminación y se notifica cualquier excepción al usuario.
+            //   Se invoca el servicio de eliminación y se notifica cualquier excepción al usuario.
             try {
                 await this._callDelIndirectosService(aLinesToDelete);
             } catch (error) {
@@ -933,23 +1088,23 @@ sap.ui.define([
         },
 
         /**
-         *  Se invoca el servicio DelIndirectosSet para dar de baja las operaciones
+         *   Se invoca el servicio DelIndirectosSet para dar de baja las operaciones
          * seleccionadas en la pestaña de Corrientes.
          * @param {array} aLinesToDelete - Conjunto de líneas a eliminar.
          * @returns {Promise} - Promesa con la respuesta del servicio.
          */
         _callDelIndirectosService: async function (aLinesToDelete) {
-            //  Se obtienen los modelos globales necesarios para construir la petición.
+            //   Se obtienen los modelos globales necesarios para construir la petición.
             var oAppData = this.getGlobalModel("appData").getData();
             var oDashModel = this.getGlobalModel("dashboardModel");
 
-            //  Se localiza la versión marcada como activa dentro del modelo de versiones.
+            //   Se localiza la versión marcada como activa dentro del modelo de versiones.
             var versiones = oAppData.NavLtVersiones;
             var flagSelectVersion = versiones.find(function (item) {
                 return item.Activo === "X";
             });
 
-            //  Se determina la fecha real del tramo, con respaldo en el modelo de dashboard.
+            //   Se determina la fecha real del tramo, con respaldo en el modelo de dashboard.
             var sFreal = "";
             if (oAppData && oAppData.tramo && oAppData.tramo.Freal) {
                 sFreal = oAppData.tramo.Freal;
@@ -961,7 +1116,7 @@ sap.ui.define([
                 throw new Error("Fecha real no disponible");
             }
 
-            //  Se parsea la fecha OData y se extrae el ejercicio que viaja en cabeceras.
+            //   Se parsea la fecha OData y se extrae el ejercicio que viaja en cabeceras.
             var oDateStart = this._parseODataDate(sFreal);
             if (!oDateStart || isNaN(oDateStart.getTime())) {
                 throw new Error("Fecha real inválida");
@@ -970,7 +1125,7 @@ sap.ui.define([
             var sEjercicio = oDateStart.getFullYear().toString();
             const token = oAppData.EvToken;
 
-            //  Se muestra el diálogo ocupado mientras dura la llamada al servicio.
+            //   Se muestra el diálogo ocupado mientras dura la llamada al servicio.
             if (!this._busyDialog) {
                 this._busyDialog = new sap.m.BusyDialog({
                     text: this.getTranslatedText("ELIMINANDO_DATOS") || "Eliminando..."
@@ -979,7 +1134,7 @@ sap.ui.define([
             this._busyDialog.open();
 
             try {
-                //  Se ejecuta la llamada POST contra el servicio principal con los headers requeridos.
+                //   Se ejecuta la llamada POST contra el servicio principal con los headers requeridos.
                 var response = await this.post(
                     this.getGlobalModel("mainService"),
                     "/DelIndirectosSet",
@@ -1004,7 +1159,7 @@ sap.ui.define([
 
                 this._busyDialog.close();
 
-                //  Se inspeccionan los mensajes devueltos por el servicio en busca de errores.
+                //   Se inspeccionan los mensajes devueltos por el servicio en busca de errores.
                 var aMensajes = response.NavMensajes?.results || [];
                 var aMensajesError = aMensajes.filter(function (mensaje) {
                     return mensaje.Tipo === "E";
@@ -1024,7 +1179,7 @@ sap.ui.define([
                     return;
                 }
 
-                //  Si no se devuelven errores, se eliminan las líneas del modelo local de Corrientes.
+                //   Si no se devuelven errores, se eliminan las líneas del modelo local de Corrientes.
                 //   El modelo es un arbol con children anidados, asi que se borra recursivamente
                 // via _removeRowsFromTreeByKey (BaseController) en vez de un splice plano.
                 var oModel = this.getView().getModel("corrientesModel");
@@ -1034,15 +1189,17 @@ sap.ui.define([
                 var oTable = this.byId("TreeTableBasic");
                 oTable.clearSelection();
 
-                //  Se marca la variante activa como modificada tras la operación de borrado.
+                //   Se marca la variante activa como modificada tras la operación de borrado.
                 this._markVariantDirty();
 
-                //  Se informa al usuario del número de líneas eliminadas con éxito.
+                //   Se informa al usuario del número de líneas eliminadas con éxito.
                 sap.m.MessageToast.show(
-                    "Se han eliminado " + aLinesToDelete.length + " línea(s) correctamente"
+                    //   Se traduce via i18n con placeholder {0} para soportar EN/FR.  
+                    this.getTranslatedText("MSG_LINEAS_ELIMINADAS", [aLinesToDelete.length])
+                    //  
                 );
 
-                //  Se muestran, si existen, los mensajes informativos, de aviso o de éxito devueltos.
+                //   Se muestran, si existen, los mensajes informativos, de aviso o de éxito devueltos.
                 var aMensajesInfo = aMensajes.filter(function (mensaje) {
                     return mensaje.Tipo === "S" || mensaje.Tipo === "I" || mensaje.Tipo === "W";
                 });
@@ -1067,10 +1224,84 @@ sap.ui.define([
                 return response;
 
             } catch (error) {
-                //  Se garantiza el cierre del diálogo ocupado ante cualquier error inesperado.
+                //   Se garantiza el cierre del diálogo ocupado ante cualquier error inesperado.
                 this._busyDialog.close();
                 throw error;
             }
         },
+           onPhPspnrInputChange: function (oEvent) {
+            return this.onRowInputChange(oEvent);
+        },
+
+        /**
+         *   Delegate puro a onRowInputChange para el Input de Post1 del Desglose nivel 3 nuevo.
+         */
+        onInputPost1Change: function (oEvent) {
+            return this.onRowInputChange(oEvent);
+        },
+        _getStaticExportColumns: function () {
+            //   Se traducen via i18n las cabeceras del export XLSX.  
+            return [
+                { header: this.getTranslatedText("colOperacionAgrupador"), path: "PhPspnr" },
+                { header: this.getTranslatedText("colDescripcionPersona"), path: "Post1" },
+                { header: this.getTranslatedText("colCosteEjecExpedProv"), path: "AmoEje" },
+                { header: this.getTranslatedText("costPend"), path: "AmoPen" },
+                { header: this.getTranslatedText("colCosteTotalPuesto"), path: "AmoTot" },
+                { header: this.getTranslatedText("dbReparto"), path: "Tipo" },
+                { header: this.getTranslatedText("colPendPlanifTarifa"), path: "PenPlan" },
+                { header: this.getTranslatedText("fechaInicio"), path: "FINI" },
+                { header: this.getTranslatedText("fechaFin"), path: "FFIN" },
+                { header: this.getTranslatedText("numMeses"), path: "NMES" },
+                { header: this.getTranslatedText("otros"), path: "Otros" }
+            ];
+            //  
+        },
+
+        /**
+         *     Columnas estáticas de Corrientes para la Plantilla de carga (apartado 5.9 del spec).
+         *   Estructura solicitada por el usuario: 11 columnas. Los headers con barras (p.ej. "Coste Ejec./
+         *   Expediente/Proveedor") indican la polisemia de la columna según el tipo de fila — el dato
+         *   real se resuelve por el path principal (AmoEje, AmoTot, PenPlan respectivamente) y los
+         *   nombres alternativos son sólo informativos en la cabecera.
+         */
+        _getPlantillaStaticColumns: function () {
+            //   Se traducen via i18n las cabeceras de la plantilla de carga.  
+            return [
+                { header: this.getTranslatedText("colOperacionAgrupador"), path: "PhPspnr" },
+                { header: this.getTranslatedText("colDescripcionPersona"), path: "Post1" },
+                { header: this.getTranslatedText("colCosteEjecExpedProv"), path: "AmoEje" },
+                { header: this.getTranslatedText("costPend") + "*", path: "AmoPen" },
+                { header: this.getTranslatedText("colCosteTotalPuesto"), path: "AmoTot" },
+                { header: this.getTranslatedText("dbReparto"), path: "Tipo" },
+                { header: this.getTranslatedText("colPendPlanifTarifa"), path: "PenPlan" },
+                { header: this.getTranslatedText("fechaInicio"), path: "FINI" },
+                { header: this.getTranslatedText("fechaFin"), path: "FFIN" },
+                { header: this.getTranslatedText("numMeses"), path: "NMES" },
+                { header: this.getTranslatedText("otros"), path: "Otros" }
+            ];
+            //  
+        },
+
+        /**
+         *     Sobrescribe la resolución de celdas para implementar la polisemia de los headers de
+         *   Corrientes en el export (Vista y Plantilla comparten estructura):
+         *     - "Coste Ejec./Expediente/Proveedor" (path AmoEje): en filas del bloque proveedor
+         *       (__isEditable === true) se muestra el campo Proveedor en lugar del AmoEje.
+         *     - "Pend. planif./Tarifa" (path PenPlan): en filas del bloque proveedor se muestra FEE (Tarifa).
+         *   Para el resto de paths (incluyendo PhPspnr→AGRUP y Post1→DESCRIP en __isEditable) se delega
+         *   en la implementación del BaseController, que ya maneja esos casos comunes.
+         */
+        _resolveCellValue: function (oNode, sPath) {
+            if (oNode && oNode.__isEditable === true) {
+                if (sPath === "AmoEje") {
+                    return this._coerceNumericValue(oNode.Proveedor);
+                }
+                if (sPath === "PenPlan") {
+                    return this._coerceNumericValue(oNode.FEE);
+                }
+            }
+            return BaseController.prototype._resolveCellValue.call(this, oNode, sPath);
+        },
+
     });
 });

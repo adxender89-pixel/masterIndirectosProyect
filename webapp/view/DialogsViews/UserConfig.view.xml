@@ -1,4 +1,4 @@
-<mvc:View controllerName="masterindirectos.controller.DialogsControlers.UserConfig"
+<mvc:View controllerName="zindirect_costs.controller.DialogsControlers.UserConfig"
     xmlns:html="http://www.w3.org/1999/xhtml"
     xmlns:mvc="sap.ui.core.mvc" displayBlock="true"
     xmlns:table="sap.ui.table"

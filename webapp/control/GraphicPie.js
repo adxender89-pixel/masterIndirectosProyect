@@ -1,6 +1,6 @@
 sap.ui.define(["sap/ui/core/Control"], function (Control) {
     "use strict";
-    return Control.extend("masterindirectos.control.GraphicBar", {
+    return Control.extend("zindirect_costs.control.GraphicBar", {
         metadata: {
             properties: {
                 data: { type: "any", defaultValue: [] },

@@ -1,94 +1,127 @@
 <mvc:View
-    controllerName="masterindirectos.controller.DialogsControlers.CambiarMaster"
+    controllerName="zindirect_costs.controller.DialogsControlers.CambiarMaster"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns:table="sap.ui.table"
     xmlns:core="sap.ui.core"
-    xmlns:l="sap.ui.layout"
-    xmlns:form="sap.ui.layout.form"
     xmlns="sap.m">
 
     <Dialog
         id="cambiarMasterDialog"
-        title="{i18n>nodeSelectorTitle}"
-        class="sapUiNoContentPadding sapUiSizeCompact"
+        title="{i18n>VERSION_MASTER}"
+        class="sapUiSizeCompact cambiarMasterDialogFix"
         draggable="true"
-        contentWidth="auto"
-        contentHeight="auto"
+        contentWidth="60rem"
         resizable="true">
 
         <content>
-            <VBox>
+            <VBox class="sapUiSmallMargin">
                 <items>
 
                     <Button
                         text="{i18n>VOLVER_MASTER}"
-                        tooltip="{i18n>VOLVER_MASTER}"
-                        press=".onVolverMaster" />
+                        icon="sap-icon://nav-back"
+                        type="Transparent"
+                        press=".onVolverMaster"
+                        class="sapUiTinyMarginBottom" />
 
-                    <form:SimpleForm
-                        editable="true"
-                        layout="ResponsiveGridLayout"
-                        labelSpanXL="4"
-                        labelSpanL="4"
-                        labelSpanM="4"
-                        labelSpanS="12"
-                        adjustLabelSpan="false"
-                        columnsXL="2"
-                        columnsL="2"
-                        columnsM="2"
-                        columnsS="1">
+                    <Panel
+                        headerText="{i18n>MASTER_OFICIAL}"
+                        expandable="false"
+                        class="sapUiSmallMarginBottom">
+                        <content>
+                            <VBox class="sapUiSmallMarginBeginEnd sapUiTinyMarginTopBottom">
+                                <items>
+                                    <CheckBox
+                                        text="{i18n>MASTER_OFICIAL}"
+                                        selected="{modelMaster>/filter/mf}" />
+                                    <HBox alignItems="Center" wrap="Wrap" class="sapUiTinyMarginTop">
+                                        <items>
+                                            <HBox alignItems="Center" class="sapUiSmallMarginEnd">
+                                                <items>
+                                                    <Label text="{i18n>EJERCICIO}" class="sapUiSmallMarginEnd" />
+                                                     <Select
+                                                         selectedKey="{modelMaster>/filter/ejer}"
+                                                         enabled="{= ${modelMaster>/filter/mf} ? true : false}"
+                                                         change=".onChangeEjer"
+                                                         width="8rem"
+                                                         items="{modelMaster>/ejercicios}">
+                                                         <core:Item key="{modelMaster>key}" text="{modelMaster>text}" />
+                                                     </Select>
+                                                </items>
+                                            </HBox>
+                                            <HBox alignItems="Center" class="sapUiSmallMarginBegin">
+                                                <items>
+                                                    <Label text="{i18n>PERIODO}" class="sapUiSmallMarginEnd" />
+                                                     <Select
+                                                         selectedKey="{modelMaster>/filter/mes}"
+                                                         enabled="{= ${modelMaster>/filter/mf} ? true : false}"
+                                                         width="6rem"
+                                                         items="{modelMaster>/periodos}">
+                                                         <core:Item key="{modelMaster>key}" text="{modelMaster>text}" />
+                                                     </Select>
+                                                </items>
+                                            </HBox>
+                                        </items>
+                                    </HBox>
+                                </items>
+                            </VBox>
+                        </content>
+                    </Panel>
 
-                        <Label text="{i18n>MASTER_OFICIAL}" />
-                        <CheckBox selected="{modelMaster>/filter/mf}" />
+                    <Panel
+                        headerText="{i18n>MASTER_TRABAJO}"
+                        expandable="false"
+                        class="sapUiSmallMarginBottom">
+                        <content>
+                            <VBox class="sapUiSmallMarginBeginEnd sapUiTinyMarginTopBottom">
+                                <items>
+                                    <CheckBox
+                                        text="{i18n>MASTER_TRABAJO}"
+                                        selected="{modelMaster>/filter/mt}" />
+                                    <HBox alignItems="Center" wrap="Wrap" class="sapUiTinyMarginTop">
+                                        <items>
+                                            <HBox alignItems="Center" class="sapUiSmallMarginEnd">
+                                                <items>
+                                                    <Label text="{i18n>NOMBRE}" class="sapUiSmallMarginEnd" />
+                                                    <Input
+                                                        value="{modelMaster>/filter/desctrab}"
+                                                        enabled="{= ${modelMaster>/filter/mt} ? true : false}"
+                                                        width="12rem" />
+                                                </items>
+                                            </HBox>
+                                            <HBox alignItems="Center" class="sapUiSmallMarginBegin">
+                                                <items>
+                                                    <Label text="{i18n>FECHA_DESDE}" class="sapUiSmallMarginEnd" />
+                                                    <DatePicker
+                                                        dateValue="{modelMaster>/filter/fechaini}"
+                                                        enabled="{= ${modelMaster>/filter/mt} ? true : false}"
+                                                        displayFormat="dd/MM/yyyy"
+                                                        width="9rem" />
+                                                </items>
+                                            </HBox>
+                                            <HBox alignItems="Center" class="sapUiSmallMarginBegin">
+                                                <items>
+                                                    <Label text="{i18n>FECHA_HASTA}" class="sapUiSmallMarginEnd" />
+                                                    <DatePicker
+                                                        dateValue="{modelMaster>/filter/fechafin}"
+                                                        enabled="{= ${modelMaster>/filter/mt} ? true : false}"
+                                                        displayFormat="dd/MM/yyyy"
+                                                        width="9rem" />
+                                                </items>
+                                            </HBox>
+                                        </items>
+                                    </HBox>
+                                </items>
+                            </VBox>
+                        </content>
+                    </Panel>
 
-                        <Label text="{i18n>EJERCICIO}" />
-                        <Select
-                            selectedKey="{modelMaster>/filter/ejer}"
-                            enabled="{= ${modelMaster>/filter/mf} ? true : false}"
-                            change=".onChangeEjer">
-                            <items>
-                                <core:Item
-                                    key="{modelMaster>key}"
-                                    text="{modelMaster>text}" />
-                            </items>
-                        </Select>
-
-                        <Label text="{i18n>PERIODO}" />
-                        <Select
-                            selectedKey="{modelMaster>/filter/mes}"
-                            enabled="{= ${modelMaster>/filter/mf} ? true : false}">
-                            <items>
-                                <core:Item
-                                    key="{modelMaster>key}"
-                                    text="{modelMaster>text}" />
-                            </items>
-                        </Select>
-
-                        <Label text="{i18n>MASTER_TRABAJO}" />
-                        <CheckBox selected="{modelMaster>/filter/mt}" />
-
-                        <Label text="{i18n>NOMBRE}" />
-                        <Input
-                            value="{modelMaster>/filter/desctrab}"
-                            enabled="{= ${modelMaster>/filter/mt} ? true : false}" />
-
-                        <Label text="{i18n>FECHA_DESDE}" />
-                        <DatePicker
-                            dateValue="{modelMaster>/filter/fechaini}"
-                            enabled="{= ${modelMaster>/filter/mt} ? true : false}" />
-
-                        <Label text="{i18n>FECHA_HASTA}" />
-                        <DatePicker
-                            dateValue="{modelMaster>/filter/fechafin}"
-                            enabled="{= ${modelMaster>/filter/mt} ? true : false}" />
-
-                    </form:SimpleForm>
-
-                    <HBox justifyContent="Center" class="sapUiSmallMarginTop">
+                    <HBox justifyContent="Center" class="sapUiSmallMarginBottom">
                         <items>
                             <Button
                                 icon="sap-icon://search"
                                 text="{i18n>BUSCAR}"
+                                type="Emphasized"
                                 press=".onSearchMaster" />
                             <Button
                                 icon="sap-icon://clear-filter"
@@ -98,7 +131,7 @@
                         </items>
                     </HBox>
 
-                    <ScrollContainer>
+                    <ScrollContainer height="20rem" vertical="true" horizontal="false">
                         <content>
                             <table:Table
                                 id="tableCambiarMasterDialog"
@@ -107,37 +140,24 @@
                                 selectionBehavior="RowOnly"
                                 showColumnVisibilityMenu="true"
                                 title="{i18n>LISTADO_MASTERES}"
-                                rows="{modelMaster>/master}">
-
+                                rows="{modelMaster>/master}"
+                                visibleRowCount="8"
+                                visibleRowCountMode="Fixed">
                                 <table:columns>
-                                    <table:Column label="{i18n>EJERCICIO}" autoResizable="true">
-                                        <table:template>
-                                            <Text text="{modelMaster>Gjahr}" />
-                                        </table:template>
+                                    <table:Column label="{i18n>EJERCICIO}" autoResizable="true" width="7rem">
+                                        <table:template><Text text="{modelMaster>Gjahr}" /></table:template>
                                     </table:Column>
-
-                                    <table:Column label="{i18n>PERIODO}" autoResizable="true">
-                                        <table:template>
-                                            <Text text="{modelMaster>Ltx}" />
-                                        </table:template>
+                                    <table:Column label="{i18n>PERIODO}" autoResizable="true" width="7rem">
+                                        <table:template><Text text="{modelMaster>Ltx}" /></table:template>
                                     </table:Column>
-
-                                    <table:Column label="{i18n>NOMBRE}" autoResizable="true">
-                                        <table:template>
-                                            <Text text="{modelMaster>Desctrab}" />
-                                        </table:template>
+                                    <table:Column label="{i18n>NOMBRE}" autoResizable="true" flexible="true">
+                                        <table:template><Text text="{modelMaster>Desctrab}" /></table:template>
                                     </table:Column>
-
-                                    <table:Column label="{i18n>FECHA}" autoResizable="true">
-                                        <table:template>
-                                            <Text text="{ path: 'modelMaster>Erdat', formatter: '.formatFecha' }" />
-                                        </table:template>
+                                    <table:Column label="{i18n>FECHA}" autoResizable="true" width="9rem">
+                                        <table:template><Text text="{ path: 'modelMaster>Erdat', formatter: '.formatFecha' }" /></table:template>
                                     </table:Column>
-
-                                    <table:Column label="{i18n>ESTADO}" autoResizable="true">
-                                        <table:template>
-                                            <Text text="{modelMaster>EstadoDesc}" />
-                                        </table:template>
+                                    <table:Column label="{i18n>ESTADO}" autoResizable="true" width="9rem">
+                                        <table:template><Text text="{modelMaster>EstadoDesc}" /></table:template>
                                     </table:Column>
                                 </table:columns>
                             </table:Table>
@@ -149,9 +169,16 @@
         </content>
 
         <buttons>
-            <Button text="{i18n>btnAceptar}" press="onAccept" />
-            <Button text="{i18n>btnCancelar}" press="onCancel" />
+            <Button
+                icon="sap-icon://accept"
+                tooltip="{i18n>ACEPTAR}"
+                press="onAccept" />
+            <Button
+                icon="sap-icon://decline"
+                tooltip="{i18n>btnCancelar}"
+                press="onClose" />
         </buttons>
+
     </Dialog>
 
 </mvc:View>

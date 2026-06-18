@@ -1,0 +1,133 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+>
+    <Dialog
+        id="userConfigDialog"
+        title="{i18n>USER_CONFIG_TITLE}"
+        contentWidth="480px"
+        contentHeight="auto"
+        resizable="false"
+        draggable="true"
+        state="None"
+    >
+        <content>
+            <VBox class="sapUiMediumMarginBeginEnd sapUiSmallMarginTopBottom">
+
+                <!-- Sección: Idioma -->
+                <HBox alignItems="Center" class="sapUiTinyMarginBottom">
+                    <core:Icon
+                        src="sap-icon://world"
+                        size="0.9rem"
+                        color="#0854a0"
+                        class="sapUiTinyMarginEnd"
+                    />
+                    <Title text="{i18n>USER_CONFIG_SECTION_LANG}" level="H5" />
+                </HBox>
+
+                <HBox
+                    width="100%"
+                    class="sapUiSmallMarginBottom"
+                    justifyContent="SpaceBetween"
+                >
+                    <!-- Lenguaje aplicación -->
+                    <VBox width="48%">
+                        <Label
+                            text="{i18n>LANG_APP}"
+                            design="Bold"
+                            class="sapUiTinyMarginBottom"
+                        />
+                        <Select
+                            selectedKey="{appData>/userData/AplicationLangu}"
+                            width="100%"
+                            forceSelection="true"
+                            items="{userConfigOptionsModel>/languages}"
+                        >
+                            <core:Item key="{userConfigOptionsModel>Langu}" text="{userConfigOptionsModel>Descr}" />
+                        </Select>
+                    </VBox>
+
+                    <!-- Lenguaje datos -->
+                    <VBox width="48%">
+                        <Label
+                            text="{i18n>LANG_DATA}"
+                            design="Bold"
+                            class="sapUiTinyMarginBottom"
+                        />
+                        <Select
+                            selectedKey="{appData>/userData/UserLangu}"
+                            width="100%"
+                            forceSelection="true"
+                            items="{userConfigOptionsModel>/languages}"
+                        >
+                            <core:Item key="{userConfigOptionsModel>Langu}" text="{userConfigOptionsModel>Descr}" />
+                        </Select>
+                    </VBox>
+                </HBox>
+
+                <!-- Sección: Formato -->
+                <HBox alignItems="Center" class="sapUiTinyMarginBottom">
+                    <core:Icon
+                        src="sap-icon://calendar"
+                        size="0.9rem"
+                        color="#0854a0"
+                        class="sapUiTinyMarginEnd"
+                    />
+                    <Title text="{i18n>USER_CONFIG_SECTION_FORMAT}" level="H5" />
+                </HBox>
+
+                <HBox
+                    width="100%"
+                    justifyContent="SpaceBetween"
+                >
+                    <!-- Formato fecha -->
+                    <VBox width="48%">
+                        <Label
+                            text="{i18n>DATE_FORMAT}"
+                            design="Bold"
+                            class="sapUiTinyMarginBottom"
+                        />
+                        <Select
+                            selectedKey="{appData>/userData/DateFormat}"
+                            width="100%"
+                            forceSelection="true"
+                            items="{userConfigOptionsModel>/dateFormats}"
+                        >
+                            <core:Item key="{userConfigOptionsModel>Formato}" text="{userConfigOptionsModel>Formato}" />
+                        </Select>
+                    </VBox>
+
+                    <!-- Formato moneda / decimales -->
+                    <VBox width="48%">
+                        <Label
+                            text="{i18n>DECIMAL_FORMAT}"
+                            design="Bold"
+                            class="sapUiTinyMarginBottom"
+                        />
+                        <Select
+                            selectedKey="{appData>/userData/CurrencyFormat}"
+                            width="100%"
+                            forceSelection="true"
+                            items="{userConfigOptionsModel>/amountFormats}"
+                        >
+                            <core:Item key="{userConfigOptionsModel>CodImporte}" text="{userConfigOptionsModel>Descr}" />
+                        </Select>
+                    </VBox>
+                </HBox>
+
+            </VBox>
+        </content>
+        <buttons>
+            <Button
+                text="{i18n>ACEPTAR}"
+                type="Emphasized"
+                press=".onUserConfigSave"
+            />
+            <Button
+                text="{i18n>btnCancelar}"
+                type="Transparent"
+                press=".onUserConfigClose"
+            />
+        </buttons>
+    </Dialog>
+</core:FragmentDefinition>

@@ -4,8 +4,8 @@ sap.ui.define([
     "sap/m/Input",
     "sap/m/Button",
     "sap/m/Label",
-    "masterindirectos/controller/BaseController",
-    "masterindirectos/model/formatter"
+    "zindirect_costs/controller/BaseController",
+    "zindirect_costs/model/formatter"
 ], function (
     JSONModel,
     Column,
@@ -17,9 +17,34 @@ sap.ui.define([
 ) {
     "use strict";
 
-    return BaseController.extend("masterindirectos.controller.DetailsControllers.Diferidos", {
+    return BaseController.extend("zindirect_costs.controller.DetailsControllers.Diferidos", {
 
         formatter: formatter,
+
+        /**
+         * Formatter function to translate TipoInd values
+         * @param {string} sTipoInd - The TipoInd value
+         * @returns {string} The translated text
+         */
+        formatTipoInd: function (sTipoInd) {
+            if (!sTipoInd) {
+                return "";
+            }
+            
+            var sKey;
+            switch (sTipoInd) {
+                case "P":
+                    sKey = "tipoIndAplicacion";
+                    break;
+                case "B":
+                    sKey = "tipoIndProvision";
+                    break;
+                default:
+                    return sTipoInd;
+            }
+            
+            return this.getTranslatedText(sKey);
+        },
 
         /**
          * Inicializa la vista de Diferidos definiendo el estado de navegación y visibilidad.
@@ -28,12 +53,24 @@ sap.ui.define([
         getCustomTableId: function () {
             return "TreeTableDiferidos";
         },
+        //      Se sobrescribe el hook para indicar que
+        //  en Diferidos el campo "Coste pendiente" se mapea en
+        //  el modelo como "_Pendiente". Lo utiliza el
+        //  onMonthInputChange del BaseController para calcular
+        //  porcentajes sobre las celdas mensuales editables.
+        _getCostePendienteField: function () {
+            return "_Pendiente";
+        },
+        //    
         onInit: function () {
 
             this.setInitData();
             this._originalDiferidosData = null;
 
         },
+        _shouldShowAmortizationStyle: function () {
+    return true;
+},
         setInitData: async function () {
 
             // Configuración de la variante para diferidos 
@@ -45,7 +82,7 @@ sap.ui.define([
 
             this._initVariantManagement(); // Ahora se llama sin parámetros
 
-            //  Se identifica esta vista como Diferidos para los headers de los servicios.
+            //   Se identifica esta vista como Diferidos para los headers de los servicios.
             this._pestana = "Diferidos";
 
             this._initYearsModel();
@@ -100,13 +137,30 @@ sap.ui.define([
          * Forza el renderizado de la tabla una vez la vista está disponible en el DOM.
          */
         onAfterRendering: function (oEvent) {
-            let table = this.byId("TreeTableDiferidos")
-            table.attachEvent("rowsUpdated", this.colorRows.bind(this));
-            table.attachEvent("firstVisibleRowChanged", this.colorRows.bind(this));
-            table.rerender(true);
+            let table = this.byId("TreeTableDiferidos");
+            
+            // Detach previous handlers to avoid duplicates
+            if (this._colorRowsHandler) {
+                table.detachEvent("rowsUpdated", this._colorRowsHandler);
+                table.detachEvent("firstVisibleRowChanged", this._colorRowsHandler);
+            }
+            
+            // Create bound handler and store reference
+            // Se usa una función anónima para no pasar el evento como argumento a colorRows
+            this._colorRowsHandler = function() { this.colorRows(); }.bind(this);
+            table.attachEvent("rowsUpdated", this._colorRowsHandler);
+            table.attachEvent("firstVisibleRowChanged", this._colorRowsHandler);
+            
+            // Force initial coloring after a short delay to ensure DOM is ready
+            setTimeout(function() {
+                this.colorRows();
+            }.bind(this), 100);
             
             // Adjuntar listener para el botón de colapsar del header después del renderizado
             this._attachHeaderToggleListener();
+            
+            // Calcular filas dinámicas
+            this._calculateDynamicRows();
         },
 
         /**
@@ -186,7 +240,7 @@ sap.ui.define([
                 return item.Activo === "X";
             });
 
-            //  Se intenta obtener Freal desde appData.tramo como fuente principal.
+            //   Se intenta obtener Freal desde appData.tramo como fuente principal.
             if (oAppData && oAppData.tramo && oAppData.tramo.Freal) {
                 sFreal = oAppData.tramo.Freal;
             } else if (oDashModel) {
@@ -214,8 +268,12 @@ sap.ui.define([
                 return;
             }
 
-            // Se extrae el año directamente de Freal para usarlo como ejercicio en la cabecera.
-            var sEjercicio = oDateStart.getFullYear().toString();
+          //   Se obtiene el ejercicio desde el selector con fallback al año de Freal, 
+            //   replicando el patron de Corrientes/Externos. Antes se leia siempre de Freal 
+            //   por lo que el cambio de año en el selector no se reflejaba en el header. 
+            var sEjercicioFromSelector = this._getSelectedEjercicio(); // 
+            var sEjercicioFallback = oDateStart.getFullYear().toString(); // 
+            var sEjercicio = sEjercicioFromSelector || sEjercicioFallback; // 
             const token = this.getGlobalModel("appData").getProperty("/EvToken");
             try {
                 const response = await this.post(
@@ -225,7 +283,11 @@ sap.ui.define([
                         "NavSelProyecto": [this.getGlobalModel("appData").getData().tramo],
                         "NavChanges": [],
                         "NavDatosIndirectos": [],
-                        "EvBloqueados": "",
+                         "NavKpisIndirectos":[],
+                        //   Se envía en el body el capítulo ya bloqueado por el usuario para evitar
+                        //      que el backend lo intente bloquear de nuevo y dispare el error de
+                        //      bloqueo propio al cambiar de año en el selector.
+                        "EvBloqueados": this.getGlobalModel("appData").getProperty("/EvBloqueados") || "",
                         "NavMensajes": [],
                         "NavDatosIndirectos": [],
                         "NavLtVersiones": [flagSelectVersion]
@@ -277,7 +339,9 @@ sap.ui.define([
                     oModeloBloqueo.setProperty("/isBlocked", bIsBlocked);
                 }
 
+                this._setWaersFromData(response.NavDatosIndirectos.results); //   captura la moneda de la obra para formatDecimales
                 this._addComputedFields(response.NavDatosIndirectos.results);
+                this._updateKpiTables(response.NavDatosIndirectos.results);
                 let tree = this.buildTree(response.NavDatosIndirectos.results)
                 this.getView().setModel(new sap.ui.model.json.JSONModel(tree), "diferidosModel");
                 this._createSnapshot();
@@ -299,16 +363,51 @@ sap.ui.define([
             return new Date(sODataDate);
         },
 
+        _updateKpiTables: function(aData) {
+            var aRaiz = aData.filter(function(item) { return item.ParentPath === "I"; });
+            var oApl = aRaiz.find(function(item) { return item.TipoInd === "P"; }) || {};
+            var oPro = aRaiz.find(function(item) { return item.TipoInd === "B"; }) || {};
+            var oDataTitleModel = new sap.ui.model.json.JSONModel({
+                data: [{
+                    title:  oApl._Ejecutado || "0",
+                    title2: oApl._Pendiente || "0",
+                    title3: oApl._Total     || "0",
+                    title4: oPro._Ejecutado || "0",
+                    title5: oPro._Pendiente || "0",
+                    title6: oPro._Total     || "0"
+                }]
+            });
+            this.getView().setModel(oDataTitleModel, "dataTitle");
+        },
+
+        //   Diferidos NO repinta con la respuesta del guardado temporal (ver
+        //   BaseController._shouldMergeTempSaveResponse). El backend devuelve el campo
+        //   editado a 0 en GuardarTempIndir, por lo que volcar la respuesta borraba el
+        //   valor tecleado y lo descuadraba entre Aplicacion (fila blanca) y Provision
+        //   (fila azul). Se comporta como Corrientes: el guardado temporal conserva lo
+        //   tecleado y el refresco real ocurre en initDiferidosModel (CambioPestIndirectos)
+        //   tras el guardado definitivo.
+        _shouldMergeTempSaveResponse: function () {
+            return true;
+        },
+
         _addComputedFields: function(aData) {
             aData.forEach(function(item) {
+                //   Aplicacion (TipoInd="P") -> campos de Inversion (Inv*); Provision
+                //   (TipoInd="B") -> campos de Amortizacion (Amo*). Coherente con
+                //   _mergeBackendRowsIntoTree (que agrupa "P" con "I" -> Inv*) y con el
+                //   convenio de Inmovilizados (I->Inv, A->Amo). Antes estaba invertido y
+                //   los valores se volteaban tras el primer guardado temporal.
                 if (item.TipoInd === "P") {
                     item._Ejecutado = item.InvEje || "0";
                     item._Pendiente = item.InvPen || "0";
                     item._Total = item.InvTot || "0";
+                    item._PctjPen = item.PctjPenInv || "0";
                 } else {
                     item._Ejecutado = item.AmoEje || "0";
                     item._Pendiente = item.AmoPen || "0";
                     item._Total = item.AmoTot || "0";
+                    item._PctjPen = item.PctjPenAmo || "0";
                 }
             });
         },
@@ -326,7 +425,8 @@ sap.ui.define([
                 if (item.TipoInd === "P") {
                     // Para Provisión: solo Manual
                     repartoItems = [
-                        { key: "MAN", text: "Manual" }
+                        { key: "MAN", text: "Manual" },
+                        { key: "OEO", text: "OEO" }
                     ];
                 } else if (item.TipoInd === "B") {
                     // Para Aplicación: solo OEO
@@ -377,8 +477,92 @@ sap.ui.define([
 
             return result;
         },
+
+        /**
+         * Al seleccionar/deseleccionar una fila, sincroniza automáticamente la otra versión
+         * del mismo elemento (mismo PhPspnr, distinto TipoInd: "P" ↔ "B").
+         */
+        onRowSelectionChange: function (oEvent) {
+            if (this._bSelectionChanging) {
+                return;
+            }
+
+            var oTable = this.byId("TreeTableDiferidos");
+            if (!oTable) {
+                return;
+            }
+
+            var oBinding = oTable.getBinding("rows");
+            if (!oBinding) {
+                return;
+            }
+            var iTotalRows = oBinding.getLength();
+
+            var aPrevious = this._aPreviousSelectedIndices || [];
+            var aCurrent = oTable.getSelectedIndices();
+
+            // Calcular filas recién seleccionadas y recién deseleccionadas
+            var aAdded = aCurrent.filter(function (i) { return aPrevious.indexOf(i) === -1; });
+            var aRemoved = aPrevious.filter(function (i) { return aCurrent.indexOf(i) === -1; });
+
+            // Guardar la selección actual para la próxima vez
+            this._aPreviousSelectedIndices = aCurrent.slice();
+
+            if (aAdded.length === 0 && aRemoved.length === 0) {
+                return;
+            }
+
+            // Busca el índice de la fila hermana (mismo PhPspnr, TipoInd opuesto)
+            var fnFindSibling = function (iIdx, aExclude) {
+                var oCtx = oTable.getContextByIndex(iIdx);
+                if (!oCtx) { return -1; }
+                var oData = oCtx.getObject();
+                if (!oData || !oData.PhPspnr || !oData.TipoInd) { return -1; }
+                var sPhPspnr = oData.PhPspnr;
+                var sSiblingTipoInd = oData.TipoInd === "P" ? "B" : "P";
+                for (var i = 0; i < iTotalRows; i++) {
+                    if (aExclude.indexOf(i) !== -1) { continue; }
+                    var oSibCtx = oTable.getContextByIndex(i);
+                    if (!oSibCtx) { continue; }
+                    var oSibData = oSibCtx.getObject();
+                    if (oSibData && oSibData.PhPspnr === sPhPspnr && oSibData.TipoInd === sSiblingTipoInd) {
+                        return i;
+                    }
+                }
+                return -1;
+            };
+
+            this._bSelectionChanging = true;
+            try {
+                // Seleccionar hermanas de las filas añadidas
+                aAdded.forEach(function (iIdx) {
+                    var iSibling = fnFindSibling(iIdx, aCurrent);
+                    if (iSibling !== -1) {
+                        oTable.addSelectionInterval(iSibling, iSibling);
+                        if (this._aPreviousSelectedIndices.indexOf(iSibling) === -1) {
+                            this._aPreviousSelectedIndices.push(iSibling);
+                        }
+                    }
+                }.bind(this));
+
+                // Deseleccionar hermanas de las filas eliminadas
+                aRemoved.forEach(function (iIdx) {
+                    var iSibling = fnFindSibling(iIdx, aRemoved);
+                    if (iSibling !== -1) {
+                        oTable.removeSelectionInterval(iSibling, iSibling);
+                        var iPos = this._aPreviousSelectedIndices.indexOf(iSibling);
+                        if (iPos !== -1) {
+                            this._aPreviousSelectedIndices.splice(iPos, 1);
+                        }
+                    }
+                }.bind(this));
+            } finally {
+                this._bSelectionChanging = false;
+            }
+        },
+
         _attachHeaderToggleListener: function () {
-            var oObjectPageLayout = this.byId("objectPageLayout");
+            var oObjectPageLayout = this.byId("objectPageDiferidos");
             if (!oObjectPageLayout) return;
 
             setTimeout(function () {
@@ -388,7 +572,8 @@ sap.ui.define([
                 oDom.addEventListener("click", function () {
                     setTimeout(function () {
                         this._calculateDynamicRows();
-                    }.bind(this), 200);
+                        this.colorRows();
+                    }.bind(this), 100);
                 }.bind(this), true);
 
             }.bind(this), 1000);
@@ -417,51 +602,76 @@ sap.ui.define([
                 $(window).off("resize", this._boundResizeHandler);
             }
         },
-        colorRows: function (bInversionVisible) {
+       /**
+         * Aplica colores a las filas de la tabla con debouncing para mejorar el rendimiento.
+         * Se cancela cualquier petición pendiente y se programa una nueva con un retardo de 80ms,
+         * evitando así ejecuciones excesivas durante el scroll.
+         * @param {boolean} [bClearProvision] - Si es true, las filas con TipoInd="B" no recibirán color
+         */
+        colorRows: function (bClearProvision) {
+            if (this._colorRowsTimer) {
+                clearTimeout(this._colorRowsTimer);
+            }
+            this._colorRowsTimer = setTimeout(function () {
+                this._colorRowsTimer = null;
+                this._applyRowColors(bClearProvision);
+            }.bind(this), 80);
+        },
+
+        /**
+         * Función interna que aplica los colores a las filas según TipoInd.
+         * Usa el índice DOM real de cada fila (data-sap-ui-rowindex) en lugar del índice
+         * del array getRows(), para evitar desajustes durante la virtualización de la tabla.
+         * @param {boolean} [bClearProvision] - Si es true, las filas con TipoInd="B" no recibirán color
+         * @private
+         */
+        _applyRowColors: function (bClearProvision) {
             var oTable = this.byId("TreeTableDiferidos");
+            if (!oTable) return;
+
             var aRows = oTable.getRows();
+            if (!aRows || aRows.length === 0) return;
+
+            // Cachear el wrapper jQuery de la tabla fuera del loop para evitar
+            // crear objetos jQuery costosos en cada iteración
+            var $table = oTable.$();
             var sTableId = oTable.getId();
 
-            aRows.forEach(function (oRow, i) {
-                var oContext = oRow.getBindingContext("diferidosModel") 
-                    || (oRow.oBindingContexts && oRow.oBindingContexts["diferidosModel"]);
+            aRows.forEach(function (oRow) {
+                var oRowDom = oRow.getDomRef();
+                if (!oRowDom) return;
 
-                var oFixedRef = oTable.$().find(".sapUiTableCtrlFixed tbody tr[data-sap-ui-rowindex='" + i + "']");
-                var oScrollRef = oTable.$().find(".sapUiTableCtrlScroll tbody tr[data-sap-ui-rowindex='" + i + "']");
-                var oRowSelRef = jQuery("#" + sTableId + "-rowsel" + i);
+                // Obtener el índice real del DOM para evitar desajuste con la virtualización
+                var iIdx = oRowDom.getAttribute("data-sap-ui-rowindex");
+                if (iIdx === null) return;
 
-                oFixedRef.removeClass("rowVersionB rowVersionP");
-                oScrollRef.removeClass("rowVersionB rowVersionP");
-                oRowSelRef.removeClass("rowVersionB rowVersionP");
+                var $fixed  = $table.find(".sapUiTableCtrlFixed tbody tr[data-sap-ui-rowindex='" + iIdx + "']");
+                var $scroll = $table.find(".sapUiTableCtrlScroll tbody tr[data-sap-ui-rowindex='" + iIdx + "']");
+                var $rowSel = jQuery("#" + sTableId + "-rowsel" + iIdx);
 
-                if (!oContext) return;
+                // Limpiar clases anteriores en todos los fragmentos de la fila
+                oRowDom.classList.remove("rowVersionB", "rowVersionP");
+                $fixed.removeClass("rowVersionB rowVersionP");
+                $scroll.removeClass("rowVersionB rowVersionP");
+                $rowSel.removeClass("rowVersionB rowVersionP");
 
-                // Si bInversionVisible no se pasa como parámetro, verificar el estado del checkbox
-               /* if (typeof bInversionVisible === "undefined") {
-                    var oCheckboxInversion = this.byId("checkboxInversion");
-                    if (oCheckboxInversion) {
-                        bInversionVisible = oCheckboxInversion.getSelected();
-                    }
-                }*/
+                var oContext = oRow.getBindingContext("diferidosModel");
+                if (!oContext) return; // Fila vacía: queda limpia
 
                 var sTipoInd = oContext.getProperty("TipoInd");
+                if (!sTipoInd) return;
 
-                if (sTipoInd === "P") {
-                    oFixedRef.addClass("rowVersionP");
-                    oScrollRef.addClass("rowVersionP");
-                    oRowSelRef.addClass("rowVersionP");
-                } else if (sTipoInd === "B") {
-                    // Solo aplicar la clase rowVersionB si las filas de Inversión están visibles
-                    if (bInversionVisible !== false) {
-                        oFixedRef.addClass("rowVersionB");
-                        oScrollRef.addClass("rowVersionB");
-                        oRowSelRef.addClass("rowVersionB");
-                    } else {
-                        // Si las filas de Inversión están ocultas, no aplicar la clase
-                        oFixedRef.removeClass("rowVersionB");
-                        oScrollRef.removeClass("rowVersionB");
-                        oRowSelRef.removeClass("rowVersionB");
-                    }
+                // Si se indicó que se deben limpiar las filas de provisión (TipoInd="B"),
+                // no se aplica color a esas filas (llamada desde onFilterTipoIndChange)
+                if (bClearProvision && sTipoInd === "B") return;
+
+                // Aplicar clase según TipoInd (P = Prevision, B = Base)
+                var sCls = sTipoInd === "P" ? "rowVersionP" : sTipoInd === "B" ? "rowVersionB" : null;
+                if (sCls) {
+                    oRowDom.classList.add(sCls);
+                    $fixed.addClass(sCls);
+                    $scroll.addClass(sCls);
+                    $rowSel.addClass(sCls);
                 }
             });
         },
@@ -469,7 +679,7 @@ sap.ui.define([
         onAmoPenChange: function (oEvent) {
             var oSource = oEvent.getSource();
             var oContext = oSource.getBindingContext("diferidosModel");
-            this.onRowInputChange(oEvent);
+            this.onRowInputChangeInversion(oEvent);
             if (oContext) {
                 var sRawValue = oSource.getValue();
                 var oAppData = this.getOwnerComponent().getModel("appData").getData().userData;
@@ -508,7 +718,7 @@ sap.ui.define([
         onAmoTotChange: function (oEvent) {
             var oSource = oEvent.getSource();
             var oContext = oSource.getBindingContext("diferidosModel");
-            this.onRowInputChange(oEvent);
+            this.onRowInputChangeInversion(oEvent);
             if (oContext) {
                 var sRawValue = oSource.getValue();
                 var oAppData = this.getOwnerComponent().getModel("appData").getData().userData;
@@ -543,8 +753,49 @@ sap.ui.define([
             }
         },
 
-        onPercPenAmo: function(oEvent){
-            this.onRowInputChange(oEvent);
+        //      Se reescribe onPercPenAmo para que el
+        //  campo PctjPenAmo dispare el guardado temporal en el
+        //  backend de forma fiable. La delegacion previa en
+        //  onRowInputChange fallaba en silencio: el Input
+        //  plano usa TwoWay binding directo sobre
+        //  diferidosModel>PctjPenAmo, por lo que el modelo se
+        //  actualiza antes de que onRowInputChange ejecute el
+        //  filtro "valor nuevo === valor en modelo", abortando
+        //  el envio sin avisar. Se replica el patron usado en
+        //  Inmovilizados._guardarCampoResidual (PctjResidAmo)
+        //  que ya resolvio el mismo problema: contexto
+        //  explicito sobre "diferidosModel", normalizacion via
+        //  _formatToSAPNumber, persistencia en el modelo y
+        //  envio del payload sanitizado a GuardarTempIndirSet
+        //  con CampoMod = "PctjPenAmo".
+        //    
+        onPercPenAmo: function (oEvent) {
+            var oSource = oEvent.getSource();
+            var oContext = oSource.getBindingContext("diferidosModel");
+            if (!oContext) {
+                return;
+            }
+
+            var sValorFormateado = this._formatToSAPNumber(oSource.getValue());
+            if (sValorFormateado === null || sValorFormateado === undefined || sValorFormateado === "") {
+                //  Campo vaciado: se envia "0" en lugar de cadena
+                //  vacia para evitar 400 Bad Request del backend.
+                sValorFormateado = "0";
+            }
+
+            var oModel = oContext.getModel();
+            var sPath = oContext.getPath();
+            //   El %Pendiente apunta al campo segun TipoInd: Aplicacion (P) -> PctjPenInv,
+            //   Provision (B) -> PctjPenAmo. La columna comparte una unica plantilla y pinta
+            //   el campo unificado _PctjPen, que tambien se actualiza aqui. (Hoy solo es
+            //   editable para P, pero se rutina por TipoInd por coherencia con el resto.)
+            var sCampo = oContext.getObject().TipoInd === "P" ? "PctjPenInv" : "PctjPenAmo";
+            oModel.setProperty(sPath + "/" + sCampo, sValorFormateado);
+            oModel.setProperty(sPath + "/_PctjPen", sValorFormateado);
+
+            var oPayloadRow = this._sanitizeRowForBackend(oContext.getObject());
+            oPayloadRow[sCampo] = sValorFormateado;
+            this._enviarFilaAlBackend(oContext, oPayloadRow, sCampo);
         },
 
         onAddPress: function(oEvent){
@@ -635,6 +886,13 @@ sap.ui.define([
             
             // Si es nivel 2 (operación)
             if (iLevel === 2) {
+                // Obtener todos los elementos del modelo para determinar si la fila tiene hijos reales.
+                // Los hijos de una fila nivel 2 son los elementos cuyo ParentPath coincide con el PhPspnr de la fila.
+                var aDiferidosData = oModel.getData() || [];
+                var bTieneHijos = aDiferidosData.some(function (oItem) {
+                    return oItem.ParentPath === oSelectedRow.PhPspnr;
+                });
+
                 // Validación 4: No se puede seleccionar una operación de nivel 2 con desgloses (hijos)
                 if (oSelectedRow.children && oSelectedRow.children.length > 0) {
                     this.createMessageDialog({
@@ -650,7 +908,7 @@ sap.ui.define([
                 
                 // Validación 5: No se puede seleccionar una operación de nivel 2 con datos ejecutados y sin hijos
                 var fAmoEje = parseFloat(oSelectedRow.AmoEje) || 0;
-                if (fAmoEje > 0 && (!oSelectedRow.children || oSelectedRow.children.length === 0)) {
+                if (fAmoEje > 0 && !bTieneHijos) {
                     this.createMessageDialog({
                         title: this.getTranslatedText("ERROR"),
                         textAccept: this.getTranslatedText("ACEPTAR"),
@@ -837,7 +1095,9 @@ sap.ui.define([
                 
                 // Mensaje de éxito
                 sap.m.MessageToast.show(
-                    "Se han eliminado " + aLinesToDelete.length + " línea(s) correctamente"
+                    //    Se traduce via i18n con placeholder {0} para soportar EN/FR.  
+                    this.getTranslatedText("MSG_LINEAS_ELIMINADAS", [aLinesToDelete.length])
+                    //   
                 );
                 
                 // Mostrar mensajes informativos si los hay
@@ -913,13 +1173,17 @@ sap.ui.define([
             }
 
             if (!sFreal) {
-                sap.m.MessageBox.error("Error: Fecha real no disponible");
+                //    Se traduce el mensaje via i18n para soportar EN/FR.  
+                sap.m.MessageBox.error(this.getTranslatedText("ERROR_FECHA_REAL_NO_DISPONIBLE"));
+                //   
                 return;
             }
 
             var oDateStart = this._parseODataDate(sFreal);
             if (!oDateStart || isNaN(oDateStart.getTime())) {
-                sap.m.MessageBox.error("Error: Fecha real inválida");
+                //    Se traduce el mensaje via i18n para soportar EN/FR.  
+                sap.m.MessageBox.error(this.getTranslatedText("ERROR_FECHA_REAL_INVALIDA"));
+                //   
                 return;
             }
 
@@ -1001,7 +1265,7 @@ sap.ui.define([
         _openCatalogDialog: function() {
             if (!this._catalogDialog) {
                 this._catalogDialog = sap.ui.xmlfragment(
-                    "masterindirectos.fragments.OperationsCatalogDialog",
+                    "zindirect_costs.fragments.OperationsCatalogDialog",
                     this
                 );
                 this.getView().addDependent(this._catalogDialog);
@@ -1110,7 +1374,9 @@ sap.ui.define([
             var oCatalogTable = this._catalogDialog.getContent()[0].getItems()[1];
             
             if (!oCatalogTable) {
-                sap.m.MessageBox.error("Error: Tabla del catálogo no encontrada");
+                //    Se traduce el mensaje via i18n para soportar EN/FR.  
+                sap.m.MessageBox.error(this.getTranslatedText("ERROR_TABLA_CATALOGO_NO_ENCONTRADA"));
+                //   
                 return;
             }
             
@@ -1118,7 +1384,9 @@ sap.ui.define([
             var aSelectedIndices = oCatalogTable.getSelectedIndices();
             
             if (aSelectedIndices.length === 0) {
-                sap.m.MessageBox.warning("Debe seleccionar al menos una operación");
+                //    Se traduce el mensaje via i18n para soportar EN/FR.  
+                sap.m.MessageBox.warning(this.getTranslatedText("ERROR_DEBE_SELECCIONAR_OPERACION"));
+                //   
                 return;
             }
             
@@ -1174,7 +1442,9 @@ sap.ui.define([
                     this._addOperationsToTree(aCreatedOperations);
                     
                     // Mensaje de éxito
-                    sap.m.MessageToast.show("Se han añadido " + (aCreatedOperations.length / 2) + " operación(es) correctamente");
+                    //    Se traduce el mensaje via i18n con el placeholder {0} para soportar EN/FR.  
+                    sap.m.MessageToast.show(this.getTranslatedText("MSG_OPERACIONES_ANADIDAS", [aCreatedOperations.length / 2]));
+                    //   
                 }
             }.bind(this)).catch(function(error) {
                 sap.m.MessageBox.error(
@@ -1210,7 +1480,9 @@ sap.ui.define([
             }
             
             if (iChapterBIndex === -1) {
-                sap.m.MessageBox.error("Error: No se encontró el capítulo seleccionado");
+                //    Se traduce el mensaje via i18n para soportar EN/FR.  
+                sap.m.MessageBox.error(this.getTranslatedText("ERROR_CAPITULO_NO_ENCONTRADO"));
+                //   
                 return;
             }
             
@@ -1237,7 +1509,7 @@ sap.ui.define([
                 if (!oOperation.repartoItems) {
                     if (oOperation.TipoInd === "P") {
                         // Para Provisión: solo Manual
-                        oOperation.repartoItems = [{ key: "MAN", text: "Manual" }];
+                        oOperation.repartoItems = [{ key: "MAN", text: "Manual" },{ key: "OEO", text: "OEO" }];
                     } else if (oOperation.TipoInd === "B") {
                         // Para Aplicación: solo OEO
                         oOperation.repartoItems = [{ key: "OEO", text: "OEO" }];
@@ -1389,7 +1661,7 @@ sap.ui.define([
                 ParentCode: sParentCode,
                 PhPspnrEdited: false,
                 Post1Edited: false,
-                repartoItems: oParentB.repartoItems || [{ key: "MAN", text: "Manual" }],
+                repartoItems: oParentB.repartoItems || [{ key: "MAN", text: "Manual" },{ key: "OEO", text: "OEO" }],
                 children: [],
                 Totala1: "0", Totala2: "0", Totala3: "0", Totala4: "0", Totala5: "0",
                 Totala6: "0", Totala7: "0", Totala8: "0", Totala9: "0", Totala10: "0",
@@ -1531,7 +1803,9 @@ sap.ui.define([
                             oModel.setProperty(sPath + "/isNew", false);
                             
                             // Mensaje de éxito
-                            sap.m.MessageToast.show("Operación validada correctamente");
+                            //    Se traduce el mensaje via i18n para soportar EN/FR.  
+                            sap.m.MessageToast.show(this.getTranslatedText("MSG_OPERACION_VALIDADA"));
+                            //   
                         }
                     }.bind(this)).catch(function(error) {
                         sap.m.MessageBox.error(
@@ -1620,7 +1894,9 @@ sap.ui.define([
                             oModel.setProperty(sPath + "/isNew", false);
                             
                             // Mensaje de éxito
-                            sap.m.MessageToast.show("Operación validada correctamente");
+                            //    Se traduce el mensaje via i18n para soportar EN/FR.  
+                            sap.m.MessageToast.show(this.getTranslatedText("MSG_OPERACION_VALIDADA"));
+                            //   
                         }
                     }.bind(this)).catch(function(error) {
                         sap.m.MessageBox.error(
@@ -1722,9 +1998,307 @@ sap.ui.define([
             }
             
             // Refrescar los colores de las filas
+            // Se pasa !bShowInversion: true cuando la inversión (P) está oculta,
+            // lo que indica que las filas de provisión (TipoInd="B") no deben colorearse
             setTimeout(function() {
-                this.colorRows(bShowInversion);
+                this.colorRows(!bShowInversion);
             }.bind(this), 100);
         },
+
+        /**
+         * Handler del botón "+" en la columna PhPspnr para crear filas de desglose.
+         * Adaptado de Anticipados: aplica a TipoInd="P" (Provisión).
+         */
+        onAddDesglosePress: function(oEvent) {
+            var oButton = oEvent.getSource();
+            var oContext = oButton.getBindingContext("diferidosModel");
+            if (!oContext) return;
+
+            var oData = oContext.getObject();
+            var sPath = oContext.getPath();
+            var oModel = oContext.getModel();
+
+            // Solo para Provisión (filas con TipoInd="P", no nuevas)
+            if (oData.TipoInd !== "P") {
+                return;
+            }
+
+            var aChildren = oData.children ? oData.children.slice() : [];
+
+            var sLabelAgrup    = this.getTranslatedText("agrupador")        || "Agrupador";
+            var sLabelDescrip  = this.getTranslatedText("DESCRIPCION")      || "Descripción";
+            var sLabelProv     = this.getTranslatedText("proveedor")        || "Proveedor";
+            var sLabelEje      = this.getTranslatedText("ejecutado")        || "Ejecutado";
+            var sLabelPend     = this.getTranslatedText("pendiente")        || "Pendiente";
+            var sLabelTot      = this.getTranslatedText("total")            || "Total";
+            var sLabelReparto  = this.getTranslatedText("dbReparto")        || "Reparto";
+            var sLabelPenPlan  = this.getTranslatedText("dbPendPlanificar") || "Pend. planificar";
+            var sLabelPctj     = this.getTranslatedText("porcpend")         || "% Pend. Amo.";
+            var sLabelResto    = this.getTranslatedText("restoProv")        || "Resto de proveedores";
+
+            var bHasHeader = aChildren.some(function(c) { return c.__isHeader === true; });
+
+            if (!bHasHeader) {
+                var oHeaderRow = {
+                    __isCustom: true,
+                    __isHeader: true,
+                    __isEditable: false,
+                    __isSinProveedor: false,
+                    _headerAgrup:   sLabelAgrup,
+                    _headerDescr:   sLabelDescrip,
+                    _headerProv:    sLabelProv,
+                    _headerEje:     sLabelEje,
+                    _headerPend:    sLabelPend,
+                    _headerTot:     sLabelTot,
+                    _headerReparto: sLabelReparto,
+                    _headerPenPlan: sLabelPenPlan,
+                    _headerPctj:    sLabelPctj,
+                    AGRUP: "", Post1: "", DESCRIP: "", LIFNR: "",
+                    INVEJE: "0", INVPEN: "0", INVTOT: "0", PENPLAN: "0", PCTJ: "0",
+                    Tipo: sLabelReparto, PenPlan: sLabelPenPlan,
+                    _Ejecutado: "0", _Pendiente: "0", _Total: "0",
+                    children: []
+                };
+                aChildren.unshift(oHeaderRow);
+            }
+
+            var iMaxNum = 0;
+            aChildren.forEach(function(oChild) {
+                if (oChild.__isEditable === true) {
+                    var sAgrup = oChild.AGRUP || "";
+                    var iNum = parseInt(sAgrup, 10);
+                    if (!isNaN(iNum) && iNum > iMaxNum) {
+                        iMaxNum = iNum;
+                    }
+                }
+            });
+            var sNextAgrup = (iMaxNum + 1).toString().padStart(3, "0");
+
+            var oNewDesglose = {
+                __isCustom: true,
+                __isEditable: true,
+                __isSinProveedor: false,
+                __isHeader: false,
+                AGRUP:  "",
+                DESCRIP: "",
+                LIFNR:  "",
+                _headerProv: "",
+                INVEJE: "0",
+                INVPEN: "0",
+                INVTOT: "0",
+                PENPLAN: "0",
+                PCTJ:   "0",
+                TIPO:   "MAN",
+                Val01a1: "0", Val02a1: "0", Val03a1: "0", Val04a1: "0",
+                Val05a1: "0", Val06a1: "0", Val07a1: "0", Val08a1: "0",
+                Val09a1: "0", Val10a1: "0", Val11a1: "0", Val12a1: "0",
+                Totala1: "0",
+                children: []
+            };
+
+            var iSinProveedorIdx = aChildren.findIndex(function(c) { return c.__isSinProveedor === true; });
+            if (iSinProveedorIdx !== -1) {
+                aChildren.splice(iSinProveedorIdx, 0, oNewDesglose);
+            } else {
+                aChildren.push(oNewDesglose);
+                var oResto = {
+                    __isCustom: true,
+                    __isEditable: false,
+                    __isSinProveedor: true,
+                    __isHeader: false,
+                    AGRUP:  "",
+                    Post1:  sLabelResto,
+                    LIFNR:  "",
+                    _headerProv: "",
+                    //   onAddDesglosePress solo corre para filas TipoInd="P" (Aplicacion),
+                    // que ahora muestran los campos Inv* (igual que _addComputedFields y
+                    // onAmoPenChange/onAmoTotChange tras revertir la inversion). La fila
+                    // "Resto de proveedores" se alimenta del Inv* del padre P para ser
+                    // coherente con el importe que muestra la operacion.
+                    INVEJE: oData.InvEje || "0",
+                    INVPEN: oData.InvPen || "0",
+                    INVTOT: oData.InvTot || "0",
+                    PENPLAN: "0",
+                    PCTJ: "0",
+                    TIPO:   "MAN",
+                    Val01a1: "0", Val02a1: "0", Val03a1: "0", Val04a1: "0",
+                    Val05a1: "0", Val06a1: "0", Val07a1: "0", Val08a1: "0",
+                    Val09a1: "0", Val10a1: "0", Val11a1: "0", Val12a1: "0",
+                    Totala1: "0",
+                    children: []
+                };
+                aChildren.push(oResto);
+            }
+
+            oModel.setProperty(sPath + "/children", aChildren);
+            oModel.refresh(true);
+
+            var oTable = this.byId("TreeTableDiferidos");
+            if (oTable) {
+                var oBinding = oTable.getBinding("rows");
+                if (oBinding) {
+                    var iLength = oBinding.getLength();
+                    for (var i = 0; i < iLength; i++) {
+                        var oCtx = oTable.getContextByIndex(i);
+                        if (oCtx && oCtx.getPath() === sPath) {
+                            oBinding.expand(i);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            this._markVariantDirty();
+            sap.m.MessageToast.show(
+                this.getTranslatedText("MSG_DESGLOSE_CREADO") || "Línea de desglose añadida correctamente."
+            );
+        },
+
+        /**
+         * Handler para cambio de campo AGRUP en filas de desglose de provisión.
+         */
+        onDesglosAGRUPChange: function(oEvent) {
+            var oSource = oEvent.getSource();
+            var oContext = oSource.getBindingContext("diferidosModel");
+            if (oContext) {
+                var sPath = oContext.getPath();
+                var oModel = oContext.getModel();
+                oModel.setProperty(sPath + "/AGRUP", oSource.getValue());
+                this._markVariantDirty();
+            }
+        },
+
+        /**
+         * Handler para cambio del campo Proveedor (LIFNR) en filas de desglose.
+         */
+        onDesgloseProveedorChange: function(oEvent) {
+            var oSource = oEvent.getSource();
+            var oContext = oSource.getBindingContext("diferidosModel");
+            if (!oContext) return;
+
+            var sNewLifnr = oSource.getValue().trim();
+            var sPath = oContext.getPath();
+            var oModel = oContext.getModel();
+            var oData = oContext.getObject();
+
+            if (!sNewLifnr) {
+                oModel.setProperty(sPath + "/LIFNR", "");
+                return;
+            }
+
+            var sParentPath = sPath.substring(0, sPath.lastIndexOf("/"));
+            var aParentData = oModel.getProperty(sParentPath);
+            if (Array.isArray(aParentData)) {
+                var bDuplicado = aParentData.some(function(oSibling) {
+                    return oSibling !== oData &&
+                        oSibling.__isEditable === true &&
+                        (oSibling.LIFNR || "").trim().toUpperCase() === sNewLifnr.toUpperCase();
+                });
+                if (bDuplicado) {
+                    this.createMessageDialog({
+                        title: this.getTranslatedText("ERROR"),
+                        textAccept: this.getTranslatedText("ACEPTAR"),
+                        messages: [{ text: this.getTranslatedText("ERROR_PROVEEDOR_DUPLICADO_DESGLOSE"), type: "Error" }]
+                    });
+                    oSource.setValue(oData.LIFNR || "");
+                    return;
+                }
+            }
+
+            oModel.setProperty(sPath + "/LIFNR", sNewLifnr);
+            this._markVariantDirty();
+        },
+
+        /**
+         * Handler para cambio de INVPEN en fila de desglose.
+         */
+        onDesgloseInvPenChange: function(oEvent) {
+            var oSource = oEvent.getSource();
+            var oContext = oSource.getBindingContext("diferidosModel");
+            if (!oContext) return;
+
+            var sRawValue = oSource.getValue();
+            var oAppData = this.getOwnerComponent().getModel("appData").getData().userData;
+            var sCurrencyFormat = oAppData.CurrencyFormat;
+            var sThousandSep = sCurrencyFormat.charAt(0);
+            var sDecimalSep = sCurrencyFormat.charAt(1);
+            sRawValue = sRawValue.split(sThousandSep).join("").split(sDecimalSep).join(".");
+
+            var fPen = parseFloat(sRawValue) || 0;
+            var sPath = oContext.getPath();
+            var oModel = oContext.getModel();
+            var oData = oContext.getObject();
+            var fEje = parseFloat(oData.INVEJE) || 0;
+            var fExpectedTot = fPen + fEje;
+
+            oModel.setProperty(sPath + "/INVPEN", fPen.toString());
+            oModel.setProperty(sPath + "/INVTOT", fExpectedTot.toString());
+            this._markVariantDirty();
+        },
+
+        /**
+         * Handler para cambio de INVTOT en fila de desglose.
+         */
+        onDesgloseInvTotChange: function(oEvent) {
+            var oSource = oEvent.getSource();
+            var oContext = oSource.getBindingContext("diferidosModel");
+            if (!oContext) return;
+
+            var sRawValue = oSource.getValue();
+            var oAppData = this.getOwnerComponent().getModel("appData").getData().userData;
+            var sCurrencyFormat = oAppData.CurrencyFormat;
+            var sThousandSep = sCurrencyFormat.charAt(0);
+            var sDecimalSep = sCurrencyFormat.charAt(1);
+            sRawValue = sRawValue.split(sThousandSep).join("").split(sDecimalSep).join(".");
+
+            var fTot = parseFloat(sRawValue) || 0;
+            var sPath = oContext.getPath();
+            var oModel = oContext.getModel();
+            var oData = oContext.getObject();
+            var fEje = parseFloat(oData.INVEJE) || 0;
+            var fPen = fTot - fEje;
+
+            oModel.setProperty(sPath + "/INVTOT", fTot.toString());
+            oModel.setProperty(sPath + "/INVPEN", fPen.toString());
+            this._markVariantDirty();
+        },
+         _getStaticExportColumns: function () {
+            //    Se traducen via i18n las cabeceras del export XLSX.  
+            return [
+                { header: this.getTranslatedText("oper"), path: "PhPspnr" },
+                { header: this.getTranslatedText("DESCRIPCION"), path: "Post1" },
+                { header: this.getTranslatedText("type"), path: "TipoInd" },
+                { header: this.getTranslatedText("costEje"), path: "_Ejecutado" },
+                { header: this.getTranslatedText("costPend"), path: "_Pendiente" },
+                { header: this.getTranslatedText("pendiente%"), path: "PctjPenAmo" },
+                { header: this.getTranslatedText("costTotal"), path: "_Total" },
+                { header: this.getTranslatedText("dbReparto"), path: "Tipo" },
+                { header: this.getTranslatedText("dbPendPlanificar"), path: "PenPlan" }
+            ];
+            //   
+        },
+
+        /*   */
+        /**
+         *     Columnas estáticas de Diferidos para la Plantilla de carga (apartado 5.9 del spec).
+         *   Estructura solicitada por el usuario: 8 columnas — incluye "% Pendiente" (PctjPenAmo)
+         *   específico de Diferidos. NO incluye Fecha Inicio/Fin (no figura en el spec del usuario
+         *   para este capítulo).
+         */
+        _getPlantillaStaticColumns: function () {
+            //    Se traducen via i18n las cabeceras de la plantilla.  
+            return [
+                { header: this.getTranslatedText("colOperacionAgrupador"), path: "PhPspnr" },
+                { header: this.getTranslatedText("DESCRIPCION"), path: "Post1" },
+                { header: this.getTranslatedText("colTipoProveedor"), path: "TipoInd" },
+                { header: this.getTranslatedText("ejecutado"), path: "_Ejecutado" },
+                { header: this.getTranslatedText("pendiente") + "*", path: "_Pendiente" },
+                { header: this.getTranslatedText("pendiente%"), path: "PctjPenAmo" },
+                { header: this.getTranslatedText("total"), path: "_Total" },
+                { header: this.getTranslatedText("dbReparto"), path: "Tipo" }
+            ];
+            //   
+        },
+
     });
 });

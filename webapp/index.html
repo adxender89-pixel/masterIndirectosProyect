@@ -11,12 +11,16 @@
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <!-- (INICIO) Se carga xlsx-js-style (fork de SheetJS con soporte de estilos: fill, font, border, alignment) -->
+    <!--   Expone el mismo global window.XLSX que SheetJS, por lo que la API existente (utils.book_new, utils.aoa_to_sheet, writeFile, ...) se mantiene intacta. Necesario para colorear el header, reducir el tamaño de las filas de desglose y aplicar formato numérico via cell.s.numFmt -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <!-- (FIN) -->
     <script
         id="sap-ui-bootstrap"
         src="resources/sap-ui-core.js"
         data-sap-ui-theme="sap_fiori_3"
         data-sap-ui-resourceroots='{
-            "masterindirectos": "./"
+            "zindirect_costs": "./"
         }'
         data-sap-ui-oninit="module:sap/ui/core/ComponentSupport"
         data-sap-ui-compatVersion="edge"
@@ -33,9 +37,9 @@
 <body class="sapUiBody sapUiSizeCompact" id="content">
     <div
         data-sap-ui-component
-        data-name="masterindirectos"
+        data-name="zindirect_costs"
         data-id="container"
-        data-settings='{"id" : "masterindirectos"}'
+        data-settings='{"id" : "zindirect_costs"}'
         data-handle-validation="true"
     ></div>
 </body>

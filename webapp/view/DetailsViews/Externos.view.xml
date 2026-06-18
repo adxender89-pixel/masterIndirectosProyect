@@ -1,13 +1,15 @@
 <mvc:View
-    controllerName="masterindirectos.controller.DetailsControllers.Externos"
+    controllerName="zindirect_costs.controller.DetailsControllers.Externos"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns:core="sap.ui.core"
     displayBlock="true"
     height="100%"
     xmlns="sap.m"
     xmlns:t="sap.ui.table"
-    xmlns:vn="masterindirectos.control"
+    xmlns:vn="zindirect_costs.control"
     xmlns:uxap="sap.uxap"
+    xmlns:l="sap.ui.layout"
+    xmlns:app="http://schemas.sap.com/sapui5/extension/sap.ui.core.CustomData/1"
 >
     <uxap:ObjectPageLayout
         id="objectPageExternos"
@@ -38,9 +40,13 @@
                     justifyContent="Center"
                 >
                     <VBox width="50%">
+                        <!-- (INICIO) -->
                         <t:Table
                             class="sapUiSizeCompact smallHeaderTable"
-                            rows="{dataTitle>/aKpisIndirectos}"
+                            rows="{
+                                path: 'externosModel>/',
+                                filters: { path: 'Estructura', operator: 'EQ', value1: 'C' }
+                            }"
                             visibleRowCount="1"
                             columnHeaderHeight="10"
                             width="100%"
@@ -53,61 +59,54 @@
                                         design="Bold"
                                     />
                                     <t:template>
-                                        <Text text="{dataTitle>CtotEje}" />
+                                        <!--   Se muestra coste ejecutado del capitulo (Estructura=C) -->
+                                        <Text text="{
+                                            parts: [
+                                                'externosModel>AmoEje',
+                                                'dashboardModel>/decimales',
+                                                'appData>/userData/CurrencyFormat'
+                                            ],
+                                            formatter: '.formatDecimales'
+                                        }" />
                                     </t:template>
                                 </t:Column>
-                                <!--    Se sustituye el Text estatico por un Input condicionado al flag editCtotPen,
-                                     que es true unicamente cuando Estructura=O y TipoTasa está vacío (EXT). -->
                                 <t:Column hAlign="Center">
                                     <Label
                                         text="{i18n>cost} {i18n>pendiente}"
                                         design="Bold"
                                     />
                                     <t:template>
-                                        <vn:DecimalesInput
-                                            decimalNumbers="{dashboardModel>/decimales}"
-                                            textAlign="Center"
-                                            editable="{dataTitle>editCtotPen}"
-                                            value="{
-                                                parts: [
-                                                    'dataTitle>CtotPen',
-                                                    'dashboardModel>/decimales',
-                                                    'appData>/userData/CurrencyFormat'
-                                                ],
-                                                formatter: '.formatDecimales'
-                                            }"
-                                            class="flatCellInput"
-                                            change=".onRowInputChange"
-                                        />
+                                        <!--   Se muestra coste pendiente del capitulo (Estructura=C) -->
+                                        <Text text="{
+                                            parts: [
+                                                'externosModel>AmoPen',
+                                                'dashboardModel>/decimales',
+                                                'appData>/userData/CurrencyFormat'
+                                            ],
+                                            formatter: '.formatDecimales'
+                                        }" />
                                     </t:template>
                                 </t:Column>
-                                <!--    Se sustituye el Text estatico por un Input condicionado al flag editCtot,
-                                     que es true unicamente cuando Estructura=O y TipoTasa está vacío (EXT). -->
                                 <t:Column hAlign="Center">
                                     <Label
                                         text="{i18n>cost} {i18n>total}"
                                         design="Bold"
                                     />
                                     <t:template>
-                                        <vn:DecimalesInput
-                                            decimalNumbers="{dashboardModel>/decimales}"
-                                            textAlign="Center"
-                                            editable="{dataTitle>editCtot}"
-                                            value="{
-                                                parts: [
-                                                    'dataTitle>Ctot',
-                                                    'dashboardModel>/decimales',
-                                                    'appData>/userData/CurrencyFormat'
-                                                ],
-                                                formatter: '.formatDecimales'
-                                            }"
-                                            class="flatCellInput"
-                                            change=".onRowInputChange"
-                                        />
+                                        <!--   Se muestra coste total del capitulo (Estructura=C) -->
+                                        <Text text="{
+                                            parts: [
+                                                'externosModel>AmoTot',
+                                                'dashboardModel>/decimales',
+                                                'appData>/userData/CurrencyFormat'
+                                            ],
+                                            formatter: '.formatDecimales'
+                                        }" />
                                     </t:template>
                                 </t:Column>
                             </t:columns>
                         </t:Table>
+                        <!-- (FIN) -->
                     </VBox>
                 </HBox>
             </VBox>
@@ -123,12 +122,21 @@
                         titleUppercase="false"
                     >
                         <uxap:blocks>
-                            <!-- TreeTable dentro de la sección -->
-                            <VBox
+                            <l:Splitter
+                                id="mainSplitter"
+                                orientation="Vertical"
                                 width="100%"
-                                height="100%"
-                                class="noMarginTop sapUiNoContentPadding"
+                                resize="onSplitterResize"
                             >
+                                <l:contentAreas>
+                                    <VBox width="100%">
+                                        <layoutData>
+                                            <l:SplitterLayoutData
+                                                size="auto"
+                                                minSize="150"
+                                                resizable="true"
+                                            />
+                                        </layoutData>
                                 <t:TreeTable
                                     id="TreeTableExternos"
                                     columnResize="onColumnResize"
@@ -160,11 +168,14 @@
                                                 liveChange="onOperacionLiveChange"
                                                 search="onOperacionSearch"
                                             />
+                                            <!-- (INICIO) -->
                                             <Button
                                                 width="8%"
                                                 text="{i18n>TBorigen}"
                                                 press="onOriginPress"
+                                                class="btnHighlight"
                                             />
+                                            <!-- (FIN) -->
                                             <Label
                                                 text="{i18n>reales}"
                                                 class="sapUiSmallMarginBegin"
@@ -211,6 +222,8 @@
                                                 width="100px"
                                                 change="onYearChange"
                                                 class="sapUiSizeCompact yearSelect"
+                                                  valueState="{yearsModel>/valueState}"
+                                                valueStateText="{yearsModel>/valueStateText}"
                                             >
                                                 <core:Item
                                                     key="{yearsModel>year}"
@@ -246,13 +259,16 @@
                                             />
                                             <ToolbarSeparator />
                                             <!-- Se sustituye el ComboBox de operacion por el selector de variantes de la tabla. -->
+                                            <!-- (INICIO) -->
                                             <Button
                                                 id="btnVariantSelector"
                                                 text="{variantModel>/displayLabel}"
                                                 iconFirst="false"
                                                 type="Transparent"
                                                 press="onOpenVariantPopover"
+                                                class="btnHighlight"
                                             />
+                                            <!-- (FIN) -->
                                         </OverflowToolbar>
                                     </t:extension>
                                     <t:columns>
@@ -323,35 +339,128 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <HBox
-                                                    renderType="Bare"
-                                                    width="100%"
-                                                    alignContent="Center"
-                                                >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                        width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
+                                                <VBox renderType="Bare" width="100%">
+                                                    <HBox
+                                                        renderType="Bare"
+                                                        width="100%"
+                                                        alignItems="Center"
+                                                        visible="{= ${externosModel>__isCustom} !== true }"
                                                     >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="PhPspnr"
-                                                            />
-                                                        </customData>
-                                                    </Button>
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableRow"
+                                                            class="bottomFilter"
+                                                            width="0.9rem"
+                                                            visible="{= ${externosModel>cabecera} === true }"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="PhPspnr"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <Input
+                                                            width="100%"
+                                                            textAlign="Center"
+                                                            editable="{externosModel>editPhPspnr}"
+                                                            value="{externosModel>PhPspnr}"
+                                                            showValueHelp="true"
+                                                            class="flatCellInput yearCell operacionCellInput"
+                                                            change=".onRowInputChange"
+                                                            visible="{= !(${externosModel>isLevel3} === true &amp;&amp; ${externosModel>isNew} === true) }"
+                                                        />
+                                                        <!--   Se cambia el change handler a onPhPspnrInputChange (nombre conforme al lint UI5plugin: pattern ^onPhPspnrInput.*?Change$) para que la fila Desglose nivel 3 nueva dispare AddIndirectosSet al backend cuando ambos campos (PhPspnr + Post1) esten rellenos. El handler delega a onRowInputChange si la fila no es Desglose nivel 3 nuevo, preservando el flujo previo. -->
+                                                        <Input
+                                                            width="100%"
+                                                            textAlign="Center"
+                                                            change="onPhPspnrInputChange"
+                                                            value="{externosModel>PhPspnr}"
+                                                            placeholder="{i18n>operacion}"
+                                                            editable="true"
+                                                            visible="{= ${externosModel>isLevel3} === true &amp;&amp; ${externosModel>isNew} === true }"
+                                                            class="flatCellInput operacionCellInput allowLetters"
+                                                        />
+                                                        <!--   -->
+                                                        <Button
+                                                            icon="sap-icon://add"
+                                                            width="1.5rem"
+                                                            type="Transparent"
+                                                            press=".onToggleCustomExpand"
+                                                            visible="{= ${externosModel>cabecera} !== true &amp;&amp; ${externosModel>isGroup} !== true &amp;&amp; ${externosModel>PhPspnr} !== 'D' &amp;&amp; ${externosModel>isCapitulo} !== true }"
+                                                            enabled="{= ${externosModel>isVacio} !== true }"
+                                                            class="sapUiTinyMarginEnd"
+                                                        />
+                                                    </HBox>
+                                                    <HBox
+                                                        renderType="Bare"
+                                                        width="100%"
+                                                        alignItems="Center"
+                                                        justifyContent="Center"
+                                                        visible="{= ${externosModel>__isHeader} === true }"
+                                                    >
+                                                        <Input
+                                                            value="{externosModel>PhPspnr}"
+                                                            editable="false"
+                                                            class="flatCellInput operacionCellInput"
+                                                            width="100%"
+                                                            textAlign="Center"
+                                                        />
+                                                        <Button
+                                                            icon="sap-icon://paging"
+                                                            type="{= ${externosModel>__agrupadorActive} === true ? 'Emphasized' : 'Transparent' }"
+                                                            press="onAgrupadorButtonPress"
+                                                            class="sapUiTinyMarginBegin"
+                                                            tooltip="{i18n>tooltipAgrupar}"
+                                                        />
+                                                    </HBox>
                                                     <Input
+                                                        value="{externosModel>PhPspnr}"
+                                                        editable="false"
+                                                        class="flatCellInput operacionCellInput"
                                                         width="100%"
                                                         textAlign="Center"
-                                                        editable="{externosModel>editPhPspnr}"
-                                                        value="{externosModel>PhPspnr}"
-                                                        showValueHelp="true"
-                                                        class="flatCellInput yearCell"
-                                                        change=".onRowInputChange"
+                                                        visible="{= ${externosModel>__isSinProveedor} === true }"
                                                     />
-                                                </HBox>
+                                                    <Input
+                                                        value="{externosModel>PhPspnr}"
+                                                        editable="false"
+                                                        class="flatCellInput operacionCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isAgrupadorBlock} === true }"
+                                                    />
+                                                    <Input
+                                                        value="{externosModel>AGRUP}"
+                                                        editable="false"
+                                                        class="flatCellInput operacionCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isAgrupadorTotal} === true }"
+                                                    />
+                                                    <HBox
+                                                        renderType="Bare"
+                                                        width="100%"
+                                                        alignItems="Center"
+                                                        visible="{= ${externosModel>__isEditable} === true }"
+                                                    >
+                                                        <Button
+                                                            icon="sap-icon://search"
+                                                            type="{= !!${viewModel>/currentPanelRowUid} &amp;&amp; ${externosModel>__uid} === ${viewModel>/currentPanelRowUid} ? 'Emphasized' : 'Transparent' }"
+                                                            visible="{externosModel>__hasProviderRows}"
+                                                            press="onProveedorRowViewPress"
+                                                            tooltip="{i18n>abrirPanelProveedor}"
+                                                            class="lensBtn"
+                                                        />
+                                                        <Input
+                                                            value="{externosModel>AGRUP}"
+                                                            class="sapUiSizeCompact allowLetters operacionCellInput"
+                                                            width="100%"
+                                                            textAlign="Center"
+                                                            change="onAgrupadorFieldChange"
+                                                        />
+                                                    </HBox>
+                                                </VBox>
                                             </t:template>
                                         </t:Column>
                                         <t:Column
@@ -413,42 +522,78 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <HBox
-                                                    renderType="Bare"
-                                                    alignItems="Center"
-                                                    width="100%"
-                                                >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                        width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
-                                                    >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="Post1"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                    <Input
+                                                <VBox renderType="Bare" width="100%">
+                                                    <HBox
+                                                        renderType="Bare"
+                                                        alignItems="Center"
                                                         width="100%"
-                                                        value="{
-                                                            path: 'externosModel>Post1',
-                                                            type: 'sap.ui.model.type.String'
-                                                        }"
-                                                        editable="{externosModel>editPost1}"
+                                                        visible="{= ${externosModel>__isCustom} !== true }"
+                                                    >
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableRow"
+                                                            class="bottomFilter"
+                                                            width="0.9rem"
+                                                            visible="{= ${externosModel>cabecera} === true}"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="Post1"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <!--   Se cambia el change handler a onInputPost1Change (nombre conforme al lint UI5plugin para bindings compuestos con parts+formatter: pattern ^onInput.*?Change$). Para filas que son Desglose nivel 3 nuevo, el handler invoca AddIndirectosSet al backend cuando PhPspnr y Post1 estan ambos rellenos; para el resto de filas delega en onRowInputChange manteniendo el flujo previo. -->
+                                                        <Input
+                                                            width="100%"
+                                                            value="{
+                                                                parts: [ 'externosModel>Post1' ],
+                                                                formatter: '.formatPassthrough'
+                                                            }"
+                                                            editable="{externosModel>editPost1}"
+                                                            textAlign="Center"
+                                                            class="flatCellInput allowLetters"
+                                                            type="Text"
+                                                            change="onInputPost1Change"
+                                                        />
+                                                        <!--   -->
+                                                    </HBox>
+                                                    <Input
+                                                        value="{externosModel>Post1}"
+                                                        editable="false"
+                                                        class="flatCellInput"
+                                                        width="100%"
                                                         textAlign="Center"
-                                                        class="flatCellInput allowLetters"
-                                                        type="Text"
-                                                        change=".onRowInputChange"
+                                                        visible="{= ${externosModel>__isHeader} === true }"
                                                     />
-                                                </HBox>
+                                                    <Input
+                                                        value="{externosModel>Post1}"
+                                                        editable="false"
+                                                        class="flatCellInput placeholderLike"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isSinProveedor} === true || ${externosModel>__isAgrupadorBlock} === true }"
+                                                    />
+                                                    <Input
+                                                        value="{externosModel>Post1}"
+                                                        editable="false"
+                                                        class="flatCellInput placeholderLike"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isAgrupadorTotal} === true }"
+                                                    />
+                                                    <Input
+                                                        value="{externosModel>DESCRIP}"
+                                                        class="sapUiSizeCompact allowLetters"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isEditable} === true }"
+                                                    />
+                                                </VBox>
                                             </t:template>
                                         </t:Column>
                                         <t:Column
-                                            width="80px"
+                                            width="110px"
                                             hAlign="Center"
                                         >
                                             <t:label>
@@ -484,23 +629,94 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <!--    Se condiciona la editabilidad de %Tasa al flag editTasa,
-                                                     que en buildTree solo es true cuando Estructura=O y TipoTasa="X" (INT). -->
-                                                <vn:DecimalesInput
-                                                    decimalNumbers="{dashboardModel>/decimales}"
-                                                    textAlign="Center"
-                                                    editable="{= ${externosModel>editTasa} &amp;&amp; ${modeloBloqueo>/isBlocked} === true }"
-                                                    value="{
-                                                        parts: [
-                                                            'externosModel>Tasa',
-                                                            'dashboardModel>/decimales',
-                                                            'appData>/userData/CurrencyFormat'
-                                                        ],
-                                                        formatter: '.formatDecimales'
-                                                    }"
-                                                    class="flatCellInput"
-                                                    change=".onRowInputChange"
-                                                />
+                                                <VBox renderType="Bare" width="100%">
+                                                    <vn:DecimalesInput
+                                                        decimalNumbers="{dashboardModel>/decimales}"
+                                                        textAlign="Center"
+                                                        editable="{= ${externosModel>editTasa} &amp;&amp; ${modeloBloqueo>/isBlocked} === true }"
+                                                        value="{
+                                                            parts: [
+                                                                'externosModel>Tasa',
+                                                                'dashboardModel>/decimales',
+                                                                'appData>/userData/CurrencyFormat'
+                                                            ],
+                                                            formatter: '.formatDecimales'
+                                                        }"
+                                                        class="flatCellInput"
+                                                        change=".onRowInputChange"
+                                                        visible="{= ${externosModel>__isCustom} !== true }"
+                                                    />
+                                                    <!--   Desglose (cabecera gris, "Resto" y fila editable): segun el
+                                                         documento funcional de Externos el desglose NO tiene columna
+                                                         %Tasa; se deja la celda en blanco (sin Input) para esas filas. -->
+                                                           <Input
+                                                        value="{externosModel>Proveedor}"
+                                                        editable="false"
+                                                        class="flatCellInput proveedorVHInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isHeader} === true }"
+                                                    />
+                                                    <!--   -->
+                                                    <Input
+                                                        value="{externosModel>Proveedor}"
+                                                        showValueHelp="true"
+                                                        valueHelpRequest="onProveedorValueHelpRequest"
+                                                        class="proveedorVHInput sapUiSizeCompact"
+                                                        width="100%"
+                                                        textAlign="Begin"
+                                                        visible="{= ${externosModel>__isCustom} === true
+                                                            &amp;&amp; ${externosModel>__isHeader} !== true
+                                                            &amp;&amp; ${externosModel>__isEditable} !== true
+                                                            &amp;&amp; ${externosModel>__isAgrupadorTotal} !== true }"
+                                                    />
+                                                    <HBox
+                                                        renderType="Bare"
+                                                        width="100%"
+                                                        alignItems="Center"
+                                                        visible="{= ${externosModel>__isMainEditable} === true }"
+                                                    >
+                                                        <Input
+                                                            value="{externosModel>Proveedor}"
+                                                            valueState="{externosModel>__proveedorValueState}"
+                                                            valueStateText="{externosModel>__proveedorValueStateText}"
+                                                            showValueHelp="true"
+                                                            valueHelpRequest="onProveedorValueHelpRequest"
+                                                            class="proveedorVHInput sapUiSizeCompact allowLetters"
+                                                            width="100%"
+                                                            textAlign="Begin"
+                                                            change="onEditableRowFieldChange"
+                                                            liveChange="onEditableProveedorLiveChange"
+                                                        />
+                                                    </HBox>
+                                                    <HBox
+                                                        renderType="Bare"
+                                                        width="100%"
+                                                        alignItems="Center"
+                                                        visible="{= ${externosModel>__isNieto} === true }"
+                                                    >
+                                                        <!--   Se replica el comportamiento de Corrientes: en cuanto __hasProviderRows pasa a true (al pulsar el boton +) el Input del Proveedor deja de ser editable y se oculta el icono de value help, de modo que el codigo del proveedor queda bloqueado en cuanto existe al menos una fila en el panel. Mientras __hasProviderRows sea false el Input acepta tipeo libre y muestra el cuadradito clicable para abrir la busqueda.   -->
+                                                        <Input
+                                                            value="{externosModel>Proveedor}"
+                                                            valueState="{externosModel>__proveedorValueState}"
+                                                            valueStateText="{externosModel>__proveedorValueStateText}"
+                                                            editable="{= !${externosModel>__hasProviderRows} }"
+                                                            showValueHelp="{= !${externosModel>__hasProviderRows} }"
+                                                            valueHelpRequest="onProveedorValueHelpRequest"
+                                                            change="onEditableRowFieldChange"
+                                                            class="proveedorVHInput sapUiSizeCompact"
+                                                            width="100%"
+                                                            textAlign="Begin"
+                                                        />
+                                                        <!--   -->
+                                                        <Button
+                                                            visible="{externosModel>__hasProveedor}"
+                                                            icon="sap-icon://add"
+                                                            type="Transparent"
+                                                            press="onProveedorRowAddPress"
+                                                        />
+                                                    </HBox>
+                                                </VBox>
                                             </t:template>
                                         </t:Column>
                                         <!-- COLUMNA: Coste / amount -->
@@ -563,42 +779,69 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <HBox
-                                                    renderType="Bare"
-                                                    width="100%"
-                                                    alignItems="Center"
-                                                >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                        width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
-                                                    >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="AmoEje"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                    <vn:DecimalesInput
+                                                <VBox renderType="Bare" width="100%">
+                                                    <HBox
+                                                        renderType="Bare"
                                                         width="100%"
-                                                        decimalNumbers="{dashboardModel>/decimales}"
-                                                        textAlign="Center"
+                                                        alignItems="Center"
+                                                        visible="{= ${externosModel>__isCustom} !== true }"
+                                                    >
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableRow"
+                                                            class="bottomFilter"
+                                                            width="0.9rem"
+                                                            visible="{= ${externosModel>cabecera} === true}"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="AmoEje"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <vn:DecimalesInput
+                                                            width="100%"
+                                                            decimalNumbers="{dashboardModel>/decimales}"
+                                                            textAlign="Center"
+                                                            editable="false"
+                                                            value="{
+                                                                parts: [
+                                                                    'externosModel>AmoEje',
+                                                                    'dashboardModel>/decimales',
+                                                                    'appData>/userData/CurrencyFormat'
+                                                                ],
+                                                                formatter: '.formatDecimales'
+                                                            }"
+                                                            class="flatCellInput"
+                                                            change=".onRowInputChange"
+                                                        />
+                                                    </HBox>
+                                                    <Input
+                                                        value="{i18n>coste}"
                                                         editable="false"
-                                                        value="{
-                                                            parts: [
-                                                                'externosModel>AmoEje',
-                                                                'dashboardModel>/decimales',
-                                                                'appData>/userData/CurrencyFormat'
-                                                            ],
-                                                            formatter: '.formatDecimales'
-                                                        }"
                                                         class="flatCellInput"
-                                                        change=".onRowInputChange"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isHeader} === true }"
                                                     />
-                                                </HBox>
+                                                    <Input
+                                                        value="{externosModel>AmoEje}"
+                                                        editable="false"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isSinProveedor} === true }"
+                                                    />
+                                                    <Input
+                                                        value="{externosModel>AmoEje}"
+                                                        editable="false"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isEditable} === true }"
+                                                    />
+                                                </VBox>
                                             </t:template>
                                         </t:Column>
                                         <!-- COLUMNA: CostEjAjust -->
@@ -661,49 +904,69 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <HBox
-                                                    renderType="Bare"
-                                                    width="100%"
-                                                    alignItems="Center"
-                                                >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                        width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
+                                                <VBox renderType="Bare" width="100%">
+                                                    <HBox
+                                                        renderType="Bare"
+                                                        width="100%"
+                                                        alignItems="Center"
+                                                        visible="{= ${externosModel>__isCustom} !== true }"
                                                     >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="AmoEjeAjus"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                    <!--Input
-                                                        value="{externosModel>AmoEjeAjus}"
-                                                        editable="{externosModel>isEditable}"
-                                                        textAlign="Center"
-                                                        class="flatCellInput"
-                                                        width="100%"
-                                                    /-->
-                                                    <vn:DecimalesInput
-                                                        width="100%"
-                                                        decimalNumbers="{dashboardModel>/decimales}"
-                                                        textAlign="Center"
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableRow"
+                                                            class="bottomFilter"
+                                                            width="0.9rem"
+                                                            visible="{= ${externosModel>cabecera} === true}"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="AmoEjeAjus"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <vn:DecimalesInput
+                                                            width="100%"
+                                                            decimalNumbers="{dashboardModel>/decimales}"
+                                                            textAlign="Center"
+                                                            editable="false"
+                                                            value="{
+                                                                parts: [
+                                                                    'externosModel>AmoEjeAjus',
+                                                                    'dashboardModel>/decimales',
+                                                                    'appData>/userData/CurrencyFormat'
+                                                                ],
+                                                                formatter: '.formatDecimales'
+                                                            }"
+                                                            class="flatCellInput"
+                                                            change=".onRowInputChange"
+                                                        />
+                                                    </HBox>
+                                                    <Input
+                                                        value="{i18n>CostEjAjust}"
                                                         editable="false"
-                                                        value="{
-                                                            parts: [
-                                                                'externosModel>AmoEjeAjus',
-                                                                'dashboardModel>/decimales',
-                                                                'appData>/userData/CurrencyFormat'
-                                                            ],
-                                                            formatter: '.formatDecimales'
-                                                        }"
                                                         class="flatCellInput"
-                                                        change=".onRowInputChange"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isHeader} === true }"
                                                     />
-                                                </HBox>
+                                                    <Input
+                                                        value="{externosModel>AmoEjeAjus}"
+                                                        editable="false"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isSinProveedor} === true }"
+                                                    />
+                                                    <Input
+                                                        value="{externosModel>AmoEjeAjus}"
+                                                        editable="false"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isEditable} === true }"
+                                                    />
+                                                </VBox>
                                             </t:template>
                                         </t:Column>
                                         <!-- COLUMNA: CostEjReal -->
@@ -766,42 +1029,69 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <HBox
-                                                    renderType="Bare"
-                                                    width="100%"
-                                                    alignItems="Center"
-                                                >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                        width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
-                                                    >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="AmoEjeReal"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                    <vn:DecimalesInput
+                                                <VBox renderType="Bare" width="100%">
+                                                    <HBox
+                                                        renderType="Bare"
                                                         width="100%"
-                                                        decimalNumbers="{dashboardModel>/decimales}"
-                                                        textAlign="Center"
+                                                        alignItems="Center"
+                                                        visible="{= ${externosModel>__isCustom} !== true }"
+                                                    >
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableRow"
+                                                            class="bottomFilter"
+                                                            width="0.9rem"
+                                                            visible="{= ${externosModel>cabecera} === true}"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="AmoEjeReal"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <vn:DecimalesInput
+                                                            width="100%"
+                                                            decimalNumbers="{dashboardModel>/decimales}"
+                                                            textAlign="Center"
+                                                            editable="false"
+                                                            value="{
+                                                                parts: [
+                                                                    'externosModel>AmoEjeReal',
+                                                                    'dashboardModel>/decimales',
+                                                                    'appData>/userData/CurrencyFormat'
+                                                                ],
+                                                                formatter: '.formatDecimales'
+                                                            }"
+                                                            class="flatCellInput"
+                                                            change=".onRowInputChange"
+                                                        />
+                                                    </HBox>
+                                                    <Input
+                                                        value="{i18n>CostEjReal}"
                                                         editable="false"
-                                                        value="{
-                                                            parts: [
-                                                                'externosModel>AmoEjeReal',
-                                                                'dashboardModel>/decimales',
-                                                                'appData>/userData/CurrencyFormat'
-                                                            ],
-                                                            formatter: '.formatDecimales'
-                                                        }"
                                                         class="flatCellInput"
-                                                        change=".onRowInputChange"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isHeader} === true }"
                                                     />
-                                                </HBox>
+                                                    <Input
+                                                        value="{externosModel>AmoEjeReal}"
+                                                        editable="false"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isSinProveedor} === true }"
+                                                    />
+                                                    <Input
+                                                        value="{externosModel>AmoEjeReal}"
+                                                        editable="false"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isEditable} === true }"
+                                                    />
+                                                </VBox>
                                             </t:template>
                                         </t:Column>
                                         <!-- COLUMNA: Coste pend / pricepending -->
@@ -864,43 +1154,68 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <HBox
-                                                    renderType="Bare"
-                                                    width="100%"
-                                                    alignItems="Center"
-                                                >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        width="0.9rem"
-                                                        class="bottomFilter"
-                                                        visible="{= ${cabecera} === true}"
-                                                    >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="AmoPen"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                    <!--  Se anade la condicion PhPspnr !== 'D' para bloquear la edicion en la fila raiz "D" (Work Completed Objective). -->
-                                                    <vn:DecimalesInput
+                                                <VBox renderType="Bare" width="100%">
+                                                    <HBox
+                                                        renderType="Bare"
                                                         width="100%"
-                                                        decimalNumbers="{dashboardModel>/decimales}"
-                                                        textAlign="Center"
-                                                        editable="{= ${externosModel>editAmoPen} &amp;&amp; ${externosModel>PhPspnr} !== 'D' }"
-                                                        value="{
-                                                            parts: [
-                                                                'externosModel>AmoPen',
-                                                                'dashboardModel>/decimales',
-                                                                'appData>/userData/CurrencyFormat'
-                                                            ],
-                                                            formatter: '.formatDecimales'
-                                                        }"
+                                                        alignItems="Center"
+                                                        visible="{= ${externosModel>__isCustom} !== true }"
+                                                    >
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableRow"
+                                                            width="0.9rem"
+                                                            class="bottomFilter"
+                                                            visible="{= ${externosModel>cabecera} === true}"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="AmoPen"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <vn:DecimalesInput
+                                                            width="100%"
+                                                            decimalNumbers="{dashboardModel>/decimales}"
+                                                            textAlign="Center"
+                                                            editable="{= ${externosModel>editAmoPen} &amp;&amp; ${externosModel>PhPspnr} !== 'D' &amp;&amp; ${modeloBloqueo>/isBlocked} === true &amp;&amp; !(${externosModel>isNew} === true &amp;&amp; ${externosModel>isLevel3} === true) }"
+                                                            value="{
+                                                                parts: [
+                                                                    'externosModel>AmoPen',
+                                                                    'dashboardModel>/decimales',
+                                                                    'appData>/userData/CurrencyFormat'
+                                                                ],
+                                                                formatter: '.formatDecimales'
+                                                            }"
+                                                            class="flatCellInput"
+                                                            change=".onRowInputChange"
+                                                        />
+                                                    </HBox>
+                                                    <Input
+                                                        value="{i18n>costepend}"
+                                                        editable="false"
                                                         class="flatCellInput"
-                                                        change=".onRowInputChange"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isHeader} === true }"
                                                     />
-                                                </HBox>
+                                                    <Input
+                                                        value="{externosModel>AmoPen}"
+                                                        editable="false"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isSinProveedor} === true }"
+                                                    />
+                                                    <Input
+                                                        value="{externosModel>AmoPen}"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isEditable} === true }"
+                                                    />
+                                                </VBox>
                                             </t:template>
                                         </t:Column>
                                         <!-- COLUMNA: Coste total / pricetotal -->
@@ -963,43 +1278,68 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <HBox
-                                                    renderType="Bare"
-                                                    width="100%"
-                                                    alignItems="Center"
-                                                >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                        width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
-                                                    >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="AmoTot"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                    <!--  Se anade la condicion PhPspnr !== 'D' para bloquear la edicion en la fila raiz "D". -->
-                                                    <vn:DecimalesInput
+                                                <VBox renderType="Bare" width="100%">
+                                                    <HBox
+                                                        renderType="Bare"
                                                         width="100%"
-                                                        decimalNumbers="{dashboardModel>/decimales}"
-                                                        textAlign="Center"
-                                                        editable="{= ${externosModel>editAmoTot} &amp;&amp; ${externosModel>PhPspnr} !== 'D' }"
-                                                        value="{
-                                                            parts: [
-                                                                'externosModel>AmoTot',
-                                                                'dashboardModel>/decimales',
-                                                                'appData>/userData/CurrencyFormat'
-                                                            ],
-                                                            formatter: '.formatDecimales'
-                                                        }"
+                                                        alignItems="Center"
+                                                        visible="{= ${externosModel>__isCustom} !== true }"
+                                                    >
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableRow"
+                                                            class="bottomFilter"
+                                                            width="0.9rem"
+                                                            visible="{= ${externosModel>cabecera} === true}"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="AmoTot"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <vn:DecimalesInput
+                                                            width="100%"
+                                                            decimalNumbers="{dashboardModel>/decimales}"
+                                                            textAlign="Center"
+                                                            editable="{= ${externosModel>editAmoTot} &amp;&amp; ${externosModel>PhPspnr} !== 'D' &amp;&amp; ${modeloBloqueo>/isBlocked} === true &amp;&amp; !(${externosModel>isNew} === true &amp;&amp; ${externosModel>isLevel3} === true) }"
+                                                            value="{
+                                                                parts: [
+                                                                    'externosModel>AmoTot',
+                                                                    'dashboardModel>/decimales',
+                                                                    'appData>/userData/CurrencyFormat'
+                                                                ],
+                                                                formatter: '.formatDecimales'
+                                                            }"
+                                                            class="flatCellInput"
+                                                            change=".onRowInputChange"
+                                                        />
+                                                    </HBox>
+                                                    <Input
+                                                        value="{i18n>costetotal}"
+                                                        editable="false"
                                                         class="flatCellInput"
-                                                        change=".onRowInputChange"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isHeader} === true }"
                                                     />
-                                                </HBox>
+                                                    <Input
+                                                        value="{externosModel>AmoTot}"
+                                                        editable="false"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isSinProveedor} === true }"
+                                                    />
+                                                    <Input
+                                                        value="{externosModel>AmoTot}"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isEditable} === true }"
+                                                    />
+                                                </VBox>
                                             </t:template>
                                         </t:Column>
                                         <t:Column
@@ -1041,53 +1381,61 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <HBox
-                                                    renderType="Bare"
-                                                    width="100%"
-                                                    alignItems="Center"
-                                                >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                        width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
-                                                    >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="PepDest"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                    <!--  Se anade la condicion PhPspnr !== 'D' para bloquear la edicion en la fila raiz "D". -->
-                                                    <vn:DecimalesInput
+                                                <VBox renderType="Bare" width="100%">
+                                                    <HBox
+                                                        renderType="Bare"
                                                         width="100%"
-                                                        decimalNumbers="{dashboardModel>/decimales}"
-                                                        textAlign="Center"
-                                                        editable="{= ${externosModel>editPepDest} &amp;&amp; ${modeloBloqueo>/isBlocked} === true &amp;&amp; ${externosModel>PhPspnr} !== 'D' }"
-                                                        value="{
-                                                            parts: [
-                                                                'externosModel>PepDest',
-                                                                'dashboardModel>/decimales',
-                                                                'appData>/userData/CurrencyFormat'
-                                                            ],
-                                                            formatter: '.formatDecimales'
-                                                        }"
-                                                        class="flatCellInput"
-                                                        change=".onRowInputChange"
-                                                    />
-                                                </HBox>
+                                                        alignItems="Center"
+                                                        visible="{= ${externosModel>__isCustom} !== true }"
+                                                    >
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableRow"
+                                                            class="bottomFilter"
+                                                            width="0.9rem"
+                                                            visible="{= ${externosModel>cabecera} === true}"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="PepDest"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <!--     Se sustituye DecimalesInput por Input
+                                                             plano: PepDest es un codigo PEP alfanumerico, no
+                                                             un importe. El formatter decimal anterior filtraba
+                                                             cualquier caracter no numerico impidiendo introducir
+                                                             el codigo completo (letras, puntos, guiones). El
+                                                             binding two-way directo a externosModel>PepDest
+                                                             permite ahora introducir cualquier cadena de texto.   -->
+                                                        <Input
+                                                            width="100%"
+                                                            textAlign="Center"
+                                                            editable="{= ${externosModel>editPepDest} &amp;&amp; ${modeloBloqueo>/isBlocked} === true &amp;&amp; ${externosModel>PhPspnr} !== 'D' }"
+                                                            value="{externosModel>PepDest}"
+                                                            class="flatCellInput"
+                                                            change=".onRowInputChange"
+                                                        />
+                                                        <!--     -->
+                                                    </HBox>
+                                                    <!--   Desglose (cabecera gris, "Resto" y fila editable): segun el
+                                                         documento funcional de Externos el desglose NO tiene columna
+                                                         Operacion destino; se deja la celda en blanco para esas filas. -->
+                                                </VBox>
                                             </t:template>
                                         </t:Column>
                                         <!-- COLUMNA: Reparto / size -->
+                                        <!--   Se alinea el ancho con Corrientes (125px) para dejar
+                                             espacio al boton calendario cuando el Select pasa a modo LIN. -->
                                         <t:Column
                                             id="colStart"
-                                            width="115px"
+                                            width="125px"
                                             hAlign="Center"
                                             label="Name"
                                             filterProperty="Tipo"
                                         >
+                                        <!--   -->
                                             <t:label>
                                                 <VBox
                                                     width="100%"
@@ -1142,62 +1490,102 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <HBox
-                                                    width="100%"
-                                                    alignContent="Center"
-                                                    renderType="Bare"
-                                                    class="centeredHBoxColumn"
-                                                >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                        width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
+                                                <VBox renderType="Bare" width="100%">
+                                                    <HBox
+                                                        width="100%"
+                                                        alignContent="Center"
+                                                        renderType="Bare"
+                                                        class="centeredHBoxColumn"
+                                                        visible="{= ${externosModel>__isCustom} !== true }"
                                                     >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="Tipo"
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableRow"
+                                                            class="bottomFilter"
+                                                            width="0.9rem"
+                                                            visible="{= ${externosModel>cabecera} === true}"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="Tipo"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <HBox alignItems="Center" justifyContent="Center" renderType="Bare">
+                                                            <Select
+                                                                selectedKey="{externosModel>Tipo}"
+                                                                visible="{= ${externosModel>cabecera} !== true}"
+                                                                enabled="{= ${modeloBloqueo>/isBlocked} === true &amp;&amp; ${externosModel>PhPspnr} !== 'D' &amp;&amp; !(${externosModel>isNew} === true &amp;&amp; ${externosModel>isLevel3} === true) }"
+                                                                class="flatCellInput repartoSelect"
+                                                                forceSelection="true"
+                                                                change="onRowInputChange"
+                                                                textAlign="Center"
+                                                                width="auto"
+                                                            >
+                                                                <items>
+                                                                    <core:Item key="MAN" text="{i18n>tipoManual}" />
+                                                                    <core:Item key="LIN" text="{i18n>tipoLineal}" />
+                                                                    <core:Item key="OEO" text="{i18n>tipoOEO}" />
+                                                                </items>
+                                                            </Select>
+                                                            <Button
+                                                                icon="sap-icon://calendar"
+                                                                visible="{= ${externosModel>Tipo} === 'LIN'}"
+                                                                enabled="{= ${externosModel>PhPspnr} !== 'D' }"
+                                                                type="Transparent"
+                                                                press="onOpenRangePicker"
+                                                                width="auto"
+                                                                tooltip="{
+                                                                    parts: [{
+                                                                        path: 'externosModel>_linDateFrom'
+                                                                    }, {
+                                                                        path: 'externosModel>_linDateTo'
+                                                                    }],
+                                                                    formatter: '.getCalendarTooltip'
+                                                                }"
                                                             />
-                                                        </customData>
-                                                    </Button>
-                                                    <!-- Filas normales: muestra Select con size2 -->
-                                                    <HBox alignItems="Center">
-                                                        <!--  Se anade la condicion PhPspnr !== 'D' para bloquear el Select de reparto en la fila raiz "D". -->
+                                                        </HBox>
+                                                    </HBox>
+                                                    <Input
+                                                        value="{i18n>dbReparto}"
+                                                        editable="false"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isHeader} === true }"
+                                                    />
+                                                    <Input
+                                                        value=""
+                                                        editable="false"
+                                                        class="flatCellInput"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isSinProveedor} === true }"
+                                                    />
+                                                    <HBox
+                                                        alignItems="Center"
+                                                        justifyContent="Center"
+                                                        renderType="Bare"
+                                                        visible="{= ${externosModel>__isEditable} === true }"
+                                                    >
                                                         <Select
                                                             selectedKey="{externosModel>Tipo}"
-                                                            visible="{= ${cabecera} !== true}"
-                                                            enabled="{= ${modeloBloqueo>/isBlocked} === true &amp;&amp; ${externosModel>PhPspnr} !== 'D' }"
-                                                            class="flatCellInput"
+                                                            class="flatCellInput repartoSelect"
                                                             forceSelection="true"
                                                             change="onRowInputChange"
+                                                            textAlign="Center"
                                                             width="auto"
                                                         >
                                                             <items>
-                                                                <core:Item
-                                                                    key="MAN"
-                                                                    text="Manual"
-                                                                />
-                                                                <core:Item
-                                                                    key="LIN"
-                                                                    text="Lineal"
-                                                                />
-                                                                <core:Item
-                                                                    key="OEO"
-                                                                    text="OEO"
-                                                                />
-                                                                <core:Item
-                                                                    key="PCT"
-                                                                    text="Percentage"
-                                                                />
+                                                                <core:Item key="MAN" text="{i18n>tipoManual}" />
+                                                                <core:Item key="LIN" text="{i18n>tipoLineal}" />
+                                                                <core:Item key="INF" text="{i18n>tipoInflacion}" />
                                                             </items>
                                                         </Select>
-                                                        <!--  Se anade enabled con PhPspnr !== 'D' para bloquear el datepicker en la fila raiz "D". -->
                                                         <Button
                                                             icon="sap-icon://calendar"
                                                             visible="{= ${externosModel>Tipo} === 'LIN'}"
-                                                            enabled="{= ${externosModel>PhPspnr} !== 'D' }"
                                                             type="Transparent"
                                                             press="onOpenRangePicker"
                                                             width="auto"
@@ -1211,9 +1599,10 @@
                                                             }"
                                                         />
                                                     </HBox>
-                                                </HBox>
+                                                </VBox>
                                             </t:template>
                                         </t:Column>
+                                       
                                         <!-- COLUMNA: Pend a planificar / last -->
                                         <t:Column
                                             id="colEnd"
@@ -1277,46 +1666,74 @@
                                                 </VBox>
                                             </t:label>
                                             <t:template>
-                                                <HBox
-                                                    width="100%"
-                                                    alignContent="Center"
-                                                    renderType="Bare"
-                                                    class="borderRightPend"
-                                                >
-                                                    <Button
-                                                        icon="sap-icon://filter"
-                                                        press="filterTableRow"
-                                                        class="bottomFilter"
-                                                        width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
-                                                    >
-                                                        <customData>
-                                                            <core:CustomData
-                                                                key="filterProp"
-                                                                value="PenPlan"
-                                                            />
-                                                        </customData>
-                                                    </Button>
-                                                    <vn:DecimalesInput
+                                                <VBox renderType="Bare" width="100%">
+                                                    <HBox
                                                         width="100%"
-                                                        decimalNumbers="{dashboardModel>/decimales}"
-                                                        textAlign="Center"
+                                                        alignContent="Center"
+                                                        renderType="Bare"
+                                                        class="borderRightPend"
+                                                        visible="{= ${externosModel>__isCustom} !== true }"
+                                                    >
+                                                        <Button
+                                                            icon="sap-icon://filter"
+                                                            press="filterTableRow"
+                                                            class="bottomFilter"
+                                                            width="0.9rem"
+                                                            visible="{= ${externosModel>cabecera} === true}"
+                                                        >
+                                                            <customData>
+                                                                <core:CustomData
+                                                                    key="filterProp"
+                                                                    value="PenPlan"
+                                                                />
+                                                            </customData>
+                                                        </Button>
+                                                        <vn:DecimalesInput
+                                                            width="100%"
+                                                            decimalNumbers="{dashboardModel>/decimales}"
+                                                            textAlign="Center"
+                                                            editable="false"
+                                                            value="{
+                                                                parts: [
+                                                                    'externosModel>PenPlan',
+                                                                    'dashboardModel>/decimales',
+                                                                    'appData>/userData/CurrencyFormat'
+                                                                ],
+                                                                formatter: '.formatDecimales'
+                                                            }"
+                                                            class="flatCellInput"
+                                                            change=".onRowInputChange"
+                                                        />
+                                                    </HBox>
+                                                    <Input
+                                                        value="{i18n>dbPendPlanificar}"
                                                         editable="false"
-                                                        value="{
-                                                            parts: [
-                                                                'externosModel>PenPlan',
-                                                                'dashboardModel>/decimales',
-                                                                'appData>/userData/CurrencyFormat'
-                                                            ],
-                                                            formatter: '.formatDecimales'
-                                                        }"
-                                                        class="flatCellInput"
-                                                        change=".onRowInputChange"
+                                                        class="flatCellInput borderRightPend"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isHeader} === true }"
                                                     />
-                                                </HBox>
+                                                    <Input
+                                                        value="{externosModel>PenPlan}"
+                                                        editable="false"
+                                                        class="flatCellInput borderRightPend"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isSinProveedor} === true }"
+                                                    />
+                                                    <Input
+                                                        value="{externosModel>PenPlan}"
+                                                        editable="false"
+                                                        class="flatCellInput borderRightPend"
+                                                        width="100%"
+                                                        textAlign="Center"
+                                                        visible="{= ${externosModel>__isEditable} === true }"
+                                                    />
+                                                </VBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLUMNA: Months (sin botón sticky, solo texto) -->
+                                                 <!--   Se comentan colMonths, colNew, colCheckBox1 y colCheckBox2 (originalmente Months, Pend, Auto e Inflacion) en lugar de eliminarlas, para poder recuperarlas rapidamente si vuelven a hacer falta; las llamadas controlador `this.byId("colMonths"/"colNew"/...")` se silencian gracias a los `if (this.byId(...))` defensivos en BaseController y Externos.controller, por lo que no se rompe el flujo de expansion/contraccion mientras esten comentadas. Para reactivarlas basta con eliminar las marcas XML de comentario que envuelven los bloques siguientes   -->
+                                        <!--
                                         <t:Column
                                             id="colMonths"
                                             width="85px"
@@ -1373,13 +1790,14 @@
                                                     width="100%"
                                                     alignContent="Center"
                                                     renderType="Bare"
+                                                    visible="{= ${externosModel>__isCustom} !== true }"
                                                 >
                                                     <Button
                                                         icon="sap-icon://filter"
                                                         press="filterTableRow"
                                                         class="bottomFilter"
                                                         width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
+                                                        visible="{= ${externosModel>cabecera} === true}"
                                                     >
                                                         <customData>
                                                             <core:CustomData
@@ -1388,19 +1806,17 @@
                                                             />
                                                         </customData>
                                                     </Button>
-                                                    <!--  Se anade la condicion PhPspnr !== 'D' para bloquear la edicion de los meses en la fila raiz "D". -->
                                                     <vn:DecimalesInput
                                                         width="100%"
                                                         decimalNumbers="0"
                                                         textAlign="Center"
-                                                        editable="{= ${externosModel>editMonths} &amp;&amp; ${externosModel>PhPspnr} !== 'D' }"
+                                                        editable="{= ${externosModel>editMonths} &amp;&amp; ${externosModel>PhPspnr} !== 'D' &amp;&amp; ${modeloBloqueo>/isBlocked} === true &amp;&amp; !(${externosModel>isNew} === true &amp;&amp; ${externosModel>isLevel3} === true) }"
                                                         value="{externosModel>months}"
                                                         class="flatCellInput"
                                                     />
                                                 </HBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLUMNA: Pend -->
                                         <t:Column
                                             id="colNew"
                                             width="70px"
@@ -1461,13 +1877,14 @@
                                                     width="100%"
                                                     alignContent="Center"
                                                     renderType="Bare"
+                                                    visible="{= ${externosModel>__isCustom} !== true }"
                                                 >
                                                     <Button
                                                         icon="sap-icon://filter"
                                                         press="filterTableRow"
                                                         class="bottomFilter"
                                                         width="0.9rem"
-                                                        visible="{= ${cabecera} === true}"
+                                                        visible="{= ${externosModel>cabecera} === true}"
                                                     >
                                                         <customData>
                                                             <core:CustomData
@@ -1476,7 +1893,6 @@
                                                             />
                                                         </customData>
                                                     </Button>
-                                                    <!--  Se anade la condicion PhPspnr !== 'D' para bloquear la edicion en la fila raiz "D". -->
                                                     <Input
                                                         value="{externosModel>pend}"
                                                         editable="{= ${externosModel>editPend} &amp;&amp; ${externosModel>PhPspnr} !== 'D' }"
@@ -1487,7 +1903,6 @@
                                                 </HBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLUMNA: Auto (CheckBox1) - sin filtro -->
                                         <t:Column
                                             id="colCheckBox1"
                                             width="50px"
@@ -1530,7 +1945,7 @@
                                                             alignItems="Center"
                                                         >
                                                             <Text
-                                                                text="Auto"
+                                                                text="{i18n>labelAuto}"
                                                                 visible="{ui>/showStickyChild}"
                                                                 textAlign="Center"
                                                                 wrapping="false"
@@ -1546,23 +1961,23 @@
                                                     renderType="Bare"
                                                     alignItems="Center"
                                                     alignContent="Center"
+                                                    visible="{= ${externosModel>__isCustom} !== true }"
                                                 >
                                                     <Input
                                                         value="{externosModel>flag1Label}"
                                                         editable="false"
                                                         class="flatCellInput sapUiSmallMarginBegin"
                                                         textAlign="Center"
-                                                        visible="{= ${cabecera} === true }"
+                                                        visible="{= ${externosModel>cabecera} === true }"
                                                         width="100%"
                                                     />
                                                     <CheckBox
-                                                        selected="{flag1}"
-                                                        visible="{= ${expandible} !== false &amp;&amp; !${isGroup} }"
+                                                        selected="{externosModel>flag1}"
+                                                        visible="{= ${externosModel>expandible} !== false &amp;&amp; !${externosModel>isGroup} }"
                                                     />
                                                 </VBox>
                                             </t:template>
                                         </t:Column>
-                                        <!-- COLUMNA: Inflaz (CheckBox2) - sin filtro -->
                                         <t:Column
                                             id="colCheckBox2"
                                             width="50px"
@@ -1595,7 +2010,7 @@
                                                         justifyContent="Center"
                                                     >
                                                         <Text
-                                                            text="CheckInfla"
+                                                            text="{i18n>labelCheckInfla}"
                                                             visible="{ui>/showStickyChild}"
                                                             width="100%"
                                                             textAlign="Center"
@@ -1611,6 +2026,7 @@
                                                     alignItems="Center"
                                                     width="100%"
                                                     alignContent="Center"
+                                                    visible="{= ${externosModel>__isCustom} !== true }"
                                                 >
                                                     <Input
                                                         value="{externosModel>CheckInfla}"
@@ -1618,19 +2034,316 @@
                                                         class="flatCellInput"
                                                         width="100%"
                                                         textAlign="Center"
-                                                        visible="{= ${cabecera} === true }"
+                                                        visible="{= ${externosModel>cabecera} === true }"
                                                     />
                                                     <CheckBox
-                                                        selected="{externosModel>CheckInfla}"
+                                                       selected="{ path: 'externosModel>CheckInfla', formatter: '.toBoolean' }"
                                                         select="onInflacionCheckBoxSelect"
-                                                        visible="{= ${expandible} !== false &amp;&amp; !${isGroup} }"
+                                                        visible="{= ${externosModel>expandible} !== false &amp;&amp; !${externosModel>isGroup} }"
+                                                         enabled="{= ${modeloBloqueo>/isBlocked} === true }"
                                                     />
                                                 </VBox>
                                             </t:template>
                                         </t:Column>
+                                        -->
+                                        <!--   -->
                                     </t:columns>
                                 </t:TreeTable>
-                            </VBox>
+                                    </VBox>
+                                    <VBox
+                                        width="100%"
+                                        id="panelVBox"
+                                        visible="false"
+                                    >
+                                        <layoutData>
+                                            <l:SplitterLayoutData
+                                                id="panelSplitterLayout"
+                                                size="0px"
+                                                minSize="0"
+                                                resizable="false"
+                                            />
+                                        </layoutData>
+                                        <Panel
+                                            visible="{viewModel>/panelVisible}"
+                                            width="100%"
+                                        >
+                                            <headerToolbar>
+                                                <Toolbar height="20px">
+                                                    <Title
+                                                        text="{panelModel>/descripcion} - {panelModel>/proveedor}"
+                                                        level="H5"
+                                                        class="panelTitleBold"
+                                                    />
+                                                    <ToolbarSpacer />
+                                                    <Button
+                                                        icon="sap-icon://decline"
+                                                        type="Transparent"
+                                                        tooltip="{i18n>tooltipCerrarPanel}"
+                                                        press="onClosePanelPress"
+                                                    />
+                                                </Toolbar>
+                                            </headerToolbar>
+                                            <content>
+                                                <t:Table
+                                                    id="idPanelTable"
+                                                    rows="{panelModel>/rows}"
+                                                    visibleRowCount="{panelModel>/rowCount}"
+                                                    selectionMode="None"
+                                                    columnHeaderHeight="18"
+                                                    rowHeight="32"
+                                                    class="sapUiSizeCompact panelDarkHeader"
+                                                    width="100%"
+                                                >
+                                                    <t:columns>
+                                                        <t:Column width="170px" hAlign="Center">
+                                                            <t:label>
+                                                                <Label text="{i18n>DESCRIPCION}" design="Bold" />
+                                                            </t:label>
+                                                            <t:template>
+                                                                <Input
+                                                                    value="{= ${panelModel>__isPanelParent} ? ${panelModel>Post1} : ${panelModel>DESCRIP} }"
+                                                                    editable="{= !${panelModel>__isPanelParent} }"
+                                                                    class="flatCellInput allowLetters"
+                                                                    width="100%"
+                                                                />
+                                                            </t:template>
+                                                        </t:Column>
+                                                        <t:Column width="80px" hAlign="Center">
+                                                            <t:label>
+                                                                <Label text="{i18n>ejecutado}" design="Bold" />
+                                                            </t:label>
+                                                            <t:template>
+                                                                <vn:DecimalesInput
+                                                                    value="{
+                                                                        parts: [
+                                                                            'panelModel>AmoEje',
+                                                                            'dashboardModel>/decimales',
+                                                                            'appData>/userData/CurrencyFormat'
+                                                                        ],
+                                                                        formatter: '.formatDecimales'
+                                                                    }"
+                                                                    decimalNumbers="{dashboardModel>/decimales}"
+                                                                    editable="{= !${panelModel>__isPanelParent} }"
+                                                                    class="flatCellInput"
+                                                                    width="100%"
+                                                                    textAlign="End"
+                                                                />
+                                                            </t:template>
+                                                        </t:Column>
+                                                        <t:Column width="90px" hAlign="Center">
+                                                            <t:label>
+                                                                <Label text="{i18n>pendiente}" design="Bold" />
+                                                            </t:label>
+                                                            <t:template>
+                                                                <vn:DecimalesInput
+                                                                    value="{
+                                                                        parts: [
+                                                                            'panelModel>AmoPen',
+                                                                            'dashboardModel>/decimales',
+                                                                            'appData>/userData/CurrencyFormat'
+                                                                        ],
+                                                                        formatter: '.formatDecimales'
+                                                                    }"
+                                                                    decimalNumbers="{dashboardModel>/decimales}"
+                                                                    editable="{= !${panelModel>__isPanelParent} }"
+                                                                    class="flatCellInput"
+                                                                    width="100%"
+                                                                    textAlign="End"
+                                                                />
+                                                            </t:template>
+                                                        </t:Column>
+                                                        <t:Column width="80px" hAlign="Center">
+                                                            <t:label>
+                                                                <Label text="{i18n>total}" design="Bold" />
+                                                            </t:label>
+                                                            <t:template>
+                                                                <vn:DecimalesInput
+                                                                    value="{
+                                                                        parts: [
+                                                                            'panelModel>AmoTot',
+                                                                            'dashboardModel>/decimales',
+                                                                            'appData>/userData/CurrencyFormat'
+                                                                        ],
+                                                                        formatter: '.formatDecimales'
+                                                                    }"
+                                                                    decimalNumbers="{dashboardModel>/decimales}"
+                                                                    editable="{= !${panelModel>__isPanelParent} }"
+                                                                    class="flatCellInput"
+                                                                    width="100%"
+                                                                    textAlign="End"
+                                                                />
+                                                            </t:template>
+                                                        </t:Column>
+                                                        <t:Column width="125px" hAlign="Center">
+                                                            <t:label>
+                                                                <Label text="{i18n>dbReparto}" design="Bold" />
+                                                            </t:label>
+                                                            <t:template>
+                                                                <HBox alignItems="Center" justifyContent="Center" renderType="Bare">
+                                                                    <Select
+                                                                        selectedKey="{panelModel>Tipo}"
+                                                                        enabled="{= !${panelModel>__isPanelParent} }"
+                                                                        class="flatCellInput repartoSelect"
+                                                                        forceSelection="true"
+                                                                        change="onRowInputChange"
+                                                                        textAlign="Center"
+                                                                        width="auto"
+                                                                    >
+                                                                        <items>
+                                                                            <core:Item key="MAN" text="{i18n>tipoManual}" />
+                                                                            <core:Item key="LIN" text="{i18n>tipoLineal}" />
+                                                                            <core:Item key="INF" text="{i18n>tipoInflacion}" />
+                                                                        </items>
+                                                                    </Select>
+                                                                    <Button
+                                                                        icon="sap-icon://calendar"
+                                                                        visible="{= ${panelModel>Tipo} === 'LIN'}"
+                                                                        enabled="{= !${panelModel>__isPanelParent} }"
+                                                                        type="Transparent"
+                                                                        press="onOpenRangePicker"
+                                                                        width="auto"
+                                                                        tooltip="{
+                                                                            parts: [{
+                                                                                path: 'panelModel>_linDateFrom'
+                                                                            }, {
+                                                                                path: 'panelModel>_linDateTo'
+                                                                            }],
+                                                                            formatter: '.getCalendarTooltip'
+                                                                        }"
+                                                                    />
+                                                                </HBox>
+                                                            </t:template>
+                                                        </t:Column>
+                                                        <t:Column width="120px" hAlign="Center">
+                                                            <t:label>
+                                                                <Label text="{i18n>proveedor}" design="Bold" />
+                                                            </t:label>
+                                                            <t:template>
+                                                                <Input
+                                                                    value="{panelModel>Proveedor}"
+                                                                    editable="false"
+                                                                    class="flatCellInput proveedorVHInput"
+                                                                    width="100%"
+                                                                    textAlign="Begin"
+                                                                />
+                                                            </t:template>
+                                                        </t:Column>
+                                                        <t:Column width="100px" hAlign="Center">
+                                                            <t:label>
+                                                                <Label text="{i18n>tarifa}" design="Bold" />
+                                                            </t:label>
+                                                            <t:template>
+                                                                <Input
+                                                                    value="{panelModel>FEE}"
+                                                                    editable="{= !${panelModel>__isPanelParent} }"
+                                                                    class="flatCellInput"
+                                                                    width="100%"
+                                                                />
+                                                            </t:template>
+                                                        </t:Column>
+                                                        <t:Column width="110px" hAlign="Center">
+                                                            <t:label>
+                                                                <Label text="{i18n>fechaInicio}" design="Bold" />
+                                                            </t:label>
+                                                            <t:template>
+                                                                <Input
+                                                                    placeholder="{i18n>selectRecurso}"
+                                                                    class="sapUiSizeCompact"
+                                                                    width="100%"
+                                                                    textAlign="Center"
+                                                                    enabled="{= !${panelModel>__isPanelParent} }"
+                                                                    showValueHelp="true"
+                                                                    valueHelpIconSrc="sap-icon://appointment-2"
+                                                                    valueHelpOnly="true"
+                                                                    valueHelpRequest=".onOpenMonthYearPicker"
+                                                                    app:monthField="FINI"
+                                                                    app:monthModel="panelModel"
+                                                                    value="{
+                                                                        path: 'panelModel>FINI',
+                                                                        formatter: '._formatMonthYearDisplay'
+                                                                    }"
+                                                                />
+                                                            </t:template>
+                                                        </t:Column>
+                                                        <t:Column width="110px" hAlign="Center">
+                                                            <t:label>
+                                                                <Label text="{i18n>fechaFin}" design="Bold" />
+                                                            </t:label>
+                                                            <t:template>
+                                                                <Input
+                                                                    placeholder="{i18n>selectRecurso}"
+                                                                    class="sapUiSizeCompact"
+                                                                    width="100%"
+                                                                    textAlign="Center"
+                                                                    enabled="{= !${panelModel>__isPanelParent} }"
+                                                                    showValueHelp="true"
+                                                                    valueHelpIconSrc="sap-icon://appointment-2"
+                                                                    valueHelpOnly="true"
+                                                                    valueHelpRequest=".onOpenMonthYearPicker"
+                                                                    app:monthField="FFIN"
+                                                                    app:monthModel="panelModel"
+                                                                    value="{
+                                                                        path: 'panelModel>FFIN',
+                                                                        formatter: '._formatMonthYearDisplay'
+                                                                    }"
+                                                                />
+                                                            </t:template>
+                                                        </t:Column>
+                                                        <t:Column width="85px" hAlign="Center">
+                                                            <t:label>
+                                                                <Label text="{i18n>numMeses}" design="Bold" />
+                                                            </t:label>
+                                                            <t:template>
+                                                                <Input
+                                                                    value="{panelModel>NMES}"
+                                                                    editable="{= !${panelModel>__isPanelParent} }"
+                                                                    class="flatCellInput"
+                                                                    width="100%"
+                                                                />
+                                                            </t:template>
+                                                        </t:Column>
+                                                        <t:Column width="90px" hAlign="Center">
+                                                            <t:label>
+                                                                <Label text="{i18n>otros}" design="Bold" />
+                                                            </t:label>
+                                                            <t:template>
+                                                                <Input
+                                                                    value="{panelModel>Otros}"
+                                                                    editable="{= !${panelModel>__isPanelParent} }"
+                                                                    class="flatCellInput"
+                                                                    width="100%"
+                                                                />
+                                                            </t:template>
+                                                        </t:Column>
+                                                        <t:Column width="100px" hAlign="Center">
+                                                            <t:label>
+                                                                <Label text="{i18n>pendPlanif}" design="Bold" class="borderRightPend" />
+                                                            </t:label>
+                                                            <t:template>
+                                                                <vn:DecimalesInput
+                                                                    value="{
+                                                                        parts: [
+                                                                            'panelModel>PenPlan',
+                                                                            'dashboardModel>/decimales',
+                                                                            'appData>/userData/CurrencyFormat'
+                                                                        ],
+                                                                        formatter: '.formatDecimales'
+                                                                    }"
+                                                                    decimalNumbers="{dashboardModel>/decimales}"
+                                                                    editable="false"
+                                                                    class="flatCellInput borderRightPend"
+                                                                    width="100%"
+                                                                    textAlign="End"
+                                                                />
+                                                            </t:template>
+                                                        </t:Column>
+                                                    </t:columns>
+                                                </t:Table>
+                                            </content>
+                                        </Panel>
+                                    </VBox>
+                                </l:contentAreas>
+                            </l:Splitter>
                         </uxap:blocks>
                     </uxap:ObjectPageSubSection>
                 </uxap:subSections>

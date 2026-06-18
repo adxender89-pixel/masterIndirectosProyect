@@ -36,7 +36,6 @@
                     <Button
                         text="{i18n>buscar}"
                         type="Emphasized"
-                        icon="sap-icon://search"
                         press="onBusquedaProveedoresBuscar" />
                 </HBox>
                 <!-- Tabla de resultados: clic en una fila selecciona el proveedor y abre el panel -->

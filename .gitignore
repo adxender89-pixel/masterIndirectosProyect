@@ -14,4 +14,16 @@ webapp/test/flpSandboxMockServer.html
 webapp/model/Catalog.json
 webapp/model/CatalogExternos.json
 webapp/test/locate-reuse-libs.js
+.mcp.json
+.claude/settings.local.json
+
+#    Se ignoran los artefactos generados por sesiones de
+# Playwright MCP (screenshots ad-hoc en la raiz y logs en la carpeta
+# .playwright-mcp/) y los backups manuales del webapp en zip. Asi
+# la raiz del proyecto se mantiene limpia tras sesiones de depuracion.  
+/after-*.png
+/test-*.png
+.playwright-mcp/
+*.zip
+#    
 

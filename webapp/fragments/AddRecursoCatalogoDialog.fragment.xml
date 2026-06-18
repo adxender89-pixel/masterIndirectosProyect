@@ -1,0 +1,67 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+    <!--   popup unico para alta y modificacion de un recurso del catalogo de obra. La distincion la hace el campo /mode del addRecursoModel ("add" o "edit"): titulo del dialogo, texto del boton principal y editabilidad de IdRecurso (que en modificacion es parte de la clave y se bloquea) cambian via expression bindings. Sustituye la fila inline editable que se insertaba antes en la tabla del catalogo: ahora tanto Alta como Editar abren este popup y solo lanzan MantCatalogoIndirSet (Estatus I o U) al pulsar Guardar. Cancelar descarta sin enviar nada al backend.   -->
+    <Dialog
+        id="addRecursoCatalogoDialog"
+        title="{= ${addRecursoModel>/mode} === 'edit' ? ${i18n>catalogoRecursosEditTitle} : ${i18n>catalogoRecursosAddTitle} }"
+        contentWidth="460px"
+        resizable="false"
+        draggable="true">
+        <content>
+            <!--   se sustituye l:VerticalLayout (que no respetaba el ancho del dialogo y dejaba que los Inputs al 100% provocaran un scroll horizontal pegado a los bordes) por un VBox de sap.m con margen medio en los 4 lados (sapUiMediumMargin = 1rem). Asi los campos quedan con una "cornice" simetrica de 16px y no llegan a tocar los bordes del dialogo. Width omitido a proposito: el VBox se adapta al ancho del contenedor padre y, dentro, los Inputs al 100% rellenan el espacio interior ya margened   -->
+            <VBox class="sapUiMediumMargin">
+                <!--   cada Input usa valueState dinamico ligado al propio modelo del popup (addRecursoModel) para marcar en rojo los campos vacios; la validacion final corre en el handler de Guardar para no permitir el envio al backend con campos en blanco   -->
+                <Label text="{i18n>catalogoRecursosIdRecurso}" labelFor="addRecursoCatalogoIdInput" required="true" />
+                <!--   IdRecurso es parte de la clave de IndCatalogo (Mandt+Version+Prctr+IdRecurso); en modo edit se bloquea para impedir que el usuario rompa la integridad referencial cambiando la clave   -->
+                <Input
+                    id="addRecursoCatalogoIdInput"
+                    value="{addRecursoModel>/IdRecurso}"
+                    valueState="{= !${addRecursoModel>/IdRecurso} ? 'Error' : 'None' }"
+                    valueStateText="{i18n>catalogoRecursosCampoRequerido}"
+                    editable="{= ${addRecursoModel>/mode} !== 'edit' }"
+                    width="100%"
+                    class="sapUiSmallMarginBottom" />
+                <!--   -->
+
+                <Label text="{i18n>catalogoRecursosPuesto}" labelFor="addRecursoCatalogoPuestoInput" required="true" />
+                <Input
+                    id="addRecursoCatalogoPuestoInput"
+                    value="{addRecursoModel>/Puesto}"
+                    valueState="{= !${addRecursoModel>/Puesto} ? 'Error' : 'None' }"
+                    valueStateText="{i18n>catalogoRecursosCampoRequerido}"
+                    width="100%"
+                    class="sapUiSmallMarginBottom" />
+
+                <Label text="{i18n>catalogoRecursosTarifa}" labelFor="addRecursoCatalogoFeeInput" required="true" />
+                <Input
+                    id="addRecursoCatalogoFeeInput"
+                    value="{addRecursoModel>/Fee}"
+                    valueState="{= !${addRecursoModel>/Fee} ? 'Error' : 'None' }"
+                    valueStateText="{i18n>catalogoRecursosCampoRequerido}"
+                    textAlign="End"
+                    liveChange="onFeeInputLiveChange"
+                    width="100%" />
+                <!--   -->
+            </VBox>
+            <!--   -->
+        </content>
+        <beginButton>
+            <!--    Guardar = llamada al backend con Estatus=I (alta) o Estatus=U (edit) segun mode; el boton se desactiva mientras la peticion esta en vuelo (flag busy del addRecursoModel) para evitar doble envio. El texto cambia "Guardar" / "Guardar cambios" para que el usuario sepa que esta confirmando una modificacion y no un alta   -->
+            <Button
+                id="addRecursoCatalogoSaveBtn"
+                type="Emphasized"
+                text="{= ${addRecursoModel>/mode} === 'edit' ? ${i18n>btnGuardarCambios} : ${i18n>btnGuardar} }"
+                enabled="{= !${addRecursoModel>/busy} }"
+                press="onSaveAddRecursoCatalogo" />
+            <!--    -->
+        </beginButton>
+        <endButton>
+            <Button
+                id="addRecursoCatalogoCancelBtn"
+                text="{i18n>btnCancelar}"
+                press="onCloseAddRecursoCatalogoDialog" />
+        </endButton>
+    </Dialog>
+    <!--    -->
+</core:FragmentDefinition>

@@ -1,5 +1,5 @@
 sap.ui.define([
-	"masterindirectos/test/unit/controller/View1.controller"
+	"zindirect_costs/test/unit/controller/View1.controller"
 ], function () {
 	"use strict";
 });

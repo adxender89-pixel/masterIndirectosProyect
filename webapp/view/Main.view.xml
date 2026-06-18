@@ -1,5 +1,5 @@
 <mvc:View
-    controllerName="masterindirectos.controller.Main"
+    controllerName="zindirect_costs.controller.Main"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
     displayBlock="true"
@@ -39,19 +39,21 @@
                         class="sapUiSizeCozy"
                     >
                         <Label text="{i18n>Aplicacion}:" />
+                        <!--   Se sustituyen los items Presupuestacion/Planificacion (claves presu/cind) por Directos/Indirectos. Las claves antiguas no se usaban en ninguna otra parte del codigo (verificado con grep), por lo que el renombrado a directos/indirectos es seguro. El selectedKey por defecto pasa a "indirectos" porque la app actual gestiona costes indirectos   -->
                         <ComboBox
-                            class="sapUiTinyMarginBegin"
-                            selectedKey="presu"
+                            class="sapUiTinyMarginBegin centeredInput"
+                            selectedKey="indirectos"
                             width="180px"
+                             change="onSelectAplicacion"
                         >
                             <items>
                                 <core:Item
-                                    text="{i18n>Presupuestación}"
-                                    key="presu"
+                                    text="{i18n>Directos}"
+                                    key="directos"
                                 />
                                 <core:Item
-                                    text="{i18n>Planificacion}"
-                                    key="cind"
+                                    text="{i18n>Indirectos}"
+                                    key="indirectos"
                                 />
                             </items>
                         </ComboBox>
@@ -60,6 +62,7 @@
                             text="{i18n>Escenario}:"
                         />
                         <ComboBox 
+                        class="sapUiTinyMarginBegin centeredInput"
                         selectedKey="{appData>/sVersionActiva}"
                             change="onSelectVersion"
                             items="{appData>/NavLtVersiones}">
@@ -75,29 +78,57 @@
                 </contentMiddle>
                 <!-- Acciones rápidas en la cabecera -->
                 <contentRight>
+                    <!--     Se acompanya el boton de busqueda con el titulo
+                         "MASTER DE OBRA" para identificar el contexto de la cabecera.
+                         Ambos son hermanos directos de contentRight para heredar el
+                         centrado vertical del .sapMBarRight (flex + center) y quedar
+                         alineados con el resto de iconos. -->
                     <Button
                         icon="sap-icon://search"
+                        press="onSearchMaster"
                         type="Transparent"
                         class="headerIconBtn"
                     />
+                    <Text
+                        text="{i18n>MASTER_DE_OBRA}"
+                        class="masterDeObraHeaderText"
+                    />
+                    <!--   Se anyade el boton con icono de reloj que abre y cierra el
+                         panel lateral de historial (historySideBar). Solo se muestra
+                         cuando hay una vista activa distinta del dashboard, ya que el
+                         historial no aplica en Inicio. -->
+                    <Button
+                        icon="sap-icon://history"
+                        press="onToggleHistorySidebar"
+                        type="Transparent"
+                        class="headerIconBtn"
+                        visible="{= ${ui>/activeTab} !== 'dashboard' }"
+                    />
+                    <!--      -->
+                    <!--   Se intercambian los handlers press de los botones settings y power: ahora el icono settings abre la configuracion de usuario (onUserConfigOpen) y el icono log/power activa el sidebar (onToggleSideBar). Los iconos y su orden visual se conservan. -->
                     <Button
                         icon="sap-icon://settings"
-                        press="onToggleSideBar"
+                       press="onUserConfigOpen"
                         type="Transparent"
                         class="headerIconBtn"
                     />
+                    <!--   Se sustituye el icono sap-icon://log (power) por sap-icon://menu2 (tres lineas horizontales / hamburger) para reflejar mejor que el boton abre/cierra el sidebar. -->
                     <Button
-                        icon="sap-icon://log"
+                      press="onToggleSideBar"
+                        icon="sap-icon://menu2"
+
                         type="Transparent"
                         class="headerIconBtn"
                     />
+                    <!--   -->
                 </contentRight>
             </Bar>
         </customHeader>
         <content>
+            <!--   Se añade la clase sideBarOverlayHost para que el sidebar flotante pueda anclarse al borde derecho mediante position:absolute -->
             <FlexBox
                 width="100%"
-                class="maxHeight"
+                class="maxHeight sideBarOverlayHost"
                 height="100%"
                 direction="Row"
                 fitContainer="true"
@@ -156,33 +187,112 @@
                         </layoutData>
                     </VBox>
                 </VBox>
-                <!-- SIDEBAR -->
+                <!--     Se anyade el panel lateral de historial que se abre
+                     desde el icono de reloj de la cabecera. Comparte la clase
+                     floatingSideBar para anclarse al borde derecho sobre el contenido
+                     principal sin desplazarlo, replicando el patron del sidebar
+                     existente. Se fija width al 30% para que el panel cubra hacia la
+                     izquierda hasta el borde derecho de la columna "Coste Total" de
+                     la tabla superior, sin invadir las dos KPIs precedentes. El
+                     contenido (filtros + tabla) se delega al fragment
+                     HistorialModificaciones para mantener Main.view.xml legible. -->
+                <VBox
+                    id="historySideBar"
+                    visible="false"
+                    width="30%"
+                    height="100%"
+                    class="sapUiNoContentPadding floatingSideBar historySideBar"
+                >
+                    <items>
+                        <core:Fragment
+                            fragmentName="zindirect_costs.fragments.HistorialModificaciones"
+                            type="XML"
+                        />
+                    </items>
+                </VBox>
+                <!--      -->
+                <!--     Se anyade el panel lateral derecho del Catalogo de
+                     recursos, hermano del historySideBar. Reutiliza la clase
+                     floatingSideBar para anclarse al borde derecho sobre el contenido
+                     principal sin desplazarlo. Solo se muestra cuando el usuario
+                     pulsa el boton lateral de catalogo (icono employee); cuando el
+                     catalogo se abre desde el value-help del Input DESCRIP sigue
+                     usandose el Dialog modal existente (CatalogoRecursosDialog).
+                     Ancho 45% para acoger las tres columnas de la tabla
+                     (ID Recurso / Puesto / Tarifa) sin invadir las KPIs de cabecera.   -->
+                <VBox
+                    id="catalogoRecursosSideBar"
+                    visible="false"
+                    width="45%"
+                    height="100%"
+                    class="sapUiNoContentPadding floatingSideBar catalogoRecursosSideBar"
+                >
+                    <items>
+                        <core:Fragment
+                            fragmentName="zindirect_costs.fragments.CatalogoRecursosSideBar"
+                            type="XML"
+                        />
+                    </items>
+                </VBox>
+                <!--     -->
+                <!--   Se reemplaza la barra de acciones lateral por los botones funcionales descritos en el spec -->
+                <!--   Se aplica floatingSideBar para que el sidebar se sobreponga al contenido anclado al borde derecho sin desplazar la zona principal ni requerir scroll horizontal -->
                 <VBox
                     id="sideActionToolbar"
                     visible="false"
                     width="2.5rem"
                     height="100%"
-                    class="sapUiNoContentPadding"
+                    class="sapUiNoContentPadding floatingSideBar"
                 >
                     <items>
+                        <!--   Se muestra el diálogo informativo de atajos de teclado (Alt+ +, Alt+ -, Alt+ S) -->
                         <Button
-                            icon="sap-icon://comment"
+                            icon="sap-icon://keyboard-and-mouse"
+                            tooltip="{i18n>actionShortcuts}"
+                            press="onShowShortcuts"
                             type="Transparent"
                         />
+                        <!--   Se invierte el estado de contabilización (BLOQZ) de todos los PEPs seleccionados -->
+                        <Button
+                            icon="sap-icon://locked"
+                            tooltip="{i18n>actionBloquearContab}"
+                            press="onToggleBloqueoContab"
+                            type="Transparent"
+                        />
+                        <!--   Se inicia la importación masiva desde Excel (ver apartado 5.10) -->
+                        <Button
+                            icon="sap-icon://upload"
+                            tooltip="{i18n>actionImportar}"
+                            press="onImportarExcel"
+                            type="Transparent"
+                        />
+                        <!--   Se inicia la exportación a XLSX (ver apartado 5.9) -->
+                        <Button
+                            icon="sap-icon://download"
+                            tooltip="{i18n>actionExportar}"
+                            press="onExportarExcel"
+                            type="Transparent"
+                        />
+                        <!--   Se permite visualizar o adjuntar ficheros a nivel de obra -->
                         <Button
                             icon="sap-icon://attachment"
+                            tooltip="{i18n>actionAdjuntarFichero}"
+                            press="onAdjuntarFichero"
                             type="Transparent"
                         />
+                        <!--   Se permite visualizar o adjuntar hipervínculos a nivel de obra -->
                         <Button
-                            icon="sap-icon://history"
+                            icon="sap-icon://chain-link"
+                            tooltip="{i18n>actionAdjuntarHipervinculo}"
+                            press="onAdjuntarHipervinculo"
                             type="Transparent"
                         />
+                        <!--   Se abre el catálogo de recursos; solo visible en la pestaña Corrientes -->
                         <Button
-                            icon="sap-icon://edit"
-                            type="Transparent"
-                        />
-                        <Button
-                            icon="sap-icon://settings"
+                            icon="sap-icon://employee"
+                            tooltip="{i18n>actionCatalogoRecursos}"
+                            press="onAbrirCatalogoRecursos"
+                            visible="{= ${ui>/activeTab} === 'corrientes' }"
                             type="Transparent"
                         />
                     </items>
@@ -193,9 +303,10 @@
         <footer>
             <OverflowToolbar height="2.5rem">
                 <Button
+                    id="messageViewBtn"
                     text="{i18n>btnMensajes}"
                     type="Transparent"
-                    press="onSaveAll"
+                    press="onMessagePopoverPress"
                     width="6rem"
                 />
                 <ToolbarSpacer />

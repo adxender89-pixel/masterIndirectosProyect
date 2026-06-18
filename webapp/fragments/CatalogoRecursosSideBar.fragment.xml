@@ -1,0 +1,204 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+    <!--     Se monta el "Catalogo de recursos" como panel lateral
+         derecho, replicando el patron del Historico de modificaciones
+         (HistorialModificaciones.fragment.xml). El popup Dialog
+         (CatalogoRecursosDialog.fragment.xml) se conserva intacto porque sigue
+         usandose desde el value-help del Input DESCRIP, donde el flujo modal
+         tiene sentido. Este fragment solo se renderiza cuando el usuario abre
+         el catalogo desde el boton lateral. Los identificadores llevan prefijo
+         "sb" (sidebar) para no chocar con los del Dialog, que viven en la
+         misma vista. Los bindings al modelo catalogoRecursosModel se
+         mantienen identicos para que los handlers del controller funcionen
+         indistintamente sobre ambos contenedores.   -->
+    <VBox height="100%" class="catalogoPanelContent">
+        <!--     Cabecera del panel: titulo a la izquierda y boton X de
+             cierre a la derecha, mismo patron visual que el panel de Historial
+             para coherencia.   -->
+        <HBox
+            class="catalogoPanelHeader"
+            justifyContent="SpaceBetween"
+            alignItems="Center"
+        >
+            <Title
+                text="{i18n>actionCatalogoRecursos}"
+                level="H4"
+                class="catalogoPanelTitle"
+            />
+            <Button
+                icon="sap-icon://decline"
+                tooltip="{i18n>HISTORY_CERRAR}"
+                press="onCatalogoRecursosSideBarClose"
+                type="Transparent"
+                class="catalogoPanelCloseBtn"
+            />
+        </HBox>
+        <!--     -->
+
+        <!--     Cuerpo del panel: SegmentedButton Obra/Generales,
+             toolbar de mantenimiento (Anyadir / Editar / Borrar) y tabla del
+             catalogo. Se omite la expresion sobre openedFromVH en los botones
+             del toolbar porque en el side panel ese flujo no aplica: cuando
+             el catalogo se abre desde la descripcion el contenedor activo es
+             el Dialog, no este panel.   -->
+        <VBox class="catalogoPanelBody sapUiSmallMargin">
+            <SegmentedButton
+                id="sbCatalogoRecursosSegmented"
+                selectedKey="{catalogoRecursosModel>/activeKey}"
+                selectionChange="onCatalogoSegmentChange"
+                class="sapUiSmallMarginBottom"
+            >
+                <items>
+                    <SegmentedButtonItem
+                        id="sbCatalogoRecursosSegObra"
+                        key="obra"
+                        text="{i18n>catalogoRecursosObra}"
+                    />
+                    <SegmentedButtonItem
+                        id="sbCatalogoRecursosSegGenerales"
+                        key="generales"
+                        text="{i18n>catalogoRecursosGenerales}"
+                    />
+                </items>
+            </SegmentedButton>
+
+            <Toolbar id="sbCatalogoRecursosToolbar" design="Transparent">
+                <Button
+                    id="sbCatalogoRecursosAddBtn"
+                    text="{i18n>catalogoRecursosAdd}"
+                    type="Transparent"
+                    visible="{= ${catalogoRecursosModel>/activeKey} === 'obra' }"
+                    press="onAddRecursoCatalogo"
+                />
+                <Button
+                    id="sbCatalogoRecursosEditBtn"
+                    text="{i18n>catalogoRecursosEdit}"
+                    type="Transparent"
+                    visible="{= ${catalogoRecursosModel>/activeKey} === 'obra' }"
+                    press="onEditRecursoCatalogo"
+                />
+                <Button
+                    id="sbCatalogoRecursosDeleteBtn"
+                    text="{i18n>catalogoRecursosDelete}"
+                    type="Transparent"
+                    visible="{= ${catalogoRecursosModel>/activeKey} === 'obra' }"
+                    press="onDeleteRecursoCatalogo"
+                />
+            </Toolbar>
+
+            <Table
+                id="sbCatalogoRecursosTable"
+                items="{catalogoRecursosModel>/visible}"
+                mode="MultiSelect"
+                selectionChange="onCatalogoRecursoSelectionChange"
+                growing="true"
+                growingThreshold="100"
+                noDataText="{i18n>catalogoRecursosSinDatos}"
+                class="sapUiSizeCompact catalogoPanelTable"
+                width="100%"
+            >
+                <columns>
+                    <Column id="sbCatalogoRecursosColId" width="180px">
+                        <Text
+                            id="sbCatalogoRecursosColIdLabel"
+                            text="{i18n>catalogoRecursosIdRecurso}"
+                        />
+                    </Column>
+                    <Column id="sbCatalogoRecursosColPuesto">
+                        <Text
+                            id="sbCatalogoRecursosColPuestoLabel"
+                            text="{i18n>catalogoRecursosPuesto}"
+                        />
+                    </Column>
+                    <Column id="sbCatalogoRecursosColFee" width="110px" hAlign="End">
+                        <Text
+                            id="sbCatalogoRecursosColFeeLabel"
+                            text="{i18n>catalogoRecursosTarifa}"
+                        />
+                    </Column>
+                </columns>
+                <items>
+                    <ColumnListItem id="sbCatalogoRecursosItem">
+                        <cells>
+                            <HBox renderType="Bare" alignItems="Center" width="100%">
+                                <Input
+                                    value="{catalogoRecursosModel>IdRecurso}"
+                                    valueState="{= !${catalogoRecursosModel>IdRecurso} ? 'Error' : 'None' }"
+                                    valueStateText="{i18n>catalogoRecursosCampoRequerido}"
+                                    visible="{= ${catalogoRecursosModel>__editMode} === true }"
+                                    textAlign="Begin"
+                                    change="onIdRecursoInputChange"
+                                    width="100%"
+                                    class="sapUiSizeCompact catalogoEditTextInput"
+                                />
+                                <Text
+                                    id="sbCatalogoRecursosCellId"
+                                    text="{catalogoRecursosModel>IdRecurso}"
+                                    wrapping="false"
+                                    visible="{= ${catalogoRecursosModel>__editMode} !== true }"
+                                />
+                            </HBox>
+                            <HBox renderType="Bare" alignItems="Center" width="100%">
+                                <Input
+                                    value="{catalogoRecursosModel>Puesto}"
+                                    valueState="{= !${catalogoRecursosModel>Puesto} ? 'Error' : 'None' }"
+                                    valueStateText="{i18n>catalogoRecursosCampoRequerido}"
+                                    visible="{= ${catalogoRecursosModel>__editMode} === true }"
+                                    textAlign="Begin"
+                                    change="onPuestoInputChange"
+                                    width="100%"
+                                    class="sapUiSizeCompact catalogoEditTextInput"
+                                />
+                                <Text
+                                    id="sbCatalogoRecursosCellPuesto"
+                                    text="{catalogoRecursosModel>Puesto}"
+                                    wrapping="false"
+                                    visible="{= ${catalogoRecursosModel>__editMode} !== true }"
+                                />
+                            </HBox>
+                            <HBox renderType="Bare" alignItems="Center" width="100%" justifyContent="End">
+                                <Input
+                                    value="{catalogoRecursosModel>Fee}"
+                                    valueState="{= !${catalogoRecursosModel>Fee} ? 'Error' : 'None' }"
+                                    valueStateText="{i18n>catalogoRecursosCampoRequerido}"
+                                    visible="{= ${catalogoRecursosModel>__editMode} === true }"
+                                    textAlign="End"
+                                    liveChange="onFeeInputLiveChange"
+                                    change="onFeeInputChange"
+                                    width="100%"
+                                    class="sapUiSizeCompact"
+                                />
+                                <Text
+                                    id="sbCatalogoRecursosCellFee"
+                                    text="{catalogoRecursosModel>Fee}"
+                                    wrapping="false"
+                                    visible="{= ${catalogoRecursosModel>__editMode} !== true }"
+                                />
+                            </HBox>
+                        </cells>
+                    </ColumnListItem>
+                </items>
+            </Table>
+        </VBox>
+        <!--     -->
+
+        <!--     Fila de accion principal del panel ("Anyadir al
+             desglose"), alineada a la derecha con divisor superior, mismo
+             tratamiento visual que la fila de acciones del Historial.   -->
+        <HBox
+            justifyContent="End"
+            alignItems="Center"
+            class="catalogoPanelActionsRow sapUiSmallMargin"
+        >
+            <Button
+                id="sbCatalogoRecursosAddDesgloseBtn"
+                type="Emphasized"
+                text="{i18n>catalogoRecursosAddDesglose}"
+                enabled="{catalogoRecursosModel>/hasSelection}"
+                press="onAddRecursoToDesglose"
+                class="catalogoPanelActionBtn"
+            />
+        </HBox>
+        <!--     -->
+    </VBox>
+    <!--     -->
+</core:FragmentDefinition>

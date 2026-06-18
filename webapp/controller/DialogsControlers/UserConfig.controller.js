@@ -7,11 +7,11 @@ sap.ui.define(
     function (BaseController, JSONModel, deepClone) {
         "use strict";
 
-        return BaseController.extend("masterindirectos.controller.DialogsControlers.UserConfig", {
+        return BaseController.extend("zindirect_costs.controller.DialogsControlers.UserConfig", {
             onInit: function () {
                 // Set up the JSON model for the scope selector dialog in data/nodeList.json
                 const oModel = new JSONModel();
-                const sUrl = sap.ui.require.toUrl("masterindirectos/data/nodeList.json");
+                const sUrl = sap.ui.require.toUrl("zindirect_costs/data/nodeList.json");
 
                 oModel.loadData(sUrl);
                 this.getView().setModel(new JSONModel({

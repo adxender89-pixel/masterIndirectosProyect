@@ -2,15 +2,18 @@
     xmlns="sap.m"
     xmlns:core="sap.ui.core"
     xmlns:t="sap.ui.table">
+    <!--   Se enlazan todos los textos al bundle i18n (titulo,
+         mensaje de instrucciones, cabeceras de columna y botones) para
+         soportar EN/FR; las claves ya existen en i18n.properties.   -->
     <Dialog
-        title="Catálogo de Operaciones"
+        title="{i18n>catalogoOperacionesTitulo}"
         contentWidth="700px"
         contentHeight="500px"
         resizable="true"
         draggable="true">
         <content>
             <VBox class="sapUiSmallMargin">
-                <Text text="Seleccione una o más operaciones para añadir al capítulo:" class="sapUiSmallMarginBottom" />
+                <Text text="{i18n>selectOperationsMessage}" class="sapUiSmallMarginBottom" />
                 <t:Table
                     id="catalogTable"
                     rows="{catalogModel>/operations}"
@@ -20,13 +23,13 @@
                     width="100%">
                     <t:columns>
                         <t:Column width="200px">
-                            <Label text="Código de Operación" />
+                            <Label text="{i18n>codigoOperacion}" />
                             <t:template>
                                 <Text text="{catalogModel>Code}" wrapping="false" />
                             </t:template>
                         </t:Column>
                         <t:Column width="400px">
-                            <Label text="Descripción" />
+                            <Label text="{i18n>DESCRIPCION}" />
                             <t:template>
                                 <Text text="{catalogModel>Description}" wrapping="false" />
                             </t:template>
@@ -37,14 +40,15 @@
         </content>
         <beginButton>
             <Button
-                text="Añadir Seleccionados"
+                text="{i18n>addSelected}"
                 type="Emphasized"
                 press="onAddSelectedOperations" />
         </beginButton>
         <endButton>
             <Button
-                text="Cancelar"
+                text="{i18n>btnCancelar}"
                 press="onCloseCatalogDialog" />
         </endButton>
     </Dialog>
+    <!--   -->
 </core:FragmentDefinition>

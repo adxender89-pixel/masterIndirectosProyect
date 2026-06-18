@@ -1,8 +1,8 @@
-<mvc:View controllerName="masterindirectos.controller.DetailsControllers.Dashboard"
+<mvc:View controllerName="zindirect_costs.controller.DetailsControllers.Dashboard"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
     xmlns:t="sap.ui.table" height="100%"
-    xmlns:vn="masterindirectos.control" class="vistaDashboard"
+    xmlns:vn="zindirect_costs.control" class="vistaDashboard"
     xmlns:core="sap.ui.core"
     xmlns:l="sap.ui.layout">
 

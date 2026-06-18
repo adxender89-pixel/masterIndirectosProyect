@@ -1,0 +1,27 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+    <!--   Popover informativo de atajos de teclado de la aplicación -->
+    <Popover
+        title="{i18n>shortcutsTitle}"
+        placement="Left"
+        contentWidth="240px"
+        showHeader="true"
+    >
+        <content>
+            <!--   Se listan los atajos en una rejilla simple acción / tecla -->
+            <VBox class="sapUiSmallMargin">
+                <HBox justifyContent="SpaceBetween" class="sapUiTinyMarginBottom">
+                    <Label text="{i18n>shortcutAdd}" />
+                    <Text text="Alt + +" />
+                </HBox>
+                <HBox justifyContent="SpaceBetween" class="sapUiTinyMarginBottom">
+                    <Label text="{i18n>shortcutDelete}" />
+                    <Text text="Alt + -" />
+                </HBox>
+                <HBox justifyContent="SpaceBetween">
+                    <Label text="{i18n>shortcutSave}" />
+                    <Text text="Alt + S" />
+                </HBox>
+            </VBox>
+        </content>
+    </Popover>
+</core:FragmentDefinition>

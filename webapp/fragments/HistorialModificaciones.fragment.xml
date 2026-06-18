@@ -1,0 +1,134 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+    <!--     Fragment con el contenido del panel lateral "Histórico de
+         modificaciones" que se abre desde el icono de reloj de la cabecera.
+         Incluye los tres filtros (operacion, Desde, Hasta) y los botones
+         Limpiar / Buscar / Exportar Excel. Se ha retirado la tabla de
+         resultados del panel: cuando el backend ZIND_LOG este disponible,
+         Buscar prepara el conjunto y Exportar Excel lo descarga; el usuario
+         no necesita visualizar las filas dentro del panel. El fragment se
+         embebe en el VBox historySideBar de Main.view.xml para no inflar el
+         view raiz. -->
+    <VBox
+        height="100%"
+        class="historyPanelContent"
+    >
+        <!--   Cabecera del panel: barra con titulo a la izquierda y boton de
+             cerrar (X) a la derecha. El boton onHistoryClose simplemente
+             oculta el historySideBar, ahorrando al usuario un viaje a la
+             cabecera para cerrar el panel. Debajo se anyade un divisor
+             horizontal sutil para separar visualmente del bloque de filtros. -->
+        <HBox
+            class="historyPanelHeader"
+            justifyContent="SpaceBetween"
+            alignItems="Center"
+        >
+            <Title
+                text="{i18n>HISTORY_TITLE}"
+                level="H4"
+                class="historyPanelTitle"
+            />
+            <Button
+                icon="sap-icon://decline"
+                tooltip="{i18n>HISTORY_CERRAR}"
+                press="onHistoryClose"
+                type="Transparent"
+                class="historyPanelCloseBtn"
+            />
+        </HBox>
+
+        <!--   Bloque de filtros: cada filtro lleva un Label propio sobre el
+             control para reforzar la jerarquia visual; las fechas usan icono
+             calendario como ayuda contextual. Se mantiene VBox vertical
+             porque el ancho del panel (30%) no permite un toolbar horizontal. -->
+        <VBox class="historyPanelFilters sapUiSmallMargin">
+            <Label
+                text="{i18n>HISTORY_OPERACION}"
+                class="historyPanelLabel"
+            />
+            <SearchField
+                id="historyOperacionSearch"
+                placeholder="{i18n>HISTORY_PLACEHOLDER_OPERACION}"
+                enableSuggestions="true"
+                suggest="onHistoryOperacionSuggest"
+                liveChange="onHistoryOperacionLiveChange"
+                search="onHistoryBuscar"
+                value="{historyModel>/filters/operacion}"
+                class="allowLetters"
+            />
+            <HBox alignItems="Center" class="historyPanelLabelRow historyPanelLabelTop">
+                <core:Icon
+                    src="sap-icon://calendar"
+                    class="historyPanelLabelIcon"
+                />
+                <Label
+                    text="{i18n>HISTORY_DESDE}"
+                    class="historyPanelLabel"
+                />
+            </HBox>
+            <DateTimePicker
+                id="historyDesdePicker"
+                placeholder="{i18n>HISTORY_PLACEHOLDER_FECHA}"
+                value="{
+                    path: 'historyModel>/filters/desde',
+                    type: 'sap.ui.model.type.DateTime',
+                    formatOptions: { pattern: 'dd/MM/yyyy HH:mm' }
+                }"
+                change="onHistoryDesdeChange"
+                valueFormat="yyyy-MM-dd'T'HH:mm:ss"
+                displayFormat="dd/MM/yyyy HH:mm"
+                valueState="{historyModel>/filters/desdeState}"
+                valueStateText="{historyModel>/filters/desdeStateText}"
+                width="100%"
+            />
+            <HBox alignItems="Center" class="historyPanelLabelRow historyPanelLabelTop">
+                <core:Icon
+                    src="sap-icon://calendar"
+                    class="historyPanelLabelIcon"
+                />
+                <Label
+                    text="{i18n>HISTORY_HASTA}"
+                    class="historyPanelLabel"
+                />
+            </HBox>
+            <DateTimePicker
+                id="historyHastaPicker"
+                placeholder="{i18n>HISTORY_PLACEHOLDER_FECHA}"
+                value="{
+                    path: 'historyModel>/filters/hasta',
+                    type: 'sap.ui.model.type.DateTime',
+                    formatOptions: { pattern: 'dd/MM/yyyy HH:mm' }
+                }"
+                change="onHistoryHastaChange"
+                valueFormat="yyyy-MM-dd'T'HH:mm:ss"
+                displayFormat="dd/MM/yyyy HH:mm"
+                valueState="{historyModel>/filters/hastaState}"
+                valueStateText="{historyModel>/filters/hastaStateText}"
+                width="100%"
+            />
+            <!--   Botones de accion principales: Buscar + Exportar Excel.
+                 El boton Limpiar global se ha sustituido por iconos X
+                 individuales junto al SearchField (nativo) y a cada
+                 DateTimePicker, mas precisos para el usuario. -->
+            <HBox
+                justifyContent="End"
+                alignItems="Center"
+                class="sapUiSmallMarginTop historyPanelActionsRow"
+            >
+                <Button
+                    text="{i18n>HISTORY_BUSCAR}"
+                    icon="sap-icon://search"
+                    press="onHistoryBuscar"
+                    type="Emphasized"
+                    class="historyPanelActionBtn"
+                />
+                <Button
+                    text="{i18n>HISTORY_EXPORTAR}"
+                    icon="sap-icon://excel-attachment"
+                    press="onHistoryExportarExcel"
+                    class="historyPanelActionBtn sapUiTinyMarginBegin"
+                />
+            </HBox>
+        </VBox>
+    </VBox>
+    <!--      -->
+</core:FragmentDefinition>

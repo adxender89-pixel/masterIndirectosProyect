@@ -7,7 +7,7 @@ sap.ui.define(
     function (BaseController, JSONModel, deepClone) {
         "use strict";
 
-        return BaseController.extend("masterindirectos.controller.DialogsControlers.ScopeSelector", {
+        return BaseController.extend("zindirect_costs.controller.DialogsControlers.ScopeSelector", {
             
             /**
              * Se inicializa el controlador del diálogo estableciendo un modelo JSON vacío

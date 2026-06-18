@@ -1,0 +1,166 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+   >
+    <Dialog
+        id="catalogoRecursosDialog"
+        title="{i18n>actionCatalogoRecursos}"
+        contentWidth="900px"
+        contentHeight="600px"
+        resizable="true"
+        draggable="true"
+        class="catalogoRecursosCss">
+        <content>
+            <!--   Se evita el IconTabBar (su contenido no renderizaba dentro del Dialog) y
+                   se replica el patrón que sí pinta en este proyecto (OperationsCatalogDialog):
+                   una sap.m.Table directamente dentro de un VBox. La separación Obra/Generales
+                   se resuelve con un SegmentedButton que alterna el binding de la tabla entre
+                   /obra y /generales (a través de /visible). -->
+            <VBox id="catalogoRecursosVBox" class="sapUiSmallMargin">
+                <SegmentedButton
+                    id="catalogoRecursosSegmented"
+                    selectedKey="{catalogoRecursosModel>/activeKey}"
+                    selectionChange="onCatalogoSegmentChange"
+                    class="sapUiSmallMarginBottom">
+                    <items>
+                        <SegmentedButtonItem id="catalogoRecursosSegObra" key="obra" text="{i18n>catalogoRecursosObra}" />
+                        <SegmentedButtonItem id="catalogoRecursosSegGenerales" key="generales" text="{i18n>catalogoRecursosGenerales}" />
+                    </items>
+                </SegmentedButton>
+
+                <!--   Los 3 botones de gestion del catalogo (Añadir/Editar/Borrar) solo aparecen cuando el dialogo se abre desde el menu lateral. Si se ha abierto desde el value-help del Input DESCRIP (openedFromVH === true), se ocultan: ese flujo solo permite seleccionar recursos y volcarlos al desglose, no gestionar el catalogo en si -->
+                <Toolbar id="catalogoRecursosToolbar" design="Transparent">
+                    <Button
+                        id="catalogoRecursosAddBtn"
+
+                        text="{i18n>catalogoRecursosAdd}"
+                        type="Transparent"
+                        visible="{= ${catalogoRecursosModel>/activeKey} === 'obra' &amp;&amp; ${catalogoRecursosModel>/openedFromVH} !== true }"
+                        press="onAddRecursoCatalogo" />
+                    <Button
+                        id="catalogoRecursosEditBtn"
+
+                        text="{i18n>catalogoRecursosEdit}"
+                        type="Transparent"
+                        visible="{= ${catalogoRecursosModel>/activeKey} === 'obra' &amp;&amp; ${catalogoRecursosModel>/openedFromVH} !== true }"
+                        press="onEditRecursoCatalogo" />
+                    <Button
+                        id="catalogoRecursosDeleteBtn"
+
+                        text="{i18n>catalogoRecursosDelete}"
+                        type="Transparent"
+                        visible="{= ${catalogoRecursosModel>/activeKey} === 'obra' &amp;&amp; ${catalogoRecursosModel>/openedFromVH} !== true }"
+                        press="onDeleteRecursoCatalogo" />
+
+                </Toolbar>
+                <!--   -->
+
+                <!--   Tabla en modo MultiSelect: permite seleccionar varios recursos para volcarlos en bloque en el desglose, y a la vez sirve de seleccion para los botones Editar/Borrar -->
+                <Table
+                    id="catalogoRecursosTable"
+                    items="{catalogoRecursosModel>/visible}"
+                    mode="MultiSelect"
+                    selectionChange="onCatalogoRecursoSelectionChange"
+                    growing="true"
+                    growingThreshold="100"
+                    noDataText="{i18n>catalogoRecursosSinDatos}"
+                    class="sapUiSizeCompact"
+                    width="100%">
+                    <columns>
+                        <Column id="catalogoRecursosColId" width="220px">
+                            <Text id="catalogoRecursosColIdLabel" text="{i18n>catalogoRecursosIdRecurso}" />
+                        </Column>
+                        <Column id="catalogoRecursosColPuesto">
+                            <Text id="catalogoRecursosColPuestoLabel" text="{i18n>catalogoRecursosPuesto}" />
+                        </Column>
+                        <Column id="catalogoRecursosColFee" width="150px" hAlign="End">
+                            <Text id="catalogoRecursosColFeeLabel" text="{i18n>catalogoRecursosTarifa}" />
+                        </Column>
+                    </columns>
+                    <items>
+                        <ColumnListItem id="catalogoRecursosItem">
+                            <cells>
+                                <!--   Celda IdRecurso: Input cuando la fila esta en modo edicion (__editMode), Text en caso contrario. El valueState=Error se enlaza inline para que el campo se marque automaticamente si esta vacio. textAlign=Begin (texto, izquierda a derecha). El change consolida la fila si los tres campos quedan llenos. -->
+                                <HBox renderType="Bare" alignItems="Center" width="100%">
+                                    <Input
+                                        value="{catalogoRecursosModel>IdRecurso}"
+                                        valueState="{= !${catalogoRecursosModel>IdRecurso} ? 'Error' : 'None' }"
+                                        valueStateText="{i18n>catalogoRecursosCampoRequerido}"
+                                        visible="{= ${catalogoRecursosModel>__editMode} === true }"
+                                        textAlign="Begin"
+                                        change="onIdRecursoInputChange"
+                                        width="100%"
+                                        class="sapUiSizeCompact catalogoEditTextInput"
+                                    />
+                                    <Text
+                                        id="catalogoRecursosCellId"
+                                        text="{catalogoRecursosModel>IdRecurso}"
+                                        wrapping="false"
+                                        visible="{= ${catalogoRecursosModel>__editMode} !== true }"
+                                    />
+                                </HBox>
+                                <!--   -->
+                                <!--   Celda Puesto: mismo patron Input/Text. textAlign=Begin (texto). El change consolida la fila si los tres campos quedan llenos. -->
+                                <HBox renderType="Bare" alignItems="Center" width="100%">
+                                    <Input
+                                        value="{catalogoRecursosModel>Puesto}"
+                                        valueState="{= !${catalogoRecursosModel>Puesto} ? 'Error' : 'None' }"
+                                        valueStateText="{i18n>catalogoRecursosCampoRequerido}"
+                                        visible="{= ${catalogoRecursosModel>__editMode} === true }"
+                                        textAlign="Begin"
+                                        change="onPuestoInputChange"
+                                        width="100%"
+                                        class="sapUiSizeCompact catalogoEditTextInput"
+                                    />
+                                    <Text
+                                        id="catalogoRecursosCellPuesto"
+                                        text="{catalogoRecursosModel>Puesto}"
+                                        wrapping="false"
+                                        visible="{= ${catalogoRecursosModel>__editMode} !== true }"
+                                    />
+                                </HBox>
+                                <!--   -->
+                                <!--   Celda Fee: textAlign=End (numero, derecha a izquierda) y liveChange para filtrar a solo digitos/decimal. change consolida la fila si los tres campos quedan llenos. -->
+                                <HBox renderType="Bare" alignItems="Center" width="100%" justifyContent="End">
+                                    <Input
+                                        value="{catalogoRecursosModel>Fee}"
+                                        valueState="{= !${catalogoRecursosModel>Fee} ? 'Error' : 'None' }"
+                                        valueStateText="{i18n>catalogoRecursosCampoRequerido}"
+                                        visible="{= ${catalogoRecursosModel>__editMode} === true }"
+                                        textAlign="End"
+                                        liveChange="onFeeInputLiveChange"
+                                        change="onFeeInputChange"
+                                        width="100%"
+                                        class="sapUiSizeCompact"
+                                    />
+                                    <Text
+                                        id="catalogoRecursosCellFee"
+                                        text="{catalogoRecursosModel>Fee}"
+                                        wrapping="false"
+                                        visible="{= ${catalogoRecursosModel>__editMode} !== true }"
+                                    />
+                                </HBox>
+                                <!--   -->
+                            </cells>
+                        </ColumnListItem>
+                    </items>
+                </Table>
+                <!--   -->
+            </VBox>
+        </content>
+        <beginButton>
+            <Button
+                id="catalogoRecursosAddDesgloseBtn"
+                type="Emphasized"
+                text="{i18n>catalogoRecursosAddDesglose}"
+                enabled="{catalogoRecursosModel>/hasSelection}"
+                press="onAddRecursoToDesglose" />
+        </beginButton>
+        <endButton>
+            <Button
+                id="catalogoRecursosCloseBtn"
+                text="{i18n>btnClose}"
+                press="onCloseCatalogoRecursosDialog" />
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

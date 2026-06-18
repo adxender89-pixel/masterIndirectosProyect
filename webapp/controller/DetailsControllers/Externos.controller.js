@@ -4,8 +4,8 @@ sap.ui.define([
     "sap/m/Input",
     "sap/m/Button",
     "sap/m/Label",
-    "masterindirectos/controller/BaseController",
-    "masterindirectos/model/formatter"
+    "zindirect_costs/controller/BaseController",
+    "zindirect_costs/model/formatter"
 ], function (
     JSONModel,
     Column,
@@ -17,7 +17,7 @@ sap.ui.define([
 ) {
     "use strict";
 
-    return BaseController.extend("masterindirectos.controller.DetailsControllers.Externos", {
+    return BaseController.extend("zindirect_costs.controller.DetailsControllers.Externos", {
         formatter: formatter,
 
         /**
@@ -216,7 +216,11 @@ sap.ui.define([
                         "NavSelProyecto": [this.getGlobalModel("appData").getData().tramo],
                         "NavChanges": [],
                         "NavDatosIndirectos": [],
-                        "EvBloqueados": "",
+                         "NavKpisIndirectos":[],
+                        //   Se envía en el body el capítulo ya bloqueado por el usuario para evitar
+                        //      que el backend lo intente bloquear de nuevo y dispare el error de
+                        //      bloqueo propio al cambiar de año en el selector.
+                        "EvBloqueados": this.getGlobalModel("appData").getProperty("/EvBloqueados") || "",
                         "NavMensajes": [],
                         "NavLtVersiones": [flagSelectVersion]
                     },
@@ -224,7 +228,7 @@ sap.ui.define([
                         headers: {
                             ambito: this.getGlobalModel("appData").getData().userData.initialNode,
                             lang: this.getGlobalModel("appData").getData().userData.AplicationLangu,
-                            bloqueado: "",
+                            bloqueado: this.getGlobalModel("appData").getProperty("/EvBloqueados") || "",
                             decimales: this.getGlobalModel("dashboardModel").getData().decimales,
                             ejercicio: sEjercicio,
                             pestana: "Externos",
@@ -260,20 +264,28 @@ sap.ui.define([
                 // El modelo modeloBloqueo se consume desde la view para habilitar/deshabilitar
                 // controles (Add, Delete, PepDest, Reparto, etc). Mismo patron que Corrientes.
                 var sEvBloqueados = response.EvBloqueados || "";
-                var bIsBlocked = sEvBloqueados.trim().length > 0;
+                //   Se persiste el capítulo bloqueado en appData (mismo patrón que el resto
+                //      de detail controllers) para que la próxima llamada a CambioPestIndirectosSet
+                //      lo envíe en el body y el backend no intente bloquearlo de nuevo, evitando
+                //      el error de bloqueo propio al cambiar de año en el selector.
+                this.getGlobalModel("appData").setProperty("/EvBloqueados", sEvBloqueados);
+                 var bIsBlocked = sEvBloqueados.trim().length > 0 && aMensajesError.length === 0;
 
-                var oModeloBloqueo = this.getView().getModel("modeloBloqueo");
-                if (!oModeloBloqueo) {
-                    oModeloBloqueo = new sap.ui.model.json.JSONModel({
-                        isBlocked: bIsBlocked
-                    });
-                    this.getView().setModel(oModeloBloqueo, "modeloBloqueo");
-                } else {
-                    oModeloBloqueo.setProperty("/isBlocked", bIsBlocked);
-                }
+                //   Se reemplaza SIEMPRE modeloBloqueo con una instancia JSONModel nueva en lugar de actualizar la existente via setProperty. setProperty+refresh no propagaba a las expression bindings de las columnas dinamicas instanciadas dinamicamente desde BaseController (botones Add/Delete, Select Reparto, meses, etc.): cuando se cambiaba de pestana y volvia con el backend devolviendo bloqueo, los campos quedaban editable=true. Con setModel todas las bindings se vuelven a atar a la nueva instancia y el isBlocked se propaga correctamente.
+                var oModeloBloqueo = new sap.ui.model.json.JSONModel({
+                    isBlocked: bIsBlocked
+                });
+                this.getView().setModel(oModeloBloqueo, "modeloBloqueo");
 
+                this._setWaersFromData(response.NavDatosIndirectos.results); //   captura la moneda de la obra para formatDecimales
                 const tree = this.buildTree(response.NavDatosIndirectos.results);
-                this.getView().setModel(new sap.ui.model.json.JSONModel(tree), "externosModel");
+                //   Si el modelo ya existe se actualizan sus datos in-place con setData en lugar de instanciar un JSONModel nuevo y reemplazarlo con setModel. Reemplazar el modelo en cambios de pestana provocaba que las columnas dinamicas (anyo/mes/Resto) perdieran su contexto de binding momentaneamente y que las columnas estaticas como %Tasa, Operacion destino o Pend a planificar acabaran reordenadas al final de la tabla. Manteniendo la misma instancia las bindings se preservan y solo refrescan los datos.
+                var oExternosModel = this.getView().getModel("externosModel");
+                if (oExternosModel) {
+                    oExternosModel.setData(tree);
+                } else {
+                    this.getView().setModel(new sap.ui.model.json.JSONModel(tree), "externosModel");
+                }
 
             } catch (error) {
                 // Se omite el manejo del error para no interrumpir el flujo de la vista.
@@ -298,26 +310,28 @@ sap.ui.define([
                 map[item.PhPspnr] = {
                     ...item,
                     children: [],
+                     _isSinProveedor: false,
                     isEditable: isO,
                     isSubcapitulo: isS,
                     isCapitulo: isC,
                     isVacio: isDesglose,
 
-                    editPhPspnr: isDesglose,
-                    editPost1: isDesglose,
+                   editPhPspnr: false,
+                    editPost1: false,
+
                     //   Se condiciona la editabilidad de %Tasa al valor de TipoTasa.
                     // Solo es editable cuando Estructura es O y TipoTasa es "X" (equivale a INT).
                     editTasa: isO && item.TipoTasa === "X",
                     editAmoEje: false,
                     editAmoEjeAjus: false,
                     editAmoEjeReal: false,
-                    editAmoPen: isDesglose,
-                    editAmoTot: isDesglose,
+                    editAmoPen: false,
+                    editAmoTot: false,
                     editPepDest: isO,
-                    editTipo: isO || isDesglose,
+                editTipo: isO,
                     editPenPlan: false,
-                    editMonths: isDesglose,
-                    editPend: isDesglose,
+                    editMonths: false,
+                    editPend: false,
                     //   Se condiciona la editabilidad de Pendiente y Total al valor de TipoTasa.
                     // Solo son editables cuando Estructura es O y TipoTasa está vacío (equivale a EXT).
                     editCtotPen: isO && item.TipoTasa !== "X",
@@ -479,8 +493,17 @@ sap.ui.define([
 
             // Nivel 2 (operacion): validar precondiciones y crear fila nivel 3.
             if (iLevel === 2) {
-                // Validacion 5: no se puede si ya tiene desgloses (children).
-                if (oSelectedRow.children && oSelectedRow.children.length > 0) {
+                // Validacion 5: solo se bloquea si la operacion tiene desgloses
+                // PRE-EXISTENTES (cargados del backend). Los desgloses creados por el
+                // usuario en esta misma sesion (isNew === true) NO cuentan: una vez que se
+                // ha empezado a desglosar una operacion debe poderse anadir mas hermanos de
+                // nivel 3 (y seguir editando los ya creados). _createLevel3Row ya numera el
+                // siguiente sufijo a partir de los hijos existentes.
+                var aDesgloses = oSelectedRow.children || [];
+                var bTieneDesglosesBackend = aDesgloses.some(function (oChild) {
+                    return oChild && oChild.isNew !== true;
+                });
+                if (bTieneDesglosesBackend) {
                     this.createMessageDialog({
                         title: this.getTranslatedText("ERROR"),
                         textAccept: this.getTranslatedText("ACEPTAR"),
@@ -586,6 +609,41 @@ sap.ui.define([
             setTimeout(function () {
                 this._refreshAfterToggle(sTableId);
             }.bind(this));
+                if (bExpanded && oObject) {
+                var bIsCustomNode =
+                    oObject.__isCustom === true ||
+                    oObject.__isMainBlock === true ||
+                    oObject.__isSinAgrupador === true ||
+                    oObject.__isAgrupadorBlock === true ||
+                    oObject.__isProviderBlock === true;
+                var bHasCustomDescendant =
+                    typeof this._hasCustomDescendant === "function" &&
+                    this._hasCustomDescendant(oObject);
+
+                if (bIsCustomNode || bHasCustomDescendant) {
+                    var that = this;
+                    var bFired = false;
+                    var fnCascade = function () {
+                        if (bFired) return;
+                        bFired = true;
+                        if (typeof that._expandCustomLoop === "function") {
+                            that._expandCustomLoop(oTable, 15, function () {
+                                if (typeof that._highlightSinProveedor === "function") {
+                                    that._highlightSinProveedor(oTable);
+                                }
+                                if (typeof that._applyBlockBorder === "function") {
+                                    that._applyBlockBorder(oTable);
+                                }
+                                if (typeof that._updateCustomColsVisibility === "function") {
+                                    that._updateCustomColsVisibility();
+                                }
+                            }, sPath);
+                        }
+                    };
+                    oTable.attachEventOnce("rowsUpdated", fnCascade);
+                    setTimeout(fnCascade, 200);
+                }
+            }
         },
 
         /**
@@ -633,14 +691,14 @@ sap.ui.define([
             }
         },  */
 
-        //  Se gestiona la pulsación del botón de eliminar para recoger las líneas
+        //   Se gestiona la pulsación del botón de eliminar para recoger las líneas
         // seleccionadas en la tabla y delegar la baja al servicio DelIndirectosSet.
         onDeletePress: async function () {
-            //  Se obtiene la tabla y los índices seleccionados sobre el modelo de Externos.
+            //   Se obtiene la tabla y los índices seleccionados sobre el modelo de Externos.
             var oTable = this.byId("TreeTableExternos");
             var aSelectedIndices = oTable.getSelectedIndices();
 
-            //  Se valida que al menos una línea haya sido seleccionada antes de continuar.
+            //   Se valida que al menos una línea haya sido seleccionada antes de continuar.
             if (aSelectedIndices.length === 0) {
                 this.createMessageDialog({
                     title: this.getTranslatedText("ERROR"),
@@ -653,7 +711,7 @@ sap.ui.define([
                 return;
             }
 
-            //  Se recopilan los datos completos de cada línea seleccionada para el envío.
+            //   Se recopilan los datos completos de cada línea seleccionada para el envío.
             //   Cada fila se sanea con _sanitizeRowForBackend para evitar propiedades cliente.
             var aLinesToDelete = [];
             aSelectedIndices.forEach(function (iIndex) {
@@ -663,7 +721,7 @@ sap.ui.define([
                 }
             }.bind(this));
 
-            //  Se verifica que la recolección de contextos haya producido datos válidos.
+            //   Se verifica que la recolección de contextos haya producido datos válidos.
             if (aLinesToDelete.length === 0) {
                 this.createMessageDialog({
                     title: this.getTranslatedText("ERROR"),
@@ -676,7 +734,7 @@ sap.ui.define([
                 return;
             }
 
-            //  Se invoca el servicio de eliminación y se notifica cualquier excepción al usuario.
+            //   Se invoca el servicio de eliminación y se notifica cualquier excepción al usuario.
             try {
                 await this._callDelIndirectosService(aLinesToDelete);
             } catch (error) {
@@ -690,23 +748,23 @@ sap.ui.define([
         },
 
         /**
-         *  Se invoca el servicio DelIndirectosSet para dar de baja las operaciones
+         *   Se invoca el servicio DelIndirectosSet para dar de baja las operaciones
          * seleccionadas en la pestaña de Externos.
          * @param {array} aLinesToDelete - Conjunto de líneas a eliminar.
          * @returns {Promise} - Promesa con la respuesta del servicio.
          */
         _callDelIndirectosService: async function (aLinesToDelete) {
-            //  Se obtienen los modelos globales necesarios para construir la petición.
+            //   Se obtienen los modelos globales necesarios para construir la petición.
             var oAppData = this.getGlobalModel("appData").getData();
             var oDashModel = this.getGlobalModel("dashboardModel");
 
-            //  Se localiza la versión marcada como activa dentro del modelo de versiones.
+            //   Se localiza la versión marcada como activa dentro del modelo de versiones.
             var versiones = oAppData.NavLtVersiones;
             var flagSelectVersion = versiones.find(function (item) {
                 return item.Activo === "X";
             });
 
-            //  Se determina la fecha real del tramo, con respaldo en el modelo de dashboard.
+            //   Se determina la fecha real del tramo, con respaldo en el modelo de dashboard.
             var sFreal = "";
             if (oAppData && oAppData.tramo && oAppData.tramo.Freal) {
                 sFreal = oAppData.tramo.Freal;
@@ -718,7 +776,7 @@ sap.ui.define([
                 throw new Error("Fecha real no disponible");
             }
 
-            //  Se parsea la fecha OData y se extrae el ejercicio que viaja en cabeceras.
+            //   Se parsea la fecha OData y se extrae el ejercicio que viaja en cabeceras.
             var oDateStart = this._parseODataDate(sFreal);
             if (!oDateStart || isNaN(oDateStart.getTime())) {
                 throw new Error("Fecha real inválida");
@@ -727,7 +785,7 @@ sap.ui.define([
             var sEjercicio = oDateStart.getFullYear().toString();
             const token = oAppData.EvToken;
 
-            //  Se muestra el diálogo ocupado mientras dura la llamada al servicio.
+            //   Se muestra el diálogo ocupado mientras dura la llamada al servicio.
             if (!this._busyDialog) {
                 this._busyDialog = new sap.m.BusyDialog({
                     text: this.getTranslatedText("ELIMINANDO_DATOS") || "Eliminando..."
@@ -736,7 +794,7 @@ sap.ui.define([
             this._busyDialog.open();
 
             try {
-                //  Se ejecuta la llamada POST contra el servicio principal con los headers requeridos.
+                //   Se ejecuta la llamada POST contra el servicio principal con los headers requeridos.
                 var response = await this.post(
                     this.getGlobalModel("mainService"),
                     "/DelIndirectosSet",
@@ -761,7 +819,7 @@ sap.ui.define([
 
                 this._busyDialog.close();
 
-                //  Se inspeccionan los mensajes devueltos por el servicio en busca de errores.
+                //   Se inspeccionan los mensajes devueltos por el servicio en busca de errores.
                 var aMensajes = response.NavMensajes?.results || [];
                 var aMensajesError = aMensajes.filter(function (mensaje) {
                     return mensaje.Tipo === "E";
@@ -781,7 +839,7 @@ sap.ui.define([
                     return;
                 }
 
-                //  Si no se devuelven errores, se eliminan las líneas del modelo local de Externos.
+                //   Si no se devuelven errores, se eliminan las líneas del modelo local de Externos.
                 //   El modelo es un arbol con children anidados, asi que se borra recursivamente
                 // via _removeRowsFromTreeByKey (BaseController) en vez de un splice plano.
                 var oModel = this.getView().getModel("externosModel");
@@ -791,15 +849,17 @@ sap.ui.define([
                 var oTable = this.byId("TreeTableExternos");
                 oTable.clearSelection();
 
-                //  Se marca la variante activa como modificada tras la operación de borrado.
+                //   Se marca la variante activa como modificada tras la operación de borrado.
                 this._markVariantDirty();
 
-                //  Se informa al usuario del número de líneas eliminadas con éxito.
+                //   Se informa al usuario del número de líneas eliminadas con éxito.
+                //   Se traduce via i18n con placeholder {0} para soportar EN/FR.  
                 sap.m.MessageToast.show(
-                    "Se han eliminado " + aLinesToDelete.length + " línea(s) correctamente"
+                    this.getTranslatedText("MSG_LINEAS_ELIMINADAS", [aLinesToDelete.length])
                 );
+                //  
 
-                //  Se muestran, si existen, los mensajes informativos, de aviso o de éxito devueltos.
+                //   Se muestran, si existen, los mensajes informativos, de aviso o de éxito devueltos.
                 var aMensajesInfo = aMensajes.filter(function (mensaje) {
                     return mensaje.Tipo === "S" || mensaje.Tipo === "I" || mensaje.Tipo === "W";
                 });
@@ -824,12 +884,69 @@ sap.ui.define([
                 return response;
 
             } catch (error) {
-                //  Se garantiza el cierre del diálogo ocupado ante cualquier error inesperado.
+                //   Se garantiza el cierre del diálogo ocupado ante cualquier error inesperado.
                 this._busyDialog.close();
                 throw error;
             }
         },
+ onPhPspnrInputChange: function (oEvent) {
+            return this.onRowInputChange(oEvent);
+        },
 
+        /**
+         * Delegate puro a onRowInputChange para el Input de Post1 del Desglose nivel 3 nuevo.
+         */
+        onInputPost1Change: function (oEvent) {
+            return this.onRowInputChange(oEvent);
+        },
+
+        /*   Configuración específica de Externos para el export XLSX (apartado 5.9 del spec) */
+
+        /**
+         *     Se sobrescribe la lista de columnas estáticas del export para incluir la columna
+         *   "PEP Destino" (campo PepDest) entre "Coste total" y "Reparto" — específica de Externos.
+         *   El resto del pipeline de exportación se hereda del BaseController.
+         */
+        _getStaticExportColumns: function () {
+            //   Se traducen las cabeceras del export XLSX via i18n
+            // para que el Excel descargado refleje el idioma activo de UI5.  
+            return [
+                { header: this.getTranslatedText("oper"), path: "PhPspnr" },
+                { header: this.getTranslatedText("DESCRIPCION"), path: "Post1" },
+                { header: this.getTranslatedText("costEje"), path: "AmoEje" },
+                { header: this.getTranslatedText("costPend"), path: "AmoPen" },
+                { header: this.getTranslatedText("costTotal"), path: "AmoTot" },
+                { header: this.getTranslatedText("operacionDestino"), path: "PepDest" },
+                { header: this.getTranslatedText("dbReparto"), path: "Tipo" },
+                { header: this.getTranslatedText("proveedor"), path: "Proveedor" },
+                { header: this.getTranslatedText("tarifa"), path: "FEE" },
+                { header: this.getTranslatedText("fechaInicio"), path: "FINI" },
+                { header: this.getTranslatedText("fechaFin"), path: "FFIN" },
+                { header: this.getTranslatedText("numMeses"), path: "NMES" },
+                { header: this.getTranslatedText("otros"), path: "Otros" },
+                { header: this.getTranslatedText("dbPendPlanificar"), path: "PenPlan" }
+            ];
+            //  
+        },
+         _getPlantillaStaticColumns: function () {
+            //   Idem para la plantilla de carga (las cabeceras compuestas
+            // tipo "Operacion/Agrupador" usan claves colXxx anyadidas al bundle).  
+            return [
+                { header: this.getTranslatedText("colOperacionAgrupador"), path: "PhPspnr" },
+                { header: this.getTranslatedText("DESCRIPCION"), path: "Post1" },
+                { header: this.getTranslatedText("tasa%"), path: "Tasa" },
+                { header: this.getTranslatedText("colCosteEjecProv"), path: "AmoEje" },
+                { header: this.getTranslatedText("costPend") + "*", path: "AmoPen" },
+                { header: this.getTranslatedText("costTotal"), path: "AmoTot" },
+                { header: this.getTranslatedText("operacionDestino"), path: "PepDest" },
+                { header: this.getTranslatedText("dbReparto"), path: "Tipo" },
+                { header: this.getTranslatedText("fechaInicio"), path: "FINI" },
+                { header: this.getTranslatedText("fechaFin"), path: "FFIN" }
+            ];
+            //  
+        },
+
+        /*   */
 
     });
 });

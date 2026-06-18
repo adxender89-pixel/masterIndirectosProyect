@@ -7,7 +7,7 @@ sap.ui.define([
 
 	Opa5.extendConfig({
 		arrangements: new Startup(),
-		viewNamespace: "masterindirectos.view.",
+		viewNamespace: "zindirect_costs.view.",
 		autoWait: true
 	});
 });

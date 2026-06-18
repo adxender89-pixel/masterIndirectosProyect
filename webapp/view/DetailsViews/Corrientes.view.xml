@@ -1,5 +1,5 @@
 <mvc:View
-    controllerName="masterindirectos.controller.DetailsControllers.Corrientes"
+    controllerName="zindirect_costs.controller.DetailsControllers.Corrientes"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns:core="sap.ui.core"
     displayBlock="true"
@@ -7,8 +7,9 @@
     xmlns="sap.m"
     xmlns:t="sap.ui.table"
     xmlns:uxap="sap.uxap"
-    xmlns:vn="masterindirectos.control"
+    xmlns:vn="zindirect_costs.control"
     xmlns:l="sap.ui.layout"
+    xmlns:app="http://schemas.sap.com/sapui5/extension/sap.ui.core.CustomData/1"
 >
     <uxap:ObjectPageLayout
         id="objectPageLayout"
@@ -40,10 +41,14 @@
                     width="100%"
                     justifyContent="Center"
                 >
-                    <VBox width="50%">
+                   <VBox width="50%">
+                        <!-- (INICIO) -->
                         <t:Table
                             class="sapUiSizeCompact smallHeaderTable"
-                            rows="{dataTitle>/aKpisIndirectos}"
+                            rows="{
+                                path: 'corrientesModel>/',
+                                filters: { path: 'PhPspnr', operator: 'EQ', value1: 'I.003' }
+                            }"
                             visibleRowCount="1"
                             columnHeaderHeight="10"
                             width="100%"
@@ -56,7 +61,15 @@
                                         design="Bold"
                                     />
                                     <t:template>
-                                        <Text text="{dataTitle>CtotEje}" />
+                                        <!--   Se muestra coste ejecutado de I.003 -->
+                                        <Text text="{
+                                            parts: [
+                                                'corrientesModel>AmoEje',
+                                                'dashboardModel>/decimales',
+                                                'appData>/userData/CurrencyFormat'
+                                            ],
+                                            formatter: '.formatDecimales'
+                                        }" />
                                     </t:template>
                                 </t:Column>
                                 <t:Column hAlign="Center">
@@ -65,7 +78,15 @@
                                         design="Bold"
                                     />
                                     <t:template>
-                                        <Text text="{dataTitle>CtotPen}" />
+                                        <!--   Se muestra coste pendiente de I.003 -->
+                                        <Text text="{
+                                            parts: [
+                                                'corrientesModel>AmoPen',
+                                                'dashboardModel>/decimales',
+                                                'appData>/userData/CurrencyFormat'
+                                            ],
+                                            formatter: '.formatDecimales'
+                                        }" />
                                     </t:template>
                                 </t:Column>
                                 <t:Column hAlign="Center">
@@ -74,11 +95,20 @@
                                         design="Bold"
                                     />
                                     <t:template>
-                                        <Text text="{dataTitle>Ctot}" />
+                                        <!--   Se muestra coste total de I.003 -->
+                                        <Text text="{
+                                            parts: [
+                                                'corrientesModel>AmoTot',
+                                                'dashboardModel>/decimales',
+                                                'appData>/userData/CurrencyFormat'
+                                            ],
+                                            formatter: '.formatDecimales'
+                                        }" />
                                     </t:template>
                                 </t:Column>
                             </t:columns>
                         </t:Table>
+                        <!-- (FIN) -->
                     </VBox>
                 </HBox>
             </VBox>
@@ -142,11 +172,14 @@
                                                         liveChange="onOperacionLiveChange"
                                                         search="onOperacionSearch"
                                                     />
+                                                    <!-- (INICIO) -->
                                                     <Button
                                                         width="8%"
                                                         text="{i18n>TBorigen}"
                                                         press="onOriginPress"
+                                                        class="btnHighlight"
                                                     />
+                                                    <!-- (FIN) -->
                                                     <Label
                                                         text="{i18n>reales}"
                                                         class="sapUiSmallMarginBegin"
@@ -175,7 +208,7 @@
                                                         }"
                                                         class="sapUiMediumMarginEnd"
                                                     />
-                                                    <Label text="Inflación:" />
+                                                    <Label text="{i18n>inflacion}:" />
                                                     <Input
                                                         id="inflacionInput"
                                                         value="15.00"
@@ -184,6 +217,7 @@
                                                         class="inflacionNoMargin"
                                                         textAlign="Center"
                                                         type="Number"
+                                                          enabled="{= ${modeloBloqueo>/isBlocked} === true }"
                                                     />
                                                     <Text text="%" />
                                                     <ToolbarSpacer />
@@ -206,6 +240,8 @@
                                                         width="100px"
                                                         change="onYearChange"
                                                         class="sapUiSizeCompact yearSelect"
+                                                          valueState="{yearsModel>/valueState}"
+                                                valueStateText="{yearsModel>/valueStateText}"
                                                     >
                                                         <core:Item
                                                             key="{yearsModel>year}"
@@ -220,13 +256,15 @@
                                                         class="toolbarActionBtn"
                                                         tooltip="{i18n>anadir}"
                                                     /> -->
-                                                     <Button
+                                                    <!-- (INICIO) -->
+                                                    <Button
                                                         icon="sap-icon://add"
                                                         press="onAddPress"
-                                                        
+                                                        enabled="{= ${modeloBloqueo>/isBlocked} === true }"
                                                         class="toolbarActionBtn"
                                                         tooltip="{i18n>anadir}"
                                                     />
+                                                    <!-- (FIN) -->
                                                     <Button
                                                         icon="sap-icon://delete"
                                                         press="onDeletePress"
@@ -248,13 +286,16 @@
                                                     />
                                                     <ToolbarSeparator />
                                                     <!-- Se sustituye el ComboBox de operacion por el selector de variantes de la tabla. -->
+                                                    <!-- (INICIO) -->
                                                     <Button
                                                         id="btnVariantSelector"
                                                         text="{variantModel>/displayLabel}"
                                                         iconFirst="false"
                                                         type="Transparent"
                                                         press="onOpenVariantPopover"
+                                                        class="btnHighlight"
                                                     />
+                                                    <!-- (FIN) -->
                                                 </OverflowToolbar>
                                             </t:extension>
                                             <t:columns>
@@ -352,21 +393,39 @@
                                                                     </customData>
                                                                 </Button>
                                                                 <!-- Se anade PhPspnr !== 'D' para garantizar que la fila raiz OEO ("D") nunca sea editable, independientemente del estado de modeloBloqueo. -->
+                                                                <!--   Se anade la clase "operacionCellInput" para que el CSS aplique text-align:left al codigo PhPspnr de la celda editable, sin alterar el header centrado. -->
+                                                                <!-- Se anade isLevel3 !== true: en una fila de desglose (nivel 3) el codigo de operacion (PhPspnr) se autogenera (XX.YY.ZZ.NNN) y NO debe poder editarlo el usuario. -->
+                                                                <!-- visible: se oculta en filas Desglose nuevas (isLevel3 + isNew), donde la operacion se introduce a mano mediante el Input de texto plano de abajo (DecimalesInput depura los caracteres no numericos y destruiria el codigo I.XXX.YYY.NNN). -->
                                                                 <vn:DecimalesInput
                                                                     width="100%"
                                                                     decimalNumbers="{dashboardModel>/decimales}"
                                                                     textAlign="Center"
                                                                     change=".onRowInputChange"
                                                                     value="{corrientesModel>PhPspnr}"
-                                                                    editable="{= !(${corrientesModel>isSubcapitulo} || ${corrientesModel>isEditable} || ${corrientesModel>isCapitulo}) &amp;&amp; ${corrientesModel>PhPspnr} !== 'D' }"
-                                                                    class="flatCellInput"
+                                                                    editable="{= !(${corrientesModel>isSubcapitulo} || ${corrientesModel>isEditable} || ${corrientesModel>isCapitulo}) &amp;&amp; ${corrientesModel>PhPspnr} !== 'D' &amp;&amp; ${corrientesModel>isLevel3} !== true &amp;&amp; ${corrientesModel>isVacio} !== true }"
+                                                                    visible="{= !(${corrientesModel>isLevel3} === true &amp;&amp; ${corrientesModel>isNew} === true) }"
+                                                                    class="flatCellInput operacionCellInput"
                                                                 />
+                                                                <!-- Operacion editable SOLO en filas Desglose (nivel 3) recien creadas (isNew): se introduce vacia y el usuario teclea el codigo PADRE.NNN. Es un Input de texto plano (NO DecimalesInput) precisamente para no depurar los puntos ni las letras del codigo. La validacion del formato y el guardado se gestionan en onRowInputChange -> _handleNuevaFilaNivel3Change. -->
+                                                                <!--   Se cambia el change handler a onPhPspnrInputChange (nombre conforme al lint UI5plugin: pattern ^onPhPspnrInput.*?Change$) para que la fila Desglose nivel 3 nueva dispare AddIndirectosSet al backend cuando ambos campos (PhPspnr + Post1) esten rellenos. El handler delega a onRowInputChange si la fila no es Desglose nivel 3 nuevo, preservando el flujo previo. -->
+                                                                <Input
+                                                                    width="100%"
+                                                                    textAlign="Center"
+                                                                    change="onPhPspnrInputChange"
+                                                                    value="{corrientesModel>PhPspnr}"
+                                                                    placeholder="{i18n>operacion}"
+                                                                    editable="true"
+                                                                    visible="{= ${corrientesModel>isLevel3} === true &amp;&amp; ${corrientesModel>isNew} === true }"
+                                                                    class="flatCellInput operacionCellInput allowLetters"
+                                                                />
+                                                                <!--   -->
                                                                 <Button
                                                                     icon="sap-icon://add"
                                                                     width="1.5rem"
                                                                     type="Transparent"
                                                                     press=".onToggleCustomExpand"
-                                                                    visible="{= ${corrientesModel>cabecera} !== true &amp;&amp; ${corrientesModel>isGroup} !== true &amp;&amp; ${corrientesModel>PhPspnr} !== 'D' }"
+                                                                    visible="{= ${corrientesModel>cabecera} !== true &amp;&amp; ${corrientesModel>isGroup} !== true &amp;&amp; ${corrientesModel>PhPspnr} !== 'D' &amp;&amp; ${corrientesModel>isCapitulo} !== true }"
+                                                                    enabled="{= ${corrientesModel>isVacio} !== true }"
                                                                     class="sapUiTinyMarginEnd"
                                                                 />
                                                             </HBox>
@@ -378,10 +437,11 @@
                                                                 justifyContent="Center"
                                                                 visible="{= ${corrientesModel>__isHeader} === true }"
                                                             >
+                                                                <!--   Se anade la clase "operacionCellInput" para forzar text-align:left mediante CSS en el codigo PhPspnr de la fila cabecera del bloque personalizado. -->
                                                                 <Input
                                                                     value="{corrientesModel>PhPspnr}"
                                                                     editable="false"
-                                                                    class="flatCellInput"
+                                                                    class="flatCellInput operacionCellInput"
                                                                     width="100%"
                                                                     textAlign="Center"
                                                                 />
@@ -391,32 +451,35 @@
                                                                     type="{= ${corrientesModel>__agrupadorActive} === true ? 'Emphasized' : 'Transparent' }"
                                                                     press="onAgrupadorButtonPress"
                                                                     class="sapUiTinyMarginBegin"
-                                                                    tooltip="Agrupar / Desagrupar"
+                                                                    tooltip="{i18n>tooltipAgrupar}"
                                                                 />
                                                             </HBox>
                                                             <!--   Fila "Sin proveedor" no editable. -->
+                                                            <!--   Se anade la clase "operacionCellInput" para alinear a la izquierda mediante CSS el codigo PhPspnr en la fila "Sin proveedor". -->
                                                             <Input
                                                                 value="{corrientesModel>PhPspnr}"
                                                                 editable="false"
-                                                                class="flatCellInput"
+                                                                class="flatCellInput operacionCellInput"
                                                                 width="100%"
                                                                 textAlign="Center"
                                                                 visible="{= ${corrientesModel>__isSinProveedor} === true }"
                                                             />
                                                             <!--   Fila agrupador bloque no editable. -->
+                                                            <!--   Se anade la clase "operacionCellInput" para alinear a la izquierda mediante CSS el codigo PhPspnr en la fila agrupador bloque. -->
                                                             <Input
                                                                 value="{corrientesModel>PhPspnr}"
                                                                 editable="false"
-                                                                class="flatCellInput"
+                                                                class="flatCellInput operacionCellInput"
                                                                 width="100%"
                                                                 textAlign="Center"
                                                                 visible="{= ${corrientesModel>__isAgrupadorBlock} === true }"
                                                             />
                                                             <!--   Fila gris de cabecera de grupo: muestra el valor AGRUP no editable -->
+                                                            <!--   Se anade la clase "operacionCellInput" para alinear a la izquierda mediante CSS el valor AGRUP en la fila gris de cabecera de grupo. -->
                                                             <Input
                                                                 value="{corrientesModel>AGRUP}"
                                                                 editable="false"
-                                                                class="flatCellInput"
+                                                                class="flatCellInput operacionCellInput"
                                                                 width="100%"
                                                                 textAlign="Center"
                                                                 visible="{= ${corrientesModel>__isAgrupadorTotal} === true }"
@@ -437,9 +500,10 @@
                                                                     tooltip="{i18n>abrirPanelProveedor}"
                                                                     class="lensBtn"
                                                                 />
+                                                                <!--   Se anade la clase "operacionCellInput" para alinear a la izquierda mediante CSS el valor AGRUP editable del desglose. -->
                                                                 <Input
                                                                     value="{corrientesModel>AGRUP}"
-                                                                    class="sapUiSizeCompact allowLetters"
+                                                                    class="sapUiSizeCompact allowLetters operacionCellInput"
                                                                     width="100%"
                                                                     textAlign="Center"
                                                                     change="onAgrupadorFieldChange"
@@ -533,18 +597,26 @@
                                                                     </customData>
                                                                 </Button>
                                                                 <!-- Se anade PhPspnr !== 'D' para garantizar que la fila raiz OEO ("D") nunca sea editable, independientemente del estado de modeloBloqueo. -->
+                                                                <!--   El value de Post1 usa formatter (.formatPassthrough) para que el binding sea
+                                                                     OneWay de facto: con TwoWay (por defecto) UI5 escribia el nuevo texto en el modelo
+                                                                     ANTES de que corriese onRowInputChange, de modo que su filtro "valor nuevo === valor
+                                                                     en modelo" (BaseController._enviarFilaAlBackend) abortaba el guardado temporal de la
+                                                                     descripcion. Con el formatter el modelo conserva el valor previo hasta que el propio
+                                                                     handler lo actualiza, igual que los inputs numericos (AmoPen, AmoTot). -->
+                                                                <!--   Se cambia el change handler a onInputPost1Change (nombre conforme al lint UI5plugin para bindings compuestos con parts+formatter: pattern ^onInput.*?Change$). Para filas que son Desglose nivel 3 nuevo, el handler invoca AddIndirectosSet al backend cuando PhPspnr y Post1 estan ambos rellenos; para el resto de filas delega en onRowInputChange manteniendo el flujo previo. -->
                                                                 <Input
                                                                     width="100%"
                                                                     value="{
-                                                                        path: 'corrientesModel>Post1',
-                                                                        type: 'sap.ui.model.type.String'
+                                                                        parts: [ 'corrientesModel>Post1' ],
+                                                                        formatter: '.formatPassthrough'
                                                                     }"
-                                                                    editable="{= !(${corrientesModel>isSubcapitulo} || ${corrientesModel>isEditable} || ${corrientesModel>isCapitulo}) &amp;&amp; ${corrientesModel>PhPspnr} !== 'D' }"
+                                                                    editable="{= !(${corrientesModel>isSubcapitulo} || ${corrientesModel>isEditable} || ${corrientesModel>isCapitulo}) &amp;&amp; ${corrientesModel>PhPspnr} !== 'D' &amp;&amp; ${corrientesModel>isVacio} !== true }"
                                                                     textAlign="Center"
                                                                     class="flatCellInput allowLetters"
                                                                     type="Text"
-                                                                    change=".onRowInputChange"
+                                                                    change="onInputPost1Change"
                                                                 />
+                                                                <!--   -->
                                                             </HBox>
                                                             <!-- ============================= -->
                                                             <!-- COLUMNA 2: BLOQUES INPUT -->
@@ -574,15 +646,18 @@
                                                                 textAlign="Center"
                                                                 visible="{= ${corrientesModel>__isAgrupadorTotal} === true }"
                                                             />
-                                                            <!--   Se sustituye Post1 por DESCRIP en la fila editable del desglose. Se añade liveChange para sincronizar el título del Panel cuando la fila origen está visible en él -->
+                                                            <!--   Se sustituye Post1 por DESCRIP en la fila editable del desglose -->
+                                                            <!--   Se transforma el Input de DESCRIP en ayuda de busqueda (Catalogo de Recursos): permite escribir a mano y ademas abrir el selector con el boton -->
                                                             <Input
                                                                 value="{corrientesModel>DESCRIP}"
-                                                                class="sapUiSizeCompact allowLetters"
+                                                                class="sapUiSizeCompact allowLetters descripVHInput"
                                                                 width="100%"
                                                                 textAlign="Center"
+                                                                showValueHelp="true"
+                                                                valueHelpRequest=".onDescripInputValueHelpRequest"
                                                                 visible="{= ${corrientesModel>__isEditable} === true }"
-                                                                liveChange="onDescripInputLiveChange"
                                                             />
+                                                            <!--   -->
                                                         </VBox>
                                                     </t:template>
                                                 </t:Column>
@@ -671,11 +746,12 @@
                                                                     </customData>
                                                                 </Button>
                                                                 <!-- Se anade PhPspnr !== 'D' para garantizar que la fila raiz OEO ("D") nunca sea editable, independientemente del estado de modeloBloqueo. -->
+                                                                <!-- Se anade isLevel3 !== true: el coste ejecutado (AmoEje) de un desglose (nivel 3) lo calcula el backend y NO debe ser editable, igual que en las operaciones de nivel 2. -->
                                                                 <vn:DecimalesInput
                                                                     width="100%"
                                                                     decimalNumbers="{dashboardModel>/decimales}"
                                                                     textAlign="Center"
-                                                                    editable="{= !(${corrientesModel>isSubcapitulo} || ${corrientesModel>isEditable} || ${corrientesModel>isCapitulo}) &amp;&amp; ${corrientesModel>PhPspnr} !== 'D' }"
+                                                                    editable="{= !(${corrientesModel>isSubcapitulo} || ${corrientesModel>isEditable} || ${corrientesModel>isCapitulo}) &amp;&amp; ${corrientesModel>PhPspnr} !== 'D' &amp;&amp; ${corrientesModel>isLevel3} !== true &amp;&amp; ${corrientesModel>isVacio} !== true }"
                                                                     value="{
                                                                         parts: [
                                                                             'corrientesModel>AmoEje',
@@ -804,7 +880,7 @@
                                                                     width="100%"
                                                                     decimalNumbers="{dashboardModel>/decimales}"
                                                                     textAlign="Center"
-                                                                    editable="{= !${corrientesModel>isEditable} &amp;&amp; !${corrientesModel>isCapitulo} &amp;&amp; !${corrientesModel>isSubcapitulo} &amp;&amp; ${corrientesModel>PhPspnr} !== 'D' }"
+                                                                    editable="{= !${corrientesModel>isEditable} &amp;&amp; !${corrientesModel>isCapitulo} &amp;&amp; !${corrientesModel>isSubcapitulo} &amp;&amp; ${corrientesModel>PhPspnr} !== 'D' &amp;&amp; ${corrientesModel>isVacio} !== true }"
                                                                     value="{
                                                                         parts: [
                                                                             'corrientesModel>AmoEjeAjus',
@@ -933,7 +1009,7 @@
                                                                     width="100%"
                                                                     decimalNumbers="{dashboardModel>/decimales}"
                                                                     textAlign="Center"
-                                                                    editable="{= !${corrientesModel>isEditable} &amp;&amp; !${corrientesModel>isCapitulo} &amp;&amp; !${corrientesModel>isSubcapitulo} &amp;&amp; ${corrientesModel>PhPspnr} !== 'D' }"
+                                                                    editable="{= !${corrientesModel>isEditable} &amp;&amp; !${corrientesModel>isCapitulo} &amp;&amp; !${corrientesModel>isSubcapitulo} &amp;&amp; ${corrientesModel>PhPspnr} !== 'D' &amp;&amp; ${corrientesModel>isVacio} !== true }"
                                                                     value="{
                                                                         parts: [
                                                                             'corrientesModel>AmoEjeReal',
@@ -1061,7 +1137,7 @@
                                                                     width="100%"
                                                                     decimalNumbers="{dashboardModel>/decimales}"
                                                                     textAlign="Center"
-                                                                    editable="{= !${corrientesModel>isSubcapitulo} &amp;&amp; !${corrientesModel>isCapitulo} &amp;&amp; ${corrientesModel>PhPspnr} !== 'D' }"
+                                                                    editable="{= !${corrientesModel>isSubcapitulo} &amp;&amp; !${corrientesModel>isCapitulo} &amp;&amp; ${corrientesModel>PhPspnr} !== 'D' &amp;&amp; ${modeloBloqueo>/isBlocked} === true &amp;&amp; ${corrientesModel>isVacio} !== true &amp;&amp; !(${corrientesModel>isNew} === true &amp;&amp; ${corrientesModel>isLevel3} === true) }"
                                                                     value="{
                                                                         parts: [
                                                                             'corrientesModel>AmoPen',
@@ -1189,7 +1265,7 @@
                                                                     width="100%"
                                                                     decimalNumbers="{dashboardModel>/decimales}"
                                                                     textAlign="Center"
-                                                                    editable="{= !(${corrientesModel>isSubcapitulo} || ${corrientesModel>isCapitulo}) &amp;&amp; ${corrientesModel>PhPspnr} !== 'D' }"
+                                                                     editable="{= !(${corrientesModel>isSubcapitulo} || ${corrientesModel>isCapitulo}) &amp;&amp; ${corrientesModel>PhPspnr} !== 'D' &amp;&amp; ${modeloBloqueo>/isBlocked} === true &amp;&amp; ${corrientesModel>isVacio} !== true &amp;&amp; !(${corrientesModel>isNew} === true &amp;&amp; ${corrientesModel>isLevel3} === true) }"
                                                                     value="{
                                                                         parts: [
                                                                             'corrientesModel>AmoTot',
@@ -1322,34 +1398,33 @@
                                                                     renderType="Bare"
                                                                 >
                                                                     <!-- Se elimina la dependencia de modeloBloqueo (no esta instanciado en Corrientes y dejaba el Select habilitado por defecto). El Select queda deshabilitado solo en la fila raiz "D" mediante el check PhPspnr !== 'D'. -->
-                                                                    <Select
+                                                                    <!--   Se anade la condicion not(isNew y isLevel3) para deshabilitar el Select de Reparto mientras la fila Desglose nivel 3 no haya completado su registracion backend (operacion + descripcion). Tras la registracion la condicion se desactiva y el Select recupera su comportamiento normal. -->
+                                                       <Select
                                                                         selectedKey="{corrientesModel>Tipo}"
                                                                         visible="{= ${corrientesModel>cabecera} !== true }"
-                                                                        enabled="{= ${corrientesModel>PhPspnr} !== 'D' }"
-                                                                        class="flatCellInput"
+                                                                        enabled="{= ${corrientesModel>PhPspnr} !== 'D' &amp;&amp; ${modeloBloqueo>/isBlocked} === true &amp;&amp; !(${corrientesModel>isNew} === true &amp;&amp; ${corrientesModel>isLevel3} === true) }"
+                                                                        class="flatCellInput repartoSelect"
                                                                         forceSelection="true"
                                                                         change="onRowInputChange"
+                                                                        textAlign="Center"
                                                                         width="auto"
                                                                     >
-                                                                        <items>
-                                                                            <core:Item
-                                                                                key="MAN"
-                                                                                text="Manual"
-                                                                            />
-                                                                            <core:Item
-                                                                                key="LIN"
-                                                                                text="Lineal"
-                                                                            />
-                                                                            <core:Item
-                                                                                key="OEO"
-                                                                                text="OEO"
-                                                                            />
-                                                                            <core:Item
-                                                                                key="PCT"
-                                                                                text="Percentage"
-                                                                            />
-                                                                        </items>
-                                                                    </Select>
+                                                            <items>
+                                                                <core:Item
+                                                                    key="MAN"
+                                                                    text="{i18n>tipoManual}"
+                                                                />
+                                                                <core:Item
+                                                                    key="LIN"
+                                                                    text="{i18n>tipoLineal}"
+                                                                />
+                                                                <core:Item
+                                                                    key="OEO"
+                                                                    text="{i18n>tipoOEO}"
+                                                                />
+                                                            </items>
+                                                        </Select>
+
                                                                     <!-- Se anade enabled con PhPspnr !== 'D' para bloquear el datepicker en la fila raiz "D". -->
                                                                     <Button
                                                                         icon="sap-icon://calendar"
@@ -1395,23 +1470,24 @@
                                                             >
                                                                 <Select
                                                                     selectedKey="{corrientesModel>Tipo}"
-                                                                    class="flatCellInput"
+                                                                    class="flatCellInput repartoSelect"
                                                                     forceSelection="true"
                                                                     change="onRowInputChange"
+                                                                    textAlign="Center"
                                                                     width="auto"
                                                                 >
                                                                     <items>
                                                                         <core:Item
                                                                             key="MAN"
-                                                                            text="Manual"
+                                                                            text="{i18n>tipoManual}"
                                                                         />
                                                                         <core:Item
                                                                             key="LIN"
-                                                                            text="Lineal"
+                                                                            text="{i18n>tipoLineal}"
                                                                         />
                                                                         <core:Item
                                                                             key="INF"
-                                                                            text="Inflación"
+                                                                            text="{i18n>tipoInflacion}"
                                                                         />
                                                                     </items>
                                                                 </Select>
@@ -1458,24 +1534,28 @@
                                                                 visible="{= ${corrientesModel>__isCustom} !== true }"
                                                             />
                                                             <!-- Header custom -->
+                                                            <!--   Se revierte el Input de la cabecera a su estado original no editable: la cabecera muestra el proveedor del bloque pero no se cambia desde aqui, asi que no necesita value help -->
                                                             <Input
                                                                 value="{corrientesModel>Proveedor}"
                                                                 editable="false"
-                                                                class="flatCellInput"
+                                                                class="flatCellInput proveedorVHInput"
                                                                 width="100%"
-                                                                textAlign="Center"
+                                                                textAlign="Begin"
                                                                 visible="{= ${corrientesModel>__isHeader} === true }"
                                                             />
                                                             <!-- Bloques custom no editables -->
+                                                            <!--   Mismo ajuste que en la cabecera: se elimina valueHelpOnly para que el cuadradito quede visible como un disparador independiente y solo el clic sobre el icono abra el dialog -->
                                                             <Input
                                                                 value="{corrientesModel>Proveedor}"
-                                                                editable="false"
-                                                                class="flatCellInput"
+                                                                showValueHelp="{= ${corrientesModel>__isPersonaPuesto} !== true }"
+                                                                valueHelpRequest="onProveedorValueHelpRequest"
+                                                                class="proveedorVHInput sapUiSizeCompact"
                                                                 width="100%"
-                                                                textAlign="Center"
-                                                                visible="{= ${corrientesModel>__isCustom} === true
+                                                                textAlign="Begin"
+                                                            visible="{= ${corrientesModel>__isCustom} === true
                                                                     &amp;&amp; ${corrientesModel>__isHeader} !== true
-                                                                    &amp;&amp; ${corrientesModel>__isEditable} !== true }"
+                                                                    &amp;&amp; ${corrientesModel>__isEditable} !== true
+                                                                    &amp;&amp; ${corrientesModel>__isAgrupadorTotal} !== true }"
                                                             />
                                                             <!-- Fila editable: aquí va el change a onEditableRowFieldChange -->
                                                             <!-- Fila editable principal: input editable, SIN botón + -->
@@ -1485,12 +1565,18 @@
                                                                 alignItems="Center"
                                                                 visible="{= ${corrientesModel>__isMainEditable} === true }"
                                                             >
+                                                                <!--   Se anade showValueHelp para exponer el icono clicable que abre el dialog de proveedores; se conserva la edicion libre y el change handler. La clase proveedorVHInput revierte el display:none del flatCellInput sobre el iconContainer para que el cuadradito quede siempre visible -->
                                                                 <Input
                                                                     value="{corrientesModel>Proveedor}"
-                                                                    class="sapUiSizeCompact allowLetters"
+                                                                      valueState="{corrientesModel>__proveedorValueState}"
+                                                                    valueStateText="{corrientesModel>__proveedorValueStateText}"
+                                                                    showValueHelp="{= ${corrientesModel>__isPersonaPuesto} !== true }"
+                                                                    valueHelpRequest="onProveedorValueHelpRequest"
+                                                                    class="proveedorVHInput sapUiSizeCompact allowLetters"
                                                                     width="100%"
-                                                                    textAlign="Center"
+                                                                    textAlign="Begin"
                                                                     change="onEditableRowFieldChange"
+                                                                    liveChange="onEditableProveedorLiveChange"
                                                                 />
                                                             </HBox>
                                                             <!-- Nieto: Proveedor NO editable + botón + para abrir el panel -->
@@ -1500,16 +1586,18 @@
                                                                 alignItems="Center"
                                                                 visible="{= ${corrientesModel>__isNieto} === true }"
                                                             >
-                                                                <!-- Input unificado con icono de value help siempre visible. Se mantiene editable=true en ambos estados porque sap.m.Input oculta el icono del show                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            cuando editable=false. La conmutacion entre "editable libre" y "solo seleccion desde dialog" se hace con valueHelpOnly: cuando __hasProviderRows es true UI5 bloquea la entrada por teclado y convierte todo el input en un disparador del value help, conservando el icono visible. La clase proveedorVHInput revierte el display:none generico de flatCellInput sobre el iconContainer. -->
+                                                                <!--   Cuando __hasProviderRows pasa a true (al pulsar el boton +) el Input deja de ser editable y se le quita el showValueHelp para que no se pueda modificar ni por tipeo ni desde el dialog: el codigo del proveedor queda bloqueado en cuanto existe al menos una fila en el panel. Mientras __hasProviderRows sea false el Input acepta tipeo libre y muestra el cuadradito clicable para abrir la busqueda. -->
                                                                 <Input
                                                                     value="{corrientesModel>Proveedor}"
-                                                                    showValueHelp="true"
-                                                                    valueHelpOnly="{corrientesModel>__hasProviderRows}"
+                                                                     valueState="{corrientesModel>__proveedorValueState}"
+                                                                    valueStateText="{corrientesModel>__proveedorValueStateText}"
+                                                                    editable="{= !${corrientesModel>__hasProviderRows} }"
+                                                                    showValueHelp="{= !${corrientesModel>__hasProviderRows} &amp;&amp; ${corrientesModel>__isPersonaPuesto} !== true }"
                                                                     valueHelpRequest="onProveedorValueHelpRequest"
                                                                     change="onEditableRowFieldChange"
-                                                                    class="flatCellInput proveedorVHInput"
+                                                                    class="proveedorVHInput sapUiSizeCompact"
                                                                     width="100%"
-                                                                    textAlign="Center"
+                                                                    textAlign="Begin"
                                                                 />
                                                                 <Button
                                                                     visible="{corrientesModel>__hasProveedor}"
@@ -1544,7 +1632,7 @@
                                                                 visible="{= ${corrientesModel>__isCustom} !== true }"
                                                             />
                                                             <Input
-                                                                value="Tarifa"
+                                                                value="{i18n>tarifa}"
                                                                 editable="false"
                                                                 class="flatCellInput"
                                                                 width="100%"
@@ -1595,7 +1683,7 @@
                                                                 visible="{= ${corrientesModel>__isCustom} !== true }"
                                                             />
                                                             <Input
-                                                                value="Fecha inicio"
+                                                                value="{i18n>fechaInicio}"
                                                                 editable="false"
                                                                 class="flatCellInput"
                                                                 width="100%"
@@ -1615,15 +1703,20 @@
                                                                     &amp;&amp; ${corrientesModel>__isHeader} !== true
                                                                     &amp;&amp; ${corrientesModel>__isEditable} !== true }"
                                                             />
-                                                            <DatePicker
-                                                                placeholder="seleccionar fecha"
+                                                            <Input
+                                                                placeholder="{i18n>selectRecurso}"
                                                                 class="sapUiSizeCompact"
                                                                 width="100%"
                                                                 textAlign="Center"
-                                                                displayFormat="dd/MM/yyyy"
-                                                                valueFormat="yyyy-MM-dd"
-                                                                value="{corrientesModel>FINI}"
-                                                                change=".onFiniDatePickerChange"
+                                                                showValueHelp="true"
+                                                                valueHelpIconSrc="sap-icon://appointment-2"
+                                                                valueHelpOnly="true"
+                                                                valueHelpRequest=".onOpenMonthYearPicker"
+                                                                app:monthField="FINI"
+                                                                value="{
+                                                                    path: 'corrientesModel>FINI',
+                                                                    formatter: '._formatMonthYearDisplay'
+                                                                }"
                                                                 visible="{= ${corrientesModel>__isEditable} === true }"
                                                             />
                                                         </VBox>
@@ -1652,7 +1745,7 @@
                                                                 visible="{= ${corrientesModel>__isCustom} !== true }"
                                                             />
                                                             <Input
-                                                                value="Fecha fin"
+                                                                value="{i18n>fechaFin}"
                                                                 editable="false"
                                                                 class="flatCellInput"
                                                                 width="100%"
@@ -1672,15 +1765,20 @@
                                                                     &amp;&amp; ${corrientesModel>__isHeader} !== true
                                                                     &amp;&amp; ${corrientesModel>__isEditable} !== true }"
                                                             />
-                                                            <DatePicker
-                                                                placeholder="seleccionar fecha"
+                                                                <Input
+                                                                placeholder="{i18n>selectRecurso}"
                                                                 class="sapUiSizeCompact"
                                                                 width="100%"
                                                                 textAlign="Center"
-                                                                displayFormat="dd/MM/yyyy"
-                                                                valueFormat="yyyy-MM-dd"
-                                                                value="{corrientesModel>FFIN}"
-                                                                change=".onFfinDatePickerChange"
+                                                                showValueHelp="true"
+                                                                valueHelpIconSrc="sap-icon://appointment-2"
+                                                                valueHelpOnly="true"
+                                                                valueHelpRequest=".onOpenMonthYearPicker"
+                                                                app:monthField="FFIN"
+                                                                value="{
+                                                                    path: 'corrientesModel>FFIN',
+                                                                    formatter: '._formatMonthYearDisplay'
+                                                                }"
                                                                 visible="{= ${corrientesModel>__isEditable} === true }"
                                                             />
                                                         </VBox>
@@ -1762,14 +1860,16 @@
                                                                 </customData>
                                                             </Button>
                                                             <!-- Se anade la condicion PhPspnr !== 'D' para bloquear la edicion de los meses en la fila raiz "D". -->
+                                                            <!--   Se anade la condicion not(isNew y isLevel3) para bloquear los meses de una fila Desglose nivel 3 mientras la registracion backend (operacion + descripcion) no se haya completado. Tras la registracion isNew=false y la condicion se desactiva, dejando que el resto de la expresion controle la editabilidad como antes. -->
                                                             <vn:DecimalesInput
                                                                 width="100%"
                                                                 decimalNumbers="0"
                                                                 textAlign="Center"
-                                                                editable="{= !${corrientesModel>isEditable} &amp;&amp; !${corrientesModel>isCapitulo} &amp;&amp; !${corrientesModel>isSubcapitulo} &amp;&amp; ${corrientesModel>__isCustom} !== true &amp;&amp; ${corrientesModel>PhPspnr} !== 'D' }"
+                                                                editable="{= (!${corrientesModel>isEditable} || ${corrientesModel>isLevel3} === true) &amp;&amp; !${corrientesModel>isCapitulo} &amp;&amp; !${corrientesModel>isSubcapitulo} &amp;&amp; ${corrientesModel>__isCustom} !== true &amp;&amp; ${corrientesModel>PhPspnr} !== 'D' &amp;&amp; ${modeloBloqueo>/isBlocked} === true &amp;&amp; ${corrientesModel>isVacio} !== true &amp;&amp; !(${corrientesModel>isNew} === true &amp;&amp; ${corrientesModel>isLevel3} === true) }"
                                                                 value="{corrientesModel>months}"
                                                                 class="flatCellInput"
                                                             />
+                                                            <!--   -->
                                                         </HBox>
                                                         <Input
                                                             value="{corrientesModel>months}"
@@ -1804,17 +1904,19 @@
                                                                 visible="{= ${corrientesModel>__isCustom} !== true }"
                                                             />
                                                             <Input
-                                                                value="Nº Meses"
+                                                                value="{i18n>numMeses}"
                                                                 editable="false"
                                                                 class="flatCellInput"
                                                                 width="100%"
                                                                 textAlign="Center"
                                                                 visible="{= ${corrientesModel>__isHeader} === true }"
                                                             />
-                                                            <!--   Se sustituye months por NMES en la celda de solo lectura del bloque custom. -->
+                                                            <!--   Se sustituye months por NMES en la celda del bloque custom. -->
+                                                            <!--    NMES editable tambien en las filas custom no editables del desglose (proveedor / sin proveedor / nieto) cuando no estan en modo header ni editable principal. Antes era solo lectura; el usuario pide poder corregir el numero de meses directamente en la celda. Se anade change=".onRowInputChange" para que el cambio se propague al backend por el flujo estandar   -->
                                                             <Input
                                                                 value="{corrientesModel>NMES}"
-                                                                editable="false"
+                                                                editable="true"
+                                                                change=".onRowInputChange"
                                                                 class="flatCellInput"
                                                                 width="100%"
                                                                 textAlign="Center"
@@ -1822,22 +1924,19 @@
                                                                     &amp;&amp; ${corrientesModel>__isHeader} !== true
                                                                     &amp;&amp; ${corrientesModel>__isEditable} !== true }"
                                                             />
-                                                            <!--   NMES en la fila editable: derivado de FINI/FFIN via formatter.
-                                                                 Reactivo: se recalcula automaticamente cuando cualquiera de las dos fechas cambia. -->
+                                                            <!--    -->
+                                                            <!--   NMES en la fila editable. -->
+                                                            <!--    se reemplaza el binding por formatter de FINI/FFIN por una binding directa sobre NMES: asi el Input es realmente editable (un binding con solo formatter es one-way y no propaga lo escrito al modelo). La sincronizacion automatica con las fechas se mantiene gracias a _recalcNMESFromRange (BaseController.js:7740) que ya actualiza NMES en cada onFiniDatePickerChange / onFfinDatePickerChange; el usuario puede luego sobreescribir el valor calculado tecleando manualmente y el change handler onRowInputChange propaga la edicion al backend   -->
                                                             <Input
-                                                                value="{
-                                                                    parts: [
-                                                                        'corrientesModel>FINI',
-                                                                        'corrientesModel>FFIN'
-                                                                    ],
-                                                                    formatter: '.formatNMeses'
-                                                                }"
-                                                                editable="false"
+                                                                value="{corrientesModel>NMES}"
+                                                                editable="true"
+                                                                change=".onRowInputChange"
                                                                 class="flatCellInput"
                                                                 width="100%"
                                                                 textAlign="Center"
                                                                 visible="{= ${corrientesModel>__isEditable} === true }"
                                                             />
+                                                            <!--    -->
                                                         </VBox>
                                                     </t:template>
                                                 </t:Column>
@@ -1864,7 +1963,7 @@
                                                                 visible="{= ${corrientesModel>__isCustom} !== true }"
                                                             />
                                                             <Input
-                                                                value="Otros"
+                                                                value="{i18n>otros}"
                                                                 editable="false"
                                                                 class="flatCellInput"
                                                                 width="100%"
@@ -2147,7 +2246,7 @@
                                                                     alignItems="Center"
                                                                 >
                                                                     <Text
-                                                                        text="Auto"
+                                                                        text="{i18n>labelAuto}"
                                                                         visible="{ui>/showStickyChild}"
                                                                         textAlign="Center"
                                                                         wrapping="false"
@@ -2172,9 +2271,10 @@
                                                                 visible="{= ${corrientesModel>cabecera} === true }"
                                                                 width="100%"
                                                             />
-                                                            <!-- Se aplica el formatter toBoolean para coercer el valor del modelo al tipo boolean estricto que exige sap.m.CheckBox.selected; sin esto el binding lanza el error "is of type string, expected boolean" cuando el OData devuelve "" (flag SAP no marcado). -->
+                                                            <!-- Se aplica el formatter toBoolean para coercer el valor del modelo al tipo boolean estricto que exige sap.m.CheckBox.selected; sin esto el binding lanza el error "is of type string, expected boolean" cuando el OData devuelve "" (flag SAP no marcado). enabled con PhPspnr !== 'D' bloquea la edicion del checkbox en la fila raiz "D" -->
                                                             <CheckBox
                                                                 selected="{ path: 'corrientesModel>flag1', formatter: '.toBoolean' }"
+                                                               
                                                                 visible="{= ${corrientesModel>expandible} !== false &amp;&amp; !${corrientesModel>isGroup} &amp;&amp; ${corrientesModel>__isCustom} !== true }"
                                                             />
                                                         </VBox>
@@ -2215,7 +2315,7 @@
                                                                 justifyContent="Center"
                                                             >
                                                                 <Text
-                                                                    text="CheckInfla"
+                                                                    text="{i18n>labelCheckInfla}"
                                                                     visible="{ui>/showStickyChild}"
                                                                     width="100%"
                                                                     textAlign="Center"
@@ -2240,11 +2340,12 @@
                                                                 textAlign="Center"
                                                                 visible="{= ${corrientesModel>cabecera} === true }"
                                                             />
-                                                            <!-- Se aplica el formatter toBoolean para coercer el valor del modelo al tipo boolean estricto que exige sap.m.CheckBox.selected; sin esto el binding lanza el error "is of type string, expected boolean" cuando el OData devuelve "" (flag SAP no marcado). -->
+                                                            <!-- Se aplica el formatter toBoolean para coercer el valor del modelo al tipo boolean estricto que exige sap.m.CheckBox.selected; sin esto el binding lanza el error "is of type string, expected boolean" cuando el OData devuelve "" (flag SAP no marcado). enabled con PhPspnr !== 'D' bloquea la edicion del checkbox en la fila raiz "D" -->
                                                             <CheckBox
                                                                 selected="{ path: 'corrientesModel>CheckInfla', formatter: '.toBoolean' }"
                                                                 select="onInflacionCheckBoxSelect"
-                                                                visible="{= ${corrientesModel>expandible} !== false &amp;&amp; !${corrientesModel>isGroup} &amp;&amp; ${corrientesModel>__isCustom} !== true }"
+                                                                  enabled="{= ${modeloBloqueo>/isBlocked} === true }"
+                                                                 visible="{= ${corrientesModel>expandible} !== false &amp;&amp; !${corrientesModel>isGroup} &amp;&amp; ${corrientesModel>__isCustom} !== true }"
                                                             />
                                                         </VBox>
                                                     </t:template>
@@ -2272,7 +2373,7 @@
                                         >
                                             <!-- Cabecera del Panel con título en negrita "{Descripcion} - {Proveedor}" y botón de cierre -->
                                             <headerToolbar>
-                                                <Toolbar height="40px">
+                                                <Toolbar height="20px">
                                                     <Title
                                                         text="{panelModel>/descripcion} - {panelModel>/proveedor}"
                                                         level="H5"
@@ -2282,7 +2383,7 @@
                                                     <Button
                                                         icon="sap-icon://decline"
                                                         type="Transparent"
-                                                        tooltip="Cerrar panel"
+                                                        tooltip="{i18n>tooltipCerrarPanel}"
                                                         press="onClosePanelPress"
                                                     />
                                                 </Toolbar>
@@ -2294,15 +2395,15 @@
                                                     rows="{panelModel>/rows}"
                                                     visibleRowCount="{panelModel>/rowCount}"
                                                     selectionMode="None"
-                                                    columnHeaderHeight="32"
+                                                    columnHeaderHeight="18"
                                                     rowHeight="32"
                                                     class="sapUiSizeCompact panelDarkHeader"
                                                     width="100%"
                                                 >
                                                     <t:columns>
-                                                        <!-- COLUMNA: Descripción / DESCRIP. Se elimina textAlign="Center" para que la clase allowLetters alinee el texto a la izquierda -->
+                                                        <!-- COLUMNA: Descripción / DESCRIP. Ancho reducido a 200px (antes 370px) para evitar que la celda se vea demasiado ancha en el panel. -->
                                                         <t:Column
-                                                            width="170px"
+                                                              width="170px"
                                                             hAlign="Center"
                                                         >
                                                             <t:label>
@@ -2320,9 +2421,9 @@
                                                                 />
                                                             </t:template>
                                                         </t:Column>
-                                                        <!-- COLUMNA: Ejecutado / AmoEje. Se elimina textAlign="Center" para usar la alineación numérica a la derecha por defecto -->
+                                                        <!-- COLUMNA: Ejecutado / AmoEje. Ancho 80px alineado con AmoEje (Coste ejec) de la tabla superior -->
                                                         <t:Column
-                                                            width="150px"
+                                                            width="80px"
                                                             hAlign="Center"
                                                         >
                                                             <t:label>
@@ -2332,17 +2433,26 @@
                                                                 />
                                                             </t:label>
                                                             <t:template>
-                                                                <Input
-                                                                    value="{panelModel>AmoEje}"
+                                                                <vn:DecimalesInput
+                                                                    value="{
+                                                                        parts: [
+                                                                            'panelModel>AmoEje',
+                                                                            'dashboardModel>/decimales',
+                                                                            'appData>/userData/CurrencyFormat'
+                                                                        ],
+                                                                        formatter: '.formatDecimales'
+                                                                    }"
+                                                                    decimalNumbers="{dashboardModel>/decimales}"
                                                                     editable="{= !${panelModel>__isPanelParent} }"
                                                                     class="flatCellInput"
                                                                     width="100%"
+                                                                    textAlign="End"
                                                                 />
                                                             </t:template>
                                                         </t:Column>
-                                                        <!-- COLUMNA: Pendiente / AmoPen. Se elimina textAlign="Center" para alinear el valor numérico a la derecha -->
+                                                        <!-- COLUMNA: Pendiente / AmoPen. Ancho 90px alineado con AmoPen (Coste pend) de la tabla superior -->
                                                         <t:Column
-                                                            width="70px"
+                                                            width="90px"
                                                             hAlign="Center"
                                                         >
                                                             <t:label>
@@ -2352,17 +2462,26 @@
                                                                 />
                                                             </t:label>
                                                             <t:template>
-                                                                <Input
-                                                                    value="{panelModel>AmoPen}"
+                                                                <vn:DecimalesInput
+                                                                    value="{
+                                                                        parts: [
+                                                                            'panelModel>AmoPen',
+                                                                            'dashboardModel>/decimales',
+                                                                            'appData>/userData/CurrencyFormat'
+                                                                        ],
+                                                                        formatter: '.formatDecimales'
+                                                                    }"
+                                                                    decimalNumbers="{dashboardModel>/decimales}"
                                                                     editable="{= !${panelModel>__isPanelParent} }"
                                                                     class="flatCellInput"
                                                                     width="100%"
+                                                                    textAlign="End"
                                                                 />
                                                             </t:template>
                                                         </t:Column>
-                                                        <!-- COLUMNA: Total / AmoTot. Se elimina textAlign="Center" para alinear el valor numérico a la derecha -->
+                                                        <!-- COLUMNA: Total / AmoTot. Ancho 80px alineado con AmoTot (Coste total) de la tabla superior -->
                                                         <t:Column
-                                                            width="70px"
+                                                            width="80px"
                                                             hAlign="Center"
                                                         >
                                                             <t:label>
@@ -2372,17 +2491,26 @@
                                                                 />
                                                             </t:label>
                                                             <t:template>
-                                                                <Input
-                                                                    value="{panelModel>AmoTot}"
+                                                                <vn:DecimalesInput
+                                                                    value="{
+                                                                        parts: [
+                                                                            'panelModel>AmoTot',
+                                                                            'dashboardModel>/decimales',
+                                                                            'appData>/userData/CurrencyFormat'
+                                                                        ],
+                                                                        formatter: '.formatDecimales'
+                                                                    }"
+                                                                    decimalNumbers="{dashboardModel>/decimales}"
                                                                     editable="{= !${panelModel>__isPanelParent} }"
                                                                     class="flatCellInput"
                                                                     width="100%"
+                                                                    textAlign="End"
                                                                 />
                                                             </t:template>
                                                         </t:Column>
-                                                        <!-- COLUMNA: Reparto / Tipo -->
+                                                        <!-- COLUMNA: Reparto / Tipo. Ancho 125px alineado con Tipo (Reparto) de la tabla superior -->
                                                         <t:Column
-                                                            width="110px"
+                                                            width="125px"
                                                             hAlign="Center"
                                                         >
                                                             <t:label>
@@ -2392,59 +2520,71 @@
                                                                 />
                                                             </t:label>
                                                             <t:template>
-                                                                <Select
-                                                                    selectedKey="{panelModel>Tipo}"
-                                                                    enabled="{= !${panelModel>__isPanelParent} }"
-                                                                    forceSelection="true"
-                                                                    width="auto"
-                                                                >
-                                                                    <items>
-                                                                        <core:Item
-                                                                            key="MAN"
-                                                                            text="Manual"
-                                                                        />
-                                                                        <core:Item
-                                                                            key="LIN"
-                                                                            text="Lineal"
-                                                                        />
-                                                                        <core:Item
-                                                                            key="INF"
-                                                                            text="Inflación"
-                                                                        />
-                                                                    </items>
-                                                                </Select>
+                                                                <HBox alignItems="Center" justifyContent="Center" renderType="Bare">
+                                                                    <Select
+                                                                        selectedKey="{panelModel>Tipo}"
+                                                                        enabled="{= !${panelModel>__isPanelParent} }"
+                                                                        class="flatCellInput repartoSelect"
+                                                                        forceSelection="true"
+                                                                        change="onRowInputChange"
+                                                                        textAlign="Center"
+                                                                        width="auto"
+                                                                    >
+                                                                        <items>
+                                                                            <core:Item key="MAN" text="{i18n>tipoManual}" />
+                                                                            <core:Item key="LIN" text="{i18n>tipoLineal}" />
+                                                                            <core:Item key="INF" text="{i18n>tipoInflacion}" />
+                                                                        </items>
+                                                                    </Select>
+                                                                    <Button
+                                                                        icon="sap-icon://calendar"
+                                                                        visible="{= ${panelModel>Tipo} === 'LIN'}"
+                                                                        enabled="{= !${panelModel>__isPanelParent} }"
+                                                                        type="Transparent"
+                                                                        press="onOpenRangePicker"
+                                                                        width="auto"
+                                                                        tooltip="{
+                                                                            parts: [{
+                                                                                path: 'panelModel>_linDateFrom'
+                                                                            }, {
+                                                                                path: 'panelModel>_linDateTo'
+                                                                            }],
+                                                                            formatter: '.getCalendarTooltip'
+                                                                        }"
+                                                                    />
+                                                                </HBox>
                                                             </t:template>
                                                         </t:Column>
-                                                        <!-- COLUMNA: Proveedor. Se elimina la clase allowLetters para que el valor (código numérico) se alinee a la derecha como un valor numérico -->
+                                                        <!-- COLUMNA: Proveedor. Ancho 120px alineado con Proveedor de la tabla superior -->
                                                         <t:Column
-                                                            width="90px"
+                                                            width="120px"
                                                             hAlign="Center"
                                                         >
                                                             <t:label>
                                                                 <Label
-                                                                    text="Proveedor"
+                                                                    text="{i18n>proveedor}"
                                                                     design="Bold"
                                                                 />
                                                             </t:label>
                                                             <t:template>
                                                                 <!-- Se sustituye el Input no editable por un Input con icono value help. Permite tanto editar el valor a mano como abrir el dialog de Busqueda de Proveedores y elegir uno desde alli, igual que en la celda Proveedor del treetable principal. La clase proveedorVHInput contrarresta el display:none que flatCellInput aplica al iconContainer para que el cuadradito del value help quede siempre visible -->
-                                                                <Input
+                                                                 <Input
                                                                     value="{panelModel>Proveedor}"
-                                                                    showValueHelp="true"
-                                                                    valueHelpRequest="onProveedorValueHelpRequest"
+                                                                    editable="false"
                                                                     class="flatCellInput proveedorVHInput"
                                                                     width="100%"
+                                                                    textAlign="Begin"
                                                                 />
                                                             </t:template>
                                                         </t:Column>
-                                                        <!-- COLUMNA: Tarifa / FEE. Se elimina textAlign="Center" para alinear el valor numérico a la derecha -->
+                                                        <!-- COLUMNA: Tarifa / FEE. Ancho 100px alineado con FEE (Tarifa) de la tabla superior -->
                                                         <t:Column
-                                                            width="70px"
+                                                            width="100px"
                                                             hAlign="Center"
                                                         >
                                                             <t:label>
                                                                 <Label
-                                                                    text="Tarifa"
+                                                                    text="{i18n>tarifa}"
                                                                     design="Bold"
                                                                 />
                                                             </t:label>
@@ -2457,58 +2597,78 @@
                                                                 />
                                                             </t:template>
                                                         </t:Column>
-                                                        <!-- COLUMNA: Fecha inicio / FINI -->
+                                                        <!-- COLUMNA: Fecha inicio / FINI. Mismo selector mes/año que el desglose de la tabla superior (onOpenMonthYearPicker). app:monthModel apunta a panelModel para que el handler resuelva el contexto contra ese modelo en vez de tableModelName. -->
                                                         <t:Column
-                                                            width="105px"
+                                                            width="110px"
                                                             hAlign="Center"
                                                         >
                                                             <t:label>
                                                                 <Label
-                                                                    text="Fecha inicio"
+                                                                    text="{i18n>fechaInicio}"
                                                                     design="Bold"
                                                                 />
                                                             </t:label>
                                                             <t:template>
-                                                                <DatePicker
-                                                                    value="{panelModel>FINI}"
-                                                                    enabled="{= !${panelModel>__isPanelParent} }"
-                                                                    displayFormat="dd/MM/yyyy"
-                                                                    valueFormat="yyyy-MM-dd"
+                                                                <Input
+                                                                    placeholder="{i18n>selectRecurso}"
                                                                     class="sapUiSizeCompact"
                                                                     width="100%"
+                                                                    textAlign="Center"
+                                                                    enabled="{= !${panelModel>__isPanelParent} }"
+                                                                    showValueHelp="true"
+                                                                    valueHelpIconSrc="sap-icon://appointment-2"
+                                                                    valueHelpOnly="true"
+                                                                    valueHelpRequest=".onOpenMonthYearPicker"
+                                                                    app:monthField="FINI"
+                                                                    app:monthModel="panelModel"
+                                                                    value="{
+                                                                        path: 'panelModel>FINI',
+                                                                        formatter: '._formatMonthYearDisplay'
+                                                                    }"
                                                                 />
                                                             </t:template>
                                                         </t:Column>
-                                                        <!-- COLUMNA: Fecha fin / FFIN -->
+                                                        <!-- COLUMNA: Fecha fin / FFIN. Mismo selector mes/año que el desglose de la tabla superior (onOpenMonthYearPicker). app:monthModel apunta a panelModel para que el handler resuelva el contexto contra ese modelo en vez de tableModelName. -->
                                                         <t:Column
-                                                            width="105px"
+                                                            width="110px"
                                                             hAlign="Center"
                                                         >
                                                             <t:label>
                                                                 <Label
-                                                                    text="Fecha fin"
+                                                                    text="{i18n>fechaFin}"
                                                                     design="Bold"
                                                                 />
                                                             </t:label>
                                                             <t:template>
-                                                                <DatePicker
-                                                                    value="{panelModel>FFIN}"
-                                                                    enabled="{= !${panelModel>__isPanelParent} }"
-                                                                    displayFormat="dd/MM/yyyy"
-                                                                    valueFormat="yyyy-MM-dd"
+                                                                <Input
+                                                                    placeholder="{i18n>selectRecurso}"
                                                                     class="sapUiSizeCompact"
                                                                     width="100%"
+                                                                    textAlign="Center"
+                                                                    enabled="{= !${panelModel>__isPanelParent} }"
+                                                                    showValueHelp="true"
+                                                                    valueHelpIconSrc="sap-icon://appointment-2"
+                                                                    valueHelpOnly="true"
+                                                                    valueHelpRequest=".onOpenMonthYearPicker"
+                                                                    app:monthField="FFIN"
+                                                                    app:monthModel="panelModel"
+                                                                    value="{
+                                                                        path: 'panelModel>FFIN',
+                                                                        formatter: '._formatMonthYearDisplay'
+                                                                    }"
                                                                 />
                                                             </t:template>
                                                         </t:Column>
-                                                        <!-- COLUMNA: Nº Meses / NMES. Se elimina textAlign="Center" para alinear el valor numérico a la derecha -->
+                                                        <!-- COLUMNA: Espaciador alineado con colMonths (85px) de la tabla superior -->
+                                                      
+                                                        <!-- COLUMNA: Nº Meses / NMES. Ancho 85px alineado con NMES (Nº Meses) de la tabla superior -->
                                                         <t:Column
-                                                            width="65px"
+                                                            width="85px"
                                                             hAlign="Center"
                                                         >
                                                             <t:label>
                                                                 <Label
-                                                                    text="Nº Meses"
+                                                                    text="{i18n>numMeses}"
                                                                     design="Bold"
                                                                 />
                                                             </t:label>
@@ -2521,14 +2681,14 @@
                                                                 />
                                                             </t:template>
                                                         </t:Column>
-                                                        <!-- COLUMNA: Otros. Se elimina textAlign="Center" para alinear el valor numérico a la derecha -->
+                                                        <!-- COLUMNA: Otros. Ancho 90px alineado con Otros de la tabla superior -->
                                                         <t:Column
-                                                            width="65px"
+                                                            width="90px"
                                                             hAlign="Center"
                                                         >
                                                             <t:label>
                                                                 <Label
-                                                                    text="Otros"
+                                                                    text="{i18n>otros}"
                                                                     design="Bold"
                                                                 />
                                                             </t:label>
@@ -2541,9 +2701,9 @@
                                                                 />
                                                             </t:template>
                                                         </t:Column>
-                                                        <!-- COLUMNA: Pend. planif. / PenPlan. Se reduce el ancho a 70px para alinearlo con las columnas estrechas vecinas (Nº Meses, Otros) y se anyade la clase borderRightPend a las cajas de cabecera y celda para pintar la linea vertical naranja a su derecha, replicando el separador de la treetable principal -->
+                                                        <!-- COLUMNA: Pend. planif. / PenPlan. Ancho 100px alineado con PenPlan (Pend a planificar) de la tabla superior -->
                                                         <t:Column
-                                                            width="70px"
+                                                            width="100px"
                                                             hAlign="Center"
                                                         >
                                                             <t:label>
@@ -2554,11 +2714,20 @@
                                                                 />
                                                             </t:label>
                                                             <t:template>
-                                                                <Input
-                                                                    value="{panelModel>PenPlan}"
+                                                                <vn:DecimalesInput
+                                                                    value="{
+                                                                        parts: [
+                                                                            'panelModel>PenPlan',
+                                                                            'dashboardModel>/decimales',
+                                                                            'appData>/userData/CurrencyFormat'
+                                                                        ],
+                                                                        formatter: '.formatDecimales'
+                                                                    }"
+                                                                    decimalNumbers="{dashboardModel>/decimales}"
                                                                     editable="false"
                                                                     class="flatCellInput borderRightPend"
                                                                     width="100%"
+                                                                    textAlign="End"
                                                                 />
                                                             </t:template>
                                                         </t:Column>

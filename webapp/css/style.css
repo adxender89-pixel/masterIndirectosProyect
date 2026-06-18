@@ -3,6 +3,27 @@
    ========================================================================== */
 .margin { margin: 0 auto 30px auto; } /* Simplificado en una línea */
 
+/* ==========================================================================
+     Barra de acciones lateral flotante
+   - sideBarOverlayHost: contenedor con posicionamiento relativo para anclar el sidebar
+   - floatingSideBar: sidebar superpuesto al contenido, fijo en el borde derecho,
+     visible sin necesidad de scroll horizontal
+   ========================================================================== */
+.sideBarOverlayHost {
+    position: relative !important;
+}
+
+.floatingSideBar {
+    position: absolute !important;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    background-color: #ffffff;
+    box-shadow: -2px 0 4px rgba(0, 0, 0, 0.08);
+    border-left: 1px solid #e5e5e5;
+}
+
 .grayBorder {
     border: 1px solid #d9d9d9;
     border-radius: 4px;
@@ -18,7 +39,6 @@
 
 /* Agrupación de utilidades Bold */
 .testBold, 
-.sapMFlexItemAlignAuto,
 .testBold .sapMBtnContent, 
 .testBold .sapMBtnInnerText {
     font-weight: bold !important;
@@ -34,6 +54,19 @@
 [id$="-vertSB"] {
     display: none !important;
 }
+/*   Se oculta el scroll vertical y horizontal externo (la barra alta que abarcaba
+   la toolbar con "Estándar *" y el splitter superior) sin tocar el scroll INTERNO de la
+   t:TreeTable. Asi solo queda:
+   - el scroll vertical interno del t:TreeTable (gestionado por sus propios elementos
+     -vsb, que no son hijos directos de estos contenedores).
+   - el scroll horizontal interno del t:TreeTable (gestionado por .sapUiTableHSb, que
+     se fuerza visible en la regla "Forzar scroll horizontal visible SOLO en TreeTables"
+     mas arriba). */
+.sapUxAPObjectPageWrapper,
+.sapUiLoSplitterContent {
+    overflow: hidden !important;
+}
+
 
 /* ==========================================================================
    Inputs y Etiquetas (Compact Mode)
@@ -120,6 +153,7 @@
     z-index: 10 !important;
 }
 
+
 /* Overflow para TreeTables */
 #TreeTableAnticipados .sapUiTableCnt,
 #TreeTableInmovilizados .sapUiTableCnt,
@@ -127,14 +161,39 @@
     overflow-x: auto !important;
 }
 
+/* (MV-MINH) Se anula el min-height que SAP UI5 aplica inline sobre el
+   contenedor ".sapUiTableCCnt" del TreeTable (en el caso medido del
+   inspector DOM: min-height: 759px). Ese min-height forzaba al contenedor
+   a ser mas alto que la suma real de las filas, generando la "zona muerta"
+   blanca entre la ultima fila visible y la scrollbar horizontal. Forzando
+   min-height: 0 el contenedor puede ajustarse a la altura natural del
+   contenido y la scrollbar queda pegada al fondo de las filas.
+   IMPORTANTE: el selector usa [id$="..."] (attribute ends-with) en lugar
+   de "#TreeTableBasic ..." porque SAP UI5 renderiza los controles XMLView
+   con prefijo "__xmlview1--" o "__xmlviewN--" delante del id declarado en
+   la view. Por tanto el id real del CCnt en el DOM es
+   "__xmlview1--TreeTableBasic-tableCCnt" y el selector "#TreeTableBasic"
+   no matchea (no existe un elemento con id exactamente "TreeTableBasic").
+   El selector ends-with garantiza el match independientemente del prefijo
+   de la view, manteniendo la especificidad suficiente para que el
+   !important sobrescriba el style inline aplicado por el framework. */
+[id$="--TreeTableBasic-tableCCnt"],
+[id$="--TreeTableExternos-tableCCnt"],
+[id$="--TreeTableAnticipados-tableCCnt"],
+[id$="--TreeTableInmovilizados-tableCCnt"],
+[id$="--TreeTableDiferidos-tableCCnt"] {
+    min-height: 0 !important;
+}
+
+
 /* Agrupación de paddings en cero para celdas de tabla */
 .sapUiTableDataCell > .sapUiTableCellInner,
 .sapUiTableCreationRow .sapUiTableCreationRowForm .sapUiTableCell > .sapUiTableCellInner,
 .sapUiTableHeaderDataCell .sapUiTableCellInner {
-    padding: 0rem 0.2rem !important;
+    padding: 0 !important;
 }
 
-.sapUiTableCCnt .sapUiTableTableCell { padding: 0 0.2rem !important; }
+.sapUiTableCCnt .sapUiTableTableCell { padding: 0 !important; }
 
 /* Agrupación de fuentes pequeñas en tabla */
 .sapUiTable .sapMText, 
@@ -145,7 +204,7 @@
 
 .sapUiSizeCompact .sapUiTable .sapMInputBaseInner {
     height: 1rem;
-    margin-left: 0.1rem;
+    margin-left: 0;
 }
 
 .smallHeaderTable .sapUiTableHeaderRow { height: 24px !important; }
@@ -199,28 +258,159 @@
     margin-left: -0.4rem !important;
 } */
 
-.flatCellInput .sapMInputBaseContentWrapper, .sapUiTableCell .flatCellInput .sapMInputBaseContentWrapper {
-    min-height: 1rem;
-    box-shadow: none !important;
-    /* margin-top: 0 !important; */
-}
 
-/* Corrección del FlatCellInput para evitar redundancias */
-.flatCellInput .sapMInputBaseInner,
-.sapUiTableCell .flatCellInput .sapMInputBaseInner {
+/* ============================================================
+   AJUSTE DE INPUTS Y SELECTS EN CELDAS DE TREETABLE
+   Los controles flatCellInput (Input y Select) deben ocupar
+   el máximo posible de la celda sin dejar espacios en blanco.
+   Problema principal: compact mode aplica
+     .sapUiSizeCompact .sapMInputBaseContentWrapper {
+         margin: 0.2rem 0 0 0 !important;   <- añade espacio arriba
+         align-self: flex-end !important;   <- empuja al fondo
+     }
+   Se sobreescribe con selectores de mayor especificidad.
+   ============================================================ */
+
+/* 1. Anular el margin-top del modo compact DENTRO de celdas de tabla */
+.sapUiSizeCompact .sapUiTableCell .sapMInputBaseContentWrapper,
+.sapUiSizeCompact .sapUiTableDataCell .sapMInputBaseContentWrapper {
+    margin: 0 !important;
+    align-self: stretch !important;
+    height: 26px !important;
+    min-height: 0 !important;
     box-sizing: border-box !important;
 }
 
-.flatCellInput .sapMInputBaseInner { margin: 0.01rem !important; }
-
-.sapUiTableCell .flatCellInput .sapMInputBaseInner {
+/* 2. El input inner también a 26px dentro de celdas */
+.sapUiSizeCompact .sapUiTableCell .sapMInputBaseInner,
+.sapUiSizeCompact .sapUiTableDataCell .sapMInputBaseInner {
+    height: 26px !important;
+    line-height: 26px !important;
     margin: 0 !important;
-    height: 1.6rem !important;
-    line-height: 1.2rem !important; /* Se baja respecto a la altura */
-    text-align: center !important;
-    padding-bottom: 0.5rem;
-    vertical-align: top !important; /* Aiuta l'allineamento */
 }
+
+/* 3. flatCellInput (Input y Select) con ancho completo */
+.sapUiTableCell .flatCellInput,
+.sapUiTableDataCell .flatCellInput {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    height: 26px !important;
+}
+
+/* 4. Wrapper del flatCellInput Input: todo el ancho y la altura de celda */
+.sapUiTableCell .flatCellInput .sapMInputBaseContentWrapper {
+    height: 26px !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    align-self: stretch !important;
+}
+
+/* 5. Inner del flatCellInput Input */
+.sapUiTableCell .flatCellInput .sapMInputBaseInner {
+    height: 26px !important;
+    line-height: 26px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    /*   Se sustituye padding 0 por un padding horizontal minimo (0.25rem) para que el primer y ultimo caracter del texto no queden pegados al borde del input. Antes, codigos largos como "I.003.041.001" mostraban el primer caracter parcialmente recortado   */
+    padding: 0 0.25rem !important; /*   antes: 0 */
+    box-sizing: border-box !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+
+/* 6. Select con clase flatCellInput en celdas: misma altura y ancho completo */
+.sapUiSizeCompact .sapUiTableCell .flatCellInput.sapMSlt,
+.sapUiTableCell .flatCellInput.sapMSlt {
+    height: 26px !important;
+    min-height: 0 !important;
+    line-height: 26px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+}
+.sapUiSizeCompact .sapUiTableCell .flatCellInput.sapMSlt .sapMSltLabel,
+.sapUiSizeCompact .sapUiTableCell .flatCellInput.sapMSlt .sapMSltArrow,
+.sapUiTableCell .flatCellInput.sapMSlt .sapMSltLabel,
+.sapUiTableCell .flatCellInput.sapMSlt .sapMSltArrow {
+    height: 26px !important;
+    line-height: 26px !important;
+}
+
+/* 6.b. Select de la columna Reparto (clase repartoSelect).
+   Cuando Tipo === 'LIN' este Select comparte la celda con el boton de calendario.
+   Las reglas generales anteriores fuerzan width:100% !important sobre el Select, de
+   modo que ocupa toda la celda y, junto con el boton, desborda los 125px de la columna;
+   como el HBox contenedor usa justify-content:center, el desbordamiento recorta la
+   etiqueta ("Lineal") por la izquierda (la casilla "se desplaza a la izquierda" al
+   introducir las fechas del reparto lineal) y solo queda visible el icono del calendario.
+
+   Solucion (mismo comportamiento que la columna Reparto de Inmovilizados, donde el Select
+   usa flatCellInput a width:100% dentro de un HBox width:100%): se fija el contenedor flex
+   (el HBox que contiene el repartoSelect) al ancho completo de la celda y se deja que el
+   Select CREZCA hasta llenar el espacio disponible (flex-grow:1 + min-width:0) mientras el
+   boton de calendario mantiene su tamano fijo. Asi:
+     - Reparto != Lineal (sin calendario): el Select ocupa el 100% de la celda, igual que el
+       resto de filas Manual/OEO -> no se aprecia diferencia entre filas.
+     - Reparto == Lineal (con calendario): el Select llena todo el ancho MENOS el boton de
+       calendario (flex-shrink reserva su sitio), de modo que su borde izquierdo queda
+       alineado con las filas Manual y solo el icono del calendario sobresale a la derecha.
+       Nunca desborda ni se recorta la etiqueta por la izquierda.
+   Cubre las dos variantes (fila normal y fila editable) de las 5 vistas que comparten esta
+   columna sin tocar el XML. */
+.sapUiTableCell .sapMFlexBox:has(> .flatCellInput.repartoSelect) {
+    width: 100% !important;
+    max-width: 100% !important;
+    justify-content: center !important;
+    flex-wrap: nowrap !important;
+}
+.sapUiSizeCompact .sapUiTableCell .flatCellInput.repartoSelect.sapMSlt,
+.sapUiTableCell .flatCellInput.repartoSelect.sapMSlt {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+}
+.sapUiTableCell .sapMFlexBox:has(> .flatCellInput.repartoSelect) > .sapMBtn {
+    flex: 0 0 auto !important;
+}
+.blockCustomRow .flatCellInput.repartoSelect.sapMSlt,
+.panelDarkHeader .flatCellInput.repartoSelect.sapMSlt {
+    min-width: 5rem !important;
+}
+
+/* Se fuerza alineacion a la izquierda en los inputs de Proveedor (clase proveedorVHInput) anulando el text-align:center heredado de .flatCellInput. Aplica tanto al treetable principal como al panel inferior. */
+.proveedorVHInput .sapMInputBaseInner,
+.flatCellInput.proveedorVHInput .sapMInputBaseInner,
+.sapUiTableCell .proveedorVHInput .sapMInputBaseInner,
+.sapUiTableCell .flatCellInput.proveedorVHInput .sapMInputBaseInner {
+    text-align: left !important;
+}
+
+/*   Se fuerza alineacion a la izquierda en los inputs de la columna Operacion (clase operacionCellInput) para que los codigos de operacion, subcapitulo y capitulo queden alineados al inicio de la celda. Se anula la regla del tema de SAP UI5 que aplica "text-align: right !important" sobre ".sapUiTableCell .sapMInputBase .sapMInputBaseInner" y sus variantes Readonly/Disabled. Para ganar la cascada se replican exactamente los mismos selectores anadiendo la clase "operacionCellInput", lo que sube la especificidad a 4 clases (vs. 3 de SAP) y mantiene la regla por encima incluso cuando el input esta en estado readonly o disabled. El header de la columna se mantiene centrado porque la regla solo afecta a los inputs (.sapMInputBaseInner), no al label de la columna. */
+.sapUiTableCell .sapMInputBase.operacionCellInput .sapMInputBaseInner,
+.sapUiTableCell .sapMInputBase.sapMInputBaseReadonly.operacionCellInput .sapMInputBaseInner,
+.sapUiTableCell .sapMInputBase.sapMInputBaseDisabled.operacionCellInput .sapMInputBaseInner {
+    text-align: left !important;
+}
+
+/* (INICIO) */
+/*   Cuando una fila nueva se anade con el boton "+", el input de la columna Operacion */
+/*   (operacionCellInput) se renderiza editable con borde visible. SAP UI5 aplica un */
+/*   padding-left por defecto al .sapMInputBaseInner que desplaza el texto unos 4-6px */
+/*   hacia la derecha respecto a las filas existentes (que muestran el codigo PhPspnr */
+/*   sin borde de input). Se elimina ese padding horizontal para que el numero quede */
+/*   alineado verticalmente con los codigos de las filas read-only de la columna. */
+.sapUiTableCell .sapMInputBase.operacionCellInput .sapMInputBaseInner,
+.sapUiTableCell .sapMInputBase.operacionCellInput .sapMInputBaseContentWrapper {
+    padding-left: 0 !important; /*   sin padding izquierdo: el texto inicia al borde interno */
+    padding-right: 0 !important; /*   sin padding derecho para mantener simetria */
+    margin-left: 0 !important; /*   sin margen izquierdo que desplace el contenido */
+}
+/* (FIN) */
 
 .flatCellInput .sapMInputBaseIconContainer,
 .sapUiTableCell .flatCellInput .sapMInputBaseIconContainer {
@@ -228,9 +418,29 @@
 }
 
 /* Se restaura el iconContainer cuando el input expone explicitamente un value help: la regla anterior oculta todos los iconos del flatCellInput, lo que tambien suprimiria los cuadrados del showValueHelp. Esta excepcion los vuelve visibles solo en los inputs marcados con la clase proveedorVHInput (celda Proveedor del treetable). */
+/*   Se refuerzan los selectores: se anaden variantes sin .flatCellInput por si el orden de clases en el DOM hace fallar el match, se forzan dimensiones minimas y se aplica visibility/opacity para evitar que reglas posteriores con la misma especificidad oculten el cuadradito */
+.proveedorVHInput .sapMInputBaseIconContainer,
 .flatCellInput.proveedorVHInput .sapMInputBaseIconContainer,
+.sapUiTableCell .proveedorVHInput .sapMInputBaseIconContainer,
 .sapUiTableCell .flatCellInput.proveedorVHInput .sapMInputBaseIconContainer {
-    display: flex !important;
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 1.5rem !important;
+    min-width: 1.5rem !important;
+    flex-shrink: 0 !important;
+}
+/*   Se fuerza tambien el span del icono interior para asegurar que el glifo de value help no quede oculto por reglas heredadas de tamano 0 o color transparente */
+.proveedorVHInput .sapMInputBaseIconContainer .sapUiIcon,
+.flatCellInput.proveedorVHInput .sapMInputBaseIconContainer .sapUiIcon,
+.sapUiTableCell .proveedorVHInput .sapMInputBaseIconContainer .sapUiIcon,
+.sapUiTableCell .flatCellInput.proveedorVHInput .sapMInputBaseIconContainer .sapUiIcon {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 1rem !important;
+    min-width: 1rem !important;
+    color: #0a6ed1 !important;
 }
 
 /* Flechas < / > del picker LIN cuando estamos al borde del rango permitido.
@@ -530,6 +740,121 @@
    Botones y Componentes Varios
    ========================================================================== */
 
+/* (INICIO) */
+/*   Sistema unificado de estilo de botones: todos comparten cornice oscura y esquinas */
+/*   ligeramente redondeadas. Cambia solo el "fill": amarillo (highlight) o transparente. */
+/*   - .btnHighlight: fondo amarillo SAP + texto oscuro. Aplica a Mensajes, GuardarComo, Origen. */
+/*   - .btnOutline:   fondo neutro + cornice oscura. Aplica a Guardar, Cancelar. */
+/*   - .toolbarActionBtn (override abajo): bottones-icono de toolbar, fondo transparente, */
+/*                                         icono amarillo y misma cornice oscura. */
+
+/*   Variables comunes de cornice, radio y altura forzada via !important para sobrescribir SAP. */
+/*   Se fija la misma altura reducida en todos los botones de texto (.btnHighlight / .btnOutline) */
+/*   para que el footer y la toolbar tengan botones mas finos (menor grosor vertical) y */
+/*   para evitar que Mensajes parezca mas alto que Guardar/Cancelar por paddings de SAP. */
+.btnHighlight.sapMBtn,
+.btnOutline.sapMBtn {
+    height: 1.4rem !important; /*   altura reducida para que los botones sean mas finos */
+    min-height: 1.4rem !important; /*   se impide que SAP imponga una altura minima mayor */
+    border: 1px solid #1F1F1F !important; /*   cornice oscura comun a todos los botones tocados */
+    border-radius: 6px !important; /*   esquinas ligeramente redondeadas comunes */
+    box-sizing: border-box !important; /*   la cornice se contabiliza dentro de la altura para no sumar pixels */
+    padding: 0 !important; /*   sin padding externo: el contenido se centra mediante line-height del inner */
+}
+
+/*   Se uniforma el rendering del contenido del boton de texto y se centra con flexbox */
+/*   para que el texto quede perfectamente al medio vertical y horizontal en cualquier altura. */
+.btnHighlight .sapMBtnInner,
+.btnOutline .sapMBtnInner {
+    height: 100% !important; /*   el inner ocupa toda la altura del wrapper */
+    min-height: 0 !important; /*   se anula la altura minima por defecto que impondria SAP */
+    display: flex !important; /*   flexbox para centrar el contenido sin depender de line-height */
+    align-items: center !important; /*   centra verticalmente el texto en el boton */
+    justify-content: center !important; /*   centra horizontalmente el texto */
+    line-height: 1 !important; /*   line-height neutro: el centrado lo hace flexbox */
+    padding: 0 0.3rem !important; /*   padding horizontal reducido para que "Cancelar" entre sin truncarse */
+}
+
+.btnHighlight.sapMBtn {
+    background-color: #FFE0A3 !important; /*   fondo amarillo palido (#FFE0A3) pedido por el usuario */
+    color: #1F1F1F !important; /*   texto oscuro para contraste sobre el amarillo */
+}
+
+.btnHighlight .sapMBtnContent,
+.btnHighlight .sapMBtnInner,
+.btnHighlight .sapMBtnIcon {
+    color: #1F1F1F !important; /*   texto e icono oscuros sobre fondo amarillo */
+}
+
+.btnHighlight.sapMBtn:hover {
+    background-color: #F0CC8A !important; /*   tono ligeramente mas oscuro en hover coherente con el palido base */
+}
+
+.btnHighlight.sapMBtn:active,
+.btnHighlight.sapMBtn.sapMBtnActive {
+    background-color: #D9B570 !important; /*   tono mas oscuro al pulsar, sigue siendo palido */
+}
+
+.btnOutline.sapMBtn {
+    background-color: #FFFFFF !important; /*   fondo blanco para los botones secundarios outline */
+    color: #1F1F1F !important; /*   texto en negro para Guardar y Cancelar */
+}
+
+/*   Se fuerza el color del texto a negro tambien en TODOS los wrappers internos. */
+/*   SAP UI5 aplica el azul (theme color) a sapMBtnInner > bdi/sapMBtnContent en los */
+/*   botones type="Transparent", con selectores muy especificos que ganan a .btnOutline. */
+/*   Se replican selectores con la doble clase y se anaden los estados hover/focus/active */
+/*   para evitar que SAP devuelva el azul cuando el usuario interactua con el boton. */
+.btnOutline.sapMBtn,
+.btnOutline.sapMBtn .sapMBtnInner,
+.btnOutline.sapMBtn .sapMBtnContent,
+.btnOutline.sapMBtn .sapMBtnInner .sapMBtnContent,
+.btnOutline.sapMBtn .sapMBtnIcon,
+.btnOutline.sapMBtn bdi {
+    color: #1F1F1F !important; /*   texto e icono en negro en estado normal */
+}
+
+.btnOutline.sapMBtn:hover,
+.btnOutline.sapMBtn:hover .sapMBtnInner,
+.btnOutline.sapMBtn:hover .sapMBtnContent,
+.btnOutline.sapMBtn:hover .sapMBtnInner .sapMBtnContent,
+.btnOutline.sapMBtn:hover bdi,
+.btnOutline.sapMBtn:focus,
+.btnOutline.sapMBtn:focus .sapMBtnInner,
+.btnOutline.sapMBtn:focus .sapMBtnContent,
+.btnOutline.sapMBtn:focus .sapMBtnInner .sapMBtnContent,
+.btnOutline.sapMBtn:focus bdi,
+.btnOutline.sapMBtn:active,
+.btnOutline.sapMBtn:active .sapMBtnInner,
+.btnOutline.sapMBtn:active .sapMBtnContent,
+.btnOutline.sapMBtn:active .sapMBtnInner .sapMBtnContent,
+.btnOutline.sapMBtn:active bdi,
+.btnOutline.sapMBtn.sapMBtnActive,
+.btnOutline.sapMBtn.sapMBtnActive .sapMBtnInner,
+.btnOutline.sapMBtn.sapMBtnActive .sapMBtnContent,
+.btnOutline.sapMBtn.sapMBtnActive bdi {
+    color: #1F1F1F !important; /*   texto en negro tambien en hover/focus/active para no volver al azul */
+}
+
+.btnOutline.sapMBtn:hover {
+    background-color: #F2F2F2 !important; /*   gris muy claro en hover para feedback */
+}
+
+/*   Se neutraliza el rendering interno por defecto de SAP UI5 (.sapMBtnInner) para */
+/*   que la cornice y el fondo aplicados al wrapper exterior (.sapMBtn) sean los unicos */
+/*   visibles. Sin esto, el inner pinta su propio bordo/fondo y produce el efecto de */
+/*   "doble bordo" en los botones de texto (Origen, Estandar) y oculta la cornice en */
+/*   los botones-icono de la toolbar (+, cestino, refresh, flecha). */
+.btnHighlight .sapMBtnInner,
+.btnOutline .sapMBtnInner,
+.mainTreeTable .toolbarActionBtn .sapMBtnInner {
+    background-color: transparent !important; /*   inner transparente: deja ver el fondo del wrapper exterior */
+    border: none !important; /*   sin bordo interno para evitar el efecto de doble cornice */
+    box-shadow: none !important; /*   sin sombra interna que confunda el contorno */
+    border-radius: 0 !important; /*   sin radio interno: el redondeo lo da el wrapper exterior */
+}
+/* (FIN) */
+
 /* Botones Base */
 .sapMBtn { height: 1.8rem !important; margin: 1px !important; }
 .sapMBtnInner {
@@ -542,6 +867,44 @@
     font-size: 12px !important;
     line-height: 15px !important;
 }
+
+/*   Se restablecen los paddings y dimensiones por defecto de SAP UI5 para los botones del dialog "Versión Máster". La regla global anterior aplica padding 0 0.1rem en .sapMBtnInner y aplasta icono y texto provocando solapamiento (visible en "Volver", "Buscar" y "Limpiar"). Se acota la correccion al dialog mediante la clase cambiarMasterDialogFix anyadida en CambiarMaster.view.xml para no impactar otros botones de la app. Se usa display:inline-flex con gap en lugar de margin para garantizar separacion entre icono y texto incluso si reglas globales con :before/position alteran el icono   */
+.cambiarMasterDialogFix .sapMBtn { /*   */
+    height: auto !important; /*   se libera la altura para permitir contenido completo */
+    min-height: 1.625rem !important; /*   altura minima estandar SAP compact */
+    min-width: 0 !important; /*   sin anchura minima impuesta: el boton crece solo lo necesario para su contenido */
+    width: auto !important; /*   anchura natural segun contenido + padding */
+}
+.cambiarMasterDialogFix .sapMBtnInner { /*   */
+    height: 100% !important; /*   ocupa toda la altura del wrapper */
+    min-width: 0 !important; /*   sin anchura minima: ajuste al contenido */
+    width: auto !important; /*   anchura natural */
+    padding: 0 0.5rem !important; /*   padding horizontal moderado, suficiente para respiracion sin alargar el boton */
+    line-height: normal !important; /*   se restaura line-height por defecto del navegador */
+    display: inline-flex !important; /*   layout flex para controlar el gap entre icono y texto */
+    align-items: center !important; /*   centrado vertical de icono y texto */
+    justify-content: center !important; /*   centrado horizontal del contenido */
+    gap: 0.375rem !important; /*   separacion compacta entre icono y texto */
+}
+.cambiarMasterDialogFix .sapMBtnInner .sapMBtnIcon { /*   */
+    margin: 0 !important; /*   se anula cualquier margin que pueda interferir con el gap */
+    position: static !important; /*   se previene posicionamiento absoluto heredado */
+    width: 1rem !important; /*   ancho fijo del icono para reservar espacio */
+    flex: 0 0 auto !important; /*   icono no se estira ni se comprime */
+}
+.cambiarMasterDialogFix .sapMBtnInner .sapMBtnIcon:before { /*   */
+    margin: 0 !important; /*   se elimina margin del glyph interno */
+}
+.cambiarMasterDialogFix .sapMBtnInner bdi, /*   */
+.cambiarMasterDialogFix .sapMBtnInner .sapMBtnContent { /*   */
+    margin: 0 !important; /*   sin margin extra que altere la posicion del texto */
+}
+.cambiarMasterDialogFix .sapMBtnContent, /*   */
+.cambiarMasterDialogFix .sapMBtnIcon { /*   */
+    font-size: 0.875rem !important; /*   tamanyo de fuente legible (14px) coherente con el resto del dialog */
+    line-height: 1.375rem !important; /*   altura de linea acorde al alto del boton */
+}
+/*   */
 
 /* Footer Botones */
 .footerBtn.sapMBtn { height: 2rem !important; margin: 0 !important; }
@@ -562,7 +925,23 @@
     width: 1.5rem !important;
     margin: 0 2px !important;
 }
-.toolbarActionBtn.sapMBtn { height: 1.6rem !important; width: 1.6rem !important; }
+/* (INICIO) */
+/*   Se reduce el tamano de los botones-icono de la toolbar para que coincidan con la */
+/*   altura del Input "Operacion" (~1.2rem en compact). Aplicado SOLO en .mainTreeTable */
+/*   (Corrientes/Externos) para no afectar a Anticipados/Diferidos/Inmovilizados, que */
+/*   usan estilos especificos definidos por el colega. */
+.mainTreeTable .toolbarActionBtn.sapMBtn {
+    height: 1.2rem !important; /*   altura reducida solo en mainTreeTable */
+    width: 1.2rem !important; /*   anchura igual a la altura, cuadrado */
+}
+
+/*   Centrado del icono via flexbox SOLO en mainTreeTable. */
+.mainTreeTable .toolbarActionBtn .sapMBtnInner {
+    display: flex !important; /*   flexbox para centrar el icono */
+    align-items: center !important; /*   centra verticalmente el icono */
+    justify-content: center !important; /*   centra horizontalmente el icono */
+}
+/* (FIN) */
 
 .headerIconBtn .sapMBtnInner,
 .toolbarActionBtn .sapMBtnInner {
@@ -573,6 +952,26 @@
 
 .headerIconBtn .sapMBtnIcon { font-size: 1rem !important; }
 .toolbarActionBtn .sapMBtnIcon { font-size: 0.9rem !important; }
+
+/* (INICIO) */
+/*   Botones-icono de la toolbar de Corrientes/Externos en blanco por ahora (decision */
+/*   provisional del usuario). Cornice oscura + esquinas redondeadas se mantienen. */
+/*   Scoped a .mainTreeTable para no afectar a las 3 view del colega. */
+.mainTreeTable .toolbarActionBtn.sapMBtn {
+    background-color: #FFFFFF !important; /*   fondo blanco neutro */
+    border: 1px solid #1F1F1F !important; /*   cornice oscura comun con los demas botones */
+    border-radius: 6px !important; /*   esquinas ligeramente redondeadas */
+}
+
+.mainTreeTable .toolbarActionBtn.sapMBtn:hover {
+    background-color: #F2F2F2 !important; /*   gris muy claro en hover */
+}
+
+.mainTreeTable .toolbarActionBtn.sapMBtn:active,
+.mainTreeTable .toolbarActionBtn.sapMBtn.sapMBtnActive {
+    background-color: #E5E5E5 !important; /*   gris claro al pulsar */
+}
+/* (FIN) */
 
 /* Botón de solo Icono */
 .iconOnlyBtn.sapMBtn {
@@ -735,6 +1134,20 @@
 .sapUiSizeCompact .sapMSltArrow { width: 1.3rem; }
 .yearSelect .sapMSltLabel { font-weight: bold !important; }
 
+/* (INICIO) */
+/*   Se alinea verticalmente el Select de anos (.yearSelect) con el resto de la toolbar. */
+/*   SAP en modo compact aplica "margin: 0.1875rem 0" a todos los .sapMSlt, lo que empuja */
+/*   el yearSelect ligeramente hacia abajo respecto a los botones (+, cestino, Estandar...). */
+/*   Se anula ese margin vertical y se fuerza el centrado con align-self para que quede */
+/*   a la misma altura visual que los demas controles del OverflowToolbar. */
+.yearSelect.sapMSlt,
+.sapUiSizeCompact .yearSelect.sapMSlt {
+    margin-top: 0 !important; /*   anula el margin-top heredado de SAP compact */
+    margin-bottom: 0 !important; /*   anula tambien el margin-bottom para mantener centrado */
+    align-self: center !important; /*   fuerza el centrado vertical dentro del flex del toolbar */
+}
+/* (FIN) */
+
 /* ==========================================================================
    Pestañas, Textos y Otros Elementos
    ========================================================================== */
@@ -834,8 +1247,14 @@ tr.rowVersionB .flatCellInput .sapMInputBaseInner {
 /* ========================================
    OCULTAR Operación y Descripción en filas B
    ======================================== */
-.sapUiTableCtrlFixed tr.rowVersionB td:nth-child(1) .flatCellInput,
-.sapUiTableCtrlFixed tr.rowVersionB td:nth-child(2) .flatCellInput {
+/* Se excluyen las celdas de la fila cabecera del desglose (clase desgloseHeaderKeep:
+   etiquetas "Agrupador"/"Descripcion") y la fila "Resto de proveedores" (placeholderLike):
+   son filas custom que pueden heredar de forma transitoria la clase rowVersionB por el
+   reciclaje de filas de la TreeTable, y su texto debe mostrarse siempre. La ocultacion
+   solo debe aplicar a las filas de operacion reales (Amortizacion "A") para fusionarlas
+   visualmente con su pareja de Inversion "I". */
+.sapUiTableCtrlFixed tr.rowVersionB td:nth-child(1) .flatCellInput:not(.desgloseHeaderKeep):not(.placeholderLike),
+.sapUiTableCtrlFixed tr.rowVersionB td:nth-child(2) .flatCellInput:not(.desgloseHeaderKeep):not(.placeholderLike) {
     visibility: hidden;
 }
 
@@ -913,11 +1332,29 @@ tr.rowVersionB .flatCellInput .sapMInputBaseInner {
 }
 
 .borderColYears .sapMInputBaseInner {
-    text-align: center !important;     
-    line-height: 1.8rem !important;     
+    text-align: center !important;
+    line-height: 1.8rem !important;
     height: 1.7rem !important;
     padding: 0!important; /* top right bottom left */
     margin-left: 0 !important;
+}
+
+/*   Se neutraliza el fondo blanco del DecimalesInput readonly de la columna Resto para evitar que aparente ser editable en las vistas Anticipados/Inmovilizados/Diferidos. La clase restoNoEditableBg se anyade en BaseController.js sobre el DecimalesInput de la columna Resto   */
+.restoNoEditableBg .sapMInputBaseContentWrapper, /*   */
+.sapUiTableCell .restoNoEditableBg .sapMInputBaseContentWrapper { /*   */
+    background: transparent !important; /*   */
+    background-color: transparent !important; /*   */
+}
+/*   */
+
+/* =====================================================================
+   Anticipados - Desglose de Inversión: resalte de celda PENPLAN != 0
+   ===================================================================== */
+.penPlanHighlight input,
+.penPlanHighlight.sapMInputBase {
+    border: 2px solid #e05b00 !important;
+    background-color: #fff5ee !important;
+    border-radius: 3px;
 }
 
 .placeholderLike input {
@@ -937,24 +1374,29 @@ tr.rowVersionB .flatCellInput .sapMInputBaseInner {
     margin: 0 !important;
     text-align: center !important;
     background: transparent !important;
-    height: 1.6rem !important;
-    line-height: 1.6rem !important;
+    height: 26px !important;
+    line-height: 26px !important;
 }
 
 .sapUiTableCell .sapMInputBase.sapMInputBaseReadonly .sapMInputBaseIconContainer,
 .sapUiTableCell .sapMInputBase.sapMInputBaseDisabled .sapMInputBaseIconContainer {
     display: none !important;
 }
-tr.cabeceracolor-Group > td {
+.sapUiTableCtrlFixed tr.cabeceracolor-Group > td:not(.sapUiTableCellDummy), /*  */
+.sapUiTableCtrlScroll tr.cabeceracolor-Group > td:not(.sapUiTableCellDummy), /*  */
+tr.cabeceracolor-Group > td:not(.sapUiTableCellDummy) {
     border-top: 2px solid #000000 !important;
 }
-.sapUiTableTr.sinProveedorRow td,
+/*   Se excluyen las celdas dummy en todas las reglas que pintan fondo/borde 
+   de filas grises (sinProveedorRow y headerGrayRow) para que el color no se 
+   extienda al area sobrante mas alla de la ultima columna real.  */
+.sapUiTableTr.sinProveedorRow td:not(.sapUiTableCellDummy), /*  */
 .sapUiTableTr.sinProveedorRow input {
     background-color: #d9d9d9  !important;
     font-weight: bold;
     color: #000000;
 }
-.sapUiTableTr.sinProveedorRow td {
+.sapUiTableTr.sinProveedorRow td:not(.sapUiTableCellDummy) { /*  */
     background-color: #d9d9d9  !important;
 }
 .sapUiTableTr.sinProveedorRow input {
@@ -962,7 +1404,7 @@ tr.cabeceracolor-Group > td {
     font-weight: bold;
     color: #000000;
 }
-.sapUiTableTr.headerGrayRow td {
+.sapUiTableTr.headerGrayRow td:not(.sapUiTableCellDummy) { /*  */
     background-color: #9e9b9b !important;
 }
 .sapUiTableTr.headerGrayRow input {
@@ -970,32 +1412,30 @@ tr.cabeceracolor-Group > td {
     font-weight: bold;
     color: #000000;
 }
-.sinProveedorRow, 
-.sinProveedorRow td, 
-.sinProveedorRow .sapMInputBaseContentWrapper, 
+.sinProveedorRow td:not(.sapUiTableCellDummy), /*  */
+.sinProveedorRow .sapMInputBaseContentWrapper,
 .sinProveedorRow .sapMInputBaseInner {
     background-color: #d9d9d9  !important;
     color: #000 !important;
     font-weight: bold !important;
 }
 /* color cabecera continua sin lineas blancas*/
-.headerGrayRow, 
-.headerGrayRow td, 
-.headerGrayRow .sapMInputBaseContentWrapper, 
+.headerGrayRow td:not(.sapUiTableCellDummy), /*  */
+.headerGrayRow .sapMInputBaseContentWrapper,
 .headerGrayRow .sapMInputBaseInner {
     background-color: #9e9b9b !important;
     color: #000 !important;
     font-weight: bold !important;
 }
-.headerGrayRow td,
-.headerGrayRow .sapUiTableDataCell {
+.headerGrayRow td:not(.sapUiTableCellDummy), /*  */
+.headerGrayRow .sapUiTableDataCell:not(.sapUiTableCellDummy) { /*  */
     background-color: #9e9b9b !important;
     border-right: 1px solid #9e9b9b !important;
     border-left: 1px solid #9e9b9b !important;
 }
 
-.sinProveedorRow td,
-.sinProveedorRow .sapUiTableDataCell {
+.sinProveedorRow td:not(.sapUiTableCellDummy), /*  */
+.sinProveedorRow .sapUiTableDataCell:not(.sapUiTableCellDummy) { /*  */
     background-color: #d9d9d9 !important;
     border-right: 1px solid #d9d9d9 !important;
     border-left: 1px solid #d9d9d9 !important;
@@ -1030,7 +1470,6 @@ tr.cabeceracolor-Group > td {
     border-right: 1px solid #9e9b9b !important;
     border-left: 1px solid #9e9b9b !important;
 }
-
 /* Se restituye el borde naranja a las cabeceras grises del panel cuyo contenido lleva la clase borderRightPend. La regla anterior (.panelDarkHeader .sapUiTableHeaderDataCell) sobreescribe el borde con #9e9b9b por mayor especificidad; este selector combina ambas condiciones para ganarle y conservar la linea vertical naranja tambien sobre el header gris */
 .panelDarkHeader .sapUiTableColHdrTr > td:has(.borderRightPend),
 .panelDarkHeader .sapUiTableHeaderDataCell:has(.borderRightPend) {
@@ -1059,6 +1498,7 @@ tr.cabeceracolor-Group > td {
     font-weight: bold !important;
 }
 
+
 /* ==========================================================================
    Alineación de inputs numéricos
    ========================================================================== */
@@ -1082,6 +1522,25 @@ tr.cabeceracolor-Group > td {
     text-align: left !important;
 }
 
+/* Mantener alineación izquierda para campos de texto con clase allowLetters */
+.centeredInput .sapMInputBaseInner,
+.centeredInput.sapMInputBase .sapMInputBaseInner,
+.sapUiTableCell .centeredInput .sapMInputBaseInner,
+.sapUiTableCell .centeredInput.sapMInputBase .sapMInputBaseInner {
+    text-align: center !important;
+}
+
+/* Fix for uniform table header heights using custom class */
+.headerTableFix .sapUiTableHeaderDataCell {
+    padding: 0 !important;
+    height: auto !important;
+}
+
+.sapFDynamicPageToggleHeaderIndicator.sapMBtn, .sapFDynamicPageHeaderPinButton.sapMBtn {
+    position: absolute;
+    left: 48.7% !important;
+    padding: 0;
+}
 /* Se centran los textos de la cabecera gris del bloque (selectores reforzados para ganar a la regla numérica de tabla) */
 .headerGrayRow .sapMInputBaseInner,
 .sapUiTableCell .headerGrayRow .sapMInputBaseInner,
@@ -1094,9 +1553,10 @@ tr.cabeceracolor-Group > td {
 }
 
 /* Se aplica un gris más claro al fondo de las celdas de las filas custom del bloque situadas bajo la cabecera gris */
-.sapUiTableTr.blockCustomRow td,
-.blockCustomRow td,
-.blockCustomRow .sapUiTableDataCell {
+/*   Se excluye la celda dummy para que el gris claro no se extienda al area sobrante  */
+.sapUiTableTr.blockCustomRow td:not(.sapUiTableCellDummy), /*  */
+.blockCustomRow td:not(.sapUiTableCellDummy), /*  */
+.blockCustomRow .sapUiTableDataCell:not(.sapUiTableCellDummy) { /*  */
     background-color: #ececec !important;
 }
 /* Se extiende el mismo gris claro al row header (zona del checkbox) y al row action de las filas del bloque, ya que viven en <div>s separados del <tr> y no heredan el fondo de las celdas */
@@ -1134,6 +1594,21 @@ tr.cabeceracolor-Group > td {
 .blockCustomRow td:has(.borderRightPend) {
     border-right: 2px solid #f3984e !important;
 }
+/*   Se elimina el relleno de fondo arancio (#fdebd6) de la fila "D" a peticion
+   funcional; se conserva UNICAMENTE el border-bottom naranja como linea separadora
+   entre la fila "D" y el resto. */
+.sapUiTable tr.rowChapterLevel0 td:not(.sapUiTableCellDummy), /*  */
+.sapUiTableCtrlFixed tr.rowChapterLevel0 td:not(.sapUiTableCellDummy), /*  */
+.sapUiTableCtrlScroll tr.rowChapterLevel0 td:not(.sapUiTableCellDummy), /*  */
+tr.rowChapterLevel0 td:not(.sapUiTableCellDummy) {
+    border-bottom: 2px solid #f3984e !important; /*  */
+} /*  */
+.sapUiTableRowHdr.rowChapterLevel0,
+.sapUiTableRowAction.rowChapterLevel0 {
+    border-bottom: 2px solid #f3984e !important; /*  */
+} /*  */
+/*   Se eliminan las reglas que pintaban el fondo arancio sobre la columna Resto
+   (.borderColYears / .yearCell): ya no hay relleno que mostrar, solo el borde. */
 
 /* Se reducen la altura y el padding vertical de las filas del bloque (header gris y filas custom) cubriendo ambos contenedores (Fixed y Scroll) y los row header/action para mantener la misma altura entre columnas fijas y desplazables */
 .sapUiTableCtrlFixed tr.blockCustomRow,
@@ -1166,18 +1641,19 @@ tr.headerGrayRow > td,
     vertical-align: middle !important;
 }
 
-/* Se reduce la altura del Select (Reparto) y se le aplica un pequeño margin-top para alinearlo verticalmente con los Inputs vecinos en toda la mainTreeTable (no sólo en el bloque) */
+/* Select en mainTreeTable: ocupa toda la celda (26px = altura de la fila),
+   misma medida que los flatCellInputs para alineación visual uniforme */
 .mainTreeTable .sapMSlt {
-    height: 20px !important;
-    min-height: 20px !important;
-    line-height: 20px !important;
-    margin-top: 3px !important;
+    height: 26px !important;
+    min-height: 0 !important;
+    line-height: 26px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
 }
-/* Se alinean también las partes internas del Select (label y flecha) a la nueva altura para que el contenido no se desborde */
 .mainTreeTable .sapMSlt .sapMSltLabel,
 .mainTreeTable .sapMSlt .sapMSltArrow {
-    line-height: 20px !important;
-    height: 20px !important;
+    line-height: 26px !important;
+    height: 26px !important;
 }
 
 /* Se reduce la altura de TODAS las filas de la mainTreeTable a 26px para uniformar el grosor entre filas normales y filas del bloque, incluyendo los estados selected/hover/focus que de otro modo pueden sobrescribir la altura */
@@ -1193,41 +1669,78 @@ tr.headerGrayRow > td,
     min-height: 0 !important;
     max-height: 26px !important;
 }
-/* Se mantiene el row selector (zona del checkbox) y el row action a la misma altura que el tr de la fila (26px) para evitar un escalón visible entre el checkbox y el contenido de la fila */
+/* (INICIO) */
+/*   Se alinea la altura del row header (zona del checkbox) y del row action con la */
+/*   altura RENDERIZADA real del td de datos: aunque el CSS los fija a 26px, el */
+/*   navegador suma 1px de border-bottom al td y termina midiendo 27px. La cell del */
+/*   checkbox es un div sin ese borde, por eso quedaba 1px mas corta y aparecia */
+/*   visualmente "storta" respecto a su fila. Subir a 27px en row header + row action */
+/*   + row selection cell elimina el desfase de 1px sin tocar el resto del layout. */
 .mainTreeTable .sapUiTableRowHdr,
 .mainTreeTable .sapUiTableRowHdr.sapUiTableRowSel,
 .mainTreeTable .sapUiTableRowHdr.sapUiTableRowHvr,
 .mainTreeTable .sapUiTableRowAction,
 .mainTreeTable .sapUiTableRowAction.sapUiTableRowSel,
 .mainTreeTable .sapUiTableRowAction.sapUiTableRowHvr {
-    height: 26px !important;
+    height: 27px !important; /*   altura del row header ajustada a 27px */
     min-height: 0 !important;
-    max-height: 26px !important;
+    max-height: 27px !important; /*   max coherente con height */
     /* Se centra verticalmente el contenido (checkbox o icono) dentro del row header con flex, ya que la regla anterior solo fijaba la altura del contenedor pero no la posicion del checkbox interno, que aparecia alineado en la parte superior y desfasado respecto al texto de la fila correspondiente. */
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     padding: 0 !important;
 }
-/* Se aplican las mismas reglas al pseudo-elemento ::after que UI5 usa para pintar el icono del checkbox, asegurando que tambien quede vertical y horizontalmente centrado dentro del row header de 26px. */
+/* Se aplican las mismas reglas al pseudo-elemento ::after que UI5 usa para pintar el icono del checkbox, asegurando que tambien quede vertical y horizontalmente centrado dentro del row header. */
 .mainTreeTable .sapUiTableRowSelectionCell {
-    height: 26px !important;
+    height: 27px !important; /*   altura del cell de seleccion a 27px coherente con row header */
     min-height: 0 !important;
-    max-height: 26px !important;
+    max-height: 27px !important; /*   max coherente con height */
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     padding: 0 !important;
 }
-/* Se desplaza el glifo del checkbox (pseudo-elemento ::after que UI5 dibuja como icono) 1px hacia abajo para compensar el desfase residual que dejaba el checkbox visualmente algo mas arriba que el contenido de su fila correspondiente. Se aumenta tambien su font-size a 1rem para que el icono ocupe practicamente la altura util de la fila (26px) y no quede visualmente mas corto que la celda de datos seleccionada. */
-.mainTreeTable .sapUiTableRowSelectionCell::after {
-    position: relative !important;
-    top: 1px !important;
-    font-size: 1rem !important;
-    line-height: 1rem !important;
-    height: 1rem !important;
-    width: 1rem !important;
+
+/* (INICIO) */
+/*   Las filas con border-bottom destacado (Agrupador gris, fila "D" naranja, etc.) */
+/*   anaden 1px o mas a la altura renderizada del td (28px en lugar de 27). El row */
+/*   header es un div sin ese borde, asi que sin compensacion el checkbox aparece */
+/*   1px mas corto y queda desalineado solo en esas filas concretas. Se sube */
+/*   dinamicamente la altura del row header / row action / row selection cell a 28px */
+/*   SOLO cuando la fila lleva una de las clases que dibujan el borde extra: */
+/*   headerGrayRow (Agrupador gris), blockCustomRow (filas del bloque), rowChapterLevel0 */
+/*   (fila "D" naranja). Las filas normales sin esas clases conservan 27px. */
+.mainTreeTable .sapUiTableRowHdr.headerGrayRow,
+.mainTreeTable .sapUiTableRowHdr.blockCustomRow,
+.mainTreeTable .sapUiTableRowHdr.rowChapterLevel0,
+.mainTreeTable .sapUiTableRowAction.headerGrayRow,
+.mainTreeTable .sapUiTableRowAction.blockCustomRow,
+.mainTreeTable .sapUiTableRowAction.rowChapterLevel0,
+.mainTreeTable .sapUiTableRowSelectionCell.headerGrayRow,
+.mainTreeTable .sapUiTableRowSelectionCell.blockCustomRow,
+.mainTreeTable .sapUiTableRowSelectionCell.rowChapterLevel0 {
+    height: 28px !important; /*   +1px en filas con borde para igualar altura del td renderizado */
+    max-height: 28px !important; /*   max alineado a la altura ampliada */
 }
+/* (FIN) */
+/* (FIN) */
+/* (INICIO) */
+/*   Se centra el glifo del checkbox (pseudo-elemento ::after de UI5) sin forzar */
+/*   display: flex: hacerlo rompia la regla .hideCheckbox::after { display: none } */
+/*   (misma especificidad y la nuestra ganaba al venir despues), provocando que */
+/*   filas vacias mostraran tambien el cuadradito. Se mantiene el centrado vertical */
+/*   confiado al flex del CONTENEDOR padre (.sapUiTableRowSelectionCell) y se ajusta */
+/*   el tamano del glifo sin tocar display, asi .hideCheckbox sigue funcionando. */
+.mainTreeTable .sapUiTableRowSelectionCell::after {
+    position: relative !important; /*   relative para encajar en el flujo del flex padre */
+    top: 0 !important; /*   sin offset: el centrado vertical lo da align-items del padre */
+    font-size: 1rem !important; /*   el icono ocupa la altura util sin verse pequeno */
+    line-height: 1rem !important; /*   line-height alineado al font-size para no anadir espacio */
+    height: 1rem !important; /*   altura fija coherente con el tamano del icono */
+    width: 1rem !important; /*   anchura igual a altura para mantener cuadrado regular */
+}
+/* (FIN) */
 .mainTreeTable .sapUiTableCtrlFixed tr.sapUiTableTr > td,
 .mainTreeTable .sapUiTableCtrlScroll tr.sapUiTableTr > td,
 .mainTreeTable tr.sapUiTableTr > td,
@@ -1252,18 +1765,19 @@ tr.headerGrayRow > td,
 }
 
 /* Se aplica una cuadrícula completa (vertical + horizontal) con tono suave tipo defecto en las filas del header gris y del bloque, sustituyendo los bordes originales del mismo color que el fondo */
-.sapUiTableCtrlFixed tr.headerGrayRow > td,
-.sapUiTableCtrlScroll tr.headerGrayRow > td,
-tr.headerGrayRow > td,
-.headerGrayRow .sapUiTableDataCell {
+/*   Se excluye la celda dummy para que la cuadricula no se extienda al area sobrante  */
+.sapUiTableCtrlFixed tr.headerGrayRow > td:not(.sapUiTableCellDummy), /*  */
+.sapUiTableCtrlScroll tr.headerGrayRow > td:not(.sapUiTableCellDummy), /*  */
+tr.headerGrayRow > td:not(.sapUiTableCellDummy), /*  */
+.headerGrayRow .sapUiTableDataCell:not(.sapUiTableCellDummy) { /*  */
     border-right: 1px solid rgba(0, 0, 0, 0.2) !important;
     border-left: 1px solid rgba(0, 0, 0, 0.2) !important;
     border-bottom: 1px solid rgba(0, 0, 0, 0.2) !important;
 }
-.sapUiTableCtrlFixed tr.blockCustomRow > td,
-.sapUiTableCtrlScroll tr.blockCustomRow > td,
-tr.blockCustomRow > td,
-.blockCustomRow .sapUiTableDataCell {
+.sapUiTableCtrlFixed tr.blockCustomRow > td:not(.sapUiTableCellDummy), /*  */
+.sapUiTableCtrlScroll tr.blockCustomRow > td:not(.sapUiTableCellDummy), /*  */
+tr.blockCustomRow > td:not(.sapUiTableCellDummy), /*  */
+.blockCustomRow .sapUiTableDataCell:not(.sapUiTableCellDummy) { 
     border-right: 1px solid rgba(0, 0, 0, 0.08) !important;
     border-left: 1px solid rgba(0, 0, 0, 0.08) !important;
     border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
@@ -1274,6 +1788,37 @@ tr.blockCustomRow > td,
 .panelTitleBold .sapMTitleInner,
 .panelTitleBold span {
     font-weight: bold !important;
+}
+
+/* ==========================================================================
+   Color de selección de filas (naranja suave)
+   - Se sobreescribe el azul por defecto de SAP UI5 en todos los TreeTables
+     (Anticipados, Inmovilizados, Diferidos y el principal) con un naranja
+     claro (#FFE0B2) que contrasta con los colores de las filas tipo "A"/"B".
+   - Se cubren: el <tr>, las celdas <td>, los inputs, el row header (checkbox)
+     y el row action para que el color sea uniforme en toda la fila.
+   ========================================================================== */
+
+/* tr seleccionado — columnas fijas y desplazables */
+.sapUiTableCtrlFixed tr.sapUiTableTr.sapUiTableRowSel > td:not(.sapUiTableCellDummy),
+.sapUiTableCtrlScroll tr.sapUiTableTr.sapUiTableRowSel > td:not(.sapUiTableCellDummy),
+.sapUiTableCtrlFixed tr.sapUiTableTr.sapUiTableRowSelected > td:not(.sapUiTableCellDummy),
+.sapUiTableCtrlScroll tr.sapUiTableTr.sapUiTableRowSelected > td:not(.sapUiTableCellDummy) {
+    background-color: #FFE0B2 !important;
+}
+
+/* inputs dentro de la fila seleccionada */
+tr.sapUiTableTr.sapUiTableRowSel .sapMInputBaseInner,
+tr.sapUiTableTr.sapUiTableRowSel .sapMInputBaseContentWrapper,
+tr.sapUiTableTr.sapUiTableRowSelected .sapMInputBaseInner,
+tr.sapUiTableTr.sapUiTableRowSelected .sapMInputBaseContentWrapper {
+    background-color: #FFE0B2 !important;
+}
+
+/* row header (zona del checkbox) y row action de la fila seleccionada */
+.sapUiTableRowHdr.sapUiTableRowSel,
+.sapUiTableRowAction.sapUiTableRowSel {
+    background-color: #FFE0B2 !important;
 }
 
 /* Se pinta la barra divisoria del Splitter en un naranja corporativo mas opaco/apagado (#cc7a3a) para reducir la luminosidad del tono original #f3984e y suavizar el contraste con el contenido */
@@ -1291,3 +1836,306 @@ tr.blockCustomRow > td,
 .sapUiLoSplitterBar .sapUiLoSplitterBarGrip {
     color: #ffffff !important;
 }
+
+/* ===================================================================== */
+/*   Diálogo "Catálogo de recursos"                                      */
+/* ===================================================================== */
+/*   Las reglas globales .sapMBtnInner { line-height: 0.1rem; height: 80%; */
+/*   padding: 0 0.1rem; } (pensadas para los botones del tree table) colapsan */
+/*   la caja interna del botón y hacen que el icono se solape con el texto en */
+/*   los botones de este diálogo, que no llevan las clases correctoras */
+/*   (toolbarActionBtn / footerBtn). Se restauran aquí valores normales para */
+/*   que el icono y el texto se rendericen uno al lado del otro. */
+.catalogoRecursosCss .sapMBtn .sapMBtnInner {
+    height: auto !important;
+    min-width: 2rem !important;
+    padding: 0 0.625rem !important;
+    line-height: 1.5rem !important;
+}
+.catalogoRecursosCss .sapMBtn .sapMBtnContent,
+.catalogoRecursosCss .sapMBtn .sapMBtnIcon {
+    line-height: 1.5rem !important;
+}
+/*   El icono recupera su separación a la derecha respecto del texto. */
+.catalogoRecursosCss .sapMBtn .sapMBtnIcon {
+    padding-right: 0.25rem !important;
+}
+
+/*   Visibilidad del icono de ayuda de busqueda en el Input DESCRIP
+   del desglose: el contenedor del icono esta oculto por defecto en
+   .flatCellInput; aqui se reverte solo para .descripVHInput, sin afectar al
+   resto de Inputs de celda. Replica el patron de .proveedorVHInput. */
+.descripVHInput .sapMInputBaseIconContainer,
+.flatCellInput.descripVHInput .sapMInputBaseIconContainer,
+.sapUiTableCell .descripVHInput .sapMInputBaseIconContainer,
+.sapUiTableCell .flatCellInput.descripVHInput .sapMInputBaseIconContainer {
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 1.5rem !important;
+    min-width: 1.5rem !important;
+    flex-shrink: 0 !important;
+}
+.descripVHInput .sapMInputBaseIconContainer .sapUiIcon {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 1rem !important;
+}
+/*   */
+
+/*   Inputs editables de IdRecurso y Puesto en el dialogo del
+   Catalogo de Recursos: durante la edicion el texto se desplazaba a la
+   derecha del Input. Se aplican varias capas de override con alta
+   especificidad sobre todos los nodos posibles (.sapMInputBaseInner y el
+   input HTML interno), forzando direction:ltr + text-align:left + margin-left:0
+   para neutralizar tanto la regla global de margin-left: 1rem
+   (.sapMInputBase ... .sapMInputBaseInner del style.css del proyecto)
+   como un eventual text-align heredado de la celda de la sap.m.Table.
+   No afecta al Input de Tarifa, que se queda con textAlign=End por defecto. */
+.catalogoEditTextInput,
+.catalogoEditTextInput .sapMInputBaseInner,
+.catalogoEditTextInput input,
+.catalogoEditTextInput input.sapMInputBaseInner,
+.sapUiSizeCompact .catalogoEditTextInput .sapMInputBaseInner,
+.sapUiSizeCompact .catalogoEditTextInput input,
+.sapMDialog .catalogoEditTextInput .sapMInputBaseInner,
+.sapMDialog .catalogoEditTextInput input {
+    direction: ltr !important;
+    text-align: left !important;
+    margin-left: 0 !important;
+    padding-left: 0.5rem !important;
+}
+.precargaPlantillaHidden,
+.precargaPlantillaHidden * {
+    visibility: hidden !important;
+}
+/*     Se estiliza la etiqueta "MASTER DE OBRA" de la cabecera del Main.
+     El texto se inserta como hermano directo del boton lupa dentro de contentRight
+     y hereda el centrado vertical del .sapMBarRight. Se fija line-height igual a
+     la altura del boton (.headerIconBtn ~ 1.5rem) para que el centro tipografico
+     coincida con el centro vertical del icono. */
+.masterDeObraHeaderText {
+    font-size: 0.75rem;
+    line-height: 1.5rem;
+    color: #1f1f1f;
+    text-align: center;
+    margin: 0 0.375rem 0 0.125rem;
+      font-weight: bold;
+}
+/*      */
+
+/*     Estilos del panel "Histórico de modificaciones".
+     El panel solo contiene los filtros (operacion + Desde/Hasta) y los
+     botones Buscar / Exportar Excel. La tabla de resultados se retiro a
+     peticion del usuario: el listado se entregara directamente via Excel.
+     - .historySideBar permite scroll vertical defensivo si el alto del
+       contenido superara el viewport en pantallas pequenyas.
+     - .historyPanelTitle reduce el peso visual del titulo respecto al H4
+       por defecto (mas elegante en un panel estrecho). */
+.historySideBar {
+    overflow-y: auto;
+    overflow-x: hidden;
+    background-color: #ffffff;
+}
+
+.historyPanelContent {
+    width: 100%;
+}
+
+.historyPanelTitle {
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    color: #1f1f1f;
+}
+
+/*   Cabecera del panel: barra horizontal con titulo + X. Padding lateral
+     para alinear con los filtros, padding vertical reducido para no robar
+     espacio, y borde inferior fino que actua como divisor sutil. */
+.historyPanelHeader {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #e5e5e5;
+    background-color: #fafafa;
+}
+
+.historyPanelCloseBtn.sapMBtn {
+    min-width: 1.75rem !important;
+    width: 1.75rem !important;
+    height: 1.75rem !important;
+}
+
+.historyPanelCloseBtn .sapMBtnIcon {
+    font-size: 0.9rem !important;
+    color: #6a6a6a !important;
+}
+
+/*   Label sobre cada filtro: ligeramente mas peso y color neutro oscuro
+     para crear jerarquia visual respecto al placeholder gris claro.
+     Selectores `.sapMLabel.historyPanelLabel` y el bdi interno fuerzan
+     la specificity para anular el line-height 24px que sap.m.Label aplica
+     por defecto, asegurando que el texto "Desde"/"Hasta" quede alineado
+     verticalmente al centro junto al icono calendar de la misma fila. */
+.sapMLabel.historyPanelLabel,
+.sapMLabel.historyPanelLabel > bdi {
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    color: #32363a !important;
+    line-height: 1 !important;
+    height: auto !important;
+}
+
+/*   Margen superior aplicado al contenedor del segundo y tercer label
+     (Desde / Hasta) para separar visualmente los grupos de filtro sin
+     depender de marginTop de la clase utility. */
+.historyPanelLabelTop {
+    margin-top: 0.5rem;
+}
+
+.historyPanelLabelRow {
+    width: 100%;
+}
+
+.historyPanelLabelIcon {
+    font-size: 0.85rem !important;
+    color: #0a6ed1 !important;
+    margin-right: 0.375rem;
+}
+
+.historyPanelFilters .sapMDP,
+.historyPanelFilters .sapMDTP,
+.historyPanelFilters .sapMSF {
+    margin-top: 0.25rem;
+}
+
+/*   Fila de botones Buscar / Exportar: padding superior para separarla
+     de los filtros y borde fino para reforzar la division visual. */
+.historyPanelActionsRow {
+    padding-top: 0.5rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+
+/*   Botones de accion del panel (Buscar / Exportar Excel): se fuerza un
+     min-width que acoja icono + texto y un padding horizontal interno
+     suficiente para que el icono no se solape con la primera letra.
+     Tambien se anyade margen entre el icono y el texto para evitar que
+     se peguen, problema que ocurria sobre todo en "Exportar Excel". */
+.historyPanelActionBtn.sapMBtn {
+    min-width: 8rem !important;
+    width: auto !important;
+}
+
+.historyPanelActionBtn .sapMBtnInner {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+}
+
+.historyPanelActionBtn .sapMBtnIcon {
+    margin-right: 0.375rem !important;
+}
+
+/*   Estilos para la X de borrado interna en los DateTimePicker del panel "Histórico de modificaciones". Se busca replicar visualmente el comportamiento del SearchField nativo de Operación, donde la X aparece a la izquierda del icono de accion y el texto queda alineado a la izquierda.   */
+
+/* historyClearIcon: el icono "decline" (X) que el controller agrega via addEndIcon. Se replica visualmente la X del SearchField nativo (sap.m.SearchField .sapMSFR): font-size 9.6px, color azul SAP (rgb 8,84,160) y ancho 19.19px para que la X quede centrada en una caja del mismo tamanyo que la X del SearchField y se alinee horizontalmente con ella. text-align center asegura que el glyph quede al medio de la caja ampliada. Se usan selectores compuestos (.sapUiIcon + .sapMInputBaseIcon) para superar la specificity de SAP que fija width 14.39px en .sapMInputBaseIcon. */
+span.sapUiIcon.sapMInputBaseIcon.historyClearIcon {
+    font-size: 9.6px !important;
+    color: rgb(8, 84, 160) !important;
+    width: 19.19px !important;
+    min-width: 19.19px !important;
+    text-align: center !important;
+}
+span.sapUiIcon.sapMInputBaseIcon.historyClearIcon:hover {
+    color: #0a6ed1 !important;
+}
+
+/* Texto de los DateTimePicker desde/hasta alineado a la izquierda (start) en vez de la alineacion por defecto a la derecha que SAP aplica a los DatePicker. Se replica el comportamiento del SearchField de Operacion. Tambien se aumenta padding-left para que el texto arranque a la misma altura visual que el SearchField (~14px desde el borde izquierdo del wrapper) y se elimina padding-right para que las iconos puedan empujarse al borde derecho sin solapamientos. */
+.historyPanelFilters input.sapMInputBaseInner {
+    text-align: left !important;
+    padding-left: 1.5rem !important;
+    padding-right: 0 !important;
+}
+/* Contenedor de los end icons del DateTimePicker: se invierte la direccion del contenido a RTL para que las dos iconos (calendar y X) aparezcan en orden visual invertido respecto al orden en el DOM (X a la izquierda, calendar a la derecha). Se convierte a inline-flex con gap para separar visualmente X y calendar (sin solapamiento ni amontonamiento). margin-left auto empuja el contenedor al borde derecho del content wrapper (flex item). */
+.historyPanelFilters .sapMInputBaseIconContainer {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.25rem;
+    direction: rtl;
+    padding-right: 2px !important;
+    margin-right: 0 !important;
+    margin-left: auto !important;
+    width: auto !important;
+}
+/* Content wrapper del DateTimePicker: por defecto SAP lo renderiza como block normal con padding-right que mantiene un hueco entre las iconos y el borde derecho del wrapper. Se convierte a flex y se eliminan los paddings laterales para que el input pueda extenderse y el iconContainer pegarse al borde derecho via margin-left auto. align-items center mantiene la alineacion vertical original. */
+.historyPanelFilters .sapMInputBaseContentWrapper {
+    display: flex !important;
+    align-items: center !important;
+    padding-right: 0 !important;
+}
+/*   */
+/*      */
+/*   */
+
+/*   Se compensa el desalineamiento horizontal del boton "Comprimi testata" / collapse de los ObjectPageLayout. SAP posiciona el indicador toggle sin considerar el ancho de la scrollbar vertical (~17px), por lo que el boton aparece ~8-12px desplazado a la izquierda respecto al centro visual del header. Se aplica margin-left 8px (compromiso entre los dos centros) sobre la clase generica sapFDynamicPageToggleHeaderIndicator. Para revertir basta con eliminar este bloque marcado.   */
+button.sapFDynamicPageToggleHeaderIndicator {
+    margin-left: 8px !important;
+}
+/*   */
+
+/*     Estilos del panel lateral "Catalogo de recursos". Replican
+     visualmente el panel "Historico de modificaciones" (cabecera con titulo y
+     X, divisor inferior, fila de acciones a la derecha con divisor superior).
+     Se mantienen separados de las clases historyPanel* para poder ajustar el
+     panel del catalogo de forma independiente si fuese necesario (anchos
+     internos de tabla, padding del toolbar, etc.) sin afectar al de Historial.   */
+.catalogoRecursosSideBar {
+    overflow-y: auto;
+    overflow-x: hidden;
+    background-color: #ffffff;
+    /*     Se desplaza el borde derecho 2.5rem hacia el interior para
+         dejar libre el ancho exacto del sideActionToolbar (barra de iconos
+         flotante anclada al borde derecho con right:0). Sin este offset el
+         toolbar se solapa sobre la tabla del catalogo y tapa la columna Tarifa.
+         Override de .floatingSideBar { right: 0 } heredado de la clase base.   */
+    right: 2.5rem !important;
+    /*     */
+}
+
+.catalogoPanelContent {
+    width: 100%;
+}
+
+.catalogoPanelTitle {
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    color: #1f1f1f;
+}
+
+.catalogoPanelHeader {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #e5e5e5;
+    background-color: #fafafa;
+}
+
+.catalogoPanelCloseBtn.sapMBtn {
+    min-width: 1.75rem !important;
+    width: 1.75rem !important;
+    height: 1.75rem !important;
+}
+
+.catalogoPanelCloseBtn .sapMBtnIcon {
+    font-size: 0.9rem !important;
+    color: #6a6a6a !important;
+}
+
+.catalogoPanelActionsRow {
+    padding-top: 0.5rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+.catalogoPanelActionBtn.sapMBtn {
+    min-width: 8rem !important;
+    width: auto !important;
+}
+/*     */
+
+

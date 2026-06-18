@@ -5,7 +5,7 @@ sap.ui.getCore().attachInit(function () {
 	"use strict";
 
 	sap.ui.require([
-		"masterindirectos/test/unit/AllTests"
+		"zindirect_costs/test/unit/AllTests"
 	], function () {
 		QUnit.start();
 	});

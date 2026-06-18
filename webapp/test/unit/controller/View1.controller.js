@@ -1,7 +1,7 @@
 /*global QUnit*/
 
 sap.ui.define([
-	"masterindirectos/controller/View1.controller"
+	"zindirect_costs/controller/View1.controller"
 ], function (Controller) {
 	"use strict";
 

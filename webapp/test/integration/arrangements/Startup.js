@@ -14,7 +14,7 @@ sap.ui.define([
 			// start the app UI component
 			this.iStartMyUIComponent({
 				componentConfig: {
-					name: "masterindirectos",
+					name: "zindirect_costs",
 					async: true
 				},
 				hash: oOptions.hash,

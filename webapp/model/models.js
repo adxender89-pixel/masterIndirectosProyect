@@ -16,6 +16,35 @@ sap.ui.define([
                 return oModel;
             },
 
+            createUrlsMasterModel: function () {
+                const domain = document.domain;
+
+                // En local este proyecto corre en localhost:8080
+                const url = (domain === "localhost")
+                    ? "http://fsapl09l.intranet.ferrovial.es:8000"
+                    : window.location.origin;
+
+                const urlInsite = (
+                    domain === "localhost" ||
+                    domain === "fsapl09l.ferrovial.int" ||
+                    domain === "fsapl09l.intranet.ferrovial.es"
+                )
+                    ? "http://flrhvmtpho001.ferrovial.int:7011"
+                    : window.location.origin;
+
+                const service = "/sap/opu/odata/SAP/ZFERR_MASTER_SRV/";
+                const vistasService = "/sap/opu/odata/SAP/ZFERR_XX_SRV/";
+
+                return new JSONModel({
+                    url: url,
+                    urlInsite: urlInsite + "/FerPhoFrontalWL12",
+                    service: service,
+                    vistasService: vistasService,
+                    endpoint: url + service,
+                    endpointVistas: url + vistasService
+                });
+            },
+
             createEndpointModel: function () {
                 const domain = document.domain;
 

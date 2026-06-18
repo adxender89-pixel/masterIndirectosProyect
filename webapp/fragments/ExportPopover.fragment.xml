@@ -1,0 +1,39 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+    <!--   Popover anclado al botón Exportar de la barra lateral, ofrece las tres opciones de exportación -->
+    <Popover
+        title="{i18n>exportPopoverTitle}"
+        placement="Left"
+        contentWidth="260px"
+        showHeader="true"
+    >
+        <content>
+            <!--   Se listan en vertical las tres opciones de exportación disponibles -->
+            <VBox class="sapUiSmallMargin">
+                <!--   Opción 1: se exporta la vista del capítulo actual (sólo lectura, sin pestaña de obra/tramo) -->
+                <Button
+                    text="{i18n>exportOptionVistaCapitulo}"
+                    icon="sap-icon://table-view"
+                    press="onExportarVistaCapitulo"
+                    width="100%"
+                    class="sapUiTinyMarginBottom"
+                />
+                <!--   Opción 2: se exporta la plantilla de carga (presind y planind, seis pestañas + inicio de validación) -->
+                <Button
+                    text="{i18n>exportOptionPlantillaCarga}"
+                    icon="sap-icon://excel-attachment"
+                    press="onExportarPlantillaCarga"
+                    width="100%"
+                    class="sapUiTinyMarginBottom"
+                />
+                <!--   Opción 3: se exporta el catálogo del capítulo de Corrientes -->
+                <Button
+                    text="{i18n>exportOptionCatalogoCapitulo}"
+                    icon="sap-icon://product"
+                    press="onExportarCatalogoCapitulo"
+                    width="100%"
+                />
+            </VBox>
+        </content>
+    </Popover>
+    <!--   -->
+</core:FragmentDefinition>

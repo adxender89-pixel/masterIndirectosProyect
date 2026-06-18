@@ -4,8 +4,8 @@ sap.ui.define([
     "sap/m/Input",
     "sap/m/Button",
     "sap/m/Label",
-    "masterindirectos/controller/BaseController",
-    "masterindirectos/model/formatter"
+    "zindirect_costs/controller/BaseController",
+    "zindirect_costs/model/formatter"
 ], function (
     JSONModel,
     Column,
@@ -17,9 +17,35 @@ sap.ui.define([
 ) {
     "use strict";
 
-    return BaseController.extend("masterindirectos.controller.DetailsControllers.Inmovilizados", {
+    return BaseController.extend("zindirect_costs.controller.DetailsControllers.Inmovilizados", {
 
         formatter: formatter,
+
+        /**
+         * Formatter function to translate TipoInd values
+         * @param {string} sTipoInd - The TipoInd value
+         * @returns {string} The translated text
+         */
+        formatTipoInd: function (sTipoInd) {
+            if (!sTipoInd) {
+                return "";
+            }
+            
+            var sKey;
+            switch (sTipoInd) {
+                case "I":
+                    sKey = "tipoIndInversion";
+                    break;
+                case "A":
+                    sKey = "tipoIndAmortizacion";
+                    break;
+                default:
+                    return sTipoInd;
+            }
+            
+            return this.getTranslatedText(sKey);
+        },
+
         /**
          * Inicializa la vista de Diferidos definiendo el estado de navegación y visibilidad.
          * Configura la tabla principal y prepara las columnas anuales iniciales.
@@ -27,6 +53,15 @@ sap.ui.define([
         getCustomTableId: function () {
             return "TreeTableInmovilizados";
         },
+        //      Se sobrescribe el hook para indicar que
+        //  en Inmovilizados el campo "Coste pendiente" se mapea
+        //  en el modelo como "_Pendiente". Lo utiliza el
+        //  onMonthInputChange del BaseController para calcular
+        //  porcentajes sobre las celdas mensuales editables.
+        _getCostePendienteField: function () {
+            return "_Pendiente";
+        },
+        //    
 
         onInit: function () {
 
@@ -43,7 +78,7 @@ sap.ui.define([
 
             this._initVariantManagement(); // Ahora se llama sin parámetros
 
-            //  Se identifica esta vista como Inmovilizados para los headers de los servicios.
+            //   Se identifica esta vista como Inmovilizados para los headers de los servicios.
             this._pestana = "Inmovilizados";
 
             this._initYearsModel();
@@ -80,42 +115,71 @@ sap.ui.define([
          * Forza el renderizado de la tabla una vez la vista está disponible en el DOM.
          */
         onAfterRendering: function (oEvent) {
-            let table = this.byId("TreeTableInmovilizados")
-            table.attachEvent("rowsUpdated", this.colorRows.bind(this));
-            table.attachEvent("firstVisibleRowChanged", this.colorRows.bind(this));
-            table.rerender(true);
+            let table = this.byId("TreeTableInmovilizados");
+            
+            // Detach previous handlers to avoid duplicates
+            if (this._colorRowsHandler) {
+                table.detachEvent("rowsUpdated", this._colorRowsHandler);
+                table.detachEvent("firstVisibleRowChanged", this._colorRowsHandler);
+            }
+            
+            // Create bound handler and store reference
+            // Se usa una función anónima para no pasar el evento como argumento a colorRows
+            this._colorRowsHandler = function() { this.colorRows(); }.bind(this);
+            table.attachEvent("rowsUpdated", this._colorRowsHandler);
+            table.attachEvent("firstVisibleRowChanged", this._colorRowsHandler);
+            
+            // Force initial coloring after a short delay to ensure DOM is ready
+            setTimeout(function() {
+                this.colorRows();
+            }.bind(this), 100);
             
             // Adjuntar listener para el botón de colapsar del header después del renderizado
             this._attachHeaderToggleListener();
+            
+            // Calcular filas dinámicas
+            this._calculateDynamicRows();
         },
 
         /**
          * Gestiona la visibilidad de columnas extendidas al expandir nodos en la TreeTable.
+         * Las columnas de meses NO se muestran cuando se expanden nodos de desglose.
          */
         onToggleOpenState: function (oEvent) {
             var oTable = oEvent.getSource();
             var sTableId = oTable.getId();
             var bExpanded = oEvent.getParameter("expanded");
+            var iRowIndex = oEvent.getParameter("rowIndex");
             var oUiModel = this.getView().getModel("ui");
 
             var oColMonths = this.byId("colMonths");
             var oColNew = this.byId("colNew");
 
             if (!bExpanded) {
-                // Si se contrae un nodo, verifica si todavía quedan otros expandidos para mantener las columnas.
-                var bAnyExpanded = false;
+                // Si se contrae un nodo, verifica si todavía quedan otros expandidos con columnas de meses.
+                var bAnyPlanExpanded = false;
                 var oBinding = oTable.getBinding("rows");
 
                 if (oBinding) {
                     for (var i = 0; i < oBinding.getLength(); i++) {
                         if (oTable.isExpanded(i)) {
-                            bAnyExpanded = true;
-                            break;
+                            var oCtx = oTable.getContextByIndex(i);
+                            var oObj = oCtx && oCtx.getObject();
+                            // Solo cuenta si los hijos son filas de plan (tienen months), no desgloses
+                            if (oObj && Array.isArray(oObj.children) && oObj.children.length > 0) {
+                                var bHasDesgloseChildren = oObj.children.some(function(c) {
+                                    return c.__isEditable === true || c.__isSinProveedor === true || c.__isHeader === true;
+                                });
+                                if (!bHasDesgloseChildren) {
+                                    bAnyPlanExpanded = true;
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
 
-                if (!bAnyExpanded) {
+                if (!bAnyPlanExpanded) {
                     if (oColMonths) oColMonths.setVisible(false);
                     if (oColNew) oColNew.setVisible(false);
 
@@ -124,9 +188,19 @@ sap.ui.define([
                     return;
                 }
             } else {
-                // Al expandir, asegura que las columnas de detalle sean visibles.
-                if (oColMonths) oColMonths.setVisible(true);
-                if (oColNew) oColNew.setVisible(true);
+                // Al expandir, solo mostrar colMonths/colNew si NO son hijos de desglose
+                var oCtxExpanded = oTable.getContextByIndex(iRowIndex);
+                var oObjExpanded = oCtxExpanded && oCtxExpanded.getObject();
+                var bIsDesgloseExpansion = oObjExpanded && Array.isArray(oObjExpanded.children) &&
+                    oObjExpanded.children.length > 0 &&
+                    oObjExpanded.children.some(function(c) {
+                        return c.__isEditable === true || c.__isSinProveedor === true || c.__isHeader === true;
+                    });
+
+                if (!bIsDesgloseExpansion) {
+                    if (oColMonths) oColMonths.setVisible(true);
+                    if (oColNew) oColNew.setVisible(true);
+                }
             }
 
             // Refresca la lógica de estilos y scroll de la tabla.
@@ -141,58 +215,421 @@ sap.ui.define([
                 this._originalData = JSON.parse(JSON.stringify(oData));
             }
         },
+
+        /**
+         * Marca las filas hijas de un desglose con los flags necesarios para la vista.
+         * - __isEditable: true para filas con proveedor asignado (editables)
+         * - __isSinProveedor: true para la fila "Resto de proveedores" (calculada, solo lectura)
+         */
+        _markDesgloseChildren: function(aChildren) {
+            aChildren.forEach(function(oChild) {
+                if (oChild.__isSinProveedor === true) {
+                    oChild.__isEditable = false;
+                } else {
+                    oChild.__isEditable = true;
+                    oChild.__isSinProveedor = false;
+                }
+            });
+        },
+
+        /**
+         * Handler del botón "+" inline de la columna PhPspnr.
+         * Crea una nueva fila de desglose vacía (con proveedor) en el array children
+         * de la operación pulsada (tanto Inversión como Amortización).
+         */
+        onAddDesglosePress: function(oEvent) {
+            var oButton = oEvent.getSource();
+            var oContext = oButton.getBindingContext("inmovilizadosModel");
+            if (!oContext) return;
+
+            var oData = oContext.getObject();
+            var sPath = oContext.getPath();
+            var oModel = oContext.getModel();
+
+            // Validación: solo para operaciones con Estructura='O' (TipoInd I o A)
+            if (oData.Estructura !== "O") {
+                return;
+            }
+
+            // Obtener o inicializar el array de children
+            var aChildren = oData.children ? oData.children.slice() : [];
+
+            // Etiquetas para la fila cabecera del desglose (i18n con fallbacks)
+            var sLabelAgrup    = this.getTranslatedText("agrupador")        || "Agrupador";
+            var sLabelDescrip  = this.getTranslatedText("DESCRIPCION")      || "Descripción";
+            var sLabelProv     = this.getTranslatedText("proveedor")        || "Proveedor";
+            var sLabelEje      = this.getTranslatedText("ejecutado")        || "Ejecutado";
+            var sLabelPend     = this.getTranslatedText("pendiente")        || "Pendiente";
+            var sLabelTot      = this.getTranslatedText("total")            || "Total";
+            var sLabelReparto  = this.getTranslatedText("dbReparto")        || "Reparto";
+            var sLabelPenPlan  = this.getTranslatedText("dbPendPlanificar") || "Pend. planificar";
+            var sLabelResto    = this.getTranslatedText("restoProv")        || "Resto de proveedores";
+
+            // Etiquetas adicionales para las columnas de Valor Residual y % Residual
+            var sLabelValResid   = this.getTranslatedText("valorResidual")      || "Val. Residual";
+            var sLabelPctResid   = this.getTranslatedText("percValorResidual")  || "% Residual";
+
+            // Crear la fila cabecera gris (solo si es el primer desglose)
+            var bHasHeader = aChildren.some(function(c) { return c.__isHeader === true; });
+            if (!bHasHeader) {
+                var oHeaderRow = {
+                    __isCustom: true,
+                    __isHeader: true,
+                    __isEditable: false,
+                    __isSinProveedor: false,
+                    _headerAgrup:    sLabelAgrup,
+                    _headerDescr:    sLabelDescrip,
+                    _headerProv:     sLabelProv,
+                    _headerEje:      sLabelEje,
+                    _headerPend:     sLabelPend,
+                    _headerTot:      sLabelTot,
+                    _headerValResid: sLabelValResid,
+                    _headerPctResid: sLabelPctResid,
+                    _headerReparto:  sLabelReparto,
+                    _headerPenPlan:  sLabelPenPlan,
+                    AGRUP: "", Post1: "", DESCRIP: "", LIFNR: "",
+                    INVEJE: "0", INVPEN: "0", INVTOT: "0", PENPLAN: "0",
+                    ValResidAmo: "0", PctjResidAmo: "",
+                    Tipo: sLabelReparto, PenPlan: sLabelPenPlan,
+                    _Ejecutado: "0", _Pendiente: "0", _Total: "0",
+                    children: []
+                };
+                aChildren.unshift(oHeaderRow);
+            }
+
+            // Calcular el siguiente número de agrupador (AGRUP) libre
+            var iMaxNum = 0;
+            aChildren.forEach(function(oChild) {
+                if (oChild.__isEditable === true) {
+                    var sAgrup = oChild.AGRUP || "";
+                    var iNum = parseInt(sAgrup, 10);
+                    if (!isNaN(iNum) && iNum > iMaxNum) {
+                        iMaxNum = iNum;
+                    }
+                }
+            });
+            var sNextAgrup = (iMaxNum + 1).toString().padStart(3, "0");
+
+            // Determinar los items de reparto según el TipoInd del padre
+            var aDesgloseRepartoItems;
+            if (oData.TipoInd === "A") {
+                aDesgloseRepartoItems = [
+                    { key: "OEO", text: "OEO" },
+                    { key: "LIN", text: "Lineal" },
+                    { key: "MAN", text: "Manual" }
+                ];
+            } else {
+                aDesgloseRepartoItems = [
+                    { key: "MAN", text: "Manual" }
+                ];
+            }
+
+            // Crear la nueva fila de desglose editable
+            var oNewDesglose = {
+                __isCustom: true,
+                __isEditable: true,
+                __isSinProveedor: false,
+                __isHeader: false,
+                AGRUP:  "",
+                DESCRIP: "",
+                LIFNR:  "",
+                _headerProv: "",
+                INVEJE: "0",
+                INVPEN: "0",
+                INVTOT: "0",
+                PENPLAN: "0",
+                //   Campos residuales: se mantienen las cuatro propiedades backend
+                //   (Inv/Amo) a cero y un campo unificado _ValResid/_PctjResid que pinta
+                //   la celda. onDesgloseValResidChange/PctResidChange escriben en el campo
+                //   real correcto segun el TipoInd del padre del desglose.
+                ValResidAmo: "0",
+                PctjResidAmo: "",
+                ValResidInv: "0",
+                PctjResidInv: "0",
+                _ValResid: "0",
+                _PctjResid: "",
+                TIPO:   "MAN",
+                repartoItems: aDesgloseRepartoItems,
+                Val01a1: "0", Val02a1: "0", Val03a1: "0", Val04a1: "0",
+                Val05a1: "0", Val06a1: "0", Val07a1: "0", Val08a1: "0",
+                Val09a1: "0", Val10a1: "0", Val11a1: "0", Val12a1: "0",
+                Totala1: "0",
+                children: []
+            };
+
+            // Insertar la nueva fila de desglose antes de la fila "Resto de proveedores"
+            var iSinProveedorIdx = aChildren.findIndex(function(c) { return c.__isSinProveedor === true; });
+            if (iSinProveedorIdx !== -1) {
+                aChildren.splice(iSinProveedorIdx, 0, oNewDesglose);
+            } else {
+                aChildren.push(oNewDesglose);
+
+                // Determinar valores para "Resto" según TipoInd
+                var sInvEje = oData.TipoInd === "I" ? (oData.InvEje || "0") : (oData.AmoEje || "0");
+                var sInvPen = oData.TipoInd === "I" ? (oData.InvPen || "0") : (oData.AmoPen || "0");
+                var sInvTot = oData.TipoInd === "I" ? (oData.InvTot || "0") : (oData.AmoTot || "0");
+
+                var oResto = {
+                    __isCustom: true,
+                    __isEditable: false,
+                    __isSinProveedor: true,
+                    __isHeader: false,
+                    AGRUP:  "",
+                    Post1:  sLabelResto,
+                    LIFNR:  "",
+                    _headerProv: "",
+                    INVEJE: sInvEje,
+                    INVPEN: sInvPen,
+                    INVTOT: sInvTot,
+                    PENPLAN: "0",
+                    _ValResid: "0",
+                    _PctjResid: "",
+                    TIPO:   "MAN",
+                    Val01a1: "0", Val02a1: "0", Val03a1: "0", Val04a1: "0",
+                    Val05a1: "0", Val06a1: "0", Val07a1: "0", Val08a1: "0",
+                    Val09a1: "0", Val10a1: "0", Val11a1: "0", Val12a1: "0",
+                    Totala1: "0",
+                    children: []
+                };
+                aChildren.push(oResto);
+            }
+
+            // Actualizar el array de children en el modelo
+            oModel.setProperty(sPath + "/children", aChildren);
+            oModel.refresh(true);
+
+            // Expandir el nodo padre para mostrar los hijos recién añadidos
+            var oTable = this.byId("TreeTableInmovilizados");
+            if (oTable) {
+                var oBinding = oTable.getBinding("rows");
+                if (oBinding) {
+                    var iLength = oBinding.getLength();
+                    for (var i = 0; i < iLength; i++) {
+                        var oCtx = oTable.getContextByIndex(i);
+                        if (oCtx && oCtx.getPath() === sPath) {
+                            oBinding.expand(i);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            this._markVariantDirty();
+            sap.m.MessageToast.show(
+                this.getTranslatedText("MSG_DESGLOSE_CREADO") || "Línea de desglose añadida correctamente."
+            );
+        },
+
+        /**
+         * Handler del botón de agrupación en la fila cabecera del desglose.
+         * Alterna el estado __agrupadorActive en la fila cabecera del bloque.
+         */
+        onAgrupadorButtonPress: function(oEvent) {
+            var oButton = oEvent.getSource();
+            var oContext = oButton.getBindingContext("inmovilizadosModel");
+            if (!oContext) return;
+
+            var sPath = oContext.getPath();
+            var oModel = oContext.getModel();
+            var oData = oContext.getObject();
+
+            var bCurrentActive = oData.__agrupadorActive === true;
+            oModel.setProperty(sPath + "/__agrupadorActive", !bCurrentActive);
+            oModel.refresh(true);
+            this._markVariantDirty();
+        },
+
+        /**
+         * Handler para cambio de campo AGRUP en filas de desglose.
+         */
+        onDesglosAGRUPChange: function(oEvent) {
+            var oSource = oEvent.getSource();
+            var oContext = oSource.getBindingContext("inmovilizadosModel");
+            if (oContext) {
+                var sPath = oContext.getPath();
+                var oModel = oContext.getModel();
+                oModel.setProperty(sPath + "/AGRUP", oSource.getValue());
+                this._markVariantDirty();
+            }
+        },
+
+        /**
+         * Handler para cambio del campo Proveedor (LIFNR) en filas de desglose.
+         * Valida que el proveedor no esté ya asignado en otra fila del mismo desglose.
+         */
+        onDesgloseProveedorChange: function(oEvent) {
+            var oSource = oEvent.getSource();
+            var oContext = oSource.getBindingContext("inmovilizadosModel");
+            if (!oContext) return;
+
+            var sNewLifnr = oSource.getValue().trim();
+            var sPath = oContext.getPath();
+            var oModel = oContext.getModel();
+            var oData = oContext.getObject();
+
+            if (!sNewLifnr) {
+                oModel.setProperty(sPath + "/LIFNR", "");
+                return;
+            }
+
+            // Validación: no duplicados en el mismo bloque
+            var sParentPath = sPath.substring(0, sPath.lastIndexOf("/"));
+            var aParentData = oModel.getProperty(sParentPath);
+            if (Array.isArray(aParentData)) {
+                var bDuplicado = aParentData.some(function(oSibling) {
+                    return oSibling !== oData &&
+                        oSibling.__isEditable === true &&
+                        (oSibling.LIFNR || "").trim().toUpperCase() === sNewLifnr.toUpperCase();
+                });
+                if (bDuplicado) {
+                    this.createMessageDialog({
+                        title: this.getTranslatedText("ERROR"),
+                        textAccept: this.getTranslatedText("ACEPTAR"),
+                        messages: [{ text: this.getTranslatedText("ERROR_PROVEEDOR_DUPLICADO_DESGLOSE"), type: "Error" }]
+                    });
+                    oSource.setValue(oData.LIFNR || "");
+                    return;
+                }
+            }
+
+            oModel.setProperty(sPath + "/LIFNR", sNewLifnr);
+            this._markVariantDirty();
+        },
+
+        //   Devuelve el TipoInd de la operacion padre de una fila de desglose. El padre
+        //   es siempre la operacion inmediata: el path del hijo es ".../children/N", por
+        //   lo que se elimina ese ultimo segmento para leer su TipoInd. Sirve para rutar
+        //   el residual del desglose al campo backend correcto (Inversion vs Amortizacion).
+        _getParentTipoInd: function(oModel, sPath) {
+            var sParentPath = sPath.replace(/\/children\/\d+$/, "");
+            return oModel.getProperty(sParentPath + "/TipoInd");
+        },
+
+        /**
+         * Handler para cambio del Valor residual en fila de desglose.
+         * Escribe en ValResidInv/ValResidAmo segun el TipoInd del padre.
+         */
+        onDesgloseValResidChange: function(oEvent) {
+            var oSource = oEvent.getSource();
+            var oContext = oSource.getBindingContext("inmovilizadosModel");
+            if (!oContext) return;
+
+            var sRawValue = oSource.getValue();
+            var oAppData = this.getOwnerComponent().getModel("appData").getData().userData;
+            var sCurrencyFormat = oAppData.CurrencyFormat;
+            var sThousandSep = sCurrencyFormat.charAt(0);
+            var sDecimalSep = sCurrencyFormat.charAt(1);
+            sRawValue = sRawValue.split(sThousandSep).join("").split(sDecimalSep).join(".");
+
+            var fValue = parseFloat(sRawValue) || 0;
+            var sPath = oContext.getPath();
+            var oModel = oContext.getModel();
+            var sCampo = this._getParentTipoInd(oModel, sPath) === "I" ? "ValResidInv" : "ValResidAmo";
+            oModel.setProperty(sPath + "/" + sCampo, fValue.toString());
+            oModel.setProperty(sPath + "/_ValResid", fValue.toString());
+            this._markVariantDirty();
+        },
+
+        /**
+         * Handler para cambio del % residual en fila de desglose.
+         * Escribe en PctjResidInv/PctjResidAmo segun el TipoInd del padre.
+         */
+        onDesglosePctResidChange: function(oEvent) {
+            var oSource = oEvent.getSource();
+            var oContext = oSource.getBindingContext("inmovilizadosModel");
+            if (!oContext) return;
+
+            var sPath = oContext.getPath();
+            var oModel = oContext.getModel();
+            var sCampo = this._getParentTipoInd(oModel, sPath) === "I" ? "PctjResidInv" : "PctjResidAmo";
+            oModel.setProperty(sPath + "/" + sCampo, oSource.getValue());
+            oModel.setProperty(sPath + "/_PctjResid", oSource.getValue());
+            this._markVariantDirty();
+        },
+
+        /**
+         * Handler para cambio de INVPEN en fila de desglose.
+         */
+        onDesgloseInvPenChange: function(oEvent) {
+            var oSource = oEvent.getSource();
+            var oContext = oSource.getBindingContext("inmovilizadosModel");
+            if (!oContext) return;
+
+            var sRawValue = oSource.getValue();
+            var oAppData = this.getOwnerComponent().getModel("appData").getData().userData;
+            var sCurrencyFormat = oAppData.CurrencyFormat;
+            var sThousandSep = sCurrencyFormat.charAt(0);
+            var sDecimalSep = sCurrencyFormat.charAt(1);
+            sRawValue = sRawValue.split(sThousandSep).join("").split(sDecimalSep).join(".");
+
+            var fPen = parseFloat(sRawValue) || 0;
+            var sPath = oContext.getPath();
+            var oModel = oContext.getModel();
+            var oData = oContext.getObject();
+            var fEje = parseFloat(oData.INVEJE) || 0;
+            oModel.setProperty(sPath + "/INVPEN", fPen.toString());
+            oModel.setProperty(sPath + "/INVTOT", (fPen + fEje).toString());
+            this._markVariantDirty();
+        },
+
+        /**
+         * Handler para cambio de INVTOT en fila de desglose.
+         * Recalcula INVPEN = INVTOT - INVEJE.
+         */
+        onDesgloseInvTotChange: function(oEvent) {
+            var oSource = oEvent.getSource();
+            var oContext = oSource.getBindingContext("inmovilizadosModel");
+            if (!oContext) return;
+
+            var sRawValue = oSource.getValue();
+            var oAppData = this.getOwnerComponent().getModel("appData").getData().userData;
+            var sCurrencyFormat = oAppData.CurrencyFormat;
+            var sThousandSep = sCurrencyFormat.charAt(0);
+            var sDecimalSep = sCurrencyFormat.charAt(1);
+            sRawValue = sRawValue.split(sThousandSep).join("").split(sDecimalSep).join(".");
+
+            var fTot = parseFloat(sRawValue) || 0;
+            var sPath = oContext.getPath();
+            var oModel = oContext.getModel();
+            var oData = oContext.getObject();
+            var fEje = parseFloat(oData.INVEJE) || 0;
+
+            oModel.setProperty(sPath + "/INVTOT", fTot.toString());
+            oModel.setProperty(sPath + "/INVPEN", (fTot - fEje).toString());
+            this._markVariantDirty();
+        },
+
         initInmovilizadosModel: async function (sPreviousKey) {
             var oAppData = this.getGlobalModel("appData").getData();
-
-            // Se obtiene la version activa desde el modelo global de la aplicacion.
-            var versiones = oAppData.NavLtVersiones;
-            var flagSelectVersion = versiones.find(function (item) {
-                return item.Activo === "X";
-            });
-
-            // Se lee Freal desde appData como fuente global unica, con fallback al tramo
-            // en caso de que el dashboard no haya persistido el valor todavia.
-            var sFreal = oAppData.Freal || (oAppData.tramo && oAppData.tramo.Freal) || "";
-            var oDashModel = this.getGlobalModel("dashboardModel")
+            var oDashModel = this.getGlobalModel("dashboardModel");
             var sFreal = "";
 
-            // Se recupera el arreglo de versiones desde el modelo global de la aplicación.
             var versiones = this.getGlobalModel("appData").getData().NavLtVersiones;
-            // Se busca e identifica el objeto correspondiente a la versión que se encuentra actualmente marcada como activa ("X").
             var flagSelectVersion = versiones.find(function (item) {
                 return item.Activo === "X";
             });
 
-            //  Se intenta obtener Freal desde appData.tramo como fuente principal.
             if (oAppData && oAppData.tramo && oAppData.tramo.Freal) {
                 sFreal = oAppData.tramo.Freal;
             } else if (oDashModel) {
-                // Se recurre al dashboardModel únicamente si appData no contiene Freal.
                 sFreal = oDashModel.getProperty("/NavMasterLt/0/Freal");
             }
 
-            //Si Freal no está disponible en ninguna fuente, se reintenta tras 500ms
-            // hasta que el modelo esté cargado. No se utiliza ningún valor por defecto.
             if (!sFreal) {
-
                 setTimeout(function () {
                     this.initInmovilizadosModel(sPreviousKey);
                 }.bind(this), 500);
                 return;
             }
 
-            // Se parsea la fecha de Freal al formato Date de JavaScript.
             var oDateStart = this._parseODataDate(sFreal);
-
-            // Si el parseo de Freal falla, se detiene la ejecución sin enviar ninguna llamada.
-            // No se permite continuar con un ejercicio incorrecto.
             if (!oDateStart || isNaN(oDateStart.getTime())) {
-
                 return;
             }
 
-            // Se extrae el año directamente de Freal para usarlo como ejercicio en la cabecera.
-            var sEjercicio = oDateStart.getFullYear().toString();
+            var sEjercicioFromSelector = this._getSelectedEjercicio();
+            var sEjercicioFallback = oDateStart.getFullYear().toString();
+            var sEjercicio = sEjercicioFromSelector || sEjercicioFallback;
             const token = this.getGlobalModel("appData").getProperty("/EvToken");
 
             try {
@@ -203,12 +640,10 @@ sap.ui.define([
                         "NavSelProyecto": [this.getGlobalModel("appData").getData().tramo],
                         "NavChanges": [],
                         "NavDatosIndirectos": [],
-                        "EvBloqueados": "",
+                        "NavKpisIndirectos": [],
+                        "EvBloqueados": this.getGlobalModel("appData").getProperty("/EvBloqueados") || "",
                         "NavMensajes": [],
-                        "NavDatosIndirectos": [],
                         "NavLtVersiones": [flagSelectVersion]
-
-
                     },
                     {
                         headers: {
@@ -222,51 +657,52 @@ sap.ui.define([
                         }
                     }
                 );
+
                 var aMensajes = response.NavMensajes?.results || [];
-                    var aMensajesError = aMensajes.filter(function(mensaje) {
-                        return mensaje.Tipo === "E";
+                var aMensajesError = aMensajes.filter(function(mensaje) { return mensaje.Tipo === "E"; });
+                if (aMensajesError.length > 0) {
+                    this.createMessageDialog({
+                        title: this.getTranslatedText("ERROR"),
+                        textAccept: this.getTranslatedText("ACEPTAR"),
+                        messages: aMensajesError.map(function(m) { return { text: m.Mensaje || m.Message || m.text || "", type: "Error" }; })
                     });
-
-                    if (aMensajesError.length > 0) {
-                        this.createMessageDialog({
-                            title: this.getTranslatedText("ERROR"),
-                            textAccept: this.getTranslatedText("ACEPTAR"),
-                            messages: aMensajesError.map(function(mensaje) {
-                                return {
-                                    text: mensaje.Mensaje || mensaje.Message || mensaje.text || "",
-                                    type: "Error"
-                                };
-                            })
-                        });
-                    }
-
-                // Capturar el estado de bloqueo de la pestaña desde EvBloqueados
+                }
                 var sEvBloqueados = response.EvBloqueados || "";
                 var bIsBlocked = sEvBloqueados.trim().length > 0;
                 this.getGlobalModel("appData").setProperty("/EvBloqueados", sEvBloqueados);
-                // Crear o actualizar el modelo de bloqueo
                 var oModeloBloqueo = this.getView().getModel("modeloBloqueo");
                 if (!oModeloBloqueo) {
-                    oModeloBloqueo = new sap.ui.model.json.JSONModel({
-                        isBlocked: bIsBlocked
-                    });
+                    oModeloBloqueo = new sap.ui.model.json.JSONModel({ isBlocked: bIsBlocked });
                     this.getView().setModel(oModeloBloqueo, "modeloBloqueo");
                 } else {
                     oModeloBloqueo.setProperty("/isBlocked", bIsBlocked);
                 }
-
+                this._setWaersFromData(response.NavDatosIndirectos.results); //   captura la moneda de la obra para formatDecimales
                 this._addComputedFields(response.NavDatosIndirectos.results);
+                this._updateKpiTables(response.NavDatosIndirectos.results);
                 const tree = this.buildTree(response.NavDatosIndirectos.results);
                 this.getView().setModel(new sap.ui.model.json.JSONModel(tree), "inmovilizadosModel");
                 this._createSnapshot();
                 this._originalInmovilizadosData = JSON.parse(JSON.stringify(tree));
-                setTimeout(function () {
-                    this.colorRows();
-                }.bind(this), 500);
+                setTimeout(function () { this.colorRows(); }.bind(this), 500);
+            } catch (error) { }
+        },
 
-            } catch (error) {
-
-            }
+        _updateKpiTables: function(aData) {
+            var aRaiz = aData.filter(function(item) { return item.ParentPath === "I"; });
+            var oInv = aRaiz.find(function(item) { return item.TipoInd === "I"; }) || {};
+            var oAmo = aRaiz.find(function(item) { return item.TipoInd === "A"; }) || {};
+            var oDataTitleModel = new sap.ui.model.json.JSONModel({
+                data: [{
+                    title:  oInv._Ejecutado || "0",
+                    title2: oInv._Pendiente || "0",
+                    title3: oInv._Total     || "0",
+                    title4: oAmo._Ejecutado || "0",
+                    title5: oAmo._Pendiente || "0",
+                    title6: oAmo._Total     || "0"
+                }]
+            });
+            this.getView().setModel(oDataTitleModel, "dataTitle");
         },
 
         _addComputedFields: function(aData) {
@@ -275,10 +711,18 @@ sap.ui.define([
                     item._Ejecutado = item.InvEje || "0";
                     item._Pendiente = item.InvPen || "0";
                     item._Total = item.InvTot || "0";
+                    //   La columna Valor/% Residual comparte una unica plantilla para las
+                    //   filas de Inversion (I) y Amortizacion (A). Se unifica aqui el valor a
+                    //   mostrar tomandolo del campo backend correcto segun TipoInd: Inversion
+                    //   lee ValResidInv/PctjResidInv, Amortizacion ValResidAmo/PctjResidAmo.
+                    item._ValResid = item.ValResidInv || "0";
+                    item._PctjResid = item.PctjResidInv || "0";
                 } else {
                     item._Ejecutado = item.AmoEje || "0";
                     item._Pendiente = item.AmoPen || "0";
                     item._Total = item.AmoTot || "0";
+                    item._ValResid = item.ValResidAmo || "0";
+                    item._PctjResid = item.PctjResidAmo || "0";
                 }
             });
         },
@@ -357,7 +801,90 @@ sap.ui.define([
             }
             return new Date(sODataDate);
         },
-        
+
+        /**
+         * Al seleccionar/deseleccionar una fila, sincroniza automáticamente la otra versión
+         * del mismo elemento (mismo PhPspnr, distinto TipoInd: "I" ↔ "A").
+         */
+        onRowSelectionChange: function (oEvent) {
+            if (this._bSelectionChanging) {
+                return;
+            }
+
+            var oTable = this.byId("TreeTableInmovilizados");
+            if (!oTable) {
+                return;
+            }
+
+            var oBinding = oTable.getBinding("rows");
+            if (!oBinding) {
+                return;
+            }
+            var iTotalRows = oBinding.getLength();
+
+            var aPrevious = this._aPreviousSelectedIndices || [];
+            var aCurrent = oTable.getSelectedIndices();
+
+            // Calcular filas recién seleccionadas y recién deseleccionadas
+            var aAdded = aCurrent.filter(function (i) { return aPrevious.indexOf(i) === -1; });
+            var aRemoved = aPrevious.filter(function (i) { return aCurrent.indexOf(i) === -1; });
+
+            // Guardar la selección actual para la próxima vez
+            this._aPreviousSelectedIndices = aCurrent.slice();
+
+            if (aAdded.length === 0 && aRemoved.length === 0) {
+                return;
+            }
+
+            // Busca el índice de la fila hermana (mismo PhPspnr, TipoInd opuesto)
+            var fnFindSibling = function (iIdx, aExclude) {
+                var oCtx = oTable.getContextByIndex(iIdx);
+                if (!oCtx) { return -1; }
+                var oData = oCtx.getObject();
+                if (!oData || !oData.PhPspnr || !oData.TipoInd) { return -1; }
+                var sPhPspnr = oData.PhPspnr;
+                var sSiblingTipoInd = oData.TipoInd === "I" ? "A" : "I";
+                for (var i = 0; i < iTotalRows; i++) {
+                    if (aExclude.indexOf(i) !== -1) { continue; }
+                    var oSibCtx = oTable.getContextByIndex(i);
+                    if (!oSibCtx) { continue; }
+                    var oSibData = oSibCtx.getObject();
+                    if (oSibData && oSibData.PhPspnr === sPhPspnr && oSibData.TipoInd === sSiblingTipoInd) {
+                        return i;
+                    }
+                }
+                return -1;
+            };
+
+            this._bSelectionChanging = true;
+            try {
+                // Seleccionar hermanas de las filas añadidas
+                aAdded.forEach(function (iIdx) {
+                    var iSibling = fnFindSibling(iIdx, aCurrent);
+                    if (iSibling !== -1) {
+                        oTable.addSelectionInterval(iSibling, iSibling);
+                        if (this._aPreviousSelectedIndices.indexOf(iSibling) === -1) {
+                            this._aPreviousSelectedIndices.push(iSibling);
+                        }
+                    }
+                }.bind(this));
+
+                // Deseleccionar hermanas de las filas eliminadas
+                aRemoved.forEach(function (iIdx) {
+                    var iSibling = fnFindSibling(iIdx, aRemoved);
+                    if (iSibling !== -1) {
+                        oTable.removeSelectionInterval(iSibling, iSibling);
+                        var iPos = this._aPreviousSelectedIndices.indexOf(iSibling);
+                        if (iPos !== -1) {
+                            this._aPreviousSelectedIndices.splice(iPos, 1);
+                        }
+                    }
+                }.bind(this));
+            } finally {
+                this._bSelectionChanging = false;
+            }
+        },
+
         /**
          * Adjunta un listener al botón de colapsar/expandir del header del ObjectPageLayout
          * para recalcular las filas dinámicas cuando cambia el estado del header
@@ -384,7 +911,12 @@ sap.ui.define([
                     return;
                 }
 
-                console.log("DOM del ObjectPageLayout encontrado");
+                oDom.addEventListener("click", function () {
+                    setTimeout(function () {
+                        this._calculateDynamicRows();
+                        this.colorRows();
+                    }.bind(this), 100);
+                }.bind(this), true);
 
                 // Buscar el botón de colapsar específicamente
                 var oCollapseBtn = oDom.querySelector('[id*="collapseBtn"]');
@@ -419,59 +951,84 @@ sap.ui.define([
             }.bind(this), 500);
         },
 
-        colorRows: function (bInversionVisible) {
+        
+        /**
+         * Aplica colores a las filas de la tabla con debouncing para mejorar el rendimiento.
+         * Se cancela cualquier petición pendiente y se programa una nueva con un retardo de 80ms,
+         * evitando así ejecuciones excesivas durante el scroll.
+         * @param {boolean} [bClearAmortizacion] - Si es true, las filas con TipoInd="A" no recibirán color
+         */
+        colorRows: function (bClearAmortizacion) {
+            if (this._colorRowsTimer) {
+                clearTimeout(this._colorRowsTimer);
+            }
+            this._colorRowsTimer = setTimeout(function () {
+                this._colorRowsTimer = null;
+                this._applyRowColors(bClearAmortizacion);
+            }.bind(this), 80);
+        },
+
+        /**
+         * Función interna que aplica los colores a las filas según TipoInd.
+         * Usa el índice DOM real de cada fila (data-sap-ui-rowindex) en lugar del índice
+         * del array getRows(), para evitar desajustes durante la virtualización de la tabla.
+         * @param {boolean} [bClearAmortizacion] - Si es true, las filas con TipoInd="A" no recibirán color
+         * @private
+         */
+        _applyRowColors: function (bClearAmortizacion) {
             var oTable = this.byId("TreeTableInmovilizados");
+            if (!oTable) return;
+
             var aRows = oTable.getRows();
+            if (!aRows || aRows.length === 0) return;
+
+            // Cachear el wrapper jQuery de la tabla fuera del loop para evitar
+            // crear objetos jQuery costosos en cada iteración
+            var $table = oTable.$();
             var sTableId = oTable.getId();
 
-            aRows.forEach(function (oRow, i) {
-                var oContext = oRow.getBindingContext("inmovilizadosModel") 
-                    || (oRow.oBindingContexts && oRow.oBindingContexts["inmovilizadosModel"]);
+            aRows.forEach(function (oRow) {
+                var oRowDom = oRow.getDomRef();
+                if (!oRowDom) return;
 
-                var oFixedRef = oTable.$().find(".sapUiTableCtrlFixed tbody tr[data-sap-ui-rowindex='" + i + "']");
-                var oScrollRef = oTable.$().find(".sapUiTableCtrlScroll tbody tr[data-sap-ui-rowindex='" + i + "']");
-                var oRowSelRef = jQuery("#" + sTableId + "-rowsel" + i);
+                // Obtener el índice real del DOM para evitar desajuste con la virtualización
+                var iIdx = oRowDom.getAttribute("data-sap-ui-rowindex");
+                if (iIdx === null) return;
 
-                oFixedRef.removeClass("rowVersionB rowVersionP");
-                oScrollRef.removeClass("rowVersionB rowVersionP");
-                oRowSelRef.removeClass("rowVersionB rowVersionP");
+                var $fixed  = $table.find(".sapUiTableCtrlFixed tbody tr[data-sap-ui-rowindex='" + iIdx + "']");
+                var $scroll = $table.find(".sapUiTableCtrlScroll tbody tr[data-sap-ui-rowindex='" + iIdx + "']");
+                var $rowSel = jQuery("#" + sTableId + "-rowsel" + iIdx);
 
-                if (!oContext) return;
+                // Limpiar clases anteriores en todos los fragmentos de la fila
+                oRowDom.classList.remove("rowVersionB", "rowVersionP");
+                $fixed.removeClass("rowVersionB rowVersionP");
+                $scroll.removeClass("rowVersionB rowVersionP");
+                $rowSel.removeClass("rowVersionB rowVersionP");
 
-                // Si bInversionVisible no se pasa como parámetro, verificar el estado del checkbox
-               /* if (typeof bInversionVisible === "undefined") {
-                    var oCheckboxInversion = this.byId("checkboxInversion");
-                    if (oCheckboxInversion) {
-                        bInversionVisible = oCheckboxInversion.getSelected();
-                    }
-                }*/
+                var oContext = oRow.getBindingContext("inmovilizadosModel");
+                if (!oContext) return; // Fila vacía: queda limpia
 
                 var sTipoInd = oContext.getProperty("TipoInd");
+                if (!sTipoInd) return;
 
-                if (sTipoInd === "I") {
-                    oFixedRef.addClass("rowVersionP");
-                    oScrollRef.addClass("rowVersionP");
-                    oRowSelRef.addClass("rowVersionP");
-                } else if (sTipoInd === "A") {
-                    // Solo aplicar la clase rowVersionB si las filas de Inversión están visibles
-                    if (bInversionVisible !== false) {
-                        oFixedRef.addClass("rowVersionB");
-                        oScrollRef.addClass("rowVersionB");
-                        oRowSelRef.addClass("rowVersionB");
-                    } else {
-                        // Si las filas de Inversión están ocultas, no aplicar la clase
-                        oFixedRef.removeClass("rowVersionB");
-                        oScrollRef.removeClass("rowVersionB");
-                        oRowSelRef.removeClass("rowVersionB");
-                    }
+                // Si se indicó que se deben limpiar las filas de amortización (TipoInd="A"),
+                // no se aplica color a esas filas (llamada desde onFilterTipoIndChange)
+                if (bClearAmortizacion && sTipoInd === "A") return;
+
+                // Aplicar clase según TipoInd
+                var sCls = sTipoInd === "I" ? "rowVersionP" : sTipoInd === "A" ? "rowVersionB" : null;
+                if (sCls) {
+                    oRowDom.classList.add(sCls);
+                    $fixed.addClass(sCls);
+                    $scroll.addClass(sCls);
+                    $rowSel.addClass(sCls);
                 }
             });
         },
-
         onAmoPenChange: function (oEvent) {
             var oSource = oEvent.getSource();
             var oContext = oSource.getBindingContext("inmovilizadosModel");
-            this.onRowInputChange(oEvent);
+            this.onRowInputChangeInversion(oEvent);
             if (oContext) {
                 var sRawValue = oSource.getValue();
                 var oAppData = this.getOwnerComponent().getModel("appData").getData().userData;
@@ -510,7 +1067,7 @@ sap.ui.define([
         onAmoTotChange: function (oEvent) {
             var oSource = oEvent.getSource();
             var oContext = oSource.getBindingContext("inmovilizadosModel");
-            this.onRowInputChange(oEvent);
+            this.onRowInputChangeInversion(oEvent);
             if (oContext) {
                 var sRawValue = oSource.getValue();
                 var oAppData = this.getOwnerComponent().getModel("appData").getData().userData;
@@ -547,31 +1104,47 @@ sap.ui.define([
         },
 
         onValResidChange: function(oEvent){
-            var oSource = oEvent.getSource();
-            var oContext = oSource.getBindingContext("inmovilizadosModel");
-            this.onRowInputChange(oEvent);
-            if (oContext) {
-                var sRawValue = oSource.getValue();
-                var oAppData = this.getOwnerComponent().getModel("appData").getData().userData;
-                var sCurrencyFormat = oAppData.CurrencyFormat;
-                var sThousandSep = sCurrencyFormat.charAt(0);
-                var sDecimalSep = sCurrencyFormat.charAt(1);
-
-                sRawValue = sRawValue.split(sThousandSep).join("");
-                sRawValue = sRawValue.split(sDecimalSep).join(".");
-
-                var fValue = parseFloat(sRawValue) || 0;
-                var sPath = oContext.getPath();
-                var oModel = oContext.getModel();
-                var oData = oContext.getObject();
-
-                oModel.setProperty(sPath + "/ValResidAmo", fValue.toString());
-
-            }
+            this._guardarCampoResidual(oEvent, "ValResid", "_ValResid");
         },
 
         onPercValResidChange: function(oEvent){
-            this.onRowInputChange(oEvent);
+            this._guardarCampoResidual(oEvent, "PctjResid", "_PctjResid");
+        },
+
+        //     Guardado temporal directo de Valor residual (ValResidAmo) y % Valor
+        //   residual (PctjResidAmo). Antes ambos delegaban en onRowInputChange, cuyo filtro
+        //   "valor nuevo === valor en modelo" abortaba el envio: en PctjResidAmo el binding
+        //   TwoWay (sin formatter) ya habia actualizado el modelo antes del evento change, por
+        //   lo que el guardado temporal nunca se lanzaba. Aqui se normaliza el valor al formato
+        //   SAP, se actualiza el modelo y se envia la fila al backend en cada edicion.
+        _guardarCampoResidual: function(oEvent, sCampoBase, sCampoUnificado){
+            var oSource = oEvent.getSource();
+            var oContext = oSource.getBindingContext("inmovilizadosModel");
+            if (!oContext) { return; }
+
+            //   El campo backend destino depende del TipoInd de la fila: Inversion (I)
+            //   escribe en ValResidInv/PctjResidInv y Amortizacion (A) en ValResidAmo/
+            //   PctjResidAmo. La columna comparte una unica plantilla enlazada al campo
+            //   unificado (_ValResid/_PctjResid), por lo que aqui se resuelve la propiedad
+            //   real que viaja en el payload y en el header CampoMod.
+            var sTipoInd = oContext.getProperty("TipoInd");
+            var sCampo = sCampoBase + (sTipoInd === "I" ? "Inv" : "Amo");
+
+            var sValorFormateado = this._formatToSAPNumber(oSource.getValue());
+            if (sValorFormateado === null || sValorFormateado === undefined || sValorFormateado === "") {
+                sValorFormateado = "0"; //   campo vaciado -> se envia 0 en lugar de cadena vacia
+            }
+
+            var oModel = oContext.getModel();
+            var sPath = oContext.getPath();
+            //   Se actualiza tanto la propiedad backend real como el campo unificado que
+            //   pinta la celda, para que el valor editado persista y se siga mostrando.
+            oModel.setProperty(sPath + "/" + sCampo, sValorFormateado);
+            oModel.setProperty(sPath + "/" + sCampoUnificado, sValorFormateado);
+
+            var oPayloadRow = this._sanitizeRowForBackend(oContext.getObject());
+            oPayloadRow[sCampo] = sValorFormateado;
+            this._enviarFilaAlBackend(oContext, oPayloadRow, sCampo);
         },
 
         onAddPress: function(oEvent){
@@ -662,6 +1235,13 @@ sap.ui.define([
             
             // Si es nivel 2 (operación)
             if (iLevel === 2) {
+                // Obtener todos los elementos del modelo para determinar si la fila tiene hijos reales.
+                // Los hijos de una fila nivel 2 son los elementos cuyo ParentPath coincide con el PhPspnr de la fila.
+                var aInmovilizadosData = oModel.getData() || [];
+                var bTieneHijos = aInmovilizadosData.some(function (oItem) {
+                    return oItem.ParentPath === oSelectedRow.PhPspnr;
+                });
+
                 // Validación 4: No se puede seleccionar una operación de nivel 2 con desgloses (hijos)
                 if (oSelectedRow.children && oSelectedRow.children.length > 0) {
                     this.createMessageDialog({
@@ -677,7 +1257,7 @@ sap.ui.define([
                 
                 // Validación 5: No se puede seleccionar una operación de nivel 2 con datos ejecutados y sin hijos
                 var fAmoEje = parseFloat(oSelectedRow.AmoEje) || 0;
-                if (fAmoEje > 0 && (!oSelectedRow.children || oSelectedRow.children.length === 0)) {
+                if (fAmoEje > 0 && !bTieneHijos) {
                     this.createMessageDialog({
                         title: this.getTranslatedText("ERROR"),
                         textAccept: this.getTranslatedText("ACEPTAR"),
@@ -865,7 +1445,9 @@ sap.ui.define([
                 
                 // Mensaje de éxito
                 sap.m.MessageToast.show(
-                    "Se han eliminado " + aLinesToDelete.length + " línea(s) correctamente"
+                    //    Se traduce via i18n con placeholder {0} para soportar EN/FR.  
+                    this.getTranslatedText("MSG_LINEAS_ELIMINADAS", [aLinesToDelete.length])
+                    //   
                 );
                 
                 // Mostrar mensajes informativos si los hay
@@ -941,13 +1523,17 @@ sap.ui.define([
             }
 
             if (!sFreal) {
-                sap.m.MessageBox.error("Error: Fecha real no disponible");
+                //    Se traduce el mensaje via i18n para soportar EN/FR.  
+                sap.m.MessageBox.error(this.getTranslatedText("ERROR_FECHA_REAL_NO_DISPONIBLE"));
+                //   
                 return;
             }
 
             var oDateStart = this._parseODataDate(sFreal);
             if (!oDateStart || isNaN(oDateStart.getTime())) {
-                sap.m.MessageBox.error("Error: Fecha real inválida");
+                //    Se traduce el mensaje via i18n para soportar EN/FR.  
+                sap.m.MessageBox.error(this.getTranslatedText("ERROR_FECHA_REAL_INVALIDA"));
+                //   
                 return;
             }
 
@@ -1029,7 +1615,7 @@ sap.ui.define([
         _openCatalogDialog: function() {
             if (!this._catalogDialog) {
                 this._catalogDialog = sap.ui.xmlfragment(
-                    "masterindirectos.fragments.OperationsCatalogDialog",
+                    "zindirect_costs.fragments.OperationsCatalogDialog",
                     this
                 );
                 this.getView().addDependent(this._catalogDialog);
@@ -1136,14 +1722,18 @@ sap.ui.define([
             var oCatalogTable = this._catalogDialog.getContent()[0].getItems()[1];
             
             if (!oCatalogTable) {
-                sap.m.MessageBox.error("Error: Tabla del catálogo no encontrada");
+                //    Se traduce el mensaje via i18n para soportar EN/FR.  
+                sap.m.MessageBox.error(this.getTranslatedText("ERROR_TABLA_CATALOGO_NO_ENCONTRADA"));
+                //   
                 return;
             }
             
             var aSelectedIndices = oCatalogTable.getSelectedIndices();
             
             if (aSelectedIndices.length === 0) {
-                sap.m.MessageBox.warning("Debe seleccionar al menos una operación");
+                //    Se traduce el mensaje via i18n para soportar EN/FR.  
+                sap.m.MessageBox.warning(this.getTranslatedText("ERROR_DEBE_SELECCIONAR_OPERACION"));
+                //   
                 return;
             }
             
@@ -1190,7 +1780,9 @@ sap.ui.define([
                 
                 if (aCreatedOperations.length > 0) {
                     this._addOperationsToTree(aCreatedOperations);
-                    sap.m.MessageToast.show("Se han añadido " + (aCreatedOperations.length / 2) + " operación(es) correctamente");
+                    //    Se traduce el mensaje via i18n con el placeholder {0} para soportar EN/FR.  
+                    sap.m.MessageToast.show(this.getTranslatedText("MSG_OPERACIONES_ANADIDAS", [aCreatedOperations.length / 2]));
+                    //   
                 }
             }.bind(this)).catch(function(error) {
                 sap.m.MessageBox.error(
@@ -1220,7 +1812,9 @@ sap.ui.define([
             }
             
             if (iChapterAIndex === -1) {
-                sap.m.MessageBox.error("Error: No se encontró el capítulo seleccionado");
+                //    Se traduce el mensaje via i18n para soportar EN/FR.  
+                sap.m.MessageBox.error(this.getTranslatedText("ERROR_CAPITULO_NO_ENCONTRADO"));
+                //   
                 return;
             }
             
@@ -1541,7 +2135,9 @@ sap.ui.define([
                         oModel.setProperty(sPath + "/isNew", false);
 
                         // Mensaje de éxito
-                        sap.m.MessageToast.show("Operación validada correctamente");
+                        //    Se traduce el mensaje via i18n para soportar EN/FR.  
+                        sap.m.MessageToast.show(this.getTranslatedText("MSG_OPERACION_VALIDADA"));
+                        //   
                     }
                 }.bind(this)).catch(function (error) {
                     sap.m.MessageBox.error(
@@ -1636,7 +2232,9 @@ sap.ui.define([
                         oModel.setProperty(sPath + "/isNew", false);
 
                         // Mensaje de éxito
-                        sap.m.MessageToast.show("Operación validada correctamente");
+                        //    Se traduce el mensaje via i18n para soportar EN/FR.  
+                        sap.m.MessageToast.show(this.getTranslatedText("MSG_OPERACION_VALIDADA"));
+                        //   
                     }
                 }.bind(this)).catch(function (error) {
                     sap.m.MessageBox.error(
@@ -1684,8 +2282,8 @@ sap.ui.define([
                 if (aData[i].PhPspnr === sOldValue && 
                     aData[i].TipoInd === sSiblingTipoInd &&
                     aData[i].isNew) {
-                    // La versión hermana ya tiene el valor correcto (el antiguo)
-                    // No necesitamos hacer nada, solo asegurarnos de que no se cambie
+                    // La version hermana ya conserva el valor correcto (el antiguo);
+                    // no se requiere ninguna accion adicional, basta con no modificarla.
                     break;
                 }
             }
@@ -1741,9 +2339,26 @@ sap.ui.define([
             }
             
             // Refrescar los colores de las filas
+            // Se pasa !bShowInversion: true cuando la inversión está oculta,
+            // lo que indica que las filas de amortización (TipoInd="A") no deben colorearse
             setTimeout(function() {
-                this.colorRows(bShowInversion);
+                this.colorRows(!bShowInversion);
             }.bind(this), 100);
+        },
+
+        /**
+         *    Se ejecuta antes de cerrar el navegador para advertir sobre cambios sin guardar.
+         * Faltaba esta definicion en Inmovilizados aunque setInitData hacia
+         * this.onBrowserClose.bind(this) (linea ~101) y onExit eliminaba el listener, por lo
+         * que onInit lanzaba "Cannot read properties of undefined (reading 'bind')". Se replica
+         * el comportamiento de las otras pestanas, comprobando hasUnsavedChanges de forma segura.
+         */
+        onBrowserClose: function (oEvent) {
+            if (typeof this.hasUnsavedChanges === "function" && this.hasUnsavedChanges()) {
+                oEvent.preventDefault();
+                oEvent.returnValue = "";
+                return "";
+            }
         },
 
         /**
@@ -1757,6 +2372,54 @@ sap.ui.define([
             if (this._boundResizeHandler) {
                 $(window).off("resize", this._boundResizeHandler);
             }
+        },
+             _getStaticExportColumns: function () {
+            //    Se traducen via i18n las cabeceras del export XLSX.  
+            return [
+                { header: this.getTranslatedText("oper"), path: "PhPspnr" },
+                { header: this.getTranslatedText("DESCRIPCION"), path: "Post1" },
+                { header: this.getTranslatedText("type"), path: "TipoInd" },
+                { header: this.getTranslatedText("costEje"), path: "_Ejecutado" },
+                { header: this.getTranslatedText("costPend"), path: "_Pendiente" },
+                { header: this.getTranslatedText("costTotal"), path: "_Total" },
+                { header: this.getTranslatedText("valorResidual"), path: "ValResidAmo" },
+                { header: this.getTranslatedText("percValorResidual"), path: "PctjResidAmo" },
+                { header: this.getTranslatedText("dbReparto"), path: "Tipo" },
+                { header: this.getTranslatedText("dbPendPlanificar"), path: "PenPlan" }
+            ];
+            //   
+        },
+
+        /*   */
+        /**
+         *     Se activa el coloreado azzurrino de las filas Amortización (TipoInd === "A") en el export
+         *   porque Inmovilizados sí maneja la dualidad Inversión/Amortización con estilo visual diferenciado.
+         */
+        _shouldShowAmortizationStyle: function () {
+            return true; //  
+        },
+
+        /**
+         *     Columnas estáticas de Inmovilizados para la Plantilla de carga (apartado 5.9 del spec).
+         *   Estructura solicitada por el usuario: 11 columnas — incluye Valor residual y %Residual
+         *   específicos de Inmovilizados (campos ValResidAmo/PctjResidAmo del modelo).
+         */
+        _getPlantillaStaticColumns: function () {
+            //    Se traducen via i18n las cabeceras de la plantilla.  
+            return [
+                { header: this.getTranslatedText("colOperacionAgrupador"), path: "PhPspnr" },
+                { header: this.getTranslatedText("DESCRIPCION"), path: "Post1" },
+                { header: this.getTranslatedText("colTipoProveedor"), path: "TipoInd" },
+                { header: this.getTranslatedText("ejecutado"), path: "_Ejecutado" },
+                { header: this.getTranslatedText("pendiente") + "*", path: "_Pendiente" },
+                { header: this.getTranslatedText("total"), path: "_Total" },
+                { header: this.getTranslatedText("valorResidual") + "*", path: "ValResidAmo" },
+                { header: this.getTranslatedText("percValorResidual"), path: "PctjResidAmo" },
+                { header: this.getTranslatedText("dbReparto"), path: "Tipo" },
+                { header: this.getTranslatedText("fechaInicio"), path: "FINI" },
+                { header: this.getTranslatedText("fechaFin"), path: "FFIN" }
+            ];
+            //   
         },
     });
 });
