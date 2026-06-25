@@ -138,7 +138,9 @@ sap.ui.define([
                                 srcControl: oInput,
                                 keyCode: iKeyCode,
                                 preventDefault: function () { oNativeEvent.preventDefault(); },
-                                stopImmediatePropagation: function () { oNativeEvent.stopImmediatePropagation(); }
+                                stopImmediatePropagation: function () { oNativeEvent.stopImmediatePropagation(); },
+                                // (INICIO MV) Se anyade stopPropagation al evento sintetico para que BaseController._onInputKeyDown pueda frenar la propagacion ascendente al TreeTable. Sin esta funcion el handler lanzaba TypeError y rompia toda la navegacion con flechas tras el ultimo cambio de BaseController. (FIN MV)
+                                stopPropagation: function () { oNativeEvent.stopPropagation(); }
                             });
                         }
                     }.bind(this));
@@ -218,8 +220,7 @@ sap.ui.define([
             }.bind(this);
             $(window).on("resize", this._boundResizeHandler);
 
-            /* NO SE ESTA USANDO   this._boundBrowserClose = this.onBrowserClose.bind(this);
-                 window.addEventListener("beforeunload", this._boundBrowserClose);*/
+            this._setupBrowserCloseHandler();
         },
 
         /**
@@ -281,6 +282,9 @@ sap.ui.define([
          */
         onAfterRendering: function (oEvent) {
             this._attachHeaderToggleListener();
+
+            // Menú contextual con clic derecho sobre filas
+            this._attachContextMenuToTable("TreeTableBasic");
         },
 
         /**
@@ -341,32 +345,9 @@ sap.ui.define([
             var oSelectedRow = aSelectedRows[0];
             if (!oSelectedRow) return;
 
-            // Validacion 3: la fila "D" (OEO) no es valida.
-            if (sPhPspnr === "D") {
-                this.createMessageDialog({
-                    title: this.getTranslatedText("ERROR"),
-                    textAccept: this.getTranslatedText("ACEPTAR"),
-                    messages: [{
-                        text: this.getTranslatedText("ERROR_NO_ANADIR_OEO"),
-                        type: "Error"
-                    }]
-                });
-                return;
-            }
+            //    se delegan al backend las validaciones de fila OEO ("D"), de operacion de nivel 3 y de operacion con datos ejecutados (AmoEje > 0). El servicio rechaza esas combinaciones con su propio mensaje y duplicarlas en cliente generaba mantenimiento adicional cada vez que cambiaba la regla de negocio. Se mantiene en local unicamente el bloqueo por desgloses preexistentes porque deriva del estado del modelo cargado y permite ahorrar un viaje innecesario al backend  
 
-            // Validacion 4: nivel 3 (desglose) no se puede seleccionar.
             var iLevel = this._getOperationLevel(sPhPspnr);
-            if (iLevel === 3) {
-                this.createMessageDialog({
-                    title: this.getTranslatedText("ERROR"),
-                    textAccept: this.getTranslatedText("ACEPTAR"),
-                    messages: [{
-                        text: this.getTranslatedText("ERROR_NO_ANADIR_NIVEL3"),
-                        type: "Error"
-                    }]
-                });
-                return;
-            }
 
             //   Recuperar el contexto para pasarlo a los helpers (mismo que se usa
             // para localizar la fila en el arbol al insertar children).
@@ -380,13 +361,8 @@ sap.ui.define([
 
             // Nivel 2 (operacion): validar precondiciones y crear fila nivel 3.
             if (iLevel === 2) {
-                // Validacion 5: solo se bloquea si la operacion tiene desgloses
-                // PRE-EXISTENTES (cargados del backend). Los desgloses creados por el
-                // usuario en esta misma sesion (isNew === true) NO cuentan: una vez que se
-                // ha empezado a desglosar una operacion debe poderse anadir mas hermanos de
-                // nivel 3 (y seguir editando los ya creados). _createLevel3Row ya numera el
-                // siguiente sufijo a partir de los hijos existentes.
-               /* var aDesgloses = oSelectedRow.children || [];
+                //    se reactiva la validacion de desgloses preexistentes que estaba comentada en este controller. Solo se bloquea si la operacion tiene desgloses cargados del backend (isNew !== true); los desgloses creados en esta misma sesion no cuentan porque _createLevel3Row ya numera el siguiente sufijo a partir de los hijos existentes y debe poderse seguir desglosando una operacion ya abierta sin tener que recargar la pestania  
+                var aDesgloses = oSelectedRow.children || [];
                 var bTieneDesglosesBackend = aDesgloses.some(function (oChild) {
                     return oChild && oChild.isNew !== true;
                 });
@@ -396,19 +372,6 @@ sap.ui.define([
                         textAccept: this.getTranslatedText("ACEPTAR"),
                         messages: [{
                             text: this.getTranslatedText("ERROR_NO_ANADIR_CON_DESGLOSES"),
-                            type: "Error"
-                        }]
-                    });
-                    return;
-                }*/
-                // Validacion 6: no se puede si tiene importes ejecutados.
-                var fAmoEje = parseFloat(oSelectedRow.AmoEje) || 0;
-                if (fAmoEje > 0) {
-                    this.createMessageDialog({
-                        title: this.getTranslatedText("ERROR"),
-                        textAccept: this.getTranslatedText("ACEPTAR"),
-                        messages: [{
-                            text: this.getTranslatedText("ERROR_NO_ANADIR_CON_EJECUTADO"),
                             type: "Error"
                         }]
                     });
@@ -518,28 +481,15 @@ sap.ui.define([
             }.bind(this));
         },
 
-        /**NO SE ESTA USANDO
-         * Se gestiona el evento de cierre del navegador para advertir sobre posibles cambios sin guardar.
-         
-        onBrowserClose: function (oEvent) {
-            if (this.hasUnsavedChanges()) {
-                oEvent.preventDefault();
-                oEvent.returnValue = '';
-                return '';
-            }
-        },*/
-
-        /** NO SE ESTA USANDO
-         * Se limpian los escuchadores de eventos activos al destruir el controlador de la vista.
-        
+        /**
+         * Limpia los event listeners al destruir el controlador
+         */
         onExit: function () {
-            if (this._boundBrowserClose) {
-                window.removeEventListener("beforeunload", this._boundBrowserClose);
-            }
+            this._teardownBrowserCloseHandler();
             if (this._boundResizeHandler) {
                 $(window).off("resize", this._boundResizeHandler);
             }
-        }, */
+        },
         /**
 
  *   Permite que el selector de año recargue los datos de esta pestaña
@@ -618,6 +568,12 @@ sap.ui.define([
                         "NavSelProyecto": [this.getGlobalModel("appData").getData().tramo],
                         "NavChanges": [],
                         "NavDatosIndirectos": [],
+                        //      Se declara NavDatosIndirectosDesglo vacio en el body para que
+                        //   el gateway popule la nav inline en la respuesta. Sin esta linea el backend
+                        //   la devuelve como {__deferred:{uri:...}} y al seguir la URI responde
+                        //   501 Method 'DATOSINDIRECTO01_GET_ENTITYSET' not implemented. Misma
+                        //   convencion ya usada para NavDatosIndirectos / NavKpisIndirectos.  
+                        "NavDatosIndirectosDesglo": [],
                          "NavKpisIndirectos":[],
                         //   Se envía en el body el capítulo ya bloqueado por el usuario para evitar
                         //      que el backend lo intente bloquear de nuevo y dispare el error de
@@ -685,8 +641,22 @@ sap.ui.define([
                 this.getView().setModel(oModeloBloqueo, "modeloBloqueo");
                 
                 this._setWaersFromData(response.NavDatosIndirectos.results); //   captura la moneda de la obra para formatDecimales
+                //     
+                //   Se almacena en el controller la nueva nav NavDatosIndirectosDesglo que el
+                //   backend agrega a CambioPestIndirectosSet. Por ahora se persiste tal cual y
+                //   se registra en consola para diagnostico; el merge en el arbol de Corrientes
+                //   se hara cuando Angel confirme el formato exacto del payload de respuesta.
+                this._aDesgloseFromBackend = (response.NavDatosIndirectosDesglo && response.NavDatosIndirectosDesglo.results) || [];
+                //    
                 this._addComputedFields(response.NavDatosIndirectos.results);
                 const tree = this.buildTree(response.NavDatosIndirectos.results);
+                //      Se mergean las filas del desglose (NavDatosIndirectosDesglo)
+                //   en el arbol recien construido. Cada fila se engancha como hija del
+                //   capitulo padre (match por Psphi+Version+Pspnr) con los flags
+                //   __isCustom/__isNieto/__isEditable que el XML usa para renderizar el
+                //   bloque editable. Sin esta llamada las 37 filas existian en memoria
+                //   (this._aDesgloseFromBackend) pero no aparecian en la TreeTable.  
+                this._mergeBackendDesgloseIntoTree(tree, this._aDesgloseFromBackend);
                  //   Si el modelo ya existe se actualizan sus datos in-place con setData en lugar de instanciar un JSONModel nuevo y reemplazarlo con setModel. Reemplazar el modelo en cambios de pestana provocaba que las columnas dinamicas perdieran momentaneamente su contexto de binding y que las columnas estaticas se reordenaran. Manteniendo la misma instancia las bindings se preservan y solo se refrescan los datos.
                 var oCorrientesModel = this.getView().getModel("corrientesModel");
                 if (oCorrientesModel) {
@@ -741,9 +711,18 @@ sap.ui.define([
             if (oNode.PhPspnr && Array.isArray(oNode.children)) {
                 //     Se separan los hijos en custom (a guardar) y no custom
                 // (a recorrer recursivamente para detectar bloques anidados).
+                //     Las filas con __fromBackendMerge=true (header, main editable
+                //   y nietos creados por _mergeBackendDesgloseIntoTree al cargar
+                //   NavDatosIndirectosDesglo) se IGNORAN en el snapshot: el siguiente
+                //   load via CambioPestIndirectosSet las reinyecta automaticamente. Si
+                //   se guardaran y restauraran tambien aqui, se duplicarian visualmente.
                 var aCustom = [];
                 var aNonCustom = [];
                 oNode.children.forEach(function (c) {
+                    if (c && c.__fromBackendMerge === true) {
+                        //   no se snapshotta: viene del merge backend, se recarga sola
+                        return;
+                    }
                     if (c && c.__isCustom === true) {
                         aCustom.push(c);
                     } else {
@@ -915,6 +894,8 @@ sap.ui.define([
                     isSubcapitulo: !isD && item.Estructura === "S",
                     isCapitulo: isD || item.Estructura === "C",
                     isVacio: !isD && item.Estructura === "",
+                    // (INICIO MV) Se marca isLevel3 en las filas PEP (Estructura "O") para que la formula de colMonths (`(!isEditable || isLevel3) && ...`) las considere editables y la navegacion con flechas pueda aterrizarlas. (FIN MV)
+                    isLevel3: !isD && item.Estructura === "O",
                 };
             });
 

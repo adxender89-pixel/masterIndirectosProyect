@@ -498,16 +498,7 @@ sap.ui.define([
                     // La celda general solo es visible si la fila NO es una cabecera organizativa.
                     visible: true,
                     items: [
-                        // Campo editable para introducir datos manuales. Se oculta automáticamente si la fila no es de detalle puro.
-                        //   Se sustituye el binding de cadena por un objeto de binding con tipo
-                        //   sap.ui.model.type.Float construido mediante la funcion auxiliar
-                        //   _buildNumericBinding. El tipo gestiona la formateacion en la vista y
-                        //   el parseo del valor introducido por el usuario de forma bidireccional,
-                        //   eliminando la necesidad de manejar la conversion manualmente.
-                        //   Se sustituye el Input anónimo de la columna año por uno que incluye el handler
-                        //   centralizado onRowInputChange y los atributos custom necesarios para que dicho
-                        //   método identifique el control como perteneciente a una columna dinámica de año.
-                        // prueba editabilidad"{= ${" + this.tableModelName + ">/EvBloqueados} !== 'X' }"
+                     
                         new sap.m.Input({
                             editable: false,
                             textAlign: "Center",
@@ -696,13 +687,7 @@ sap.ui.define([
             }.bind(this), 0);
 
         },
-        /**
-*  Se crean las columnas de años utilizando el rango dinámico definido
-*  en _initYearsModel (Freal → Frealfinobra).
-*/
-        /**Se aplica también la lógica de visibilidad (2 años o 1 si es el último)
-         *  y se abre automáticamente el detalle mensual del año seleccionado.
-         */
+   
         createDynamicYearColumns: function (sTableId) {
 
             //  Se verifica que los años hayan sido inicializados previamente.
@@ -1026,12 +1011,7 @@ sap.ui.define([
 
             this._openedYear = sYear;
 
-            //   Se generan los nombres abreviados de los meses
-            // respetando el idioma activo de UI5. Antes se forzaba "es-ES"
-            // via toLocaleString, lo que impedia traducir los encabezados
-            // de mes a EN/FR. Con DateFormat.getDateInstance se delega en
-            // sap.ui.getCore().getConfiguration().getLanguage() y los
-            // labels se localizan automaticamente al cambiar de bundle.  
+            
             const oMonthFormat = sap.ui.core.format.DateFormat.getDateInstance({ pattern: "MMM" });
             const aMonthNames = [];
             for (let i = 0; i < 12; i++) {
@@ -1049,10 +1029,8 @@ sap.ui.define([
 
             // Se localiza la columna del año en la tabla para calcular la posicion de insercion.
             const oYearCol = oTable.getColumns().find(function (c) {
-                const lab = c.getLabel();
-                const txt = lab.getText ? lab.getText() : (lab.getItems ? lab.getItems()[0].getText() : "");
-                return txt === String(sYear);
-            });
+                return this._getColumnLabelText(c) === String(sYear);
+            }, this);
             const colIndex = oTable.indexOfColumn(oYearCol);
 
             // Se inserta la columna de ejercicios anteriores expandida antes de los meses si procede.
@@ -1080,22 +1058,7 @@ sap.ui.define([
                         : (i + 1).toString()
                     ) + subFijoYear;
 
-                    // Se emplea DecimalesInput para que las celdas de meses ejecutados hereden
-                    //el mismo formateo, normalizacion de vacios y comportamiento de focus
-                    //que el resto de inputs numericos de la tabla, aunque sean de solo lectura.
-                    // Se usa el patron parts + formatter como en las vistas (binding one-way)
-                    //en lugar de _buildNumericBinding (que aplica un tipo Float two-way). El
-                    //tipo two-way reformatea el valor al modelo en cada pulsacion, lo que
-                    //reposicionaba el caret y dejaba escribir solo un digito; ademas
-                    //actualizaba el modelo antes de onRowInputChange, haciendo creer al
-                    //filtro de cambio que el valor no se habia modificado y abortando el
-                    //envio al backend.
-                    // IMPORTANTE: el formatter usado es this.formatDecimales (definido en
-                    //este mismo BaseController, no el de model/formatter.js). Es exactamente
-                    //el mismo que las vistas resuelven al hacer formatter: '.formatDecimales'
-                    //y usa parseFloat directamente sobre el valor del modelo, evitando los
-                    //problemas de los dos formateadores divergiendo en su tratamiento del
-                    //formato SAP ("11.00000") frente al formato de usuario ("11,00").
+        
                     const oInput = new zindirect_costs.control.DecimalesInput({
                         width: "100%",
                         decimalNumbers: "{dashboardModel>/decimales}",
@@ -1132,24 +1095,7 @@ sap.ui.define([
                             : (iIdx + 1).toString()
                         ) + subFijoYear;
 
-                        // Se utiliza DecimalesInput en lugar de sap.m.Input para que las celdas
-                        //de meses editables compartan la misma logica de formateo, seleccion
-                        //automatica al entrar en celdas con valor cero y normalizacion del
-                        //campo vacio a "0,00" que aplica al resto de inputs numericos.
-                        // Se usa el patron parts + formatter (one-way) en lugar de
-                        //_buildNumericBinding (type Float two-way). El two-way reformateaba
-                        //el valor al modelo en cada pulsacion: el caret se reposicionaba y
-                        //el usuario solo podia escribir un digito antes de que el input se
-                        //sobrescribiera; ademas el modelo se actualizaba antes de
-                        //onRowInputChange, por lo que el filtro "valor === modelo" abortaba
-                        //la llamada al backend al considerar que no habia habido cambios.
-                        // IMPORTANTE: el formatter es this.formatDecimales del propio
-                        // BaseController(el mismo que las vistas resuelven al usar
-                        //'.formatDecimales'), no el de model/formatter.js. Usar el de
-                        //formatter.js producia diferencias de formato visibles solo en las
-                        //celdas de meses: tras una edicion, el valor podia mostrarse como
-                        //"1.100,00" en lugar de "11,00" porque ese formatter aplicaba un
-                        //replace de millares incorrecto sobre el formato SAP del modelo.
+                    
                         const oInput = new zindirect_costs.control.DecimalesInput({
                             width: "100%",
                             decimalNumbers: "{dashboardModel>/decimales}",
@@ -1186,19 +1132,7 @@ sap.ui.define([
                             // queda habilitado cuando la pestaña esta en estado "blocked"
                             // (modeloBloqueo>/isBlocked === true en convencion del proyecto).
                             enabled: "{modeloBloqueo>/isBlocked}",
-                            //  Se utiliza onMonthInputChange en lugar de
-                            //  onRowInputChange para habilitar la entrada de
-                            //  porcentajes (ej. "50%") sobre las celdas mensuales
-                            //  editables. Dicho envoltorio interpreta el signo %
-                            //  como porcentaje del campo AmoPen (Coste pendiente)
-                            //  de la misma fila y delega despues en
-                            //  onRowInputChange para el envio habitual al backend.
-                            //      Se actualiza el texto: la base del
-                            //  calculo paso de PenPlan a AmoPen segun el nuevo
-                            //  requisito funcional aplicable a todas las vistas
-                            //  que utilizan onCreateMonthsTable (Corrientes y
-                            //  Externos).
-                            //    
+                       
                             change: this.onMonthInputChange.bind(this)
                         })
                             .data("monthIdx", iIdx)
@@ -1306,11 +1240,7 @@ sap.ui.define([
                 } catch (e) { }
                 oTable.setBusy(false);
 
-                // Tras insertar las columnas dinamicas de meses, se reasocia el
-                //delegado de flechas a los inputs recien creados. El listener de
-                //rowsUpdated puede no dispararse al insertar columnas, por lo que
-                //sin esta llamada explicita las celdas de meses quedan sin el
-                //handler de _onInputKeyDown y la navegacion vertical no funciona.
+             
                 if (typeof this._attachArrowDelegates === "function") {
                     this._attachArrowDelegates(oTable);
                 }
@@ -1336,16 +1266,6 @@ sap.ui.define([
             var sSelectedYear = oEvent.getParameter("selectedItem").getKey();
             var iSelectedYear = parseInt(sSelectedYear, 10);
 
-            // (INICIO)
-            //   Antes de cambiar de ejercicio se dispara el guardado definitivo (mismo
-            //   flujo que el boton "Guardar" del footer), pero SOLO si hay cambios pendientes
-            //   marcados por _enviarFilaAlBackend. Asi se evita una llamada inutil al backend
-            //   cuando el usuario solo navega entre anios sin editar nada. onSave vive en
-            //   Main.controller; el rootView del Component es App (App.view.xml), no Main,
-            //   asi que se localiza Main pidiendo al sap.m.App (id="app") la pagina actual,
-            //   que es la view Main cargada por la ruta RouteMain. Main.onSave lee el anio
-            //   actual desde yearsModel/selectedYear, por eso se invoca ANTES de cambiar
-            //   la propiedad mas abajo: se guarda con el anio actual y luego se cambia.
             if (this._hasPendingChanges === true) { //   solo se guarda si hubo edicion previa
                 try {
                     var oRootViewMV = this.getOwnerComponent && this.getOwnerComponent().getRootControl(); //   App view (root del Component)
@@ -1353,10 +1273,7 @@ sap.ui.define([
                     var oMainViewMV = oAppCtrlMV && typeof oAppCtrlMV.getCurrentPage === "function" && oAppCtrlMV.getCurrentPage(); //   view Main (pagina actual del App)
                     var oMainControllerMV = oMainViewMV && oMainViewMV.getController(); //   controller Main (con override de onSave que hace POST)
                     if (oMainControllerMV && oMainControllerMV !== this && typeof oMainControllerMV.onSave === "function") { //   defensivo: distinto al this actual y con onSave
-                        //   El binding bidireccional del Select ya escribio el ano NUEVO en
-                        //   /selectedYear, asi que el modelo NO sirve como fuente del ejercicio
-                        //   a guardar. Se pasa explicitamente el ano PREVIO (donde se hicieron
-                        //   los guardados temporales) como override para que viaje en el header.
+                     
                         await oMainControllerMV.onSave(this._previousSelectedYear); //   guardado con el ejercicio anterior, no el seleccionado
                     }
                 } catch (errSaveMV) { //   se captura cualquier error para no bloquear el cambio de anio
@@ -1387,14 +1304,6 @@ sap.ui.define([
                 .forEach(function (c) { oTable.removeColumn(c); });
             this._openedYear = null;
 
-            //   Se recarga el modelo contra el backend. El servidor mapea siempre
-            //   el ejercicio seleccionado como Gjahr1 → a1 y el siguiente como
-            //   Gjahr2 → a2. Nunca se usan a3 ni a4.
-            // (INICIO)
-            //   Se suprime el dialog global "Cargando datos" durante la recarga por cambio
-            //   de anio: el flag transitorio _suppressGlobalLoading se respeta dentro de
-            //   _showLoadingDialog y se restablece en finally para no afectar a otras
-            //   llamadas posteriores (manuales, refresh, etc.) que SI deben mostrarlo.
             if (typeof this.initTabModel === "function") { //   defensivo: el detail puede no implementar initTabModel
                 this._suppressGlobalLoading = true; //   se activa la supresion antes del reload
                 try {
@@ -1464,12 +1373,7 @@ sap.ui.define([
             });
         },
 
-        /**
-         * Se busca un control por su identificador tanto en la vista activa como en el
-         * resto de elementos registrados en el nucleo de SAPUI5. Resulta necesario cuando
-         * el control pertenece a una vista distinta de la vista hija en uso, como ocurre
-         * con idEjecutadoCheckBox2 que reside en la Main view.
-         */
+      
         _findControlGlobally: function (sId) {
             // Se comprueba primero si el control existe en la vista activa para evitar
             // una busqueda global innecesaria en el caso mas comun.
@@ -1503,15 +1407,7 @@ sap.ui.define([
                     this._highlightSinProveedor(oTable);
                     this._applyBlockBorder(oTable);
                 }
-                //    
-                // Se vuelve a colorear las filas tras la conmutacion del checkbox de
-                // ejercicios anteriores. La adicion/eliminacion de columnas mensuales
-                // recicla los <tr> del DOM y las clases rowVersionB / rowVersionP que
-                // pintaban las filas de Amortizacion/Inversion (Inmovilizados),
-                // Provision/Aplicacion (Diferidos) o Anticipados se perdian al
-                // refrescarse el render. Se delega en colorRows del controller hijo
-                // (las 3 vistas con coloreo por TipoInd la implementan); el resto de
-                // vistas no la tienen y simplemente se omite la llamada.
+  
                 if (typeof this.colorRows === "function") {
                     this.colorRows();
                 }
@@ -1556,10 +1452,8 @@ sap.ui.define([
 
                 // Se busca la columna padre del año que estaba abierto para saber donde volver a insertar los meses.
                 const oYearCol = oTable.getColumns().find(function (c) {
-                    const lab = c.getLabel();
-                    const txt = lab.getText ? lab.getText() : (lab.getItems ? lab.getItems()[0].getText() : "");
-                    return txt === String(sYear);
-                });
+                    return this._getColumnLabelText(c) === String(sYear);
+                }, this);
 
                 // Si se encontro la columna de ese año se relanza la funcion creadora de meses simulando que el usuario hizo clic en ella.
                 if (oYearCol) {
@@ -1890,10 +1784,77 @@ sap.ui.define([
             return sId ? this.byId(sId) : null;
         },
 
-        /**
-            * Se configuran las propiedades y eventos necesarios para el funcionamiento de una TreeTable dinámica.
-            * Centraliza la asignación de delegados de teclado, cálculos de tamaño y eventos de scroll.
-            */
+       
+        _getColumnLabelText: function (oCol) {
+            var oLabel = oCol && typeof oCol.getLabel === "function" ? oCol.getLabel() : null;
+            if (!oLabel) {
+                return "";
+            }
+            if (typeof oLabel.getText === "function") {
+                return oLabel.getText() || "";
+            }
+            if (typeof oLabel.getItems === "function") {
+                var aItems = oLabel.getItems();
+                for (var i = 0; i < aItems.length; i++) {
+                    if (aItems[i] && typeof aItems[i].getText === "function") {
+                        return aItems[i].getText() || "";
+                    }
+                }
+            }
+            return "";
+        },
+
+        onToggleExpandCollapseAll: function (oEvent) {
+            var oTable = this.getControlTable();
+            if (!oTable) {
+                return;
+            }
+            var oButton = oEvent && oEvent.getSource ? oEvent.getSource() : null;
+
+            //   Se alterna el estado guardado en el propio controlador.
+            this._bAllExpanded = !this._bAllExpanded;
+
+            if (this._bAllExpanded) {
+                if (typeof oTable.expandToLevel === "function") {
+                    oTable.expandToLevel(99);
+                }
+                //   Pasada adicional para los desgloses custom de expansión diferida.
+                if (typeof this._expandAllCustomNodes === "function") {
+                    this._expandAllCustomNodes(oTable);
+                }
+                if (oButton) {
+                    oButton.setIcon("sap-icon://collapse-group");
+                    oButton.setTooltip(this.getTranslatedText("colapsarTodo"));
+                }
+            } else {
+                if (typeof oTable.collapseAll === "function") {
+                    oTable.collapseAll();
+                }
+                if (oButton) {
+                    oButton.setIcon("sap-icon://expand-group");
+                    oButton.setTooltip(this.getTranslatedText("expandirTodo"));
+                }
+            }
+
+            //   Se reaplican los estilos de fila tras el cambio de expansión.
+            setTimeout(function () {
+                if (typeof this.colorRows === "function") {
+                    this.colorRows();
+                }
+                if (typeof this._highlightSinProveedor === "function") {
+                    this._highlightSinProveedor(oTable);
+                }
+                if (typeof this._applyBlockBorder === "function") {
+                    this._applyBlockBorder(oTable);
+                }
+             
+                if (typeof this._updateCustomColsVisibility === "function") {
+                    this._updateCustomColsVisibility();
+                }
+            }.bind(this), 80);
+        },
+
+     
         setupDynamicTreeTable: function (sTableId) {
             // Se localiza la tabla ya sea por el ID proporcionado o mediante el método de obtención predeterminado.
             const oTable = sTableId ? this.byId(sTableId) : this.getControlTable();
@@ -1928,38 +1889,29 @@ sap.ui.define([
                 }.bind(this));
                 oTable._rowsUpdatedAttachedForResize = true;
             }
-             //   Se engancha el repintado de la fila del capitulo nivel 0 ("D") a 
-            //   rowsUpdated para que la clase rowChapterLevel0 se reaplique tras 
-            //   cualquier scroll/refresh sin tocar la logica existente de colorRows. 
-            //   Funciona para las 5 vistas (Corrientes, Externos, Anticipados, 
-            //   Diferidos, Inmovilizados) porque setupDynamicTreeTable es invocado 
-            //   por todas y this.tableModelName esta definido en cada una. 
-            if (!oTable._chapterLevel0Attached) { // 
-                //   Se enganchan tres mecanismos para cubrir todos los re-renders 
-                //   de la TreeTable: rowsUpdated, firstVisibleRowChanged y un 
-                //   MutationObserver sobre el DOM del wrapper. El observer es 
-                //   imprescindible porque UI5 reemplaza los <tr> sin disparar 
-                //   eventos publicos en varios escenarios (insertion de filas 
-                //   custom, apertura del panel inferior, etc) y los estilos 
-                //   inline se perderian sin esta vigilancia. 
-                oTable.attachEvent("rowsUpdated", function () { // 
-                    this._paintChapterLevel0(sTableId); // 
-                }.bind(this)); // 
-                oTable.attachEvent("firstVisibleRowChanged", function () { // 
-                    this._paintChapterLevel0(sTableId); // 
-                }.bind(this)); // 
+     
+            if (!oTable._chapterLevel0Attached) { 
+          
+                var that = this; 
+                var bPaintScheduled = false;
+                var fnPaintThrottled = function () {
+                    if (bPaintScheduled) return; 
+                    bPaintScheduled = true;
+                    window.requestAnimationFrame(function () {
+                        bPaintScheduled = false;
+                        that._paintChapterLevel0(sTableId);
+                    });
+                };
+                oTable.attachEvent("rowsUpdated", fnPaintThrottled);
+                oTable.attachEvent("firstVisibleRowChanged", fnPaintThrottled);
+                   
                 //   Disparo inicial diferido para cubrir el caso en que rowsUpdated 
                 //   se haya emitido antes de este attach. 
                 setTimeout(function () { this._paintChapterLevel0(sTableId); }.bind(this), 500); // 
                 var fnSetupObserver = function () { // 
                     var oDomRoot = oTable.getDomRef(); // 
                     if (!oDomRoot) return; // 
-                    //   Se desconecta el observer previo si existe: al cambiar 
-                    //   de vista (IconTabBar) UI5 re-renderiza la tabla, el DOM 
-                    //   anterior queda detached y el observer continuaba 
-                    //   vigilando nodos obsoletos. Sin reconectar al nuevo 
-                    //   getDomRef() la fila "D" naranja y la linea negra no se 
-                    //   reaplicaban al volver a la vista. 
+     
                     if (oTable._chapterLevel0Observer) { // 
                         oTable._chapterLevel0Observer.disconnect(); // 
                         oTable._chapterLevel0Observer = null; // 
@@ -1985,28 +1937,19 @@ sap.ui.define([
                 //   reintenta tras el primer render con onAfterRendering. 
                 fnSetupObserver(); // 
                 oTable.addEventDelegate({ onAfterRendering: fnSetupObserver }); // 
-                //   Listener de window.resize para cubrir el zoom del navegador 
-                //   (Ctrl + / Ctrl -). El zoom no dispara rowsUpdated ni cambia 
-                //   atributos del DOM, por lo que ni el MutationObserver ni los 
-                //   eventos UI5 vuelven a invocar _paintChapterLevel0; el 
-                //   resultado era que las propiedades inline aplicadas a los <td> 
-                //   se perdian al recalcularse el layout y la fila "D" quedaba 
-                //   sin fondo arancio palido ni border-bottom arancione. 
-                //   Se debounce a 120ms para no encadenar repaints durante un 
-                //   resize/zoom continuo. 
-                var fnZoomRepaint = function () { // 
-                    if (oTable._chapterLevel0ZoomTimer) { // 
-                        clearTimeout(oTable._chapterLevel0ZoomTimer); // 
+
+                var fnZoomRepaint = function () { 
+                    if (oTable._chapterLevel0ZoomTimer) {  
+                        clearTimeout(oTable._chapterLevel0ZoomTimer); 
                     } // 
-                    oTable._chapterLevel0ZoomTimer = setTimeout(function () { // 
-                        oTable._chapterLevel0ZoomTimer = null; // 
-                        this._paintChapterLevel0(sTableId); // 
+                    oTable._chapterLevel0ZoomTimer = setTimeout(function () {  
+                        oTable._chapterLevel0ZoomTimer = null; 
+                        this._paintChapterLevel0(sTableId);  
                     }.bind(this), 120); // 
                 }.bind(this); // 
-                window.addEventListener("resize", fnZoomRepaint); // 
-                oTable._chapterLevel0Attached = true; // 
-            } // 
-
+                window.addEventListener("resize", fnZoomRepaint);  
+                oTable._chapterLevel0Attached = true; 
+            } 
 
             //    Se añaden las columnas exclusivas de filas custom al array
             // de ocultación inicial para que no aparezcan vacías al cargar la vista.
@@ -2069,20 +2012,74 @@ sap.ui.define([
             });
 
             if (!oTable._rowsDelegateAttached) {
+
+                var thatRD = this;
+                var bScrollPaintScheduled = false;
                 oTable.attachEvent("rowsUpdated", function () {
-                    this._attachArrowDelegates(oTable);
-       this._applyCabeceraStyle();
-       //    Se recalcula la altura interna de la scrollbar vertical
-       //tras cada redibujado para corregir el "overshoot" de UI5: por defecto
-       //sap.ui.table.TreeTable sobredimensiona el contenido virtual (~825px
-       //para 4 filas reales de overflow), lo que dejaba al usuario arrastrar
-       //el thumb mas alla del final real y la rueda nunca alcanzaba la ultima
-       //fila. Con esta correccion el rango del scroll coincide exactamente
-       //con (filas_overflow * altura_fila).  
-       this._capScrollbarOvershoot(oTable);
-       //    
-                }.bind(this));
+                    if (bScrollPaintScheduled) return;
+                    bScrollPaintScheduled = true;
+                    window.requestAnimationFrame(function () {
+                        bScrollPaintScheduled = false;
+                        thatRD._attachArrowDelegates(oTable);
+                        thatRD._applyCabeceraStyle();
+                        thatRD._capScrollbarOvershoot(oTable);
+                    });
+                });
+                //
                 oTable._rowsDelegateAttached = true;
+            }
+
+            // (INICIO MV) Lazy-attach defensivo: cuando un input toma foco, si por algun motivo no tiene el arrow delegate (caso de filas nuevas creadas tras expansion de desglose o rerenders rapidos donde el rAF queda saltado por el flag `bScrollPaintScheduled`), se le attacha al vuelo. Asi no se queda jamas un input sin navegacion con flechas. Idempotente: `addEventDelegate` precedido por `removeEventDelegate` evita duplicados. (FIN MV)
+            if (!oTable._arrowLazyFocusAttached) {
+                // (INICIO MV) Listener en `document` en lugar de en el DOM de la tabla: el DOM de la tabla se vacia/recrea en cada re-render, perdiendo el listener. document es persistente y captura focusin gracias a la fase de captura. Se filtra por contencion dentro del DOM CURRENT de la tabla. (FIN MV)
+                document.addEventListener("focusin", function (oNativeEvt) {
+                    const oCurrentTableDom = oTable.getDomRef();
+                    if (!oCurrentTableDom || !oNativeEvt.target || !oCurrentTableDom.contains(oNativeEvt.target)) return;
+                        const oTargetDom = oNativeEvt.target;
+                        if (!oTargetDom || !oTargetDom.id) return;
+                        // (INICIO MV) Intercept para suprimir el flash visual del indicador de celda nativo del TreeTable: si el foco aterriza en `...rows-rowN-colM` (cell container nativo) buscamos el input editable dentro de esa celda y redirigimos el foco hacia el. Se ejecuta SIEMPRE (no solo durante `_navInFlight`) porque tambien en el path sin scroll el handler nativo de sap.ui.table puede mover el foco a la celda contenedor entre nuestros eventos. (FIN MV)
+                        const mCell = oTargetDom.id.match(/-rows-row(\d+)-col(\d+)$/);
+                        if (mCell) {
+                            const iVisRow = parseInt(mCell[1], 10);
+                            const iVisCol = parseInt(mCell[2], 10);
+                            const aRowsCells = oTable.getRows();
+                            if (iVisRow >= 0 && iVisRow < aRowsCells.length) {
+                                const oRowR = aRowsCells[iVisRow];
+                                const aCellsR = oRowR.getCells();
+                                // El index de columna en cell container DOM ID es 0-based incluyendo fixed; getCells() esta alineado pero hay que probar el indice del DOM.
+                                const oCellR = aCellsR[iVisCol] || aCellsR[iVisCol + 2]; // fallback por offset de fixed columns
+                                if (oCellR) {
+                                    const oInputR = thatRD._recursiveGetInput(oCellR);
+                                    if (oInputR && oInputR.getFocusDomRef) {
+                                        const oDomR = oInputR.getFocusDomRef();
+                                        if (oDomR && oDomR !== oTargetDom) {
+                                            oDomR.focus();
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        const sFocusId = oTargetDom.id.replace(/-inner$/, "");
+                        const oFocusedCtrl = sap.ui.getCore().byId(sFocusId);
+                        if (!oFocusedCtrl || !oFocusedCtrl.isA || !oFocusedCtrl.isA("sap.m.Input")) return;
+                        if (!oFocusedCtrl.getEditable || !oFocusedCtrl.getEditable()) return;
+                        // (INICIO MV) Si `_arrowDelegate` aun no existe (p.ej. `_attachArrowDelegates` no se ejecuto todavia porque `rowsUpdated` no disparo o el rAF se salto), se crea aqui mismo. Asi el lazy-attach funciona desde la primera interaccion sin depender del orden de inicializacion. (FIN MV)
+                        if (!thatRD._arrowDelegate) {
+                            thatRD._arrowDelegate = {
+                                onkeydown: function (oEvent) {
+                                    thatRD._onInputKeyDown(oEvent);
+                                }
+                            };
+                        }
+                    const aDel = oFocusedCtrl.aDelegates || [];
+                    const bHas = aDel.some(function (d) { return d.oDelegate && d.oDelegate.onkeydown && d.oDelegate === thatRD._arrowDelegate; });
+                    if (!bHas) {
+                        oFocusedCtrl.removeEventDelegate(thatRD._arrowDelegate);
+                        oFocusedCtrl.addEventDelegate(thatRD._arrowDelegate);
+                    }
+                }, true);
+                oTable._arrowLazyFocusAttached = true;
             }
 
             // Se cierra el panel inferior automaticamente cuando el foco va a una fila distinta de la que abrio el panel. Asi el panel deja de mostrar datos del proveedor anterior en cuanto el usuario navega a otra fila/proveedor
@@ -2125,12 +2122,7 @@ sap.ui.define([
                 window.addEventListener("resize", this._windowResizeHandler);
             }
 
-            //   Se engancha el evento de expansion y colapso de la cabecera del
-            // ObjectPageLayout para recalcular el splitter y las filas visibles.
-            // Se usa attachEvent con el nombre interno del evento de snap/expand
-            // ya que attachToggleHeaderOnTitleClick no existe como API publica.
-            // El ObjectPageLayout emite "_snapHeader" al colapsar y "_expandHeader"
-            // al expandir; ambos se interceptan con el mismo handler de recalculo.
+
             if (!this._oHeaderToggleAttached) {
                 var oObjectPage = this.byId("objectPageLayout");
                 if (oObjectPage) {
@@ -2209,13 +2201,12 @@ sap.ui.define([
                 }.bind(this));
                 oTable._colResizeAttached = true;
             }
+
+            // Se registran los atajos de teclado globales (Alt+Plus, Alt+Minus, Alt+S)
+            // una única vez por instancia de controlador.
+            this._attachKeyboardShortcuts();
         },
-        /*   Se pinta la fila del capitulo nivel 0 (PhPspnr === "D") con la 
-         *  clase CSS rowChapterLevel0 para que destaque siempre (fondo arancio 
-         *  palido + border-bottom arancione), independientemente del estado de 
-         *  seleccion del checkbox o del color por TipoInd que aplique colorRows. 
-         *  Se invoca desde rowsUpdated para que se reaplique tras scroll/refresh. 
-         */
+    
         _paintChapterLevel0: function (sTableId) { // 
             var oTable = this.byId(sTableId); // 
             if (!oTable) return; // 
@@ -2228,21 +2219,7 @@ sap.ui.define([
             var sModelName = this.tableModelName; // 
             var sFullTableId = oTable.getId(); // 
             var aRows = oTable.getRows(); // 
-            //   Estilo inline porque UI5 reemplaza el DOM al re-renderizar y las 
-            //   reglas CSS por clase pueden ser sobreescritas por las reglas 
-            //   internas con mayor especificidad. Inline + !important garantiza 
-            //   prioridad maxima. 
-            //   Se separa el estilo inline en dos: sInlineTd lleva ademas del 
-            //   fondo arancio el border-bottom arancione, y solo se aplica al 
-            //   <td> (un nivel). sInlineFill lleva solo el background-color y 
-            //   se aplica a los hijos del td y al propio <tr> para cubrir el 
-            //   fondo en wrappers internos. Antes ambos llevaban border-bottom 
-            //   y en Anticipados/Diferidos/Inmovilizados se veian dos rayas 
-            //   naranjas apiladas porque la celda contiene un wrapper interno 
-            //   adicional (estructura Inversion+Amortizacion). 
-            //   Se eliminan las cadenas de estilo inline de relleno arancio (antes
-            //   sInlineTd/sInlineFill): la fila "D" ya NO lleva fondo. Solo se aplica
-            //   inline el border-bottom naranja mas abajo (linea separadora).
+  
             aRows.forEach(function (oRow, i) { // 
                 //   Se intenta primero con el modelo nombrado y se cae al modelo 
                 //   por defecto para evitar null context en bindings tree. 
@@ -2259,54 +2236,31 @@ sap.ui.define([
                 oFixedRef.removeClass("rowChapterLevel0"); // 
                 oScrollRef.removeClass("rowChapterLevel0"); // 
                 oRowSelRef.removeClass("rowChapterLevel0"); // 
-                //   Funcion local que limpia las propiedades inline que aplicamos. 
-                //   Imprescindible: UI5 reusa los <tr> al hacer scroll, asi que si 
-                //   no limpiamos las filas que dejan de ser "D", el naranja se queda 
-                //   pegado al indice de fila y aparenta moverse con el scroll. 
+              
                 var fnClearInline = function () { // 
                     this.style.removeProperty("background-color"); // 
                     this.style.removeProperty("border-bottom"); // 
                 }; // 
-                //   Se excluyen las celdas dummy (sapUiTableCellDummy) tanto del 
-                //   limpiado como de la aplicacion del estilo inline. Eran las 
-                //   que hacian que el fondo arancio y el border-bottom se 
-                //   extendieran mas alla de la ultima columna real ("Resto"). 
-                oFixedRef.find("td:not(.sapUiTableCellDummy)").each(fnClearInline); // 
-                oScrollRef.find("td:not(.sapUiTableCellDummy)").each(fnClearInline); // 
-                oFixedRef.find("td:not(.sapUiTableCellDummy) > *").each(fnClearInline); // 
-                oScrollRef.find("td:not(.sapUiTableCellDummy) > *").each(fnClearInline); // 
+       
+                oFixedRef.find("td:not(.sapUiTableCellDummy)").each(fnClearInline);  
+                oScrollRef.find("td:not(.sapUiTableCellDummy)").each(fnClearInline); 
+                oFixedRef.find("td:not(.sapUiTableCellDummy) > *").each(fnClearInline); 
+                oScrollRef.find("td:not(.sapUiTableCellDummy) > *").each(fnClearInline); 
                 oFixedRef.each(fnClearInline); // 
                 oScrollRef.each(fnClearInline); // 
                 if (oRowDom) fnClearInline.call(oRowDom); // 
                 if (sPhPspnr === "D") { //
-                    //   Se conserva SOLO la linea naranja de borde inferior que separa
-                    //   la fila "D" del resto de filas; se elimina el relleno de fondo
-                    //   arancio a peticion funcional. Se reanade la clase rowChapterLevel0
-                    //   para mantener la compensacion de altura del row header/checkbox
-                    //   (.rowChapterLevel0 -> 28px); el fondo de esa clase se ha eliminado
-                    //   en el CSS, asi que la clase ya solo aporta borde + altura.
+             
                     if (oRowDom) oRowDom.classList.add("rowChapterLevel0"); //
                     oFixedRef.addClass("rowChapterLevel0"); //
                     oScrollRef.addClass("rowChapterLevel0"); //
                     oRowSelRef.addClass("rowChapterLevel0"); //
-                    //   Solo border-bottom inline (sin background) al <td>, excluyendo las
-                    //   celdas dummy para no extender la linea mas alla de la ultima columna
-                    //   real ("Resto"). Inline + !important garantiza que la linea se vea
-                    //   aunque UI5 sobreescriba la regla por clase con mayor especificidad.
+                
                     oFixedRef.find("td:not(.sapUiTableCellDummy)").each(function () { this.style.cssText += ";border-bottom: 2px solid #f3984e !important;"; }); //
                     oScrollRef.find("td:not(.sapUiTableCellDummy)").each(function () { this.style.cssText += ";border-bottom: 2px solid #f3984e !important;"; }); //
                 } //
             }); // 
-            //   Se reaplica tambien _applyCabeceraStyle dentro del mismo bloque 
-            //   con el observer desconectado: la clase cabeceracolor-Group (linea 
-            //   negra del desglose proveedor) tambien se borra cuando UI5 recicla 
-            //   los <tr> en la virtualizacion de la TreeTable y el unico hook a 
-            //   rowsUpdated no basta cuando UI5 reemplaza el DOM sin emitir el 
-            //   evento publico (insercion de filas custom, apertura del panel 
-            //   inferior, etc). Aprovechar este mismo punto garantiza que la 
-            //   linea negra se reaplique en TODOS los disparadores: rowsUpdated, 
-            //   firstVisibleRowChanged, MutationObserver, resize/zoom y el 
-            //   timeout inicial.  */
+         
             try { this._applyCabeceraStyle(); } catch (e) { /*  defensivo */ } // 
             //   Se reconecta el observer tras el repaint (microtick para que las 
             //   mutaciones de este repaint no entren como nuevas notificaciones). 
@@ -2316,11 +2270,7 @@ sap.ui.define([
                 }, 0); // 
             } // 
         },
-        //   Se conecta un MutationObserver al DOM del ObjectPageLayout para
-        // detectar cuando la cabecera cambia de estado (snap/expand) y recalcular
-        // el splitter y las filas visibles. Es el mecanismo mas robusto porque no
-        // depende de nombres de eventos internos que pueden cambiar entre versiones
-        // de SAPUI5.
+        
         _connectHeaderObserver: function (oDom, fnCallback) {
             if (this._oHeaderMutationObserver) return;
 
@@ -2421,12 +2371,6 @@ sap.ui.define([
             oViewModel.setProperty("/dynamicRowCount", iRows);
         },
 
-        /**
-         * Se calcula dinámicamente la altura del Splitter vertical
-         * restando la posición superior del control y el footer
-         * de la altura total de la ventana. De este modo el Splitter
-         * se adapta a cualquier nivel de zoom sin usar píxeles fijos.
-         */
         _calculateSplitterHeight: function () {
             var oSplitter = this.byId("mainSplitter");
             if (!oSplitter) return;
@@ -2476,10 +2420,7 @@ sap.ui.define([
                 oSplitter.addEventDelegate({ onAfterRendering: fnCompute });
             }
         },
-        /**
- * Se construye una clave estable que identifica una columna dinámica
- * de forma unívoca para su almacenamiento en el mapa de anchos guardados.
- */
+    
         _getColKey: function (oCol) {
             // Se genera la clave para la columna de ejercicios anteriores diferenciando
             // si actúa como columna mensual o como columna anual consolidada.
@@ -2497,16 +2438,7 @@ sap.ui.define([
             // Se devuelve el identificador nativo del control como fallback.
             return oCol.getId();
         },
-
-        //    Se corrige el "overshoot" de la barra de scroll vertical de
-        //sap.ui.table.TreeTable. Por defecto UI5 1.71 fija una altura interna
-        //virtual mayor que la suma real de filas overflow, permitiendo arrastrar
-        //el thumb mas alla del final real y dejando la rueda del raton sin poder
-        //alcanzar la ultima fila. Se reasigna la altura interna a
-        //(clientHeight + filas_overflow * altura_fila), reflejando exactamente el
-        //contenido scrollable y eliminando el espacio "fantasma". Se invoca tras
-        //cada rowsUpdated.  
-        _capScrollbarOvershoot: function (oTable) {
+          _capScrollbarOvershoot: function (oTable) {
             if (!oTable) return;
             const oDom = oTable.getDomRef();
             if (!oDom) return;
@@ -2534,7 +2466,7 @@ sap.ui.define([
                 oVsbInner.style.height = iProperH + "px";
             }
         },
-        //    
+
         /**
          * Se asignan los delegados de las flechas del teclado a todos los campos de entrada visibles.
          * Permite la navegación tipo "Excel" entre las celdas de la tabla.
@@ -2552,11 +2484,36 @@ sap.ui.define([
             // Se obtienen únicamente las filas que están dibujadas en el DOM en este instante.
             const aRows = oTable.getRows();
 
+            // (INICIO MV) Walker independiente que NO requiere getDomRef() (a diferencia de `_recursiveGetInput`): el delegate de flechas puede engancharse aunque el DOM del input aun no este renderizado en el primer `rowsUpdated`; cuando la usuaria de hecho enfoque ese input mas tarde, el delegate disparara. Sin esto, en algunas vistas (caso Anticipados) el delegate quedaba sin atacar a ningun input — la navegacion con flechas no funcionaba en absoluto desde el primer foco. (FIN MV)
+            const findInputForAttach = function (oControl) {
+                if (!oControl) return null;
+                if (oControl.getVisible && oControl.getVisible() === false) return null;
+                if (oControl.isA && oControl.isA("sap.m.Input")) {
+                    if (oControl.getEditable && oControl.getEditable()) return oControl;
+                    return null;
+                }
+                if (oControl.getContent) {
+                    const aContent = oControl.getContent();
+                    for (let i = 0; i < aContent.length; i++) {
+                        const r = findInputForAttach(aContent[i]);
+                        if (r) return r;
+                    }
+                }
+                if (oControl.getItems) {
+                    const aItems = oControl.getItems();
+                    for (let j = 0; j < aItems.length; j++) {
+                        const r = findInputForAttach(aItems[j]);
+                        if (r) return r;
+                    }
+                }
+                return null;
+            };
+
             // Se itera sobre cada fila y, seguidamente, sobre cada celda que compone la fila.
             aRows.forEach(function (oRow) {
                 oRow.getCells().forEach(function (oCell) {
                     // Se utiliza una función recursiva para buscar dentro de la celda si existe un control Input oculto bajo otros layouts (VBox, HBox).
-                    const oInput = this._recursiveGetInput(oCell);
+                    const oInput = findInputForAttach(oCell);
 
                     if (oInput) {
                         // Se elimina el delegado antes de añadirlo para garantizar que no se acumulen disparadores múltiples del mismo evento.
@@ -2582,23 +2539,14 @@ sap.ui.define([
 
             // Si la tecla pulsada no es una flecha de navegación, se ignora el evento y se permite el comportamiento por defecto.
             if (!bDown && !bUp && !bRight && !bLeft) return;
+                if (bUp && (this._pendingNavSteps || 0) > 0) this._pendingNavSteps = 0;
+            else if (bDown && (this._pendingNavSteps || 0) < 0) this._pendingNavSteps = 0;
 
             // Se recupera la referencia del DOM (HTML nativo) del Input para leer su valor exacto antes de que el framework lo procese.
             const oDomRef = oInput.getFocusDomRef();
             if (!oDomRef) return;
 
-            // En las flechas horizontales el caret se desplaza primero dentro
-            //del texto del input antes de cambiar de celda. Las condiciones que
-            //disparan la navegacion son:
-            //  1) El caret esta colapsado en el borde correspondiente (posicion 0
-            //     para ArrowLeft, final del valor para ArrowRight).
-            //  2) El texto esta integramente seleccionado Y el valor representa
-            //     un cero. En las celdas "0,00" se asume que el usuario solo
-            //     quiere atravesarlas, asi que una sola pulsacion basta para
-            //     saltar a la siguiente. En cambio, si la seleccion total esta
-            //     sobre un numero distinto de cero, se deja al navegador
-            //     colapsar la seleccion para permitir al usuario desplazarse
-            //     cifra a cifra dentro del input y editar libremente.
+       
             const _bValueIsZero = (function () {
                 const sVal = oDomRef.value || "";
                 if (!sVal) return true;
@@ -2636,39 +2584,29 @@ sap.ui.define([
                 }
             }
 
-            //    Se sustituye el throttle temporal fijo (50ms) por una
-            //bandera "_navInFlight" y un contador "_pendingNavSteps". Dentro del
-            //viewport no hay throttle (movimientos fluidos al pulsado largo).
-            //Cuando una navegacion con scroll esta en curso, las flechas que
-            //llegan se acumulan en _pendingNavSteps (signed: +down/-up) en vez de
-            //descartarse. Al completarse el redibujado fnFocus saltara DE GOLPE
-            //todas las filas acumuladas en un unico scroll adicional. Esto convierte
-            //el "mantener pulsada la flecha" en un scroll de varias filas por ciclo
-            //en vez de una sola, eliminando la sensacion de lentitud sin sobrecargar
-            //el ciclo de renderizado.  
-            if (this._navInFlight) {
-                if (bDown) this._pendingNavSteps = (this._pendingNavSteps || 0) + 1;
-                else if (bUp) this._pendingNavSteps = (this._pendingNavSteps || 0) - 1;
+           // (INICIO MV) Watchdog: si `_navInFlight` lleva mas de 250ms en true, se asume que el `fnFocus` correspondiente se perdio (p.ej. `rowsUpdated` no disparado porque `setFirstVisibleRow` no cambio nada y el setTimeout backup se descarto). Se fuerza el reset para no quedar bloqueando indefinidamente la navegacion siguiente — sintoma visible: el handler nativo de la tabla se queda con las flechas y mueve el foco a las filas contenedor. (FIN MV)
+           if (this._navInFlight && this._navInFlightTs && (Date.now() - this._navInFlightTs) > 250) {
+                this._navInFlight = false;
+                this._pendingNavSteps = 0;
+            }
+           if (this._navInFlight) {
+                // (INICIO MV) Se descartan completamente las pulsaciones nuevas mientras hay un scroll en vuelo (no se acumulan en `_pendingNavSteps`). Con la tecla mantenida pulsada y la cola activa, `fnFocus` lanzaba un replay sintetico al terminar; ese replay disparaba otro `setFirstVisibleRow` + rerender + fnFocus inmediatamente, encadenando rerenders cada ~120ms y produciendo el "impazzimento" visual del scroll. Sin cola, las pulsaciones extra se pierden y la usuaria controla manualmente el ritmo (1 pulsacion = 1 desplazamiento, despues de que el foco se haya estabilizado). (FIN MV)
+                this._pendingNavSteps = 0;
                 oEvent.preventDefault();
                 oEvent.stopImmediatePropagation();
+                // (INICIO MV) Se intenta tambien `stopPropagation` para frenar la propagacion ascendente al sap.ui.table.TreeTable y evitar que su handler nativo de teclado mueva el foco a `...rows-rowN-col0`. Se protege con typeof porque el delegate de SAPUI5 puede entregar un oEvent sin todos los metodos (sintetico durante el replay de `_pendingNavSteps`). (FIN MV)
+                if (typeof oEvent.stopPropagation === "function") oEvent.stopPropagation();
+                // (INICIO MV) Se anyade `setMarked()` (API interna de SAPUI5) para que la extension de teclado de sap.ui.table considere el evento ya gestionado y NO mueva su foco interno a `...rows-rowN-col0` durante el scroll. Sin esto, en cada flecha vertical aparecia un flash de 100ms en el indicador de celda nativo antes de que `fnFocus` restituyera el foco real. (FIN MV)
+                if (typeof oEvent.setMarked === "function") oEvent.setMarked();
                 return;
             }
-            //    
 
-            // Se elimina la sincronizacion manual del valor DOM->control en
-            //este punto. Antes se invocaba setValue + updateModelProperty
-            //cuando el DOM diferia del control, pero en un binding compuesto
-            //(parts + formatter, sin parser) updateModelProperty empujaba el
-            //valor crudo al modelo y la cadena de eventos posterior podia
-            //reinterpretarlo: una edicion "3" + tecla flecha producia
-            //"3.300,00" en vez de "33,00" por una lectura incorrecta del
-            //separador. El blur natural del input dispara attachChange con
-            //el valor DOM correcto, que es donde realmente se debe formatear
-            //y enviar al backend; aqui no es necesario hacer nada.
-
-            // Se detiene la propagación del evento para que no interfiera con otras funcionalidades nativas del navegador.
             oEvent.preventDefault();
             oEvent.stopImmediatePropagation();
+            // (INICIO MV) Mismo razonamiento: se bloquea la propagacion ascendente al TreeTable para que su navegacion nativa de teclado no compita con la nuestra. (FIN MV)
+            if (typeof oEvent.stopPropagation === "function") oEvent.stopPropagation();
+            // (INICIO MV) setMarked() para suprimir el flash del indicador de celda de sap.ui.table durante el scroll vertical. (FIN MV)
+            if (typeof oEvent.setMarked === "function") oEvent.setMarked();
 
             const oTable = this.getControlTable();
             if (!oTable) return;
@@ -2689,15 +2627,7 @@ sap.ui.define([
             const iCurrentRowIndex = oParent.getIndex();
             const oCurrentContext = oParent.getBindingContext(this.tableModelName);
             if (!oCurrentContext) return;
-            //    Se memoriza la ruta de binding de la fila origen para
-            //poder devolver el foco a esa misma fila por path si la fila destino
-            //resulta no editable tras el scroll. Sin esta referencia el fallback
-            //caia en oInput.focus(), pero el control oInput habia sido reasignado
-            //a otra fila por la virtualizacion de UI5, dejando al usuario en una
-            //celda no editable (caso reproducible al subir desde la operacion
-            //hasta la fila cabecera "D").  
-            const sSourcePath = oCurrentContext.getPath();
-            //    
+              const sSourcePath = oCurrentContext.getPath();
 
             // Se recorren las celdas de la fila actual para averiguar en qué índice de columna se encuentra el Input enfocado.
             const aCells = oParent.getCells();
@@ -2716,6 +2646,8 @@ sap.ui.define([
 
             // ── LÓGICA DE NAVEGACIÓN HORIZONTAL (DERECHA / IZQUIERDA) ─────────────────────────────
             if (bLeft || bRight) {
+                // (INICIO MV) Se fuerza el reset de `_navInFlight` en el flujo horizontal: la navegacion lateral nunca dispara scroll y no necesita esperar a `rowsUpdated`. Si un movimiento vertical anterior lo dejo en true por accidente (timeout perdido), las flechas izquierda/derecha quedaban bloqueadas hasta refrescar la vista. (FIN MV)
+                this._navInFlight = false;
                 // Se traduce el índice absoluto de fila a índice relativo a la vista actual para acceder al elemento renderizado.
                 const iFirstVisible = oTable.getFirstVisibleRow();
                 const iVisibleRowIndex = iCurrentRowIndex - iFirstVisible;
@@ -2735,9 +2667,10 @@ sap.ui.define([
                 // Se inicializa el índice de búsqueda horizontal y la referencia al input destino.
                 let iNewColIndex = iTargetColIndex;
                 let oTargetInput = null;
-                const iTotalCols = oTable.getColumns().length;
+                // (INICIO MV) Se usa el tamanyo del array `cells` y NO `getColumns().length`: sap.ui.table.Row.getCells() salta las columnas con visible=false, por lo que el indice del array de celdas y el del array de columnas estan desalineados cuando hay columnas ocultas (en Corrientes, p.ej. "Coste Ej. Ajustado"/"Coste Ej. Real"). El fix previo que filtraba `aAllCols[iNewColIndex].getVisible() === false` aplicaba el check a la columna XML equivocada y saltaba celdas validas como "Coste Total" (visible) confundiendola con "Coste Ej. Real" (oculta), provocando que la flecha derecha desde Pendiente saltara directamente a los meses. Las celdas del array `cells` ya estan filtradas por SAPUI5 a columnas visibles, asi que no hace falta volver a comprobarlo. (FIN MV)
+                const aRowCells = oRow.getCells();
+                const iTotalCols = aRowCells.length;
 
-                // Se itera en la dirección indicada saltando celdas sin input o con inputs no editables.
                 while (true) {
                     iNewColIndex = bRight ? iNewColIndex + 1 : iNewColIndex - 1;
 
@@ -2747,19 +2680,18 @@ sap.ui.define([
                         return;
                     }
 
-                    const oCell = oRow.getCells()[iNewColIndex];
+                    const oCell = aRowCells[iNewColIndex];
                     if (!oCell) continue;
 
-                    // Se busca cualquier input visible en la celda ignorando la restricción de editable para detectar su existencia.
-                    const oCandidato = this._recursiveGetInput(oCell, true);
-                    if (!oCandidato) continue; // La celda no contiene ningún input, se continúa la búsqueda.
+                    // Se busca un input visible y editable en la celda; `_recursiveGetInput` ya filtra por visible+editable.
+                    const oCandidato = this._recursiveGetInput(oCell);
+                    if (!oCandidato) continue; // La celda no contiene ningún input editable, se continúa la búsqueda.
 
-                    // Si el input existe y es editable, se establece como destino y se detiene la búsqueda.
-                    if (oCandidato.getEditable()) {
-                        oTargetInput = oCandidato;
-                        break;
-                    }
-                    // Si el input existe pero no es editable, se salta y se continúa en la misma dirección.
+                    // (INICIO MV) Se acepta el input solo si esta tambien habilitado (`getEnabled() !== false`); si esta deshabilitado por `modeloBloqueo>/isBlocked` el foco no produciria efecto y la navegacion se quedaria atascada. (FIN MV)
+                    if (oCandidato.getEnabled && oCandidato.getEnabled() === false) continue;
+
+                    oTargetInput = oCandidato;
+                    break;
                 }
 
                 // Se transfiere el foco al input destino encontrado o se devuelve al original si no se halló ninguno.
@@ -2778,22 +2710,38 @@ sap.ui.define([
                 return;
             }
 
-            // ── LÓGICA DE NAVEGACIÓN VERTICAL (ARRIBA / ABAJO) ────────────────────────────────────
-            //    Se restringe la navegacion vertical a la misma columna de origen
-            //para imitar el comportamiento de Excel: ArrowUp/ArrowDown nunca cambia de
-            //columna. Si la celda candidata de esa columna no tiene un input editable
-            //visible (por el patron de fila: __isHeader, __isSinProveedor, custom...),
-            //se salta esa fila y se continua buscando hacia arriba/abajo hasta encontrar
-            //una fila con la misma columna editable o hasta agotar el rango. La logica
-            //anterior buscaba el editable mas cercano por distancia de columna, lo que
-            //hacia que el cursor saltara a otra columna y quedara atrapado fuera de la
-            //original.  
-            //    
             let iTargetRowIndex = null;
             let sTargetPath = null;
             let iTargetFinalColIndex = iTargetColIndex;
             let iSearchIndex = iCurrentRowIndex;
             let iSearchSteps = 0;
+
+            // (INICIO MV) Se inspeccionan las filas renderizadas para clasificar la columna actual: (1) si es "custom-only" (editable solo en desglose, caso Agrupador/Descripcion), (2) que valores de TipoInd ("A"/"B"/none) admiten input editable en esa columna. Sirve para descartar filas fuera del viewport cuyo perfil garantiza ausencia de Input editable — eliminando el scroll-restore visible y el "salto al cell container" reportado por la usuaria. Caso real: en Anticipados, las filas Amortizacion (TipoInd="A") solo tienen Inputs editables a partir de las columnas de mes, no en Coste pend / Total; sin este filtro un ArrowDown desde una Inversion en col 4 caia en row Amortizacion sin input, disparaba scroll y luego restore, perdiendo el foco. (FIN MV)
+            let bColCustomOnly = false;
+            const oColEditableTipoInd = {};
+            try {
+                let bHasCustomEditable = false;
+                let bHasNonCustomEditable = false;
+                const aAllRowsForProbe = oTable.getRows();
+                for (let pi = 0; pi < aAllRowsForProbe.length; pi++) {
+                    const rProbe = aAllRowsForProbe[pi];
+                    const ctxProbe = rProbe.getBindingContext(this.tableModelName);
+                    if (!ctxProbe) continue;
+                    const dProbe = ctxProbe.getObject();
+                    if (!dProbe) continue;
+                    const cellProbe = rProbe.getCells()[iTargetColIndex];
+                    if (!cellProbe) continue;
+                    const inputProbe = this._recursiveGetInput(cellProbe);
+                    if (!inputProbe) continue;
+                    if (dProbe.__isCustom === true) bHasCustomEditable = true;
+                    else bHasNonCustomEditable = true;
+                    // (INICIO MV) Se registra el TipoInd que SI tiene editable: cualquier valor (incluyendo undefined → clave "_none"). (FIN MV)
+                    const sKey = dProbe.TipoInd ? String(dProbe.TipoInd) : "_none";
+                    oColEditableTipoInd[sKey] = true;
+                }
+                bColCustomOnly = bHasCustomEditable && !bHasNonCustomEditable;
+            } catch (_) {}
+            const bUseTipoIndFilter = Object.keys(oColEditableTipoInd).length > 0;
 
             while (true) {
                 // Se incrementa o decrementa el índice lógico en base a la dirección de la flecha.
@@ -2802,12 +2750,14 @@ sap.ui.define([
 
                 // Si se alcanza el límite superior o inferior absoluto de la tabla, se cancela el movimiento.
                 if (iSearchIndex < 0 || iSearchIndex >= oBinding.getLength()) {
+                     this._pendingNavSteps = 0;
                     setTimeout(function () { oInput.focus(); if (oInput.select) oInput.select(); }, 10);
                     return;
                 }
 
                 // Se evita un posible bucle infinito limitando la búsqueda a doscientas iteraciones.
                 if (iSearchSteps > 200) {
+                          this._pendingNavSteps = 0;
                     setTimeout(function () { oInput.focus(); if (oInput.select) oInput.select(); }, 10);
                     return;
                 }
@@ -2819,13 +2769,7 @@ sap.ui.define([
                 const oData = oCtx.getObject();
                 if (!oData) continue;
 
-                //    Se inspecciona unicamente la celda de la columna
-                //de origen (iTargetColIndex). Si su input no es editable y visible,
-                //se descarta la fila y se sigue buscando en la siguiente direccion.
-                //De este modo se garantiza que ArrowUp/ArrowDown nunca cambien de
-                //columna, replicando la navegacion de Excel y evitando el salto a
-                //columnas adyacentes que dejaba al usuario atrapado.  
-                const iFirstVisCheck = oTable.getFirstVisibleRow();
+                  const iFirstVisCheck = oTable.getFirstVisibleRow();
                 const iVisIdxCheck = iSearchIndex - iFirstVisCheck;
 
                 if (iVisIdxCheck >= 0 && iVisIdxCheck < oTable.getRows().length) {
@@ -2837,19 +2781,35 @@ sap.ui.define([
 
                         // Si en esta fila la columna de origen no tiene un input
                         //editable visible se continua la busqueda hacia arriba o abajo.
-                        if (!oInputAtCol || !oInputAtCol.getVisible() || !oInputAtCol.getEditable()) continue;
+                        // (INICIO MV) Se anyade el check de `getEnabled() === false` para no aterrizar en inputs deshabilitados por `modeloBloqueo>/isBlocked`, que dejarian el foco sin efecto y atascarian la navegacion vertical. (FIN MV)
+                        if (!oInputAtCol || !oInputAtCol.getVisible() || !oInputAtCol.getEditable() || (oInputAtCol.getEnabled && oInputAtCol.getEnabled() === false)) continue;
 
                         // Se mantiene la misma columna como objetivo final para que
                         //las fases de scroll/focus busquen el input exactamente
                         //en la columna original.
                         iTargetFinalColIndex = iTargetColIndex;
                     }
+                } else {
+                    // (INICIO MV) Filas fuera del viewport: se aplica una heuristica por flags de datos para evitar comprometerse a una fila estructural (capitulo/subcapitulo/vacio/OEO root/cabecera de desglose/Resto sin proveedor), que jamas tienen inputs editables en las columnas estandar. Sin este filtro la navegacion vertical hacia filas no renderizadas provocaba un scroll inutil hasta una fila no editable, y luego el foco se devolvia al origen — dejando al usuario con la tabla desplazada sin razon aparente. (FIN MV)
+                    // (INICIO MV) Se anyade `Estructura === "C"` como fallback porque en Anticipados/Inmovilizados las filas capitulo/subcapitulo a veces no tienen el flag `isCapitulo`/`isSubcapitulo` propagado (solo Estructura). (FIN MV)
+                    if (oData.isCapitulo === true || oData.isSubcapitulo === true || oData.isVacio === true
+                        || oData.Estructura === "C" || oData.Estructura === "S"
+                        || oData.PhPspnr === "D"
+                        || oData.__isHeader === true || oData.__isSinProveedor === true) {
+                        continue;
+                    }
+                    // (INICIO MV) Si la columna actual es "custom-only" (editable solo en desglose, p.ej. Agrupador / Descripcion), se descartan filas no-__isCustom fuera del viewport: en esas columnas un salto a fila PEP siempre acabaria en fallback con scroll restore visible. (FIN MV)
+                    if (bColCustomOnly && oData.__isCustom !== true) {
+                        continue;
+                    }
+                    // (INICIO MV) Si la columna no admite input editable en filas con el TipoInd de la candidata (caso Anticipados/Inmovilizados: Amortizacion TipoInd="A" no tiene Input en columnas iniciales), se descarta. Asi se evita commit a una fila que provocaria scroll + restore + perdida de foco al cell container. (FIN MV)
+                    if (bUseTipoIndFilter) {
+                        const sKeyData = oData.TipoInd ? String(oData.TipoInd) : "_none";
+                        if (!oColEditableTipoInd[sKeyData]) {
+                            continue;
+                        }
+                    }
                 }
-                // Si la fila no esta renderizada todavia se acepta sin
-                //inspeccionar (la fase de focus tras el scroll caera al input
-                //original en caso de que la fila no contenga editables en la
-                //columna pedida).
-                //    
 
                 // Se fija el índice y la ruta de la fila destino y se detiene la búsqueda.
                 iTargetRowIndex = iSearchIndex;
@@ -2882,43 +2842,48 @@ sap.ui.define([
                 bNeedsScroll = true;
             }
 
-            // ── ASIGNACIÓN DE FOCO CON SCROLL ─────────────────────────────────────────────────────
             if (bNeedsScroll) {
                 const that = this;
                 let bFocused = false;
+                // (INICIO MV) Se memoriza la posicion de scroll original antes de mover la tabla, para poder restaurarla si `fnFocus` no encuentra un input editable en la celda destino (caso: la heuristica fuera de viewport acepto una fila `__isCustom` que en la columna actual no tiene Input renderizado, p.ej. columna Agrupador en un desglose distinto al de origen). Sin esta restauracion la tabla se quedaba desplazada de forma visible aunque el foco volviera al origen — el "scroll inutile" reportado por la usuaria. (FIN MV)
+                const iOriginalFirstVisible = iFirstVisible;
+                // (INICIO MV) Counter de generacion para invalidar `fnFocus` huerfanos. Cuando la usuaria mantiene la flecha pulsada y el watchdog (>250ms) resetea `_navInFlight` antes de que el `fnFocus` de la pulsacion anterior se haya disparado, se produce una race condition: el `fnFocus` viejo se ejecuta cuando ya hay una nueva navegacion en vuelo, intenta restaurar `firstVisibleRow` a un valor obsoleto y/o pone el foco en un input bindeado a otra fila — visualmente el foco "rebota" entre celdas y la tabla scrolla a saltos ("impazzimento"). Con `_navGeneration` cada nueva nav incrementa el counter y los `fnFocus` viejos se auto-cancelan al ver que su `iMyGen !== _navGeneration`. (FIN MV)
+                this._navGeneration = (this._navGeneration || 0) + 1;
+                const iMyGen = this._navGeneration;
+                // (INICIO MV) Se memoriza el ID DOM del input origen para que `fnFocus` aborte si la usuaria movio el foco a otro sitio (p.ej. click con el raton en otra celda) mientras el scroll estaba en vuelo. Sin este check, el `fnFocus` pendiente sobrescribia con el foco al target calculado, deshaciendo el click manual y produciendo el "impazzimento" que la usuaria veia al interactuar con el raton durante el scroll. (FIN MV)
+                const sExpectedFocusId = oInput.getFocusDomRef && oInput.getFocusDomRef() ? oInput.getFocusDomRef().id : null;
+                // (INICIO MV) Se memoriza target row path + col index ANTES del scroll para que el intercept del cell container nativo (en el lazy focusin listener) pueda encontrar el input destino sin esperar a `fnFocus`. Asi se suprime el flash visual del indicador de celda nativo del TreeTable. (FIN MV)
+                this._navTargetPath = sTargetPath;
+                this._navTargetColIdx = iTargetColIndex;
 
                 // Se define una función de cierre que ejecutará el enfoque una vez que la tabla termine de desplazarse.
                 const fnFocus = function () {
                     // Se utiliza una bandera para evitar que el evento rowsUpdated dispare el enfoque múltiples veces.
                     if (bFocused) return;
                     bFocused = true;
-                    //    Se libera la bandera "_navInFlight" en cuanto la
-                    //navegacion con scroll termina. Si quedaron pulsaciones encoladas
-                    //durante el scroll (_pendingNavSteps != 0), se procesa UNA mas
-                    //mediante un evento sintetico sobre el input enfocado: la
-                    //siguiente flecha avanzara una fila mas. Repetir esto en cadena
-                    //agota la cola sin necesidad de recursion compleja dentro de
-                    //fnFocus (que provocaba deadlocks cuando la fila objetivo
-                    //alcanzaba el limite y rowsUpdated no volvia a dispararse).  
-                    that._navInFlight = false;
-                    //    
+                    // (INICIO MV) Auto-cancelacion si llego otra navegacion mientras esta estaba pendiente: el counter actual ya no coincide con `iMyGen`, asi que esta instancia se descarta sin tocar foco ni scroll. Asi se evita el bounce de foco y los restores de scroll en cascada cuando se mantiene la tecla pulsada. (FIN MV)
+                    if (that._navGeneration !== iMyGen) {
+                        return;
+                    }
+                    // (INICIO MV) Abort solo si la usuaria pulso ACTIVAMENTE otro input con el raton durante el scroll: el activeElement debe ser un campo de edicion real (INPUT/TEXTAREA/SELECT) Y fuera del DOM de la tabla. Si es el body o un row container nativo del TreeTable (caso normal durante el rerender) NO se aborta — el fnFocus sigue para restituir el foco al target. Sin esta precision, el foco se "perdia" porque el activeElement durante el rerender era el body o un cell wrapper. (FIN MV)
+                    const oCurrentActive = document.activeElement;
+                    if (oCurrentActive && oCurrentActive.id && sExpectedFocusId && oCurrentActive.id !== sExpectedFocusId) {
+                        const sTag = oCurrentActive.tagName;
+                        const bIsEditableTag = sTag === "INPUT" || sTag === "TEXTAREA" || sTag === "SELECT";
+                        const oTableDom = oTable.getDomRef();
+                        if (bIsEditableTag && oTableDom && !oTableDom.contains(oCurrentActive)) {
+                            that._navInFlight = false;
+                            return;
+                        }
+                    }
+                       that._navInFlight = false;
 
                     const aRows = oTable.getRows();
                     let oTargetRow = null;
 
                     // Se escanean las filas recién dibujadas buscando aquella cuyo contexto coincida con la ruta de destino.
                     for (let i = 0; i < aRows.length; i++) {
-                        //    Se usa "that.tableModelName" en lugar de
-                        //"this.tableModelName": la funcion fnFocus se invoca via
-                        //setTimeout y attachEventOnce, asi que "this" no apunta
-                        //al controlador y getBindingContext(undefined) devolvia
-                        //el contexto del modelo por defecto, nunca coincidente
-                        //con sTargetPath. El fallback acababa rellamando a
-                        //oInput.focus() y, tras la virtualizacion del scroll,
-                        //ese input ya estaba bindeado a otra fila, dejando el
-                        //cursor bloqueado y a veces sobre un input no editable.  
-                        const oRowContext = aRows[i].getBindingContext(that.tableModelName);
-                        //    
+                          const oRowContext = aRows[i].getBindingContext(that.tableModelName);
 
                         if (oRowContext && oRowContext.getPath() === sTargetPath) {
                             oTargetRow = aRows[i];
@@ -2928,6 +2893,8 @@ sap.ui.define([
 
                     // Si no se encuentra la fila tras el scroll, se devuelve el foco a la posición inicial como salvaguarda.
                     if (!oTargetRow) {
+                        // (INICIO MV) Se anula el scroll: la fila destino no se renderizo y el foco vuelve al origen. (FIN MV)
+                        oTable.setFirstVisibleRow(iOriginalFirstVisible);
                         oInput.focus();
                         if (oInput.select) oInput.select();
                         return;
@@ -2943,18 +2910,26 @@ sap.ui.define([
                         that._pendingFocusTarget = oTargetInput;
                         oTargetInput.focus();
                         if (oTargetInput.select) oTargetInput.select();
+                        // (INICIO MV) Re-focus defensivo en el siguiente frame: en algunas vistas (p.ej. Anticipados con filas Inversion/Amortizacion) el `onfocusin` interno del TableKeyboardExtension de sap.ui.table reposiciona el foco al contenedor de celda nativo (`...rows-rowN-colM`) justo despues de nuestro `focus()`, perdiendo el Input. Volviendo a llamar `focus()` dentro de un rAF (despues de que todos los handlers internos de la tabla terminan) garantizamos que el Input retiene el foco. (FIN MV)
+                        if (typeof window.requestAnimationFrame === "function") {
+                            window.requestAnimationFrame(function () {
+                                const oDomCheck = oTargetInput.getFocusDomRef && oTargetInput.getFocusDomRef();
+                                if (oDomCheck && document.activeElement !== oDomCheck) {
+                                    oTargetInput.focus();
+                                    if (oTargetInput.select) oTargetInput.select();
+                                }
+                            });
+                        }
                     } else {
-                        //    Se devuelve el foco a la fila origen por path
-                        //(no a oInput.focus()) porque tras el scroll oInput puede
-                        //haber sido reasignado por la virtualizacion a una celda
-                        //distinta y no editable. Buscando la fila por sSourcePath se
-                        //garantiza que el usuario permanezca en la posicion previa
-                        //al ArrowUp/ArrowDown cuando el destino no era editable.  
+                        // (INICIO MV) Se anula el scroll cuando la celda destino no tiene Input editable: el foco regresa al origen sin que la tabla quede desplazada. (FIN MV)
+                        oTable.setFirstVisibleRow(iOriginalFirstVisible);
+                        // (INICIO MV) Se RE-OBTIENE oTable.getRows() despues del restore: los Row controls del array `aRows` fueron rebindeados durante el scroll temporal y ya no apuntan a las filas correctas. Buscar source por path en `aRows` (snapshot pre-restore) devolvia un Row control que ahora muestra otra fila distinta, y el `oInput.focus()` siguiente disparaba focus sobre un Input rebindeado a la fila equivocada o ya invalido — perdiendo el foco (el "va su e poi torna giu, perdendo il focus" reportado por la usuaria al ArrowUp desde una PEP cerca del top con un capitulo no-editable encima). (FIN MV)
+                        const aRowsFresh = oTable.getRows();
                         let oSourceRow = null;
-                        for (let j = 0; j < aRows.length; j++) {
-                            const oCtxSrc = aRows[j].getBindingContext(that.tableModelName);
+                        for (let j = 0; j < aRowsFresh.length; j++) {
+                            const oCtxSrc = aRowsFresh[j].getBindingContext(that.tableModelName);
                             if (oCtxSrc && oCtxSrc.getPath() === sSourcePath) {
-                                oSourceRow = aRows[j];
+                                oSourceRow = aRowsFresh[j];
                                 break;
                             }
                         }
@@ -2972,18 +2947,9 @@ sap.ui.define([
                         //se mantiene el comportamiento previo como ultimo recurso.
                         oInput.focus();
                         if (oInput.select) oInput.select();
-                        //    
+                        //   
                     }
-
-                    //    Tras fijar el foco se procesa la cola de teclas
-                    //que llegaron durante el scroll. Si _pendingNavSteps != 0 se
-                    //dispara UN evento sintetico de flecha sobre el input recien
-                    //enfocado para que se reanude la navegacion en cadena. La
-                    //llamada en setTimeout(0) rompe el stack y deja que el resto
-                    //de eventos pendientes se procesen normalmente, sin saturar
-                    //el ciclo de renderizado ni bloquearse cuando la fila ya
-                    //este en el limite (la siguiente llamada al handler caera
-                    //al fallback de borde y limpiara la cola sin recursion).  
+ 
                     const iPendingAfter = that._pendingNavSteps || 0;
                     if (iPendingAfter !== 0) {
                         const iKey = iPendingAfter > 0 ? 40 : 38;
@@ -2997,85 +2963,105 @@ sap.ui.define([
                                 srcControl: oCtrl,
                                 keyCode: iKey,
                                 preventDefault: function () {},
-                                stopImmediatePropagation: function () {}
+                                stopImmediatePropagation: function () {},
+                                // (INICIO MV) Se anyade noop para stopPropagation, ahora invocado por la nueva proteccion contra el handler nativo del TreeTable. (FIN MV)
+                                stopPropagation: function () {}
                             };
                             that._onInputKeyDown(oSynth);
                         }, 0);
                     }
-                    //    
+                    //   
                 };
 
-                // Se ata el evento para ejecutar el enfoque en el momento en que la tabla comunica que terminó de renderizar el desplazamiento.
-                //    Se elimina el setTimeout(50ms) intermedio. El evento
-                //rowsUpdated ya se dispara tras completar el redibujado de filas,
-                //por lo que ese retardo solo sumaba ~50ms a cada scroll y hacia
-                //sentir lento el mantener pulsada la flecha (~10 filas/seg). Sin
-                //el retardo el ratio sube a ~20 filas/seg al pulsado largo.  
+             
                 oTable.attachEventOnce("rowsUpdated", function () {
                     fnFocus();
                 });
-                //    
-
-                //    Se activa la bandera de navegacion en curso justo
-                //antes de iniciar el scroll. Cualquier flecha pulsada mientras la
-                //tabla se redibuja se descartara para evitar que el handler opere
-                //sobre filas con binding desfasado. La bandera se liberara dentro
-                //de fnFocus al completarse el redibujado.  
+                
                 this._navInFlight = true;
-                //    
+                // (INICIO MV) Se registra el timestamp del bloqueo para el watchdog del inicio de `_onInputKeyDown`. (FIN MV)
+                this._navInFlightTs = Date.now();
+                //
+                // (INICIO MV) Se elimina el blur() previo al scroll: ese blur dejaba el foco en `document.body` durante los 120ms que tarda `fnFocus` en restaurarlo, haciendo "desaparecer" visualmente el indicador de foco durante todo el hold de la tecla (la usuaria veia la tabla scrollar sin ver donde estaba el cursor). Como sap.ui.table.TreeTable reusa los Row controls al hacer scroll (cell clones persistentes, solo se rebinda el contexto), el Input fuente normalmente sobrevive al rerender; el foco se mantiene visible y `fnFocus` lo mueve limpiamente al destino cuando termina. (FIN MV)
                 // Se instruye físicamente a la tabla para que se mueva a la nueva fila inicial calculada.
                 oTable.setFirstVisibleRow(iNewFirstVisible);
 
                 // Se establece un temporizador de respaldo en caso de que el evento rowsUpdated falle o se pierda.
-                setTimeout(fnFocus, 300);
+                // (INICIO MV) Se reduce el respaldo de 300ms a 120ms: en sap.ui.table el evento `rowsUpdated` se dispara tipicamente en <50ms tras `setFirstVisibleRow`; 120ms basta como red de seguridad sin penalizar la sensacion de respuesta cuando hay scroll. (FIN MV)
+                setTimeout(fnFocus, 120);
 
             } else {
                 // ── ASIGNACIÓN DE FOCO SIN SCROLL ─────────────────────────────────────────────────
-                // Se capturan las variables necesarias en el ámbito del closure para evitar pérdidas de referencia.
-                const sPath = sTargetPath;
-                const iColIdx = iTargetColIndex;
+                // (INICIO MV) Patron de "shared target + single in-flight setTimeout": en lugar de cancelar setTimeouts viejos via gen check (que con la tecla mantenida pulsada perdia casi todas las pulsaciones y producia bloqueos), cada pulsacion sobrescribe `_noScrollPending` con el ultimo path/columna a focar. Solo un `setTimeout(10)` esta en vuelo a la vez; al dispararse lee el valor actual de `_noScrollPending`, asi siempre se ejecuta la ultima intencion del usuario sin perder ciclos. Resultado: hold ArrowDown se mueve continuamente sin "atascarse". (FIN MV)
+                this._noScrollPending = {
+                    sPath: sTargetPath,
+                    iColIdx: iTargetColIndex,
+                    oFallbackInput: oInput,
+                    // (INICIO MV) Se memoriza el id DOM del input origen para abortar si la usuaria movio el foco con el raton antes de que el setTimeout dispare. (FIN MV)
+                    sExpectedFocusId: oInput.getFocusDomRef && oInput.getFocusDomRef() ? oInput.getFocusDomRef().id : null
+                };
 
-                setTimeout(function () {
-                    const aRows = oTable.getRows();
-                    let oTargetRow = null;
+                if (!this._noScrollTimer) {
+                    this._noScrollTimer = setTimeout(function () {
+                        this._noScrollTimer = null;
+                        const oPending = this._noScrollPending;
+                        this._noScrollPending = null;
+                        if (!oPending) return;
 
-                    // Se busca la fila objetivo por su ruta de binding utilizando el nombre del modelo correcto.
-                    for (let i = 0; i < aRows.length; i++) {
-                        const oRowContext = aRows[i].getBindingContext(this.tableModelName);
-
-                        if (oRowContext && oRowContext.getPath() === sPath) {
-                            oTargetRow = aRows[i];
-                            break;
+                        // (INICIO MV) Abort solo si activeElement es un INPUT/TEXTAREA/SELECT real fuera de la tabla: signo claro de click manual de la usuaria mid-setTimeout. Body/cell wrappers nativos del TreeTable no triggeran abort para no perder el foco durante navegacion normal. (FIN MV)
+                        const oCurrentActive = document.activeElement;
+                        if (oCurrentActive && oCurrentActive.id && oPending.sExpectedFocusId && oCurrentActive.id !== oPending.sExpectedFocusId) {
+                            const sTag = oCurrentActive.tagName;
+                            const bIsEditableTag = sTag === "INPUT" || sTag === "TEXTAREA" || sTag === "SELECT";
+                            const oTableDom = oTable.getDomRef();
+                            if (bIsEditableTag && oTableDom && !oTableDom.contains(oCurrentActive)) {
+                                return;
+                            }
                         }
-                    }
 
-                    // Se devuelve el foco al input original si no se localiza la fila destino.
-                    if (!oTargetRow) {
-                        oInput.focus();
-                        if (oInput.select) oInput.select();
-                        return;
-                    }
+                        const aRows = oTable.getRows();
+                        let oTargetRow = null;
+                        for (let i = 0; i < aRows.length; i++) {
+                            const oRowContext = aRows[i].getBindingContext(this.tableModelName);
+                            if (oRowContext && oRowContext.getPath() === oPending.sPath) {
+                                oTargetRow = aRows[i];
+                                break;
+                            }
+                        }
 
-                    // Se extrae el input de la celda destino y se le transfiere el foco.
-                    const oCell = oTargetRow.getCells()[iColIdx];
-                    const oTargetInput = this._recursiveGetInput(oCell);
+                        if (!oTargetRow) {
+                            if (oPending.oFallbackInput && oPending.oFallbackInput.focus) {
+                                oPending.oFallbackInput.focus();
+                                if (oPending.oFallbackInput.select) oPending.oFallbackInput.select();
+                            }
+                            return;
+                        }
 
-                    if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
-                        //     Se guarda el input destino en _pendingFocusTarget para que
-                        //     _enviarFilaAlBackend pueda restaurarlo tras la llamada async.
-                        // Se usa "this" en lugar de "that" porque el setTimeout esta
-                        //bindeado al controlador con .bind(this) abajo y "that" no
-                        //esta definido en este branch (solo existe en el branch con
-                        //scroll). Sin este fix, la navegacion vertical lanzaba
-                        // ReferenceError silencioso y el foco no se movia.
-                        this._pendingFocusTarget = oTargetInput;
-                        oTargetInput.focus();
-                        if (oTargetInput.select) oTargetInput.select();
-                    } else {
-                        oInput.focus();
-                        if (oInput.select) oInput.select();
-                    }
-                }.bind(this), 10);
+                        const oCell = oTargetRow.getCells()[oPending.iColIdx];
+                        const oTargetInput = this._recursiveGetInput(oCell);
+
+                        if (oTargetInput && oTargetInput.getVisible() && oTargetInput.getEditable()) {
+                            this._pendingFocusTarget = oTargetInput;
+                            oTargetInput.focus();
+                            if (oTargetInput.select) oTargetInput.select();
+                            // (INICIO MV) Re-focus defensivo via rAF para vistas donde sap.ui.table reposiciona el foco al cell container tras nuestro focus(). (FIN MV)
+                            if (typeof window.requestAnimationFrame === "function") {
+                                window.requestAnimationFrame(function () {
+                                    const oDomCheck = oTargetInput.getFocusDomRef && oTargetInput.getFocusDomRef();
+                                    if (oDomCheck && document.activeElement !== oDomCheck) {
+                                        oTargetInput.focus();
+                                        if (oTargetInput.select) oTargetInput.select();
+                                    }
+                                });
+                            }
+                        } else {
+                            if (oPending.oFallbackInput && oPending.oFallbackInput.focus) {
+                                oPending.oFallbackInput.focus();
+                                if (oPending.oFallbackInput.select) oPending.oFallbackInput.select();
+                            }
+                        }
+                    }.bind(this), 10);
+                }
             }
         },
 
@@ -3118,12 +3104,18 @@ sap.ui.define([
             // Se valida que el control exista antes de intentar procesarlo.
             if (!oControl) return null;
 
+            // (INICIO MV) Se descartan ramas cuyo contenedor padre tenga `visible=false`, ya que en SAPUI5 la propiedad `visible` no se propaga: un Input dentro de un HBox/VBox invisible mantiene su propia `getVisible()=true` aunque su DOM no se renderice. Antes la recursion devolvia esos inputs "fantasma" (caso de las plantillas con varios HBox condicionales como colProveedor/colNMeses) y `focus()` no surtia efecto, dejando la navegacion atascada en la celda origen. (FIN MV)
+            if (oControl.getVisible && oControl.getVisible() === false) return null;
+
             // Caso base: se verifica si el control evaluado es directamente la instancia de entrada buscada.
             if (oControl.isA && oControl.isA("sap.m.Input")) {
                 // Se garantiza que el input solo se retorne si está habilitado para la interacción del usuario.
-                if (oControl.getVisible() && oControl.getEditable()) {
+                // (INICIO MV) Se anyade el check de `getDomRef()` para excluir inputs cuyo DOM no esta renderizado (padre HBox/VBox no visible para esta fila). (FIN MV)
+                if (oControl.getEditable() && oControl.getDomRef && oControl.getDomRef()) {
                     return oControl;
                 }
+                // Si el control es un Input no renderizado, no se profundiza en sus hijos.
+                return null;
             }
 
             // Si el control es un contenedor de diseño tradicional (ej. Panel, Page), se escanean sus elementos hijos.
@@ -3349,10 +3341,7 @@ sap.ui.define([
             }.bind(this), 100);
         },
 
-        /**
-         * Se combinan las modificaciones del usuario (tecleadas en la tabla actual) con la estructura base o backup.
-         * Evita que se pierdan datos ingresados cuando se aplican o quitan filtros destructivos.
-         */
+   
         _mergeModifications: function (aBase, aModified) {
             // Si no hay datos modificados para combinar, se devuelve la base intacta.
             if (!Array.isArray(aModified)) return aBase;
@@ -3388,21 +3377,13 @@ sap.ui.define([
             mergeRecursive(aBase, aModified);
             return aBase;
         },
-        /**
-         * Se compara el arbol actual del modelo con el arbol original del servidor
-         * y se devuelve unicamente la lista de valores que han cambiado respecto al origen.
-         * Cada entrada del delta contiene la ruta de acceso al nodo, la clave del
-         * campo modificado y el nuevo valor introducido por el usuario.
-         */
+     
         _computeModelDelta: function (aOriginal, aCurrent, sBasePath) {
             const aDelta = [];
             const sPath = sBasePath || "";
 
             if (!Array.isArray(aCurrent) || !Array.isArray(aOriginal)) return aDelta;
 
-            //     Se anaden editCtotPen y editCtot a las claves estructurales que se
-            // ignoran al calcular el delta, ya que son flags de editabilidad exclusivos
-            // del frontend y no representan datos modificables por el usuario.
             const aStructuralKeys = [
                 "children", "padre", "isGroup", "expandible", "cabecera",
                 "ParentPath", "flag1", "flag2", "flag1Label", "flag2Label",
@@ -3489,10 +3470,7 @@ sap.ui.define([
             // sigan funcionando exactamente igual que antes.
             this.tableModelName = this._variantConfig.modelName;
         },
-        /* ────────────────────────────────────
-         * Lee la clave de storage desde _variantConfig en lugar de recibir un parámetro
-         * o depender de un valor hardcodeado. El resto de la lógica es idéntica.
-         */
+      
         _initVariantManagement: function () {
             var sStorageKey = (this._variantConfig && this._variantConfig.storageKey)
                 ? this._variantConfig.storageKey
@@ -3598,14 +3576,6 @@ sap.ui.define([
             this._markVariantDirty();
         },
 
-        /**
-         * Se captura el estado completo de la tabla incluyendo el orden de las columnas
-         * estaticas, sus anchos, su visibilidad, las filas expandidas, las seleccionadas,
-         * el delta de cambios realizados por el usuario en las celdas editables y el estado
-         * de los controles auxiliares de ejercicios anteriores y ajustes.
-         * El estado de idEjecutadoCheckBox2 se lee desde la variable interna _bEjecutadoSelected
-         * ya que dicho control reside en la Main view y no es accesible directamente desde aqui.
-         */
         _getCurrentTableState: function () {
             const oTable = this.getControlTable();
             if (!oTable) return null;
@@ -3681,14 +3651,7 @@ sap.ui.define([
             };
         },
 
-        /**
-         * Se aplica un estado de variante guardado a la tabla restaurando el orden,
-         * anchos y visibilidad de columnas, los datos editados en las celdas mediante
-         * el delta, las filas expandidas y seleccionadas y el estado de los controles
-         * auxiliares de ejercicios anteriores y ajustes.
-         * Para actualizar visualmente idEjecutadoCheckBox2 se utiliza la retrollamada
-         * _fnSetEjecutadoCheckBox inyectada por la Main view al cargar esta vista hija.
-         */
+       
         _applyVariantState: function (oState) {
             if (!oState) return;
             const oTable = this.getControlTable();
@@ -3866,12 +3829,7 @@ sap.ui.define([
             }.bind(this), 300);
         },
 
-        /**
-        * Se construye una clave estable para identificar una columna dentro de una variante.
-        * Los IDs generados por el framework con formato __columnN varían según el orden en que se
-        * inicializan las vistas en cada sesión. Para columnas sin filterProperty ni ID explícito
-        * se extrae el texto de la etiqueta principal como discriminador invariante entre sesiones.
-        */
+       
         _getVariantColumnKey: function (oCol) {
             //    La filterProperty es siempre la clave más fiable cuando existe.
             var sFilter = oCol.getFilterProperty && oCol.getFilterProperty();
@@ -3926,14 +3884,7 @@ sap.ui.define([
             return oControl || null;
         },
 
-        /**
-         * Se filtra el TreeTable construyendo un nuevo arbol con solo las coincidencias y sus padres reales.   
-         * Reglas:   
-         *   - Si el nodo coincidente tiene hijos (es padre): se muestra junto con sus hijos.   
-         *   - Si el nodo coincidente es hijo de un padre real (con varios hijos): se muestra el padre expandido con el hijo encontrado.   
-         *   - Si el nodo coincidente no tiene familia (sin hijos y con genitores que solo lo contienen a el como unico hijo): se muestra como fila aislada en raiz.   
-         * Se conserva una copia del arbol original para poder restaurarlo cuando se vacia el campo de busqueda.   
-         */
+
         onOperacionSearch: function (oEvent) {
             // Se obtiene el valor desde search (query) o desde la seleccion de una sugerencia.   
             var sQuery = oEvent.getParameter("query");
@@ -5892,6 +5843,28 @@ onManageVariants: function () {
         },
  
 
+        /**
+         *   Traduce la etiqueta del tipo de reparto a partir de su código (key) para
+         *   mostrarla en el desplegable de Reparto. Es un formatter de SOLO display: la
+         *   lógica de la app sigue trabajando con la key (MAN/LIN/OEO), que es lo que se
+         *   bindea en selectedKey y lo que lee onRowInputChange (getSelectedKey). Así se
+         *   traduce el texto visible sin tocar la construcción de repartoItems ni el modelo.
+         *   Capítulos con items estáticos (Corrientes) ya usan i18n directamente; este
+         *   helper cubre los de items dinámicos (Anticipados/Diferidos/Inmovilizados).
+         */
+        formatRepartoTipo: function (sKey) {
+            var oLabels = {
+                "MAN": "tipoManual",
+                "LIN": "tipoLineal",
+                "OEO": "tipoOEO"
+            };
+            if (sKey && oLabels[sKey]) {
+                return this.getTranslatedText(oLabels[sKey]);
+            }
+            //   Tipo desconocido o vacío: se devuelve el valor original sin romper la celda.
+            return sKey || "";
+        },
+
         //     Se elimina la primera definicion duplicada de formatDecimales que usaba
         //     parametros decimalSep y groupSep ya no necesarios, y se mantiene unicamente
         //     esta version que lee el formato directamente desde el CurrencyFormat del usuario.
@@ -6239,10 +6212,7 @@ onManageVariants: function () {
             }
 
             this._linYearTitle = new sap.m.Title({ text: "", level: "H4" });
-            //   Se almacenan las flechas en this para poder deshabilitarlas desde
-            // _refreshRangePopover cuando se llega al limite inferior o superior.
-            // Los handlers tambien validan el bound antes de decrementar/incrementar
-            // como defensa por si algun click llegara con el boton ya deshabilitado.
+            
             this._linPrevBtn = new sap.m.Button({
                 icon: "sap-icon://navigation-left-arrow",
                 type: "Transparent",
@@ -6711,24 +6681,24 @@ onManageVariants: function () {
                         }
 
                         var fResult = (fCostePend * fPercent) / 100;
-                        //    
 
-                        var iDec = 2;
-                        if (oSource.getProperty) {
-                            var iCfgDec = parseInt(oSource.getProperty("decimalNumbers"), 10);
-                            if (!isNaN(iCfgDec)) {
-                                iDec = iCfgDec;
-                            }
-                        }
-
-                        var oFmt = sap.ui.core.format.NumberFormat.getFloatInstance({
-                            groupingEnabled: true,
-                            groupingSeparator: thousandSeparator,
-                            decimalSeparator: decimalSeparator,
-                            minFractionDigits: iDec,
-                            maxFractionDigits: iDec
-                        });
-                        var sFormatted = oFmt.format(fResult);
+                        //   Se delega el formateo del resultado del porcentaje en
+                        // formatDecimales (la misma funcion que pinta el resto de
+                        // celdas) en lugar de duplicar aqui el calculo de decimales.
+                        // Asi el valor calculado coincide EXACTAMENTE con como se
+                        // muestra cualquier otra celda: 0 decimales y redondeo hacia
+                        // arriba (Math.ceil) para monedas sin decimales (CL1/CLP...),
+                        // 2 decimales para el resto.
+                        //   Antes se leia oSource._getEffectiveDecimals(), que usa el
+                        // modelo appData del PROPIO input. En la sap.ui.table los
+                        // inputs de celda se reciclan durante la virtualizacion y en
+                        // algunas filas ese modelo no resolvia, cayendo al fallback
+                        // decimalNumbers (dashboardModel>/decimales = "02") y pintando
+                        // la coma con 2 decimales solo en algunas filas. Ademas usaba
+                        // NumberFormat (redondeo normal) en vez del Math.ceil de
+                        // formatDecimales, descuadrando el % frente al resto de celdas.
+                        // formatDecimales lee /Waers via el componente, de forma estable.
+                        var sFormatted = this.formatDecimales(fResult);
 
                         oSource.setValue(sFormatted);
                         //  Se sincroniza _lastProcessedValue de
@@ -6836,7 +6806,24 @@ onManageVariants: function () {
             }
 
             sNewValue = oSource.getValue();
-            var aCamposTexto = ["PhPspnr", "Post1"];
+               //     
+               //   Lista de campos que NO deben pasar por _formatToSAPNumber (que convierte
+               //   "123" en "123.00000"). Antes solo PhPspnr/Post1/PepDest estaban listados;
+               //   las demas String fields del nuevo EntityType DatosIndirectosDesglo
+               //   (DESCRIP/AGRUP/Tipo/Waers/Prov/Zui5Descrip/Aut/Gjahr1..3/TipoTasa/Estructura/
+               //   CheckInfla/Name/Exp/Descrip/Agrup) tambien deben tratarse como texto para que
+               //   al teclear "123" la celda muestre "123" y no "123,00000".
+               //    
+               var aCamposTexto = [
+                   //   Originales (DatosIndirectos legacy)
+                   "PhPspnr", "Post1", "PepDest",
+                   //   String fields del UI desglose en MAYUSCULA (Corrientes/Externos)
+                   "DESCRIP", "AGRUP", "FINI", "FFIN",
+                   //   String fields del EntityType DatosIndirectosDesglo (backend)
+                   "Descrip", "Agrup", "Name", "Exp", "Tipo", "TipoTasa", "Waers",
+                   "CheckInfla", "Estructura", "Gjahr1", "Gjahr2", "Gjahr3",
+                   "Prov", "Zui5Descrip", "Aut", "PhPepDest"
+               ];
             var bCampoTexto = aCamposTexto.indexOf(sCampoMod) !== -1;
             sValorFormateado = bCampoTexto ? sNewValue : this._formatToSAPNumber(sNewValue);
            
@@ -6851,16 +6838,33 @@ onManageVariants: function () {
                 //al inicio de la llamada, provocando saltos eraticos cuando el
                 //usuario habia avanzado varias celdas. Con el filtro activo, una
                 //simple navegacion sin edicion no genera ninguna llamada al backend.
-                var sValorActualModelo = oContext.getModel().getProperty(oContext.getPath() + "/" + sCampoMod);
-                 var sValorActualNormalizado = bCampoTexto
-                    ? String(sValorActualModelo !== null && sValorActualModelo !== undefined ? sValorActualModelo : "")
-                    : this._formatToSAPNumber(
-                        String(sValorActualModelo !== null && sValorActualModelo !== undefined ? sValorActualModelo : "")
-                    );
+                //     
+                //   Para las filas del desglose (__isMainEditable / __isNieto) en
+                //   Corrientes/Externos se omite el filtro: los Inputs de esas filas son
+                //   sap.m.Input planos sin formatter, por lo que el two-way binding ya
+                //   ha actualizado el modelo al disparar el "change" y la comparacion
+                //   "valor formateado == valor en modelo" siempre da igual, abortando
+                //   el envio. Resultado: NINGUN edit de campos del desglose llegaba a
+                //   _enviarFilaAlBackend. Sin el filtro, cada cambio de celda dispara
+                //   un POST a GuardarTempIndirDesgloSet (mismo comportamiento que el
+                //   guardado temporal "normal" del resto de filas).
+                var oRowChk = oContext.getObject();
+                var bSkipFilterDesglose = oRowChk && oRowChk.__isCustom === true
+                    && (oRowChk.__isMainEditable === true || oRowChk.__isNieto === true)
+                    && (this._pestana === "Corrientes" || this._pestana === "Externos");
+                //    
+                if (!bSkipFilterDesglose) { //     se conserva el filtro solo fuera del desglose
+                    var sValorActualModelo = oContext.getModel().getProperty(oContext.getPath() + "/" + sCampoMod);
+                    var sValorActualNormalizado = bCampoTexto
+                        ? String(sValorActualModelo !== null && sValorActualModelo !== undefined ? sValorActualModelo : "")
+                        : this._formatToSAPNumber(
+                            String(sValorActualModelo !== null && sValorActualModelo !== undefined ? sValorActualModelo : "")
+                        );
 
-                // Si el valor no ha cambiado realmente, abortamos envio
-                if (sValorFormateado === sValorActualNormalizado) {
-                    return;
+                    // Si el valor no ha cambiado realmente, abortamos envio
+                    if (sValorFormateado === sValorActualNormalizado) {
+                        return;
+                    }
                 }
             }
 
@@ -6879,29 +6883,11 @@ onManageVariants: function () {
             this._enviarFilaAlBackend(oContext, oPayloadRow, sCampoMod);
         },
 
-        //   Handler del Select "Reparto" (Tipo) de las tablas de inversion
-        //   (Anticipados/Diferidos/Inmovilizados). Las vistas referenciaban
-        //   onRepartoChange pero el metodo no existia, por lo que cambiar el
-        //   tipo de reparto no disparaba el guardado temporal. Se delega en
-        //   onRowInputChange para replicar el comportamiento de Corrientes:
-        //   actualiza /Tipo, abre el selector de rango si se elige LIN y envia
-        //   la fila al backend (guardado temporal) con CampoMod="Tipo".
         onRepartoChange: function (oEvent) {
             return this.onRowInputChange(oEvent);
         },
 
-        //   Gestiona la edicion de Operacion (PhPspnr) y Descripcion (Post1) en una
-        // fila Desglose (nivel 3) recien creada (isNew). Reglas pedidas:
-        //   1. Ambos campos empiezan vacios y editables.
-        //   2. No se guarda la fila mientras falte cualquiera de los dos.
-        //   3. La operacion debe respetar el formato del padre: PADRE + "." + NNN
-        //      (sufijo de 3 digitos). Si no, ValueState=Error en el input y no se
-        //      guarda.
-        //   4. Cuando ambos son validos se dispara el primer guardado temporal con
-        //      la fila completa (clonada del padre en _createLevel3Row) y CampoMod
-        //      = "PhPspnr,Post1". Tras el guardado correcto la fila deja de ser nueva
-        //      (isNew=false): la operacion se bloquea y el resto de ediciones usan el
-        //      flujo normal de onRowInputChange.
+       
         _handleNuevaFilaNivel3Change: async function (oSource, oContext, sCampoMod) {
             var oModel = oContext.getModel();
             var sPath = oContext.getPath();
@@ -7133,11 +7119,7 @@ onManageVariants: function () {
                 oContext.getModel().setProperty(oContext.getPath() + "/" + sRealField, sValorFormateado);
             }
             
-            // Se prepara el payload para enviar al backend usando la lista
-            // centralizada de campos UI-only (_aFrontendOnlyProps). La lista
-            // local previa se quedaba corta en filas creadas con _createLevel3Row
-            // (FINI/FFIN/NMES/FEE/Otros/ParentCode/PhPspnrEdited/Post1Edited),
-            // provocando 400 Bad Request en el guardado temporal.
+         
             let oRow = oContext.getObject();
             let oPayloadRow = this._sanitizeRowForBackend(oRow);
 
@@ -7152,7 +7134,16 @@ onManageVariants: function () {
             _isLocalOnlyTipo: function (oContext) {
             if (!oContext) return false;
             var oRow = oContext.getObject();
-            if (oRow && oRow.__isCustom === true) return true;
+ 
+            if (oRow && oRow.__isCustom === true) {
+                var bIsDesglosePest = this._pestana === "Corrientes" || this._pestana === "Externos";
+                var bIsSavableDesglose = oRow.__isMainEditable === true || oRow.__isNieto === true;
+                if (bIsDesglosePest && bIsSavableDesglose) {
+                    return false;
+                }
+                return true;
+            }
+            //    
             var oView = this.getView();
             var oPanelModel = oView && oView.getModel("panelModel");
             if (oPanelModel && oContext.getModel() === oPanelModel) return true;
@@ -7163,14 +7154,9 @@ onManageVariants: function () {
         //     en el input destino si existe navegacion pendiente tipo Excel.
         _enviarFilaAlBackend: async function (oContext, oPayloadRow, sCampoMod) {
 
-            // (INICIO)
-            //   Se marca el controller como "con cambios pendientes" en cuanto se dispara
-            //   el guardado temporal de una fila editada. Lo usa onYearChange (y cualquier
-            //   otro flujo) para decidir si invocar el guardado definitivo (Main.onSave) o
-            //   saltarlo cuando no hay nada que guardar. El flag se limpia en Main.onSave
-            //   tras un guardado definitivo correcto, no aqui.
-            this._hasPendingChanges = true; //   flag de cambios pendientes activado al editar un input
-            // (FIN)
+          
+            this._hasPendingChanges = true; 
+     
              var oRowNew = oContext.getObject();
             var bIsNuevoSubcap = oRowNew && oRowNew.isNew === true && oRowNew.isSubcapitulo === true;
             if (bIsNuevoSubcap && sCampoMod && sCampoMod.indexOf("PhPspnr") === -1) {
@@ -7184,37 +7170,71 @@ onManageVariants: function () {
             //     Se guarda el destino de foco antes de la llamada asincrona.
             var oPendingFocus = this._pendingFocusTarget || null;
 
+        
+            var sEndpoint = "/GuardarTempIndirSet";
+            var oBody = {
+                "NavSelProyecto": [oAppData.tramo],
+                "NavDatosIndirectos": [oPayloadRow],
+                "NavMensajes": []
+            };
+            var oExtraHeaders = {};
+            var bIsDesglosePest = this._pestana === "Corrientes" || this._pestana === "Externos";
+            var bIsDesgloseRow = bIsDesglosePest && oRowNew && oRowNew.__isCustom === true
+                && (oRowNew.__isMainEditable === true || oRowNew.__isNieto === true);
+            if (bIsDesgloseRow) {
+                //   Se obtiene la fila padre (capitulo / operacion) navegando un nivel arriba
+                //   en el modelo. ParentPath se rellena con el PhPspnr del padre (17 chars segun metadata).
+                var sRowPath = oContext.getPath();
+                var sParentPath = sRowPath.replace(/\/children\/\d+$/, "");
+                var oParentRow = sParentPath && oContext.getModel().getProperty(sParentPath);
+                if (oParentRow && (oParentRow.Psphi || oParentRow.Pspnr)) {
+                    var oDesglosePayload = this._buildDesglosePayloadRow(oRowNew, oParentRow, oPayloadRow);
+                    sEndpoint = "/GuardarTempIndirDesgloSet";
+                   
+                    oBody = {
+                        "NavSelProyecto": [oAppData.tramo],
+                        "NavDatosIndirectosDesglo": oDesglosePayload
+                    };
+               
+                    oExtraHeaders.token = oAppData.EvToken || "";
+                    oExtraHeaders.campomod = (sCampoMod || "").toLowerCase();
+                    oExtraHeaders.Lang = oAppData.userData.AplicationLangu;
+                    //   Se marca el flag para suprimir el header CampoMod (PascalCase) del bloque
+                    //   legacy: la spec del nuevo entity usa solo "campomod" minuscula y duplicar
+                    //   no aporta nada.
+                    oExtraHeaders.__bIsDesgloseFlow = true;
+                }
+            }
+            //    
+
+            //     Se construye el bloque de cabeceras teniendo en cuenta si el flujo es
+            //   desglose o legado. Para el desglose se omite CampoMod (PascalCase) porque la
+            //   spec usa solo "campomod" minuscula, y se quita la marca tecnica del flag.
+            var bIsDesgloseFlowHeader = oExtraHeaders.__bIsDesgloseFlow === true;
+            delete oExtraHeaders.__bIsDesgloseFlow; //   no es un header real
+            var oHeadersBase = {
+                ambito: oAppData.userData.initialNode,
+                lang: oAppData.userData.AplicationLangu,
+                bloqueado: "",
+                decimales: "02",
+                ejercicio: sEjercicio,
+                pestana: this._pestana || ""
+            };
+            if (!bIsDesgloseFlowHeader) {
+                //   El flujo legado (GuardarTempIndirSet) sigue enviando CampoMod en PascalCase.
+                oHeadersBase.CampoMod = sCampoMod || "";
+            }
             try {
                 const response = await this.post(
                     this.getGlobalModel("mainService"),
-                    "/GuardarTempIndirSet",
-                    {
-                        "NavSelProyecto": [oAppData.tramo],
-                        "NavDatosIndirectos": [oPayloadRow],
-                        "NavMensajes": []
-                    },
+                    sEndpoint, //     endpoint dinamico: desglose o legado
+                    oBody,     //     body dinamico segun endpoint
                     {
                         noLoading: true,
-                        headers: {
-                            ambito: oAppData.userData.initialNode,
-                            lang: oAppData.userData.AplicationLangu,
-                            bloqueado: "",
-                            decimales: "02",
-                            ejercicio: sEjercicio,
-                            // Se envía la pestaña activa. Cada detail controller debe setear
-                            // this._pestana en su setInitData. Sin fallback hardcodeado: si falta
-                            // se envía vacío para que el backend rechace y el bug sea visible.
-                            pestana: this._pestana || "",
-                            CampoMod: sCampoMod || ""
-                        }
+                        headers: Object.assign(oHeadersBase, oExtraHeaders) //     extras: token/campomod/Lang en desglose
                     }
                 );
 
-                //   DEBUG TEMPORAL - bug fila azul Amortizacion duplicando valor
-                // Se inspecciona NavDatosIndirectos.results para confirmar si el backend
-                // devuelve la fila con TipoInd="A" (Amortizacion) con el mismo Val* del cambio
-                // hecho en la fila TipoInd="I" (Inversion). Si aparece, el bug es backend.
-                // ELIMINAR este bloque cuando la prueba esté hecha.
                 try {
                     var aDbgRows = (response && response.NavDatosIndirectos && response.NavDatosIndirectos.results) || [];
                     var aDbgResumen = aDbgRows.map(function (r) {
@@ -7248,20 +7268,9 @@ onManageVariants: function () {
                     });
                 }
 
-                // El backend devuelve la jerarquía completa recalculada en
-                // NavDatosIndirectos.results: totales del padre, agregados Totala*,
-                // y cualquier fila dependiente del campo modificado. Se vuelcan los
-                // valores actualizados sobre el árbol local conservando children y
-                // los flags UI (editTasa, isEditable, _Total, …). Sin este merge el
-                // padre I.003 seguía mostrando los totales previos a la edición.
+             
                 var aUpdatedRows = (response && response.NavDatosIndirectos && response.NavDatosIndirectos.results) || [];
-                //   El merge vuelca la respuesta del guardado temporal sobre el arbol local.
-                //   Se aplica salvo que el controller lo desactive (ver _shouldMergeTempSaveResponse):
-                //   Diferidos lo desactiva porque su backend devuelve el campo editado a 0 en
-                //   GuardarTempIndir, por lo que repintar borraba el valor tecleado y lo dejaba
-                //   descuadrado en la fila hermana. Se mantiene SIEMPRE para la fila nueva
-                //   (bIsNuevoSubcap), que necesita los datos que el backend le asigna. El refresco
-                //   real de Diferidos ocurre en la carga completa (CambioPestIndirectos).
+            
                 if (aUpdatedRows.length > 0 && (bIsNuevoSubcap || this._shouldMergeTempSaveResponse())) {
                     this._mergeBackendRowsIntoTree(oContext.getModel(), aUpdatedRows);
                 }
@@ -7269,14 +7278,6 @@ onManageVariants: function () {
                     oContext.getModel().setProperty(oContext.getPath() + "/isNew", false);
                 }
 
-                // Se restaura el foco tras completar la llamada asincrona, pero
-                //solo cuando el usuario sigue en el mismo destino. Si entre el
-                //envio y la respuesta el usuario ha navegado con flechas a otra
-                //celda, restaurar el foco al target original generaria saltos
-                //erraticos (el foco volveria a una celda anterior en mitad de la
-                //navegacion). Por eso se aborta la restauracion si el elemento
-                //activo actual ya esta dentro de un input/textarea distinto, lo
-                //que indica que el usuario ya esta editando otra celda.
                 if (oPendingFocus && oPendingFocus.getDomRef()) {
                     setTimeout(function () {
                         var oTargetDom = oPendingFocus.getDomRef();
@@ -7306,24 +7307,7 @@ onManageVariants: function () {
             }
         },
 
-        // Fusiona la respuesta del backend (NavDatosIndirectos.results, plana)
-        // sobre el árbol local del modelo (anidado por children) identificando cada
-        // fila por PhPspnr. Sólo se sobreescriben las claves SAP (las que empiezan
-        // por mayúscula); el resto — children, padre, isEditable, edit*, _Ejecutado,
-        // _Pendiente, _Total, _isSinProveedor, isNew, isLevel3 — son estado UI
-        // calculado en buildTree y deben preservarse. Tras el merge se recalculan
-        // _Ejecutado / _Pendiente / _Total con el mismo criterio que
-        // _addComputedFields / _addOperationsToTree y se refresca el modelo para
-        // que la TreeTable repinte padre e hijos con los totales recalculados.
-        //   Hook: indica si tras el guardado temporal (GuardarTempIndir) se debe volcar
-        //   la respuesta del backend sobre el arbol local con _mergeBackendRowsIntoTree.
-        //   Por defecto true (Corrientes/Externos/Inmovilizados/Anticipados): el backend
-        //   devuelve los valores correctos y el merge actualiza totales del padre y filas
-        //   dependientes. Diferidos lo sobreescribe a false para comportarse como Corrientes
-        //   "indiferente a la respuesta": el guardado temporal conserva el valor tecleado y
-        //   el refresco real se hace en la carga completa (CambioPestIndirectos) tras el
-        //   guardado definitivo. Asi se evita que la respuesta (que vuelve a 0 en el campo
-        //   editado) repinte la celda a 0 o contamine la fila hermana Aplicacion/Provision.
+     
         _shouldMergeTempSaveResponse: function () {
             return true;
         },
@@ -7421,19 +7405,6 @@ onManageVariants: function () {
                 //     Se mantienen los separadores por defecto si el modelo no es accesible.
             }
 
-            // Se distingue entre formato del usuario (con separador decimal
-            //"," y "." como miles) y formato SAP / interno (con punto como
-            //separador decimal y sin miles). Si la cadena contiene el
-            //separador decimal del usuario, esta en formato del usuario y
-            //se aplican los replace de millares y decimal; en caso
-            //contrario se asume formato SAP y parseFloat la interpreta
-            //directamente. Sin este chequeo, valores ya en formato SAP
-            //como "14.00000" pasaban por el replace de millares y se
-            //convertian erroneamente en "1400000.00000". Esto rompia el
-            //filtro de "valor === modelo" en onRowInputChange y disparaba
-            //un POST al backend cada vez que el usuario navegaba sobre
-            //una celda con valor previamente editado, ademas de provocar
-            //cambios visuales aleatorios en la celda atravesada.
             if (sNormalized.indexOf(decimalSeparator) >= 0) {
                 var sEscapedThousand = thousandSeparator.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
                 sNormalized = sNormalized.replace(new RegExp(sEscapedThousand, "g"), "");
@@ -7460,34 +7431,15 @@ onManageVariants: function () {
             "editAmoEjeReal", "editAmoPen", "editAmoTot", "editPepDest",
             "editTipo", "editPenPlan", "editMonths", "editPend",
             "editCtotPen", "editCtot",
-            // Campos UI-only de filas creadas con _createLevel3Row y agrupador:
-            // FINI/FFIN/NMES/FEE/Otros son nombres internos del frontend; los
-            // equivalentes backend son Fini/Ffin (minuscula) que se rellenan en
-            // el flujo del agrupador (linea ~7166). ParentCode/PhPspnrEdited/
-            // Post1Edited son banderas de la fila nueva. Enviar cualquiera de
-            // estos al EntityType del servicio provoca 400 Bad Request.
+          
             "FINI", "FFIN", "NMES", "FEE", "Otros",
             "ParentCode", "PhPspnrEdited", "Post1Edited",
             "isLevel3",
-            // Campo de reparto UI-only de las filas de desglose de inversion
-            // (Anticipados/Diferidos/Inmovilizados): el Select editable enlaza a
-            // "TIPO" en mayuscula, pero el EntityType del backend solo conoce
-            // "Tipo". Si la fila lleva TIPO, el guardado temporal devuelve
-            // 400 Bad Request ("Property 'TIPO' is invalid"). Se elimina del payload.
+          
             "TIPO"
         ],
 
-        //   ─────────────────────────────────────────────────────────────────────
-        //   Flujo Add (catalogo + creacion de fila nivel 3) compartido por las
-        // vistas con modelo en arbol (Corrientes / Externos). Adaptado del flujo
-        // de Anticipados/Diferidos/Inmovilizados quitando la duplicacion TipoInd
-        // I/A y trabajando con el campo children[] en lugar de un array plano.
-        // Las 3 vistas que ya tienen su version propia siguen ejecutandola por
-        // override de subclase; estas funciones solo se invocan en las tree views.
-        //   ─────────────────────────────────────────────────────────────────────
-
-        //   Abre el dialogo del catalogo de operaciones para un capitulo (nivel 1).
-        // Llama a /CatalogoIndirectosSet, mapea {Code, Description} y abre el fragment.
+       
         _openOperationsCatalog: async function (oSelectedRow, oContext) {
             this._selectedChapterRow = oSelectedRow;
             this._selectedChapterContext = oContext;
@@ -7777,14 +7729,6 @@ onManageVariants: function () {
 
             if (!oParentRow.children) oParentRow.children = [];
 
-            // (INICIO) Contexto completo clonado del padre nivel 2.
-            //   El guardado temporal exige TODOS los campos del EntityType (Psphi,
-            //   Pspnr, Version, Waers, Gjahr1/2/3, ParentPath, TipoInd, Val*, etc.).
-            //   Construir la fila a mano dejaba fuera ese contexto y el backend recibia
-            //   un payload incompleto (solo PhPspnr/Post1/Amo*/Estructura/PenPlan/Tipo),
-            //   provocando que el guardado de la fila nueva se hiciera mal. Se clona el
-            //   padre (saneado, sin props UI) y luego se ponen a cero los importes y se
-            //   vacian operacion/descripcion para que el usuario los rellene.
             var oNewRow = this._sanitizeRowForBackend(oParentRow);
 
             //   Importes a cero. Decimales (5) para magnitudes y porcentajes/tasa (2).
@@ -7934,6 +7878,229 @@ onManageVariants: function () {
             });
             return oClone;
         },
+
+     
+        _buildDesglosePayloadRow: function (oRow, oParentRow, oSanitizedPayload) {
+            var oPayload = Object.assign({}, oSanitizedPayload || {});
+
+           
+            delete oPayload.Proveedor;
+            delete oPayload.AGRUP;
+            delete oPayload.DESCRIP;
+            delete oPayload.FEE;
+            delete oPayload.NMES;
+            delete oPayload.FINI;
+            delete oPayload.FFIN;
+            delete oPayload.Otros;
+            delete oPayload.months;
+            delete oPayload.__isCustom;
+            delete oPayload.__isMainEditable;
+            delete oPayload.__isNieto;
+           
+            delete oPayload.Erdat;
+            delete oPayload.Updat;
+            delete oPayload.Ctime;
+            delete oPayload.Aezet;
+            delete oPayload.Ernam;
+            delete oPayload.Usnaa;
+            //    
+
+            //   Se propagan las claves desde la fila padre. Se sobreescribe siempre porque
+            //   en filas nuevas (creadas en local) estas claves estan vacias en la fila hija.
+            if (oParentRow) {
+                if (oParentRow.Psphi) oPayload.Psphi = oParentRow.Psphi;
+                if (oParentRow.Version) oPayload.Version = oParentRow.Version;
+                if (oParentRow.Pspnr) oPayload.Pspnr = oParentRow.Pspnr;
+                if (oParentRow.TipoInd) oPayload.TipoInd = oParentRow.TipoInd;
+                oPayload.ParentPath = oParentRow.PhPspnr || "";
+            }
+
+         
+            oPayload.Posnr = oRow.Posnr || oPayload.Posnr || "000000";
+
+            //   PhPspnr de la fila (no del padre) - el backend lo necesita aunque la clave
+            //   sea Posnr porque sirve como identificador de jerarquia.
+            if (oRow.PhPspnr) oPayload.PhPspnr = oRow.PhPspnr;
+
+            //   Se renombran campos UI mayusculas -> backend Camel/lowercase. Solo se vuelca
+            //   si la fila tiene contenido en el campo UI, asi no se machaca el valor que
+            //   pudiera haber llegado del backend en la respuesta anterior.
+            var fnCopyCase = function (sFront, sBack) {
+                if (oRow[sFront] !== undefined && oRow[sFront] !== null && oRow[sFront] !== "") {
+                    oPayload[sBack] = oRow[sFront];
+                }
+            };
+            fnCopyCase("AGRUP", "Agrup");
+            fnCopyCase("DESCRIP", "Descrip");
+            fnCopyCase("FEE", "Fee");
+            fnCopyCase("NMES", "Nmes");
+
+            //   Fini/Ffin: el sanitize ya hace la conversion a "/Date(ms)/" cuando la
+            //   propiedad de la fila se llama Fini/Ffin (minuscula). Si en cambio
+            //   la fila UI solo tiene FINI/FFIN (mayusculas) se hace la conversion aqui.
+            ["FINI", "FFIN"].forEach(function (sFront) {
+                var sBack = sFront.charAt(0) + sFront.slice(1).toLowerCase(); // FINI -> Fini
+                if (oPayload[sBack]) return; //   ya lo metio el sanitize
+                var vVal = oRow[sFront];
+                if (!vVal) return;
+                if (vVal instanceof Date && !isNaN(vVal.getTime())) {
+                    oPayload[sBack] = "/Date(" + vVal.getTime() + ")/";
+                } else if (typeof vVal === "string" && !/^\/Date\(\d+\)\/$/.test(vVal)) {
+                    var oParsed = new Date(vVal);
+                    if (!isNaN(oParsed.getTime())) {
+                        oPayload[sBack] = "/Date(" + oParsed.getTime() + ")/";
+                    }
+                } else if (typeof vVal === "string") {
+                    oPayload[sBack] = vVal;
+                }
+            });
+
+            //   Prov: codigo proveedor (10 chars). En el front se llama Proveedor.
+            if (oRow.Proveedor !== undefined && oRow.Proveedor !== null) {
+                oPayload.Prov = oRow.Proveedor;
+            } else if (oRow.Prov !== undefined) {
+                oPayload.Prov = oRow.Prov;
+            }
+
+            //   Name y Exp no tienen equivalente UI conocido todavia. Se envian vacios
+            //   hasta confirmacion con backend.
+            if (oPayload.Name === undefined) oPayload.Name = oRow.Name || "";
+            if (oPayload.Exp === undefined) oPayload.Exp = oRow.Exp || "";
+
+          
+            var aStringFields = {
+                Psphi: 1, Version: 1, Pspnr: 1, Posnr: 1, TipoInd: 1, PhPspnr: 1, ParentPath: 1,
+                Agrup: 1, Name: 1, Exp: 1, Descrip: 1, Post1: 1, Tipo: 1, TipoTasa: 1,
+                PepDest: 1, PhPepDest: 1, Waers: 1, CheckInfla: 1, Estructura: 1,
+                Gjahr1: 1, Gjahr2: 1, Gjahr3: 1, Ernam: 1, Usnaa: 1, Prov: 1, Zui5Descrip: 1, Aut: 1
+            };
+            Object.keys(oPayload).forEach(function (sKey) {
+                var v = oPayload[sKey];
+                if ((v === "" || v === null) && !aStringFields[sKey]) {
+                    delete oPayload[sKey];
+                }
+            });
+
+            var aScale2 = ["Nmes", "Tasa", "PctjResidAmo", "PctjResidInv", "PctjPenInv", "PctjPenAmo"];
+            aScale2.forEach(function (sKey) {
+                var v = oPayload[sKey];
+                if (v === undefined || v === null || v === "") return;
+                //   Se normaliza el separador decimal a "." (por si el usuario tecleo ",")
+                //   y se formatea a 2 decimales con toFixed.
+                var sNum = String(v).replace(",", ".");
+                var f = parseFloat(sNum);
+                if (!isNaN(f)) {
+                    oPayload[sKey] = f.toFixed(2);
+                }
+            });
+            //    
+
+            return oPayload;
+        },
+       
+        _mergeBackendDesgloseIntoTree: function (aTree, aDesgloseRows) {
+            if (!Array.isArray(aTree) || !Array.isArray(aDesgloseRows) || aDesgloseRows.length === 0) return;
+
+            //   Indice de filas desglose agrupadas por la clave del padre.
+            var mByParentKey = {};
+            aDesgloseRows.forEach(function (oRow) {
+                if (!oRow) return;
+                var sKey = (oRow.Psphi || "") + "|" + (oRow.Version || "") + "|" + (oRow.Pspnr || "");
+                if (!mByParentKey[sKey]) mByParentKey[sKey] = [];
+                mByParentKey[sKey].push(oRow);
+            });
+
+        
+            var that = this;
+            var fnWalk = function (aNodes) {
+                if (!aNodes) return;
+                //   Se itera sobre una copia snapshot de los children originales para no
+                //   incluir las filas desglose que se acaban de anyadir dentro de este mismo
+                //   recorrido.
+                var aSnapshot = aNodes.slice();
+                aSnapshot.forEach(function (oNode) {
+                    if (!oNode) return;
+                    if (oNode.__isCustom === true) return; //   se omiten las filas desglose
+                    var sKey = (oNode.Psphi || "") + "|" + (oNode.Version || "") + "|" + (oNode.Pspnr || "");
+                    var aChildren = mByParentKey[sKey];
+                    if (aChildren && aChildren.length > 0) {
+                        if (!Array.isArray(oNode.children)) oNode.children = [];
+                        //   Se prepende la fila gris de cabecera ("Agrupador / Descripcion / ...")
+                        //   y la fila vacia __isMainEditable que permite anyadir un nuevo proveedor,
+                        //   igual que el flujo manual del "+". Sin esto los nietos del backend
+                        //   aparecen "desnudos" pegados a la fila padre.
+                        var bPersonaPuesto = (typeof that._isPersonaPuestoOperation === "function")
+                            ? that._isPersonaPuestoOperation(oNode.PhPspnr) : false;
+                        if (typeof that._getProveedorHeaderRow === "function") {
+                            //   Se marca __fromBackendMerge=true para que _snapshotCustomBlocks
+                            //   no la duplique al cambiar de pestanya y volver. Sin esto la fila
+                            //   se cargaba dos veces (una via merge inicial, otra via restore).
+                            var oHeader = that._getProveedorHeaderRow(bPersonaPuesto);
+                            oHeader.__fromBackendMerge = true;
+                            oNode.children.push(oHeader);
+                        }
+                        if (typeof that._createEmptyEditableRow === "function") {
+                            var oEmptyMain = Object.assign(that._createEmptyEditableRow(), {
+                                __isMainEditable: true,
+                                __isPersonaPuesto: bPersonaPuesto === true,
+                                __fromBackendMerge: true   //     evitar duplicacion al snapshot/restore
+                            });
+                            oNode.children.push(oEmptyMain);
+                        }
+                        //   Se anyaden los nietos venidos del backend.
+                        aChildren.forEach(function (oRow) {
+                            var oNieto = that._mapBackendDesgloseToTreeRow(oRow);
+                            oNieto.__fromBackendMerge = true; //     marcador anti-duplicacion
+                            oNode.children.push(oNieto);
+                        });
+                        //   Una vez que el bucket ha "alimentado" un padre se descarta para
+                        //   evitar que un nodo descendente con la misma clave reciba un duplicado
+                        //   de los mismos desgloses (problema potencial si el arbol tiene niveles
+                        //   anidados con misma triple Psphi+Version+Pspnr).
+                        delete mByParentKey[sKey];
+                       
+                    }
+                    //   Se recorren los children "originales" (los que estaban antes del merge),
+                    //   no los recien anyadidos.
+                    if (Array.isArray(oNode.children)) fnWalk(oNode.children);
+                });
+            };
+            fnWalk(aTree);
+        },
+
+        //   Mapea una fila tal cual llega de DatosIndirectosDesglo (campos Camel/lower
+        //   en backend) a la forma que la view XML espera (campos UI en MAYUSCULAS y
+        //   flags tecnicos para el render del bloque editable).
+        _mapBackendDesgloseToTreeRow: function (oRow) {
+            var oMapped = Object.assign({}, oRow);
+            //   Se elimina __metadata de OData para que no contamine el modelo.
+            delete oMapped.__metadata;
+            //   Case map backend -> UI.
+            oMapped.AGRUP = oRow.Agrup || "";
+            oMapped.DESCRIP = oRow.Descrip || "";
+            oMapped.FEE = oRow.Fee || "";
+            oMapped.NMES = oRow.Nmes || "";
+            oMapped.FINI = oRow.Fini || "";
+            oMapped.FFIN = oRow.Ffin || "";
+            oMapped.Proveedor = oRow.Prov || "";
+            //   Flags UI: la fila es un "nieto" editable existente (no main editable,
+            //   no header). Asi el XML renderiza el bloque editable como en el alta manual.
+            oMapped.__isCustom = true;
+            oMapped.__isEditable = true;
+            oMapped.__isNieto = true;
+            oMapped.__isMainEditable = false;
+            oMapped.__isHeader = false;
+       
+            oMapped.__hasProviderRows = false;
+            oMapped.__uid = "desglose_" + (oRow.Pspnr || "") + "_" + (oRow.Posnr || "");
+            oMapped.cabecera = false;
+            oMapped.expandible = false;
+            oMapped.isGroup = false;
+            oMapped.padre = false;
+            if (!Array.isArray(oMapped.children)) oMapped.children = [];
+            return oMapped;
+        },
+        //    
 
         //   Recorre recursivamente un arbol con campo "children" y elimina in-place los
         // nodos cuya pareja (PhPspnr, TipoInd) coincida con alguna fila de aLinesToDelete.
@@ -8192,6 +8359,19 @@ onManageVariants: function () {
                 }
             });
 
+         
+            var oRowMV = oContext.getObject();
+            var bIsDesgloseSavableMV = oRowMV && oRowMV.__isCustom === true
+                && (oRowMV.__isNieto === true || oRowMV.__isMainEditable === true)
+                && (this._pestana === "Corrientes" || this._pestana === "Externos");
+            if (bIsDesgloseSavableMV) {
+                var oPayloadRowMV = this._sanitizeRowForBackend(oRowMV);
+                //   Se pasa sField (FINI/FFIN) como CampoMod tal cual. La normalizacion
+                //   a Fini/Ffin (capitalizacion backend) la hace _buildDesglosePayloadRow.
+                this._enviarFilaAlBackend(oContext, oPayloadRowMV, sField);
+            }
+            //    
+
             this._oMonthPickerContext = null;
             this._sMonthPickerField = null;
             this._oSingleMonthPopover.close();
@@ -8325,15 +8505,7 @@ onManageVariants: function () {
                 return;
             }
 
-            //   Primera apertura: se crea el header gris con __isCustom: true y con
-            // los textos de etiqueta en cada campo para que las columnas del XML muestren
-            // los titulos correctos. Sin estos valores los inputs del header aparecen vacios
-            // porque el XML hace binding directo sobre los campos del objeto de modelo.
-            // Las columnas fijas (PhPspnr, Post1, AmoEje...) usan value="{corrientesModel>campo}"
-            // y las columnas custom (colProveedor, colTarifa...) usan value estatico en el XML,
-            // por lo que solo las fijas necesitan el texto aqui en el objeto del modelo.
-            //   Se delega la construccion de la cabecera al helper
-            // _getProveedorHeaderRow que ya traduce las etiquetas via i18n.  
+          
             const oHeaderRow = this._getProveedorHeaderRow(bPersonaPuesto);
             //
 
@@ -8356,17 +8528,6 @@ onManageVariants: function () {
         },
 
        
-        //   Catalogo de recursos: alta rapida de desglose desde el popup
-      
-        //   Vuelca un recurso del catalogo (Catalogo de recursos, solo Corrientes)
-        // como una nueva fila de desglose bajo la operacion (nivel 2) seleccionada en
-        // la tabla, en lugar de obligar al usuario a pulsar el "+" y teclear los datos
-        // a mano. La invoca Main.controller tras seleccionar el recurso en el dialogo.
-        //   El recurso llega ya normalizado por _loadCatalogoRecursos (campo Puesto
-        // resuelto al idioma activo). Se mapean los campos que coinciden con las
-        // columnas del desglose: Agrupador (AGRUP) <- IdRecurso, Descripcion (DESCRIP)
-        // <- Puesto, Tarifa (FEE) <- Fee. Devuelve {ok, message} para que el dialogo
-        // informe del resultado sin acoplar la UI del popup a este controller.
         addRecursoCatalogoAlDesglose: function (oRecurso) {
             if (!oRecurso) {
                 return { ok: false, message: this.getTranslatedText("ERROR_SELECCIONE_RECURSO") };
@@ -8446,10 +8607,7 @@ onManageVariants: function () {
                 return { ok: false, message: this.getTranslatedText("ERROR_RECURSO_SOLO_OPERACION") };
             }
 
-            //   Se inserta cada recurso reutilizando _insertRecursoDesgloseRow,
-            // pero saltandose el refresh/expand intermedio: la cabecera gris se
-            // crea en la primera llamada y se reutiliza en las siguientes. El
-            // refresh y el expand finales se ejecutan una sola vez al final.
+        
             var that = this;
             //   Corrientes: modo Persona/Puesto para operaciones .031/.032/.033.
             var bPersonaPuesto = this._isPersonaPuestoOperation(oOperationRow.PhPspnr);
@@ -8621,6 +8779,23 @@ onManageVariants: function () {
             // addRecursoCatalogoAlDesglose) para activar el guardado pendiente.
             if (this._markVariantDirty) this._markVariantDirty();
 
+       
+            if (sModelName === this.tableModelName
+                && (this._pestana === "Corrientes" || this._pestana === "Externos")
+                && oRow && oRow.__isCustom === true
+                && (oRow.__isMainEditable === true || oRow.__isNieto === true)) {
+                var oCtxSaveMV = oModel.createBindingContext(sRowPath);
+                if (oCtxSaveMV) {
+                    var oPayloadRowMV = this._sanitizeRowForBackend(oRow);
+                    //   CampoMod compuesto: los tres campos que el value-help vuelca
+                    //   en la fila ("Agrup,Descrip,Fee"). El backend recibira la fila
+                    //   completa via _buildDesglosePayloadRow; el header campomod sirve
+                    //   solo como indicador del campo modificado, no como filtro.
+                    this._enviarFilaAlBackend(oCtxSaveMV, oPayloadRowMV, "Agrup,Descrip,Fee");
+                }
+            }
+            //   (FIN MV)
+
             return { ok: true };
         },
 
@@ -8688,24 +8863,13 @@ onManageVariants: function () {
             if (this._markVariantDirty) this._markVariantDirty();
         },
 
-          // Input Proveedor en error. Difiere con setTimeout(0) para que UI5 propague
-        // antes el valueStateText bindado al modelo (sin esto el popup se abria con
-        // texto vacio, como un cuadradito rosa) y registra un listener one-shot de
-        // mousedown sobre document: cualquier click fuera del Input (boton "+", otro
-        // Input, etc.) cierra el popup y deregistra el listener. Sin este cierre
-        // automatico el popup quedaba pegado al control reciclado por t:Table al
-        // insertar filas, mostrandose pegado sobre una fila vacia distinta.
         _openProveedorValueStateMessage: function (oInput) {
             if (!oInput) return;
             var self = this;
             setTimeout(function () {
                 if (oInput.bIsDestroyed) return;
                 if (typeof oInput.openValueStateMessage !== "function") return;
-                //   Se desregistra cualquier listener mousedown previo aun activo
-                // antes de registrar el nuevo: si el usuario tipea de seguido en otro
-                // Input sin clicar fuera, el listener anterior queda colgado en el
-                // document y puede interferir con futuros clicks (por ejemplo, al
-                // cerrar un MessageBox o focalizar otro control).
+             
                 self._removeProveedorValueStateCloser();
                 oInput.openValueStateMessage();
                 var fnCloseOnOutside = function (oEvt) {
@@ -8761,12 +8925,7 @@ onManageVariants: function () {
                 oContext.getModel().setProperty(oContext.getPath() + "/Proveedor", sProveedor);
             }
 
-            //   Fix 2: se restablece el ValueState en cuanto el campo se vacía,
-            // sin esperar a que el usuario escriba un nuevo valor.
-            //   Se persiste el ValueState en el modelo (por fila) en lugar de en la
-            // instancia del Input: t:Table recicla controles al insertar/eliminar filas,
-            // por lo que un setValueState directo sobre oInput viaja con el control
-            // reciclado y aparece en la fila equivocada al pulsar "+".
+      
             if (!sProveedor) {
                 oContext.getModel().setProperty(oContext.getPath() + "/__proveedorValueState", sap.ui.core.ValueState.None);
                 oContext.getModel().setProperty(oContext.getPath() + "/__proveedorValueStateText", "");
@@ -8779,15 +8938,7 @@ onManageVariants: function () {
                 return;
             }
 
-            //   Validacion silenciosa del codigo de proveedor contra /ProveedoresSet.
-            // El Input main editable solo admite Lifnr; antes de insertar el bloque se
-            // consulta el backend con noLoading:true para no mostrar el spinner global.
-            // Si la respuesta no contiene ninguna coincidencia exacta para el codigo
-            // tipeado, el Input se marca en error y se abre el dialog de busqueda con
-            // el codigo pre-rellenado en el filtro Lifnr y el mensaje de error visible;
-            // la insercion del bloque queda bloqueada hasta que el codigo sea valido.
-            // Si _skipProveedorValidation viene true (caso autorelleno desde el dialog
-            // tras una seleccion ya validada por el backend), se evita el doble fetch.
+         
             const sPath = oContext.getPath();
             const oModel = this.getView().getModel(this.tableModelName);
             //   En modo Persona/Puesto el valor es un puesto de trabajo (texto libre),
@@ -8800,25 +8951,10 @@ onManageVariants: function () {
                     .then(function (bExists) {
                         delete oRow.__processing;
                         if (!bExists) {
-                            //   Codigo no encontrado: el feedback se limita a marcar el
-                            // Input en error con el texto i18n. No se abre el dialog de
-                            // busqueda ni se muestra messageDialog, evitando interrupciones
-                            // modales cuando el usuario simplemente se ha equivocado al tipear.
-                            //   Se anclan ValueState y texto al modelo de la fila para que
-                            // sobrevivan al reciclaje de controles al insertar nuevas filas.
+                          
                             oModel.setProperty(sPath + "/__proveedorValueState", sap.ui.core.ValueState.Error);
                             oModel.setProperty(sPath + "/__proveedorValueStateText", that.getTranslatedText("proveedorNoExiste"));
-                            //   Se abre el popup del valueStateMessage inmediatamente para
-                            // que el texto del error aparezca sin esperar a un nuevo focus del
-                            // Input. Se difiere con setTimeout(0) para que UI5 propague antes
-                            // el valueStateText bindado y el popup se abra ya con el texto,
-                            // evitando el cuadradito rosa vacio. Se verifica bIsDestroyed por
-                            // si t:Table hubiera reciclado el control entre ticks.
-                            //   Tras abrir el popup se registra un listener one-shot de
-                            // mousedown sobre el document: cualquier click fuera del Input
-                            // (incluido el boton "+" que anade filas) cierra el popup y se
-                            // deregistra solo. Sin esto el popup quedaba pegado al Input y
-                            // tras reciclar t:Table aparecia sobre una fila vacia distinta.
+                          
                             that._openProveedorValueStateMessage(oInput);
                             return;
                         }
@@ -8897,11 +9033,46 @@ onManageVariants: function () {
             }
 
             const oRootRow = oModel.getProperty(sRootRowPath);
-            if (sProveedor) {
+         
+            var bIsMainEditableRowMV = oRow && oRow.__isMainEditable === true;
+            if (sProveedor && bIsMainEditableRowMV) {
                 this._insertProveedorBlock(oRootRow, sProveedor, oRow);
             }
+            //   (FIN MV)
             if (oRootRow) this._cleanupEmptyBlocks(oRootRow);
             delete oRow.__processing;
+
+       
+            var bIsDesgloseSavableMV = (this._pestana === "Corrientes" || this._pestana === "Externos");
+            if (bIsDesgloseSavableMV && oRootRow && Array.isArray(oRootRow.children)) {
+                var oNietoContextMV = null;
+                var oNietoRowMV = null;
+                if (bIsMainEditableRowMV) {
+                    //   Main editable -> nieto recien creado: localizar por __providerName.
+                    var iNietoIdxMV = -1;
+                    for (var iKMV = 0; iKMV < oRootRow.children.length; iKMV++) {
+                        var oCMV = oRootRow.children[iKMV];
+                        if (oCMV && oCMV.__isNieto === true && oCMV.__providerName === sProveedor) {
+                            iNietoIdxMV = iKMV;
+                            break;
+                        }
+                    }
+                    if (iNietoIdxMV >= 0) {
+                        var sNietoPathMV = sRootRowPath + "/children/" + iNietoIdxMV;
+                        oNietoContextMV = oModel.createBindingContext(sNietoPathMV);
+                        oNietoRowMV = oNietoContextMV && oNietoContextMV.getObject();
+                    }
+                } else {
+                    //   Fila ya nieto del backend: se guarda la propia (mantiene Posnr real).
+                    oNietoContextMV = oContext;
+                    oNietoRowMV = oRow;
+                }
+                if (oNietoRowMV && oNietoContextMV) {
+                    var oPayloadRowMV = this._sanitizeRowForBackend(oNietoRowMV);
+                    this._enviarFilaAlBackend(oNietoContextMV, oPayloadRowMV, "Prov");
+                }
+            }
+            //   (FIN MV)
 
             const oTable = this.getControlTable();
             oModel.refresh(true);
@@ -9314,15 +9485,6 @@ onManageVariants: function () {
         _applyBlockBorder: function (oTable) {
             if (!oTable) return;
 
-            // (INICIO)
-            //   En las vistas Anticipados/Diferidos/Inmovilizados (TreeTable SIN clase
-            //   .mainTreeTable) el scroll horizontal (.sapUiTableHSb) tiene reglas CSS
-            //   que lo fuerzan visible, pero el "thumb" interno solo se materializa
-            //   cuando SAP UI5 recalcula el layout (lo hace al primer resize/interaccion).
-            //   Por eso el usuario veia aparecer la barra solo tras seleccionar la primera
-            //   fila. Se dispara una sola vez por instancia (flag _hsbResizeFiredMV) una
-            //   secuencia de acciones para forzar el calculo: invalidate del TreeTable +
-            //   update directo de la HSb via scroll extension + resize event global.
             var bIsMainTreeTableInitMV = oTable.hasStyleClass && oTable.hasStyleClass("mainTreeTable"); //   check de scope
             if (!bIsMainTreeTableInitMV && !this._hsbResizeFiredMV) { //   solo en las 3 view non-mainTreeTable, una sola vez
                 this._hsbResizeFiredMV = true; //   flag para no disparar mas el resize
@@ -9386,12 +9548,7 @@ onManageVariants: function () {
                     });
                 }
 
-                // (INICIO)
-                //   Se obtienen las referencias DOM del row selector (zona checkbox)
-                //   y del row action de esta misma fila para sincronizar su altura con
-                //   la del td cuando se anade el border-bottom dinamico. SOLO se aplica
-                //   en tablas con clase mainTreeTable (Corrientes/Externos) para no tocar
-                //   el rendering de Anticipados/Diferidos/Inmovilizados.
+     
                 var bIsMainTreeTableMV = oTable.hasStyleClass && oTable.hasStyleClass("mainTreeTable"); //   flag de scope
                 var oDomRefsMV = bIsMainTreeTableMV && aRows[i].getDomRefs ? aRows[i].getDomRefs() : null; //   solo se piden refs si toca
                 var oRowSelDomMV = oDomRefsMV && oDomRefsMV.rowSelector; //   celda del checkbox
@@ -9447,16 +9604,7 @@ onManageVariants: function () {
                         });
                     }
 
-                    // (INICIO)
-                    //   El border-bottom de 2px anade altura visible al td: el navegador
-                    //   pinta el borde DEBAJO del contenido, asi que la fila pasa a medir
-                    //   28px aprox (segun rendering compact). El row selector (checkbox)
-                    //   y el row action son div sin ese borde y se quedarian 1-2px mas
-                    //   cortos, descentrando el cuadradito. Se compensa subiendo la altura
-                    //   inline del row selector y del row action SOLO para esta fila, sin
-                    //   afectar al resto. Cuando la condicion deje de aplicarse en una
-                    //   proxima ejecucion (scroll, edicion, refresh), el reset de mas
-                    //   arriba ya borra estos estilos inline y la fila vuelve a 27px.
+    
                     if (oRowSelDomMV) { //   defensivo: skip si el rowsel no esta renderizado
                         oRowSelDomMV.style.setProperty("height", "28px", "important"); //   +1px para igualar td con border
                         oRowSelDomMV.style.setProperty("max-height", "28px", "important"); //   max coherente
@@ -9465,7 +9613,7 @@ onManageVariants: function () {
                         oRowActDomMV.style.setProperty("height", "28px", "important"); //   +1px para igualar td con border
                         oRowActDomMV.style.setProperty("max-height", "28px", "important"); //   max coherente
                     }
-                    // (FIN)
+                 
                 }
             }
         },
@@ -9486,21 +9634,22 @@ onManageVariants: function () {
             var oTable = this.getControlTable();
             if (!oTable) return;
 
-            var oBinding = oTable.getBinding("rows");
-            if (!oBinding) return;
-
-            //    Se recorre el binding completo buscando al menos una fila
-            // con el marcador __isCustom para determinar si hay bloques custom activos.
+           
             var bHasCustomRows = false;
-            var iLength = oBinding.getLength();
-            for (var i = 0; i < iLength; i++) {
-                var oCtx = oTable.getContextByIndex(i);
-                if (!oCtx) continue;
-                var oObj = oCtx.getObject();
-                if (oObj && oObj.__isCustom === true) {
-                    bHasCustomRows = true;
-                    break;
-                }
+            var oModel = this.getView().getModel(this.tableModelName);
+            if (oModel) {
+                var oData = oModel.getData();
+                var aRoots = Array.isArray(oData) ? oData : (oData ? [oData] : []);
+                var fnWalk = function (oNode) {
+                    if (bHasCustomRows || !oNode) return;
+                    if (oNode.__isCustom === true) { bHasCustomRows = true; return; }
+                    if (Array.isArray(oNode.children)) {
+                        for (var i = 0; i < oNode.children.length && !bHasCustomRows; i++) {
+                            fnWalk(oNode.children[i]);
+                        }
+                    }
+                };
+                aRoots.forEach(fnWalk);
             }
 
             //    Se aplica la visibilidad calculada a todas las columnas
@@ -10067,12 +10216,7 @@ onManageVariants: function () {
             // solo las filas (la altura total del splitter no cambia).
             setTimeout(function () {
                 this._calculateDynamicRows();
-                //     Se reaplica el CSS del bloque tras un resize manual
-                // del divisor del splitter, ya que _calculateDynamicRows ajusta
-                // el visibleRowCount de la TreeTable y dispara re-render de las
-                // filas que limpia los inline borders. Sin esta llamada el
-                // borde negro del bloque agrupador desaparece cuando el usuario
-                // arrastra el divisor para redimensionar el panel proveedor.
+               
                 this._reapplyBlockCssAfterLayout();
             }.bind(this), 30);
         },
@@ -10163,13 +10307,7 @@ onManageVariants: function () {
         //  pueda actualizar su campo Proveedor y abrir el panel correspondiente.
         onProveedorValueHelpRequest: function (oEvent) {
             var oInput = oEvent.getSource();
-            //  El value help puede dispararse desde dos celdas Proveedor
-            //  distintas: la del treetable principal (binding contra
-            //  this.tableModelName) o la del panel inferior (binding contra
-            //  "panelModel"). Se prueba primero el modelo principal y, si no
-            //  resuelve contexto, se cae al panelModel. El nombre del modelo
-            //  resuelto se memoriza en _sProveedorVHTableModel para que la
-            //  seleccion posterior actualice la fila correcta.
+    
             var sModelName = this.tableModelName;
             var oContext = oInput.getBindingContext(sModelName);
             if (!oContext) {
@@ -10242,23 +10380,14 @@ onManageVariants: function () {
             if (oFiltrosModel) {
                 oFiltrosModel.setData({ Name1: "", Lifnr: "", Stcd1: "" });
             }
-             //   Se limpia la seleccion de la Table del dialog en cada apertura:
-            // SingleSelectMaster conserva la fila previa pintada en azul y un
-            // segundo click sobre ella no dispara selectionChange, impidiendo al
-            // usuario reintentar la misma seleccion (caso del duplicado, donde
-            // se quiere reactivar el MessageBox). Limpiando la seleccion el
-            // proximo click sobre cualquier fila vuelve a disparar el evento.
+           
             var oVHTable = this.byId("busquedaProveedoresTable");
             if (oVHTable && typeof oVHTable.removeSelections === "function") {
                 oVHTable.removeSelections(true);
             }
         },
 
-        //  Se valida que al menos un filtro tenga valor y se lanza la lectura
-        //  contra /ProveedoresSet. Los tres valores se leen del modelo
-        //  proveedoresFiltrosModel y se entregan tal cual a _loadProveedores,
-        //  que los traduce a las cabeceras Nombre/Codigo/Cif que el backend
-        //  usa como filtro real (los campos vacios se envian como "%").
+  
         onBusquedaProveedoresBuscar: function () {
             var oView = this.getView();
             var oFiltrosModel = oView.getModel("proveedoresFiltrosModel");
@@ -10332,14 +10461,6 @@ onManageVariants: function () {
                 });
         },
 
-        //  Se construye el bloque de cabeceras esperado por /ProveedoresSet:
-        //  Ambito y Lang vienen del global model appData (contexto de sesion
-        //  del usuario, mismo origen que usan el resto de llamadas this.get/
-        //  this.post del proyecto). Nombre, Codigo y Cif vienen de los tres
-        //  inputs del popover (modelo proveedoresFiltrosModel) y se sustituyen
-        //  por "%" cuando estan vacios, que es el wildcard que acepta el
-        //  backend para indicar "sin filtro sobre ese campo". Se mantienen
-        //  las mayusculas tal cual aparecen en la request original.
         _buildProveedoresHeaders: function (oFilterValues) {
             var oFV = oFilterValues || {};
             //   Se normaliza a mayusculas porque el backend matchea de forma
@@ -10363,12 +10484,7 @@ onManageVariants: function () {
             };
         },
 
-        //  Se gestiona la seleccion de un proveedor en la tabla del dialog: se
-        //  escribe Name1 en el campo Proveedor de la fila origen (clave usada
-        //  por _mProveedorRows) y se delega en onProveedorRowAddPress para que
-        //  abra el panel y agregue la fila inicial del nuevo proveedor. La
-        //  aplicacion real se delega en _aplicarProveedorSeleccionado para
-        //  poder reusarla desde el autocompletado del Input.
+     
         onBusquedaProveedoresSeleccion: function (oEvent) {
             var oItem = oEvent.getParameter("listItem");
             if (!oItem) return;
@@ -10444,15 +10560,8 @@ onManageVariants: function () {
                 return;
             }
 
-            //    Rama main editable: cuando la peticion de value help nace del
-            //  Input editable del padre desglose (__isMainEditable), se simula el
-            //  flujo normal de tipeo del campo Proveedor. Se sintetiza un evento con
-            //  un input falso que expone getBindingContext y los setValueState que
-            //  necesita onEditableRowFieldChange para reaprovechar integramente la
-            //  insercion del bloque proveedor, la transicion a fila nieto no editable
-            //  y la aparicion del boton +.
             var oRowSel = oTableModel.getProperty(sPath);
-            if (oRowSel && oRowSel.__isMainEditable === true) {
+            if (oRowSel && oRowSel.__isEditable === true) {
                 //   Se marca __skipProveedorValidation para que onEditableRowFieldChange
                 // omita la lectura silenciosa contra /ProveedoresSet: el codigo viene del
                 // propio dialog (resultado del backend), asi que ya esta validado y un
@@ -10470,29 +10579,6 @@ onManageVariants: function () {
                 });
                 return;
             }
-
-            //  Rama treetable principal: se sincronizan los flags
-            //  __hasProveedor/__hasProviderRows del padre para que la celda
-            //  refleje el nuevo estado antes de abrir el panel.
-            var sRootPath = sPath.replace(/\/children\/\d+$/, "");
-            var oRootRow = oTableModel.getProperty(sRootPath);
-            if (oRootRow && typeof this._syncProviderRowFlags === "function") {
-                this._syncProviderRowFlags(oRootRow);
-            }
-            oTableModel.refresh(true);
-
-            //  Se construye un evento sintetico con un getSource que devuelve un
-            //  control falso cuyo getBindingContext apunta a la fila actualizada.
-            //  De este modo se reaprovecha integramente onProveedorRowAddPress sin
-            //  duplicar la logica de creacion de fila y apertura del panel.
-            var oFakeSource = {
-                getBindingContext: function () {
-                    return oTableModel.getContext(sPath);
-                }
-            };
-            this.onProveedorRowAddPress({
-                getSource: function () { return oFakeSource; }
-            });
         },
 
         //  Se cierra el dialog de Busqueda de Proveedores sin aplicar cambios.
@@ -10516,21 +10602,23 @@ onManageVariants: function () {
                 return c.__isHeader === true;
             });
 
-            //   Editables SIN AGRUP: permanecen siempre bajo el header, antes que los grupos.
+       
             const aEditablesNoAgrup = oRootRow.children.filter(function (c) {
-                return c.__isEditable === true && !(c.AGRUP || "").trim();
+                return c.__isMainEditable === true && !(c.AGRUP || "").trim();
             });
 
             //   Todo lo demás a agrupar: nietos + editables CON AGRUP.
-            // Se excluyen header, agrupadorTotal y editables sin AGRUP.
+            // Se excluyen header, agrupadorTotal y el main editable sin AGRUP (que se
+            //   ha capturado arriba en aEditablesNoAgrup).
             const aToGroup = oRootRow.children.filter(function (c) {
                 return (
                     c.__isCustom === true &&
                     c.__isHeader !== true &&
                     c.__isAgrupadorTotal !== true &&
-                    !(c.__isEditable === true && !(c.AGRUP || "").trim())
+                    !(c.__isMainEditable === true && !(c.AGRUP || "").trim())
                 );
             });
+            //    
 
             console.log("[Reorg] aHeader:", aHeader.length,
                 "| editablesSinAgrup:", aEditablesNoAgrup.length,
@@ -10674,7 +10762,17 @@ onManageVariants: function () {
             const oRootRow = oModel.getProperty(sParentPath);
             if (!oRootRow || !Array.isArray(oRootRow.children)) return;
 
-            //   Si el modo agrupador no está activo no se hace nada.
+         
+            var bIsDesgloseSavableMV = oRow && oRow.__isCustom === true
+                && (oRow.__isNieto === true || oRow.__isMainEditable === true)
+                && (this._pestana === "Corrientes" || this._pestana === "Externos");
+            if (bIsDesgloseSavableMV) {
+                var oPayloadRowMV = this._sanitizeRowForBackend(oRow);
+                this._enviarFilaAlBackend(oContext, oPayloadRowMV, "Agrup");
+            }
+            //    
+
+            //   Si el modo agrupador no está activo no se hace nada de la reorganizacion.
             const oHeaderRow = oRootRow.children.find(function (c) { return c.__isHeader === true; });
             const bActive = oHeaderRow && oHeaderRow.__agrupadorActive === true;
             if (!bActive) return;
@@ -10818,8 +10916,16 @@ onManageVariants: function () {
                 const oRestoCol = aVisibleColumns.find(function (oCol) {
                     return typeof oCol.data === "function" && oCol.data("restoColumn") === true;
                 });
-                //     Etiquetas de mes en español (3 letras, minúscula) — el año se concatena en formato 4 dígitos
-                const aMonthLabels = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+                //     Etiquetas de mes abreviadas localizadas al idioma activo de UI5 — el año se
+                //   concatena en formato 4 dígitos. Antes se usaba un array hardcodeado en español, por
+                //   lo que las cabeceras de mes del export no se traducían al cambiar de idioma. Se usa
+                //   el mismo DateFormat ("MMM") que las cabeceras de columna de la tabla (ver
+                //   createDynamicYearColumns) para que se localicen automáticamente a EN/FR.
+                const oMonthFormat = sap.ui.core.format.DateFormat.getDateInstance({ pattern: "MMM" });
+                const aMonthLabels = [];
+                for (let iMm = 0; iMm < 12; iMm++) {
+                    aMonthLabels.push(oMonthFormat.format(new Date(2000, iMm, 1)));
+                }
                 const aDynamicHeaders = [];
                 const aDynamicPaths = [];
                 //     Columna(s) Ejercicios anteriores al principio del bloque dinámico (si el checkbox está activo)
@@ -10873,17 +10979,7 @@ onManageVariants: function () {
                 const aSheetData = [aHeaders].concat(aRows);
                 const oWorkbook = window.XLSX.utils.book_new();
                 const oWorksheet = window.XLSX.utils.aoa_to_sheet(aSheetData);
-                //     Se aplican los estilos visuales: cabecera coloreada, filas secundarias más compactas,
-                //   filas cabecera/expandible con fondo claro y formato numérico para las celdas Number.
-                //     Se detectan los índices de las columnas que llevan línea vertical separadora
-                //   en el UI. Dos fuentes:
-                //     1. fixedColumnCount del TreeTable: las columnas fijas se separan del área scrollable
-                //        con un borde a la derecha. En todos los capítulos son las 2 primeras (Operación + Desc.).
-                //     2. CSS class "borderRightPend" aplicada a alguna columna del main table (Pend a planificar
-                //        en Corrientes/Externos). Esa clase coincide siempre con la última columna estática del
-                //        export, por lo que el separador cae justo al inicio del bloque dinámico
-                //        (= aStaticColumnsConfig.length en sistema de columnas del export).
-                //   Para Inmovilizados/Anticipados/Diferidos sólo se dibuja la línea de fixedColumnCount.
+              
                 const aVerticalSepCols = [];
                 const iFixedCount = typeof oTable.getFixedColumnCount === "function" ? oTable.getFixedColumnCount() : 0;
                 if (iFixedCount > 0) {
@@ -10917,16 +11013,7 @@ onManageVariants: function () {
             }
         },
 
-        /**
-         *   Devuelve la lista de columnas estáticas (no dinámicas) a incluir en el export.
-         *   Por defecto se autodetectan recorriendo las columnas visibles de la TreeTable hasta encontrar
-         *   la primera columna dinámica (mes/año/Resto/Ejecutados). Para cada columna estática se resuelve
-         *   header (via _resolveColumnHeader: mapeo por id + extracción de label) y path (via _getColumnExportPath).
-         *   Esto permite que el export refleje automáticamente columnas que aparecen/desaparecen según los
-         *   checkbox "Ver Ajustes" y "Ejercicios anteriores", sin tener que enumerarlas manualmente.
-         *   Los controladores específicos pueden sobrescribir este método para fijar una lista estricta
-         *   (Inmovilizados/Anticipados/Diferidos/Externos lo hacen ya hoy).
-         */
+      
         _getStaticExportColumns: function () {
             const sTableId = typeof this.getCustomTableId === "function" ? this.getCustomTableId() : null;
             const oTable = sTableId ? this.byId(sTableId) : null;
@@ -10971,13 +11058,7 @@ onManageVariants: function () {
             return false;
         },
 
-        /**
-         *  Detecta si una columna del TreeTable lleva la línea naranja vertical del UI buscando
-         *   recursivamente la clase CSS "borderRightPend" en su label o en su template. El CSS la usa
-         *   con el selector :has() para pintar un border-right naranja (#f3984e) sobre la celda contenedora.
-         *   Se inspecciona toda la jerarquía de hijos (VBox/HBox/Inputs anidados) porque a veces la clase
-         *   se aplica al control interno en lugar de al label raíz.
-         */
+     
         _columnHasBorderRightPend: function (oCol) {
             if (!oCol) {
                 return false;
@@ -11121,18 +11202,7 @@ onManageVariants: function () {
             return "";
         },
 
-        /**
-         *     Resuelve el path del modelo asociado a una columna.
-         *   Estrategias en orden:
-         *     1. custom data "exportPath" (escape hatch explícito).
-         *     2. custom data "restoColumn" → PlanResto.
-         *     3. custom data "dynamicYear" + subFijoYear → Total{subFijo}.
-         *     4. Descenso recursivo en el template buscando un binding text/value sobre this.tableModelName.
-         *     5. filterProperty (fallback) — sólo si las estrategias anteriores no han devuelto path. Se evita
-         *        usarlo como primera opción porque algunas columnas tienen filterProperty con valores legacy
-         *        ("operacion", "destino", "months", "pend") que no corresponden a campos reales del modelo
-         *        y producirían celdas vacías en el export.
-         */
+       
         _getColumnExportPath: function (oColumn) {
             if (typeof oColumn.data === "function") {
                 const sExportPath = oColumn.data("exportPath");
@@ -11258,15 +11328,6 @@ onManageVariants: function () {
             return vValue;
         },
 
-        /**
-         *   Se aplica el estilo visual al worksheet:
-         *     - Cabecera (fila 0): fondo color naranja, fuente negrita, alineación centrada, borde inferior.
-         *     - Filas cabecera/expandible (cabecera===true o expandible===true): fondo azul claro, negrita.
-         *     - Filas secundarias (desgloses + filas de proveedor): fuente más pequeña, cursiva, gris, fila compacta.
-         *     - Celdas numéricas: formato "#,##0.00" via cell.z (compat SheetJS) y cell.s.numFmt (xlsx-js-style).
-         *     - Anchos de columna razonables (Operación: 16, Descripción: 25, resto: 12).
-         *   Requiere xlsx-js-style (drop-in de SheetJS con soporte de estilos).
-         */
         _applyVisualStylesToSheet: function (oWorksheet, aDesgloseRowIndexes, aCabeceraRowIndexes, aVerticalSepCols) {
             if (!oWorksheet || !oWorksheet["!ref"] || !window.XLSX || !window.XLSX.utils) {
                 return;
@@ -11401,16 +11462,7 @@ onManageVariants: function () {
             //    
         },
 
-        /**
-         *     Se aplana recursivamente el árbol del modelo del capítulo activo (this.tableModelName),
-         *   construyendo una fila por cada nodo de datos. Se omiten las filas técnicas que sólo sirven al UI
-         *   (cabeceras de filtro, bloques agrupadores, filas "Sin proveedor") pero se recorren igualmente
-         *   sus hijos por si contienen datos relevantes para el export.
-         *   Si se proporciona aDesgloseIndexesOut se rellena con los índices (sobre aRowsOut) de las filas
-         *   "secundarias" — desgloses (isLevel3) y detalles de bloques de proveedor (__isEditable o __isCustom).
-         *   Si se proporciona aCabeceraIndexesOut se rellena con los índices de las filas cabecera/expandible
-         *   (cabecera === true o expandible === true) para aplicarles un fondo claro (estilo del UI).
-         */
+      
         _flattenForExport: function (aNodes, aPaths, aRowsOut, aDesgloseIndexesOut, aCabeceraIndexesOut) {
             if (!Array.isArray(aNodes)) {
                 return;
@@ -11459,16 +11511,7 @@ onManageVariants: function () {
             }
         },
 
-        /**
-         *   Se resuelve el valor de una celda combinando casos específicos por columna con la coerción numérica genérica.
-         *   - En filas editables del bloque de proveedor (__isEditable === true) algunos campos cambian de origen:
-         *       · PhPspnr (Operación)   → AGRUP   (Agrupador / nombre del recurso)
-         *       · Post1   (Descripción) → DESCRIP (Descripción del recurso seleccionado en el Catálogo)
-         *   - Para la columna "Reparto" (path "Tipo"), delega en _resolveRepartoCellValue.
-         *   - Para la columna "Tipo" (path "TipoInd") presente en Inmovilizados/Anticipados/Diferidos,
-         *     delega en _resolveTipoIndCellValue (mapeo a Inversión/Amortización/Aplicación/Provisión).
-         *   - Para el resto, aplica _coerceNumericValue.
-         */
+      
         _resolveCellValue: function (oNode, sPath) {
             //   Overrides específicos para las filas editables del bloque de proveedor
             if (oNode && oNode.__isEditable === true) {
@@ -11488,12 +11531,7 @@ onManageVariants: function () {
             return this._coerceNumericValue(oNode[sPath]);
         },
 
-        /**
-         *     Se calcula el valor mostrado en la columna Reparto:
-         *   - Si la fila tiene el campo Tipo definido y se mapea a una etiqueta conocida, se devuelve la etiqueta
-         *     en español (Manual / Lineal / OEO / Inflación / Porcentaje).
-         *   - Si Tipo no está definido o no se reconoce, se devuelve "Manual" como valor por defecto.
-         */
+       
         _resolveRepartoCellValue: function (oNode) {
             const oTipoLabels = {
                 "MAN": "Manual",
@@ -11509,13 +11547,7 @@ onManageVariants: function () {
             return "Manual";
         },
 
-        /**
-         *   Se calcula el valor mostrado en la columna "Tipo" (path TipoInd) de Inmovilizados/Anticipados/Diferidos.
-         *   Mapea los códigos del modelo a las etiquetas en español que muestra el formatter formatTipoInd:
-         *     I → Inversión, A → Amortización  (Inmovilizados / Anticipados)
-         *     P → Aplicación, B → Provisión    (Diferidos)
-         *   Si el código no se reconoce se devuelve el valor original (o cadena vacía).
-         */
+      
         _resolveTipoIndCellValue: function (oNode) {
             const oLabels = {
                 "I": "Inversión",
@@ -11584,30 +11616,29 @@ onManageVariants: function () {
             }
         },
 
-        /**
-         *    Calcula la lista de meses a incluir en el export según el ámbito seleccionado.
-         *   Devuelve un array de objetos {year, month, label} en orden cronológico:
-         *     - "years": 2 años visibles en la app (this._iYearStart, this._iYearStart+1 normalmente),
-         *       12 meses cada uno, total 24 meses.
-         *     - "all": desde el mes actual hasta el final de la obra (appData/Frealfinobra), excluyendo
-         *       los meses anteriores al actual (que están ya ejecutados).
-         *   La etiqueta es "<mes> <YYYY>" en español, mismo formato que la Vista del capítulo.
-         */
+     
                 _getPlantillaMonths: function (sScope) {
             const aMonthLabels = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
             const aResult = [];
             if (sScope === "all") {
-                //     Opción "Toda la obra": MESES desde el mes inicial (Freal — "Fecha Reales"
-                //   de la obra, ojo no es la fecha del sistema) hasta el mes final (Frealfinobra). Cada
-                //   entrada lleva month definido para que _flattenPlantillaRows resuelva el path
-                //   "Val0<MM><subFijo>". Antes usaba new Date() pero Freal puede ser muy anterior a hoy
-                //   (en tramos históricos como 2014) y el modelo sólo contiene los meses dentro del
-                //   rango Freal→Frealfinobra.
+               
                 const oAppData = this.getGlobalModel("appData").getData();
                 const sIni = oAppData.Freal || (oAppData.tramo && oAppData.tramo.Freal) || "";
                 const sFin = oAppData.Frealfinobra || (oAppData.tramo && oAppData.tramo.Frealfinobra) || "";
-                const oIni = sIni ? this._parseODataDate(sIni) : null;
+                     let oIni = sIni ? this._parseODataDate(sIni) : null;
                 const oFin = sFin ? this._parseODataDate(sFin) : null;
+                //     Se replica el ajuste de fecha efectiva que aplica la TreeTable al abrir un anyo: si el dia de Freal no coincide con el de Frealsist se suma un dia a Freal antes de extraer el mes inicial. Asi el export arranca en el mismo mes que la columna mensual de la UI (en obras con Freal=ultimo dia del mes, el mes real de inicio es el siguiente). Misma logica que en BaseController._effectiveDate.
+                if (oIni && !isNaN(oIni.getTime())) {
+                    const sFrealsist = oAppData.Frealsist || (oAppData.tramo && oAppData.tramo.Frealsist) || "";
+                    const oFrealsist = sFrealsist ? this._parseODataDate(sFrealsist) : null;
+                    const bSameDay = oFrealsist && !isNaN(oFrealsist.getTime())
+                        && oIni.getDate() === oFrealsist.getDate();
+                    if (!bSameDay) {
+                        const oIniAdjusted = new Date(oIni);
+                        oIniAdjusted.setDate(oIniAdjusted.getDate() + 1);
+                        oIni = oIniAdjusted;
+                    }
+                }
                 if (!oIni || isNaN(oIni.getTime()) || !oFin || isNaN(oFin.getTime())) {
                     //   Fallback: si faltan fechas, se devuelven los 12 meses del año en curso de Freal o
                     //   del año actual del sistema como último recurso.
@@ -11633,15 +11664,40 @@ onManageVariants: function () {
                 return aResult;
                 //    
             }
-            //     Opción "Los 2 años visibles": devuelve 2 entradas, una por año, con isYearTotal
-            //   = true para indicar a _flattenPlantillaRows que debe resolver el path "Total<subFijo>"
-            //   (suma anual) en vez del path mensual. Las cabeceras quedan como el año a secas ("2026", "2027").
+            //    se cambia el scope "years" para devolver las columnas mensuales (no los totales anuales) de los 2 anyos visibles, arrancando en el MISMO mes inicial que muestra la TreeTable. Antes se emitia { year, isYearTotal: true } y _flattenPlantillaRows leia "Total<subFijo>", produciendo solo 2 columnas con el agregado anual; el cambio mantiene la rama isYearTotal viva en _flattenPlantillaRows como dead code inocuo por si en el futuro se reutiliza desde otro scope. Para el mes inicial se replica la regla de _effectiveDate (BaseController ~6106): si el dia de Freal no coincide con el de Frealsist se suma un dia a Freal antes de extraer mes/anyo, asi el primer mes del export coincide con el primer mes mensual visible en la TreeTable (en obras con Freal=ultimo dia del mes el mes real arranca en el siguiente). El cierre se fija en diciembre de (iStartYear + 1) para limitar el alcance a 2 anyos naturales coincidiendo con el sentido funcional de la opcion  
             const oAppData = this.getGlobalModel("appData").getData();
             const sFreal = oAppData.Freal || (oAppData.tramo && oAppData.tramo.Freal) || "";
-            const oFreal = sFreal ? this._parseODataDate(sFreal) : null;
-            const iFirstYear = (oFreal && !isNaN(oFreal.getTime())) ? oFreal.getFullYear() : new Date().getFullYear();
-            for (let iY = iFirstYear; iY < iFirstYear + 2; iY++) {
-                aResult.push({ year: iY, isYearTotal: true, label: String(iY) });
+            let oIni = sFreal ? this._parseODataDate(sFreal) : null;
+            if (oIni && !isNaN(oIni.getTime())) {
+                const sFrealsist = oAppData.Frealsist || (oAppData.tramo && oAppData.tramo.Frealsist) || "";
+                const oFrealsist = sFrealsist ? this._parseODataDate(sFrealsist) : null;
+                const bSameDay = oFrealsist && !isNaN(oFrealsist.getTime())
+                    && oIni.getDate() === oFrealsist.getDate();
+                if (!bSameDay) {
+                    const oIniAdjusted = new Date(oIni);
+                    oIniAdjusted.setDate(oIniAdjusted.getDate() + 1);
+                    oIni = oIniAdjusted;
+                }
+            }
+            if (!oIni || isNaN(oIni.getTime())) {
+                //   Fallback: si no hay Freal valido se emiten los 12 meses del anyo actual y del siguiente arrancando en enero, evitando devolver array vacio.
+                const iFallback = new Date().getFullYear();
+                for (let iY = iFallback; iY < iFallback + 2; iY++) {
+                    for (let iM = 0; iM < 12; iM++) {
+                        aResult.push({ year: iY, month: iM + 1, label: aMonthLabels[iM] + " " + iY });
+                    }
+                }
+                return aResult;
+            }
+            const iStartYear = oIni.getFullYear();
+            const iStartMonth = oIni.getMonth(); // 0-based
+            const iEndYear = iStartYear + 1;
+            let iY = iStartYear;
+            let iM = iStartMonth;
+            while (iY < iEndYear || (iY === iEndYear && iM <= 11)) {
+                aResult.push({ year: iY, month: iM + 1, label: aMonthLabels[iM] + " " + iY });
+                iM++;
+                if (iM > 11) { iM = 0; iY++; }
             }
             return aResult;
             //    
@@ -11800,9 +11856,7 @@ onManageVariants: function () {
             if (!oController) {
                 return oMap;
             }
-            //     1ª estrategia: leer las columnas dinámicas del TreeTable (sólo existen si la vista
-            //   se ha renderizado en el DOM al menos una vez — válido para Anticipados/Diferidos/Inmovilizados
-            //   que crean columnas en setInitData, y también para Corrientes/Externos tras visitar la pestaña).
+        
             if (typeof oController.getCustomTableId === "function") {
                 const sTableId = oController.getCustomTableId();
                 const oTable = sTableId ? oController.byId(sTableId) : null;
@@ -11821,12 +11875,7 @@ onManageVariants: function () {
                     }
                 }
             }
-            //     2ª estrategia (fallback): si no se encontraron columnas dinámicas en el TreeTable
-            //   (caso típico Corrientes/Externos pre-cargados via _ensureChapterLoadedForExport pero sin
-            //   render: createYearColumns se llama en onAfterRendering), se calcula el mapa directamente
-            //   desde _iYearStart/_iYearEnd del controller, que se rellenan en _initYearsModel a partir
-            //   de Freal/Frealfinobra de appData. La regla de createYearColumns es siempre
-            //   sSubFijo = "a" + (index + 1), iterando desde _iYearStart.
+        
             if (Object.keys(oMap).length === 0 && oController._iYearStart && oController._iYearEnd) {
                 let iIdx = 0;
                 for (let iY = oController._iYearStart; iY <= oController._iYearEnd; iY++) {
@@ -11838,13 +11887,7 @@ onManageVariants: function () {
             return oMap;
         },
 
-        /**
-         *    Aplanado recursivo del árbol del modelo del capítulo en filas planas para el sheet.
-         *   Cada fila combina los valores estáticos (resueltos via _resolveCellValue) + los valores
-         *   mensuales (resueltos buscando "Val0<MM><subfijo>" en el nodo, con el subfijo del año
-         *   correspondiente). Se omiten las filas técnicas auxiliares del UI (mismas reglas que la
-         *   Vista del capítulo: __isHeader, __isSinProveedor, __isAgrupadorBlock, __isAgrupadorTotal).
-         */
+      
         _flattenPlantillaRows: function (oController, aNodes, aStaticPaths, aMonths, oYearToSubfijo, aRowsOut, aCabeceraIndexesOut, aDesgloseIndexesOut) {
             if (!Array.isArray(aNodes)) {
                 return;
@@ -11878,7 +11921,7 @@ onManageVariants: function () {
                     for (let m = 0; m < aMonths.length; m++) {
                         const oM = aMonths[m];
                         const sSub = oYearToSubfijo[oM.year];
-                        if (!sSub) { aRow.push(""); continue; }
+                       if (!sSub) { aRow.push(0); continue; }
                         let sFieldName;
                         if (oM.isYearTotal === true) {
                             sFieldName = "Total" + sSub;
@@ -11886,7 +11929,8 @@ onManageVariants: function () {
                             const sMonthPad = (oM.month < 10 ? "0" : "") + oM.month;
                             sFieldName = "Val0" + sMonthPad + sSub;
                         }
-                        aRow.push(oController._coerceNumericValue(oNode[sFieldName]));
+                           const vCellValue = oController._coerceNumericValue(oNode[sFieldName]);
+                        aRow.push(vCellValue === "" ? 0 : vCellValue);
                     }
                     //    
                     const iAddedIdx = aRowsOut.length;
@@ -12044,9 +12088,317 @@ onManageVariants: function () {
             const fnPad = function (v) { return String(v).padStart(2, "0"); };
             const sDate = oNow.getFullYear() + fnPad(oNow.getMonth() + 1) + fnPad(oNow.getDate());
             const sTime = fnPad(oNow.getHours()) + fnPad(oNow.getMinutes());
-            //   Se traduce el prefijo "Plantilla_carga" del nombre de archivo via i18n.  
+            //   Se traduce el prefijo "Plantilla_carga" del nombre de archivo via i18n.
             return this.getTranslatedText("exportFileNamePlantilla") + "_" + sDate + "_" + sTime + ".xlsx";
-            //  
+            //
         },
+
+        /**
+         * Se engancha el evento nativo "contextmenu" al contenedor DOM de la
+         * TreeTable indicada.  Debe llamarse desde onAfterRendering de cada
+         * controlador hijo, una sola vez por tabla.
+         *
+         * @param {string} sTableId - ID local de la TreeTable (p.ej. "TreeTableBasic")
+         */
+        _attachContextMenuToTable: function (sTableId) {
+            var oTable = this.byId(sTableId);
+            if (!oTable) {
+                return;
+            }
+
+            // Se evita registrar el listener más de una vez si el controlador
+            // llama a _attachContextMenuToTable varias veces (p.ej. en re-renders).
+            if (oTable._ctxMenuListenerAttached) {
+                return;
+            }
+            oTable._ctxMenuListenerAttached = true;
+
+            var oController = this;
+
+            oTable.addEventDelegate({
+                onAfterRendering: function () {
+                    var oDomRef = oTable.getDomRef();
+                    if (!oDomRef || oDomRef._ctxMenuHandlerBound) {
+                        return;
+                    }
+                    oDomRef._ctxMenuHandlerBound = true;
+
+                    oDomRef.addEventListener("contextmenu", function (oNativeEvent) {
+                        // Se suprime el menú contextual nativo del navegador.
+                        oNativeEvent.preventDefault();
+                        oNativeEvent.stopPropagation();
+
+                        // Se localiza el <tr> de la fila más cercano al punto de clic.
+                        var oRowTr = oNativeEvent.target.closest("tr[data-sap-ui-rowindex]");
+                        if (!oRowTr) {
+                            // El clic fue sobre la cabecera u otra zona sin fila de datos.
+                            return;
+                        }
+
+                        // Se obtiene el índice visual (0-based dentro del viewport).
+                        var iDomRowIndex = parseInt(oRowTr.getAttribute("data-sap-ui-rowindex"), 10);
+                        if (isNaN(iDomRowIndex)) {
+                            return;
+                        }
+
+                        // Se convierte a índice absoluto sumando el primer row visible.
+                        var iAbsoluteIndex = oTable.getFirstVisibleRow() + iDomRowIndex;
+
+                        // Se obtiene el binding context independientemente del nombre del modelo.
+                        var oRowContext = oTable.getContextByIndex(iAbsoluteIndex);
+                        if (!oRowContext) {
+                            return;
+                        }
+
+                        // Se almacena el contexto y el índice para uso de los handlers de acción.
+                        oController._oContextMenuRecord = oRowContext;
+                        oController._oContextMenuRowIndex = iAbsoluteIndex;
+
+                        // Se abre el menú en la posición del cursor.
+                        oController._openContextMenu(oNativeEvent.clientX, oNativeEvent.clientY);
+                    });
+                }
+            });
+        },
+
+        /**
+         * Se carga el fragmento ContextMenu (sap.m.Menu) la primera vez y se abre
+         * posicionado en las coordenadas indicadas del cursor.
+         *
+         * @param {number} iClientX - Coordenada X del cursor en el viewport
+         * @param {number} iClientY - Coordenada Y del cursor en el viewport
+         */
+        _openContextMenu: function (iClientX, iClientY) {
+            var oView = this.getView();
+            var oController = this;
+
+            if (!this._pContextMenu) {
+                this._pContextMenu = Fragment.load({
+                    id: oView.getId() + "--ctxMenu",
+                    name: "zindirect_costs.fragments.ContextMenu",
+                    controller: this
+                }).then(function (oMenu) {
+                    oView.addDependent(oMenu);
+                    return oMenu;
+                });
+            }
+
+            this._pContextMenu.then(function (oMenu) {
+                // Se crea un elemento DOM invisible para anclar el menú a la posición del cursor.
+                var oAnchor = document.getElementById("__ctxMenuAnchor");
+                if (!oAnchor) {
+                    oAnchor = document.createElement("div");
+                    oAnchor.id = "__ctxMenuAnchor";
+                    oAnchor.style.position = "fixed";
+                    oAnchor.style.width = "1px";
+                    oAnchor.style.height = "1px";
+                    oAnchor.style.pointerEvents = "none";
+                    document.body.appendChild(oAnchor);
+                }
+                oAnchor.style.left = iClientX + "px";
+                oAnchor.style.top = iClientY + "px";
+
+                oMenu.openBy(oAnchor);
+            });
+        },
+
+        /**
+         * Se gestiona la selección de una entrada del menú contextual.
+         * Cada clave de ítem dispara la acción correspondiente.
+         *
+         * @param {sap.ui.base.Event} oEvent - Evento itemSelected del sap.m.Menu
+         */
+        onContextMenuItemSelected: function (oEvent) {
+            var oItem = oEvent.getParameter("item");
+            if (!oItem) return;
+            var sKey = oItem.getKey();
+
+            switch (sKey) {
+                case "addOperation":
+                    this._onCtxMenuAddOperation();
+                    break;
+                case "addDesglose":
+                    this._onCtxMenuAddDesglose();
+                    break;
+                case "delete":
+                    this._onCtxMenuDelete();
+                    break;
+                case "upload":
+                    this._onCtxMenuUpload();
+                    break;
+                case "distribute":
+                    this._onCtxMenuDistribute();
+                    break;
+                default:
+                    break;
+            }
+        },
+
+       
+        _attachKeyboardShortcuts: function () {
+            if (this._keyboardShortcutsAttached) {
+                return;
+            }
+            this._keyboardShortcutsAttached = true;
+
+            var oController = this;
+
+            this._keyboardShortcutHandler = function (oEvent) {
+                // Solo se procesan combinaciones con Alt sin Ctrl ni Meta (Cmd en Mac).
+                if (!oEvent.altKey || oEvent.ctrlKey || oEvent.metaKey) {
+                    return;
+                }
+
+                var sKey = oEvent.key;
+
+                // Alt + "+" o Alt + "Add" (teclado numérico) → Añadir
+                if (sKey === "+" || sKey === "Add") {
+                    // Se evita que el navegador procese el "+" (p.ej. zoom)
+                    oEvent.preventDefault();
+                    if (typeof oController.onAddPress === "function") {
+                        oController.onAddPress({ getSource: function () { return null; } });
+                    }
+                    return;
+                }
+
+                // Alt + "-" o Alt + "Subtract" (teclado numérico) → Borrar
+                if (sKey === "-" || sKey === "Subtract") {
+                    oEvent.preventDefault();
+                    if (typeof oController.onDeletePress === "function") {
+                        oController.onDeletePress();
+                    }
+                    return;
+                }
+
+                // Alt + "s" / Alt + "S" → Guardar (delega en Main.onSave)
+                if (sKey === "s" || sKey === "S") {
+                    oEvent.preventDefault();
+                    var oMain = oController._getMainController();
+                    if (oMain && typeof oMain.onSave === "function") {
+                        oMain.onSave();
+                    }
+                    return;
+                }
+            };
+
+            document.addEventListener("keydown", this._keyboardShortcutHandler, true);
+        },
+
+        /**
+         * Se elimina el listener de atajos de teclado. Se invoca desde onExit para
+         * garantizar que no quedan listeners huérfanos al destruir la vista.
+         */
+        _detachKeyboardShortcuts: function () {
+            if (this._keyboardShortcutHandler) {
+                document.removeEventListener("keydown", this._keyboardShortcutHandler, true);
+                this._keyboardShortcutHandler = null;
+            }
+            this._keyboardShortcutsAttached = false;
+        },
+
+        /**
+         * Se libera el listener de atajos de teclado cuando la vista se destruye.
+         */
+        onExit: function () {
+            this._detachKeyboardShortcuts();
+            this._teardownBrowserCloseHandler();
+        },
+
+       
+        hasUnsavedChanges: function () {
+            return this._hasPendingChanges === true;
+        },
+
+      
+        _setupBrowserCloseHandler: function () {
+            if (this._browserCloseHandlerAttached) { return; }
+            this._browserCloseHandlerAttached = true;
+            this._boundBrowserClose = function (oEvent) {
+                if (this._hasPendingChanges === true) {
+                    oEvent.preventDefault();
+                    oEvent.returnValue = "";
+                    return "";
+                }
+            }.bind(this);
+            window.addEventListener("beforeunload", this._boundBrowserClose);
+        },
+
+        _teardownBrowserCloseHandler: function () {
+            if (this._boundBrowserClose) {
+                window.removeEventListener("beforeunload", this._boundBrowserClose);
+                this._boundBrowserClose = null;
+            }
+            this._browserCloseHandlerAttached = false;
+        },
+
+        /**
+         * Acción "Añadir operaciones": delega en onAddPress del controlador hijo si existe.
+         */
+        _onCtxMenuAddOperation: function () {
+            if (!this._oContextMenuRecord) return;
+            var oTable = this.getControlTable();
+            if (oTable && this._oContextMenuRowIndex !== undefined) {
+                oTable.setSelectedIndex(this._oContextMenuRowIndex);
+            }
+            if (typeof this.onAddPress === "function") {
+                this.onAddPress({ getSource: function () { return null; } });
+            }
+        },
+
+        /**
+         * Acción "Añadir desglose": delega en onAddDesglosePress del controlador hijo si existe,
+         * simulando el evento sobre la fila seleccionada del menú contextual.
+         */
+        _onCtxMenuAddDesglose: function () {
+            if (!this._oContextMenuRecord) return;
+            if (typeof this.onAddDesglosePress === "function") {
+                var oRecord = this._oContextMenuRecord;
+                this.onAddDesglosePress({
+                    getSource: function () {
+                        return {
+                            getBindingContext: function () { return oRecord; }
+                        };
+                    }
+                });
+            }
+        },
+
+        /**
+         * Acción "Borrar": selecciona la fila del contexto en la tabla y delega en onDeletePress.
+         */
+        _onCtxMenuDelete: function () {
+            if (!this._oContextMenuRecord) return;
+            var oTable = this.getControlTable();
+            if (oTable && this._oContextMenuRowIndex !== undefined) {
+                oTable.setSelectedIndex(this._oContextMenuRowIndex);
+            }
+            if (typeof this.onDeletePress === "function") {
+                this.onDeletePress();
+            }
+        },
+
+        /**
+         * Acción "Subir": delega en onProcessPress del controlador hijo si existe.
+         */
+        _onCtxMenuUpload: function () {
+            if (typeof this.onProcessPress === "function") {
+                this.onProcessPress();
+            }
+        },
+
+        /**
+         * Acción "Repartir": selecciona la fila del contexto y delega en onShortcutPress.
+         */
+        _onCtxMenuDistribute: function () {
+            if (!this._oContextMenuRecord) return;
+            var oTable = this.getControlTable();
+            if (oTable && this._oContextMenuRowIndex !== undefined) {
+                oTable.setSelectedIndex(this._oContextMenuRowIndex);
+            }
+            if (typeof this.onShortcutPress === "function") {
+                this.onShortcutPress();
+            }
+        },
+
     });
 });

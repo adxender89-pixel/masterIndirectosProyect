@@ -72,12 +72,37 @@
    Inputs y Etiquetas (Compact Mode)
    ========================================================================== */
 .sapUiSizeCompact .sapMInputBaseInner {
-    height: 1rem !important; 
+    height: 1rem !important;
     line-height: 1rem !important;
     font-size: 0.57rem !important;
-    
+
     margin-left: -1rem;
     box-sizing: border-box;
+}
+/*     
+     La regla compact de arriba reduce el font a 0.57rem (9.12px), altura a
+     1rem y deja margin-left:-1rem. Esto tiene sentido en las celdas de TreeTable
+     (espacio limitado), pero hace ilegibles los Input dentro de los popup.
+     Para los Input dentro de .sapMDialog se devuelve el font a 0.75rem (12px),
+     se ajusta la altura/line-height a 1.5rem para que el texto quepa dentro del
+     wrapper (que en compact mide ~19px), y se anula el margin negativo que
+     dejaba el contenido sangrado a la izquierda fuera de su contenedor.
+         */
+.sapMDialog .sapMInputBaseInner {
+    height: 1.5rem !important;
+    line-height: 1.5rem !important;
+    font-size: 0.75rem !important;
+    margin-left: 0 !important;
+}
+/*     El wrapper interno tiene height auto/19px que recortaba el texto al
+     subirlo: se le da un minimo de 1.625rem para que aloje el inner ampliado.   */
+.sapMDialog .sapMInputBaseContentWrapper {
+    min-height: 1.625rem !important;
+}
+/*     El outer sapMInputBase tambien en compact mide ~26px. Se le da un
+     poco mas para que el border quede holgado alrededor del wrapper ampliado.   */
+.sapMDialog .sapMInputBase {
+    min-height: 1.75rem !important;
 }
 /* padding: 0 0 0 0 !important; Simplificado top, right, bottom, left */
 .sapUiSizeCompact .noLabelOverride .sapMLabel {
@@ -196,10 +221,31 @@
 .sapUiTableCCnt .sapUiTableTableCell { padding: 0 !important; }
 
 /* Agrupación de fuentes pequeñas en tabla */
-.sapUiTable .sapMText, 
+.sapUiTable .sapMText,
 .sapUiTable .sapMLabel,
 .sapUiTable .sapMInputBaseInner {
-    font-size: 10px !important;
+    font-size: 11px !important;
+}
+
+/* ============================================================
+   LEGIBILIDAD DEL SEPARADOR DE MILES (.) EN CELDAS NUMERICAS
+   El dato y el separador son correctos (punto = miles). A 10px
+   el glifo del punto se renderizaba con tan pocos pixeles que el
+   antialiasing lo hacia parecer una coma, sobre todo pegado al
+   digito siguiente. NO se cambia el caracter (el parser de
+   DecimalesInput depende de que el separador siga siendo "."):
+   solo se mejora el render. letter-spacing da aire al punto para
+   que se lea como separador y no como coma; el peso 500 lo hace
+   un blob redondo nitido (la coma conserva su rabito y se
+   distingue). Scoped a inputs/textos numericos de la TreeTable.
+   ============================================================ */
+.sapUiTable .customYearInput .sapMInputBaseInner,
+.sapUiTable .flatCellInput .sapMInputBaseInner,
+.sapUiTable .sapUiTableDataCell .sapMText {
+    letter-spacing: 0.35px;
+    font-weight: 500;
+    font-feature-settings: "tnum" 1;
+    font-variant-numeric: tabular-nums;
 }
 
 .sapUiSizeCompact .sapUiTable .sapMInputBaseInner {
@@ -411,6 +457,14 @@
     margin-left: 0 !important; /*   sin margen izquierdo que desplace el contenido */
 }
 /* (FIN) */
+
+/*    padding-left uniforme para el campo Operacion destino de Externos (PepDest) tanto en estado editable como readonly/disabled. SAP por defecto pone padding ~0.625rem en inputs editables pero lo anula en readonly para que parezcan texto plano: en este campo eso dejaba los valores no editables (capitulo, subcapitulo, fila D, desglose) pegados al borde izquierdo de la celda mientras los editables si tenian aire. Se anyade aqui el padding sobre los tres estados para visualizar todas las filas con la misma sangria izquierda. La clase pepDestInput se aplica solo al Input PepDest del view de Externos, asi la regla no contagia a otros allowLetters/flatCellInput del proyecto */
+.sapUiTableCell .sapMInputBase.pepDestInput .sapMInputBaseInner,
+.sapUiTableCell .sapMInputBase.sapMInputBaseReadonly.pepDestInput .sapMInputBaseInner,
+.sapUiTableCell .sapMInputBase.sapMInputBaseDisabled.pepDestInput .sapMInputBaseInner {
+    padding-left: 0.5rem !important;
+}
+/*   */
 
 .flatCellInput .sapMInputBaseIconContainer,
 .sapUiTableCell .flatCellInput .sapMInputBaseIconContainer {
@@ -1357,6 +1411,15 @@ tr.rowVersionB .flatCellInput .sapMInputBaseInner {
     border-radius: 3px;
 }
 
+/* =====================================================================
+   PenPlan Negativo – texto en rojo cuando PenPlan < 0
+   ===================================================================== */
+.penPlanNegative input,
+.penPlanNegative.sapMInputBase input,
+.penPlanNegative.sapMInputBase .sapMInputBaseInner {
+    color: #cc0000 !important;
+}
+
 .placeholderLike input {
     font-weight: bold !important;
 }
@@ -2095,9 +2158,40 @@ button.sapFDynamicPageToggleHeaderIndicator {
          dejar libre el ancho exacto del sideActionToolbar (barra de iconos
          flotante anclada al borde derecho con right:0). Sin este offset el
          toolbar se solapa sobre la tabla del catalogo y tapa la columna Tarifa.
-         Override de .floatingSideBar { right: 0 } heredado de la clase base.   */
-    right: 2.5rem !important;
+         Override de .floatingSideBar { right: 0 } heredado de la clase base.
+         Debe coincidir con el width de .sideActionBar (2.75rem).   */
+    right: 2.75rem !important;
     /*     */
+}
+
+/*   Paneles laterales derechos genericos abiertos desde los iconos del
+     sideActionToolbar (fichero / hipervinculo). Mismo offset right:3rem que el
+     catalogo para no quedar tapados por la barra de iconos (3rem), y mismo
+     fondo/scroll defensivo. El contenido es placeholder hasta su implementacion. */
+.actionSidePanel {
+    overflow-y: auto;
+    overflow-x: hidden;
+    background-color: #ffffff;
+    right: 2.75rem !important;
+}
+
+/*   Barra de acciones lateral derecha (sideActionToolbar): se agrandan ligeramente
+     la barra y sus iconos respecto al tamano por defecto de los Button transparentes
+     de SAP. Se usa la clase propia .sideActionBar (no .floatingSideBar, que la
+     comparten los paneles de historial y catalogo) para no afectar a esos paneles. */
+.sideActionBar .sapMBtn {
+    margin: 0 !important;
+}
+.sideActionBar .sapMBtn .sapMBtnInner {
+    /*   El área del botón (zona de hover/resaltado) se mantiene ajustada al icono
+         para que al pasar el ratón el recuadro no abarque casi dos iconos. Antes
+         medía 2.75rem (mucho mayor que el icono de 1.25rem) y el hover se veía enorme. */
+    width: 1.9rem !important;
+    height: 1.9rem !important;
+    min-width: 1.9rem !important;
+}
+.sideActionBar .sapMBtn .sapUiIcon {
+    font-size: 1.25rem !important;
 }
 
 .catalogoPanelContent {

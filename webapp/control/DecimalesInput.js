@@ -14,6 +14,26 @@ sap.ui.define(["sap/m/Input"], function (Control) {
 				liveChange: {}
 			}
 		},
+		_oZeroDecimalsMap: {
+			"CL1": true, "CLP": true, "JPY": true, "KRW": true, "VND": true,
+			"ISK": true, "BIF": true, "DJF": true, "GNF": true, "KMF": true,
+			"RWF": true, "UGX": true, "VUV": true, "XAF": true, "XOF": true,
+			"XPF": true, "PYG": true
+		},
+		_getEffectiveDecimals: function () {
+			try {
+				var oAppData = this.getModel("appData");
+				var sWaers = oAppData ? oAppData.getProperty("/Waers") : null;
+				if (sWaers) {
+					var sKey = String(sWaers).toUpperCase().trim();
+					if (this._oZeroDecimalsMap[sKey] === true) return 0;
+				}
+			} catch (e) {
+				// se ignora y se cae al valor de la propiedad
+			}
+			return this.getProperty("decimalNumbers");
+		},
+
 
 		init: function () {
 
@@ -59,16 +79,16 @@ sap.ui.define(["sap/m/Input"], function (Control) {
 				if (isNaN(actualValue)) {
 					actualValue = 0;
 				}
-
+	var iEffDec = that._getEffectiveDecimals();
 				var numberFormat = sap.ui.core.format.NumberFormat.getFloatInstance({
 					groupingEnabled: true,
 					groupingSeparator: thousandSeparator,
 					decimalSeparator: decimalSeparator,
-					minFractionDigits: that.getProperty("decimalNumbers"),
-					maxFractionDigits: that.getProperty("decimalNumbers")
+						minFractionDigits: iEffDec,
+					maxFractionDigits: iEffDec
 				});
 
-				if (that.getProperty("decimalNumbers") != "0") {
+					if (iEffDec != 0) {
 					actualValue = numberFormat.format(actualValue);
 				}
 
@@ -176,12 +196,13 @@ sap.ui.define(["sap/m/Input"], function (Control) {
 						let currencyFormat = modelUser.CurrencyFormat;
 						let thousandSeparator = currencyFormat.charAt(0);
 						let decimalSeparator = currencyFormat.charAt(1);
+							var iEffDecOut = that._getEffectiveDecimals();
 						var numberFormat = sap.ui.core.format.NumberFormat.getFloatInstance({
 							groupingEnabled: true,
 							groupingSeparator: thousandSeparator,
 							decimalSeparator: decimalSeparator,
-							minFractionDigits: that.getProperty("decimalNumbers"),
-							maxFractionDigits: that.getProperty("decimalNumbers")
+							minFractionDigits: iEffDecOut,
+							maxFractionDigits: iEffDecOut
 						});
 						sCurrentValue = numberFormat.format(0);
 						that.setValue(sCurrentValue);

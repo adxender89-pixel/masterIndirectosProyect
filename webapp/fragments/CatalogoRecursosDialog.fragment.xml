@@ -1,6 +1,7 @@
 <core:FragmentDefinition
     xmlns="sap.m"
     xmlns:core="sap.ui.core"
+    xmlns:u="sap.ui.unified"
    >
     <Dialog
         id="catalogoRecursosDialog"
@@ -51,6 +52,24 @@
                         type="Transparent"
                         visible="{= ${catalogoRecursosModel>/activeKey} === 'obra' &amp;&amp; ${catalogoRecursosModel>/openedFromVH} !== true }"
                         press="onDeleteRecursoCatalogo" />
+
+                    <!--   Boton Importar: FileUploader en modo buttonOnly que sube un Excel/CSV
+                           y lo envia al backend (ImportCatalogoRecursosSet) replicando el flujo de
+                           "directos". Solo visible en la pestaña Obra y fuera del flujo value-help,
+                           igual que Añadir/Editar/Borrar. Los handlers (onCatalogoRecursosFileSelected /
+                           onCatalogoRecursosFileTypeMismatch) son compartidos con el panel lateral. -->
+                    <u:FileUploader
+                        id="catalogoRecursosFileUploader"
+                        buttonOnly="true"
+                        buttonText="{i18n>catalogoRecursosImport}"
+                        tooltip="{i18n>catalogoRecursosImport}"
+                        style="Transparent"
+                        fileType="xlsx,xls,csv"
+                        sameFilenameAllowed="true"
+                        maximumFileSize="10"
+                        visible="{= ${catalogoRecursosModel>/activeKey} === 'obra' &amp;&amp; ${catalogoRecursosModel>/openedFromVH} !== true }"
+                        change="onCatalogoRecursosFileSelected"
+                        typeMissmatch="onCatalogoRecursosFileTypeMismatch" />
 
                 </Toolbar>
                 <!--   -->

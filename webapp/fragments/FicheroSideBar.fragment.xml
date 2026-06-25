@@ -1,0 +1,33 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+    <!--     Panel lateral derecho de "Ver/Adjuntar fichero". Replica el patron
+         visual del Catalogo de recursos (CatalogoRecursosSideBar) para que el
+         icono de adjuntar fichero abra una pantalla a la derecha, igual que el
+         selector de recursos. El cuerpo es por ahora un placeholder: la
+         funcionalidad de gestion de adjuntos se implementara mas adelante.   -->
+    <VBox height="100%" class="catalogoPanelContent">
+        <!--   Cabecera: titulo a la izquierda + boton X de cierre a la derecha   -->
+        <HBox
+            class="catalogoPanelHeader"
+            justifyContent="SpaceBetween"
+            alignItems="Center"
+        >
+            <Title
+                text="{i18n>actionAdjuntarFichero}"
+                level="H4"
+                class="catalogoPanelTitle"
+            />
+            <Button
+                icon="sap-icon://decline"
+                tooltip="{i18n>HISTORY_CERRAR}"
+                press="onFicheroSideBarClose"
+                type="Transparent"
+                class="catalogoPanelCloseBtn"
+            />
+        </HBox>
+        <!--   Cuerpo placeholder hasta que se implemente la gestion de adjuntos   -->
+        <VBox class="sapUiMediumMargin" alignItems="Center" justifyContent="Center">
+            <core:Icon src="sap-icon://attachment" size="2.5rem" color="#a0a0a0" />
+            <Text text="{i18n>workInPregress}" textAlign="Center" class="sapUiSmallMarginTop" />
+        </VBox>
+    </VBox>
+</core:FragmentDefinition>

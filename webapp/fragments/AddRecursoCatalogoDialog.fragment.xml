@@ -13,15 +13,20 @@
             <VBox class="sapUiMediumMargin">
                 <!--   cada Input usa valueState dinamico ligado al propio modelo del popup (addRecursoModel) para marcar en rojo los campos vacios; la validacion final corre en el handler de Guardar para no permitir el envio al backend con campos en blanco   -->
                 <Label text="{i18n>catalogoRecursosIdRecurso}" labelFor="addRecursoCatalogoIdInput" required="true" />
-                <!--   IdRecurso es parte de la clave de IndCatalogo (Mandt+Version+Prctr+IdRecurso); en modo edit se bloquea para impedir que el usuario rompa la integridad referencial cambiando la clave   -->
+                <!--      Se desbloquea IdRecurso tambien en modo edit a peticion del usuario.
+                       Aunque IdRecurso forma parte de la clave de IndCatalogo (Mandt+Version+Prctr+IdRecurso),
+                       el usuario asume el cambio: si modifica el ID al editar, el flujo de guardado
+                       enviara la fila con la nueva clave y el backend respondera segun su propia logica
+                       de integridad referencial. Antes el atributo "editable" estaba ligado a
+                       /mode !== 'edit', bloqueando el Input en modificacion.   -->
                 <Input
                     id="addRecursoCatalogoIdInput"
                     value="{addRecursoModel>/IdRecurso}"
                     valueState="{= !${addRecursoModel>/IdRecurso} ? 'Error' : 'None' }"
                     valueStateText="{i18n>catalogoRecursosCampoRequerido}"
-                    editable="{= ${addRecursoModel>/mode} !== 'edit' }"
                     width="100%"
                     class="sapUiSmallMarginBottom" />
+                <!--       -->
                 <!--   -->
 
                 <Label text="{i18n>catalogoRecursosPuesto}" labelFor="addRecursoCatalogoPuestoInput" required="true" />

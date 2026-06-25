@@ -235,20 +235,56 @@
                     </items>
                 </VBox>
                 <!--     -->
+                <!--     Panel lateral derecho de "Ver/Adjuntar fichero". Hermano del
+                     catalogoRecursosSideBar: mismo patron floatingSideBar para anclarse
+                     al borde derecho sobre el contenido. Se abre con el icono de
+                     adjuntar fichero del sideActionToolbar. Contenido placeholder por ahora.   -->
+                <VBox
+                    id="ficheroSideBar"
+                    visible="false"
+                    width="30%"
+                    height="100%"
+                    class="sapUiNoContentPadding floatingSideBar actionSidePanel"
+                >
+                    <items>
+                        <core:Fragment
+                            fragmentName="zindirect_costs.fragments.FicheroSideBar"
+                            type="XML"
+                        />
+                    </items>
+                </VBox>
+                <!--     Panel lateral derecho de "Ver/Adjuntar hipervinculo". Mismo patron.   -->
+                <VBox
+                    id="hipervinculoSideBar"
+                    visible="false"
+                    width="30%"
+                    height="100%"
+                    class="sapUiNoContentPadding floatingSideBar actionSidePanel"
+                >
+                    <items>
+                        <core:Fragment
+                            fragmentName="zindirect_costs.fragments.HipervinculoSideBar"
+                            type="XML"
+                        />
+                    </items>
+                </VBox>
+                <!--     -->
                 <!--   Se reemplaza la barra de acciones lateral por los botones funcionales descritos en el spec -->
                 <!--   Se aplica floatingSideBar para que el sidebar se sobreponga al contenido anclado al borde derecho sin desplazar la zona principal ni requerir scroll horizontal -->
                 <VBox
                     id="sideActionToolbar"
                     visible="false"
-                    width="2.5rem"
+                    width="2.75rem"
                     height="100%"
-                    class="sapUiNoContentPadding floatingSideBar"
+                    class="sapUiNoContentPadding floatingSideBar sideActionBar"
                 >
                     <items>
-                        <!--   Se muestra el diálogo informativo de atajos de teclado (Alt+ +, Alt+ -, Alt+ S) -->
+                        <!--   Icono de información (i): los atajos de teclado (Alt+ +, Alt+ -, Alt+ S)
+                               se muestran directamente en el tooltip al pasar el ratón. Se mantiene el
+                               press para abrir además el popover detallado al pulsar. -->
                         <Button
-                            icon="sap-icon://keyboard-and-mouse"
-                            tooltip="{i18n>actionShortcuts}"
+                            icon="sap-icon://message-information"
+                            tooltip="{i18n>shortcutsTooltip}"
                             press="onShowShortcuts"
                             type="Transparent"
                         />

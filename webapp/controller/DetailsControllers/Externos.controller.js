@@ -75,7 +75,9 @@ sap.ui.define([
                                 srcControl: oInput,
                                 keyCode: iKeyCode,
                                 preventDefault: function () { oNativeEvent.preventDefault(); },
-                                stopImmediatePropagation: function () { oNativeEvent.stopImmediatePropagation(); }
+                                stopImmediatePropagation: function () { oNativeEvent.stopImmediatePropagation(); },
+                                // (INICIO MV) Se anyade stopPropagation al evento sintetico para que BaseController._onInputKeyDown pueda frenar la propagacion ascendente al TreeTable. Sin esta funcion el handler lanzaba TypeError y rompia toda la navegacion con flechas tras el ultimo cambio de BaseController. (FIN MV)
+                                stopPropagation: function () { oNativeEvent.stopPropagation(); }
                             });
                         }
                     }.bind(this));
@@ -150,6 +152,8 @@ sap.ui.define([
                     this._attachHeaderToggleListener();
                 }.bind(this)
             });
+
+            this._setupBrowserCloseHandler();
         },
 
 
@@ -216,6 +220,12 @@ sap.ui.define([
                         "NavSelProyecto": [this.getGlobalModel("appData").getData().tramo],
                         "NavChanges": [],
                         "NavDatosIndirectos": [],
+                        //      Se declara NavDatosIndirectosDesglo vacio en el body para que
+                        //   el gateway popule la nav inline en la respuesta. Sin esta linea el backend
+                        //   la devuelve como {__deferred:{uri:...}} y al seguir la URI responde
+                        //   501 Method 'DATOSINDIRECTO01_GET_ENTITYSET' not implemented. Misma
+                        //   convencion ya usada para NavDatosIndirectos / NavKpisIndirectos.  
+                        "NavDatosIndirectosDesglo": [],
                          "NavKpisIndirectos":[],
                         //   Se envía en el body el capítulo ya bloqueado por el usuario para evitar
                         //      que el backend lo intente bloquear de nuevo y dispare el error de
@@ -278,7 +288,21 @@ sap.ui.define([
                 this.getView().setModel(oModeloBloqueo, "modeloBloqueo");
 
                 this._setWaersFromData(response.NavDatosIndirectos.results); //   captura la moneda de la obra para formatDecimales
+                //     
+                //   Se almacena en el controller la nueva nav NavDatosIndirectosDesglo que el
+                //   backend agrega a CambioPestIndirectosSet. Por ahora se persiste tal cual y
+                //   se registra en consola para diagnostico; el merge en el arbol de Externos
+                //   se hara cuando Angel confirme el formato exacto del payload de respuesta.
+                this._aDesgloseFromBackend = (response.NavDatosIndirectosDesglo && response.NavDatosIndirectosDesglo.results) || [];
+                //    
                 const tree = this.buildTree(response.NavDatosIndirectos.results);
+                //      Se mergean las filas del desglose (NavDatosIndirectosDesglo)
+                //   en el arbol recien construido. Cada fila se engancha como hija del
+                //   capitulo padre (match por Psphi+Version+Pspnr) con los flags
+                //   __isCustom/__isNieto/__isEditable que el XML usa para renderizar el
+                //   bloque editable. Sin esta llamada las filas existian en memoria
+                //   (this._aDesgloseFromBackend) pero no aparecian en la TreeTable.  
+                this._mergeBackendDesgloseIntoTree(tree, this._aDesgloseFromBackend);
                 //   Si el modelo ya existe se actualizan sus datos in-place con setData en lugar de instanciar un JSONModel nuevo y reemplazarlo con setModel. Reemplazar el modelo en cambios de pestana provocaba que las columnas dinamicas (anyo/mes/Resto) perdieran su contexto de binding momentaneamente y que las columnas estaticas como %Tasa, Operacion destino o Pend a planificar acabaran reordenadas al final de la tabla. Manteniendo la misma instancia las bindings se preservan y solo refrescan los datos.
                 var oExternosModel = this.getView().getModel("externosModel");
                 if (oExternosModel) {
@@ -315,6 +339,8 @@ sap.ui.define([
                     isSubcapitulo: isS,
                     isCapitulo: isC,
                     isVacio: isDesglose,
+                    // (INICIO MV) Se marca isLevel3 en las filas PEP (Estructura "O") por simetria con Corrientes y para que la navegacion con flechas reconozca correctamente las filas operacion. (FIN MV)
+                    isLevel3: isO,
 
                    editPhPspnr: false,
                     editPost1: false,
@@ -394,6 +420,9 @@ sap.ui.define([
             //      para evitar el error cuando TreeTableExternos todavia no esta en el DOM.
             this._calculateDynamicRows();
             this._attachHeaderToggleListener();
+
+            // Menú contextual con clic derecho sobre filas
+            this._attachContextMenuToTable("TreeTableExternos");
         },
 
         /**
@@ -454,32 +483,9 @@ sap.ui.define([
             var oSelectedRow = aSelectedRows[0];
             if (!oSelectedRow) return;
 
-            // Validacion 3: la fila "D" (OEO) no es valida.
-            if (sPhPspnr === "D") {
-                this.createMessageDialog({
-                    title: this.getTranslatedText("ERROR"),
-                    textAccept: this.getTranslatedText("ACEPTAR"),
-                    messages: [{
-                        text: this.getTranslatedText("ERROR_NO_ANADIR_OEO"),
-                        type: "Error"
-                    }]
-                });
-                return;
-            }
+            //    se delegan al backend las validaciones de fila OEO ("D"), de operacion de nivel 3 y de operacion con datos ejecutados (AmoEje > 0 y no subcapitulo). El servicio rechaza esas combinaciones con su propio mensaje y duplicarlas en cliente generaba mantenimiento adicional cada vez que cambiaba la regla de negocio. Se mantiene en local unicamente el bloqueo por desgloses preexistentes porque deriva del estado del modelo cargado y permite ahorrar un viaje innecesario al backend  
 
-            // Validacion 4: nivel 3 (desglose) no se puede seleccionar.
             var iLevel = this._getOperationLevel(sPhPspnr);
-            if (iLevel === 3) {
-                this.createMessageDialog({
-                    title: this.getTranslatedText("ERROR"),
-                    textAccept: this.getTranslatedText("ACEPTAR"),
-                    messages: [{
-                        text: this.getTranslatedText("ERROR_NO_ANADIR_NIVEL3"),
-                        type: "Error"
-                    }]
-                });
-                return;
-            }
 
             //   Recuperar el contexto para pasarlo a los helpers (mismo que se usa
             // para localizar la fila en el arbol al insertar children).
@@ -509,19 +515,6 @@ sap.ui.define([
                         textAccept: this.getTranslatedText("ACEPTAR"),
                         messages: [{
                             text: this.getTranslatedText("ERROR_NO_ANADIR_CON_DESGLOSES"),
-                            type: "Error"
-                        }]
-                    });
-                    return;
-                }
-                // Validacion 6: no se puede si tiene importes ejecutados.
-                var fAmoEje = parseFloat(oSelectedRow.AmoEje) || 0;
-                if (fAmoEje > 0) {
-                    this.createMessageDialog({
-                        title: this.getTranslatedText("ERROR"),
-                        textAccept: this.getTranslatedText("ACEPTAR"),
-                        messages: [{
-                            text: this.getTranslatedText("ERROR_NO_ANADIR_CON_EJECUTADO"),
                             type: "Error"
                         }]
                     });
@@ -668,7 +661,17 @@ sap.ui.define([
             }.bind(this), 1000);
         },
 
-        /**NO SE ESTA USANDO
+        /**
+         * Limpia los event listeners al destruir el controlador
+         */
+        onExit: function () {
+            this._teardownBrowserCloseHandler();
+            if (this._boundResizeHandler) {
+                $(window).off("resize", this._boundResizeHandler);
+            }
+        },
+
+        /**NO SE ESTA USANDO (referencia histórica)
          * Se gestiona el evento de cierre del navegador para advertir sobre cambios sin guardar.
         
         onBrowserClose: function (oEvent) {

@@ -1,4 +1,4 @@
-<mvc:View
+﻿<mvc:View
     controllerName="zindirect_costs.controller.DetailsControllers.Corrientes"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns:core="sap.ui.core"
@@ -199,12 +199,12 @@
                                                     />
                                                     <Label
                                                         text="{
-                                                            path: 'dashboardModel>/NavMasterLt/0/Oeo',
-                                                            type: 'sap.ui.model.type.Float',
-                                                            formatOptions: {
-                                                                decimals: 2,
-                                                                groupingEnabled: true
-                                                            }
+                                                            parts: [
+                                                                'dashboardModel>/NavMasterLt/0/Oeo',
+                                                                'dashboardModel>/decimales',
+                                                                'appData>/userData/CurrencyFormat'
+                                                            ],
+                                                            formatter: '.formatDecimales'
                                                         }"
                                                         class="sapUiMediumMarginEnd"
                                                     />
@@ -311,11 +311,21 @@
                                                             width="100%"
                                                             class="fullWidthHeader"
                                                         >
-                                                            <Label
-                                                                text="{i18n>operacion}"
-                                                                class="titleGrande"
-                                                                design="Bold"
-                                                            />
+                                                            <HBox alignItems="Center" renderType="Bare" class="fullWidthHeader">
+                                                                <Button
+                                                                    id="btnExpandCollapseAllCorrientes"
+                                                                    icon="sap-icon://expand-group"
+                                                                    tooltip="{i18n>expandirTodo}"
+                                                                    press="onToggleExpandCollapseAll"
+                                                                    type="Transparent"
+                                                                    class="sapUiTinyMarginEnd"
+                                                                />
+                                                                <Label
+                                                                    text="{i18n>operacion}"
+                                                                    class="titleGrande"
+                                                                    design="Bold"
+                                                                />
+                                                            </HBox>
                                                             <VBox
                                                                 renderType="Bare"
                                                                 visible="{ui>/showStickyParent}"
@@ -648,6 +658,7 @@
                                                             />
                                                             <!--   Se sustituye Post1 por DESCRIP en la fila editable del desglose -->
                                                             <!--   Se transforma el Input de DESCRIP en ayuda de busqueda (Catalogo de Recursos): permite escribir a mano y ademas abrir el selector con el boton -->
+                                                            <!--     change=onRowInputChange anyadido para que la edicion manual de DESCRIP en el desglose dispare GuardarTempIndirDesgloSet; antes solo el value-help abria el catalogo y la edicion libre no llegaba al backend.   -->
                                                             <Input
                                                                 value="{corrientesModel>DESCRIP}"
                                                                 class="sapUiSizeCompact allowLetters descripVHInput"
@@ -655,6 +666,7 @@
                                                                 textAlign="Center"
                                                                 showValueHelp="true"
                                                                 valueHelpRequest=".onDescripInputValueHelpRequest"
+                                                                change=".onRowInputChange"
                                                                 visible="{= ${corrientesModel>__isEditable} === true }"
                                                             />
                                                             <!--   -->
@@ -909,12 +921,22 @@
                                                                 textAlign="Center"
                                                                 visible="{= ${corrientesModel>__isSinProveedor} === true }"
                                                             />
-                                                            <Input
-                                                                value="{corrientesModel>AmoEjeAjus}"
-                                                                class="sapUiSizeCompact"
-                                                                editable="true"
+                                                            <!--     Se sustituye <Input> por <vn:DecimalesInput> en la celda editable del desglose para que aplique el formatter de moneda (formatDecimales) y no muestre 5 ceros decimales tras un valor entero. Mismo patron que las filas padre.   -->
+                                                            <vn:DecimalesInput
                                                                 width="100%"
+                                                                decimalNumbers="{dashboardModel>/decimales}"
                                                                 textAlign="Center"
+                                                                editable="true"
+                                                                value="{
+                                                                    parts: [
+                                                                        'corrientesModel>AmoEjeAjus',
+                                                                        'dashboardModel>/decimales',
+                                                                        'appData>/userData/CurrencyFormat'
+                                                                    ],
+                                                                    formatter: '.formatDecimales'
+                                                                }"
+                                                                class="sapUiSizeCompact"
+                                                                change=".onRowInputChange"
                                                                 visible="{= ${corrientesModel>__isEditable} === true }"
                                                             />
                                                         </VBox>
@@ -1038,11 +1060,21 @@
                                                                 textAlign="Center"
                                                                 visible="{= ${corrientesModel>__isSinProveedor} === true }"
                                                             />
-                                                            <Input
-                                                                value="{corrientesModel>AmoEjeReal}"
-                                                                class="sapUiSizeCompact"
+                                                            <!--     <Input> -> <vn:DecimalesInput> en la celda editable del desglose para evitar 5 ceros decimales. Mismo formatter de moneda que las filas padre.   -->
+                                                            <vn:DecimalesInput
                                                                 width="100%"
+                                                                decimalNumbers="{dashboardModel>/decimales}"
                                                                 textAlign="Center"
+                                                                value="{
+                                                                    parts: [
+                                                                        'corrientesModel>AmoEjeReal',
+                                                                        'dashboardModel>/decimales',
+                                                                        'appData>/userData/CurrencyFormat'
+                                                                    ],
+                                                                    formatter: '.formatDecimales'
+                                                                }"
+                                                                class="sapUiSizeCompact"
+                                                                change=".onRowInputChange"
                                                                 visible="{= ${corrientesModel>__isEditable} === true }"
                                                             />
                                                         </VBox>
@@ -1166,13 +1198,26 @@
                                                                 textAlign="Center"
                                                                 visible="{= ${corrientesModel>__isSinProveedor} === true }"
                                                             />
-                                                            <Input
-                                                                value="{corrientesModel>AmoPen}"
-                                                                class="flatCellInput"
+                                                            <!--    se bloquea la edicion del importe Pendiente (AmoPen) del desglose cuando la fila pertenece a las operaciones I.003.031 / I.003.032 / I.003.033 reutilizando el flag __isPersonaPuesto que BaseController ya propaga al header, al main editable y a los nietos del bloque (_createEmptyEditableRow / _cloneEditableRow); de este modo el bloqueo cubre tanto el bloque proveedor como el bloque agrupador sin necesidad de inspeccionar PhPspnr en el binding -->
+                                                            <!--     <Input> -> <vn:DecimalesInput> en la celda editable del desglose para evitar 5 ceros decimales. Mismo formatter de moneda que las filas padre. Se conserva la condicion editable=__isPersonaPuesto.   -->
+                                                            <vn:DecimalesInput
                                                                 width="100%"
+                                                                decimalNumbers="{dashboardModel>/decimales}"
                                                                 textAlign="Center"
+                                                                editable="{= ${corrientesModel>__isPersonaPuesto} !== true }"
+                                                                value="{
+                                                                    parts: [
+                                                                        'corrientesModel>AmoPen',
+                                                                        'dashboardModel>/decimales',
+                                                                        'appData>/userData/CurrencyFormat'
+                                                                    ],
+                                                                    formatter: '.formatDecimales'
+                                                                }"
+                                                                class="flatCellInput"
+                                                                change=".onRowInputChange"
                                                                 visible="{= ${corrientesModel>__isEditable} === true }"
                                                             />
+                                                            <!--   -->
                                                         </VBox>
                                                     </t:template>
                                                 </t:Column>
@@ -1294,11 +1339,21 @@
                                                                 textAlign="Center"
                                                                 visible="{= ${corrientesModel>__isSinProveedor} === true }"
                                                             />
-                                                            <Input
-                                                                value="{corrientesModel>AmoTot}"
-                                                                class="flatCellInput"
+                                                            <!--     <Input> -> <vn:DecimalesInput> en la celda editable del desglose para evitar 5 ceros decimales. Mismo formatter de moneda que las filas padre.   -->
+                                                            <vn:DecimalesInput
                                                                 width="100%"
+                                                                decimalNumbers="{dashboardModel>/decimales}"
                                                                 textAlign="Center"
+                                                                value="{
+                                                                    parts: [
+                                                                        'corrientesModel>AmoTot',
+                                                                        'dashboardModel>/decimales',
+                                                                        'appData>/userData/CurrencyFormat'
+                                                                    ],
+                                                                    formatter: '.formatDecimales'
+                                                                }"
+                                                                class="flatCellInput"
+                                                                change=".onRowInputChange"
                                                                 visible="{= ${corrientesModel>__isEditable} === true }"
                                                             />
                                                         </VBox>
@@ -1599,8 +1654,9 @@
                                                                     width="100%"
                                                                     textAlign="Begin"
                                                                 />
+                                                                <!--     Se reemplaza el binding __hasProveedor (flag que nunca se llegaba a setear: aparecia el "+" en cualquier fila editable, tanto vacia como con proveedor) por una expresion ligada al campo Proveedor: el boton "+" sale solo cuando la celda tiene un valor real. Asi se unifica el comportamiento de las filas manuales y las filas backend (que nacen con Proveedor="").   -->
                                                                 <Button
-                                                                    visible="{corrientesModel>__hasProveedor}"
+                                                                    visible="{= !!${corrientesModel>Proveedor} }"
                                                                     icon="sap-icon://add"
                                                                     type="Transparent"
                                                                     press="onProveedorRowAddPress"
@@ -1649,11 +1705,20 @@
                                                                     &amp;&amp; ${corrientesModel>__isHeader} !== true
                                                                     &amp;&amp; ${corrientesModel>__isEditable} !== true }"
                                                             />
-                                                            <Input
-                                                                value="{corrientesModel>FEE}"
-                                                                class="flatCellInput"
+                                                            <!--     <Input> -> <vn:DecimalesInput> en la celda editable del desglose para evitar 5 ceros decimales. Fee es un Decimal[20,5] y el formatter de moneda lo limita a la cantidad de decimales del modelo dashboard.   -->
+                                                            <vn:DecimalesInput
                                                                 width="100%"
+                                                                decimalNumbers="{dashboardModel>/decimales}"
                                                                 textAlign="Center"
+                                                                value="{
+                                                                    parts: [
+                                                                        'corrientesModel>FEE',
+                                                                        'dashboardModel>/decimales',
+                                                                        'appData>/userData/CurrencyFormat'
+                                                                    ],
+                                                                    formatter: '.formatDecimales'
+                                                                }"
+                                                                class="flatCellInput"
                                                                 change=".onRowInputChange"
                                                                 visible="{= ${corrientesModel>__isEditable} === true }"
                                                             />
@@ -1912,28 +1977,44 @@
                                                                 visible="{= ${corrientesModel>__isHeader} === true }"
                                                             />
                                                             <!--   Se sustituye months por NMES en la celda del bloque custom. -->
-                                                            <!--    NMES editable tambien en las filas custom no editables del desglose (proveedor / sin proveedor / nieto) cuando no estan en modo header ni editable principal. Antes era solo lectura; el usuario pide poder corregir el numero de meses directamente en la celda. Se anade change=".onRowInputChange" para que el cambio se propague al backend por el flujo estandar   -->
-                                                            <Input
-                                                                value="{corrientesModel>NMES}"
-                                                                editable="true"
-                                                                change=".onRowInputChange"
-                                                                class="flatCellInput"
+                                                            <!--     <Input> -> <vn:DecimalesInput> tambien para los nietos/sin-proveedor.   -->
+                                                            <vn:DecimalesInput
                                                                 width="100%"
+                                                                decimalNumbers="{dashboardModel>/decimales}"
                                                                 textAlign="Center"
+                                                                editable="true"
+                                                                value="{
+                                                                    parts: [
+                                                                        'corrientesModel>NMES',
+                                                                        'dashboardModel>/decimales',
+                                                                        'appData>/userData/CurrencyFormat'
+                                                                    ],
+                                                                    formatter: '.formatDecimales'
+                                                                }"
+                                                                class="flatCellInput"
+                                                                change=".onRowInputChange"
                                                                 visible="{= ${corrientesModel>__isCustom} === true
                                                                     &amp;&amp; ${corrientesModel>__isHeader} !== true
                                                                     &amp;&amp; ${corrientesModel>__isEditable} !== true }"
                                                             />
                                                             <!--    -->
                                                             <!--   NMES en la fila editable. -->
-                                                            <!--    se reemplaza el binding por formatter de FINI/FFIN por una binding directa sobre NMES: asi el Input es realmente editable (un binding con solo formatter es one-way y no propaga lo escrito al modelo). La sincronizacion automatica con las fechas se mantiene gracias a _recalcNMESFromRange (BaseController.js:7740) que ya actualiza NMES en cada onFiniDatePickerChange / onFfinDatePickerChange; el usuario puede luego sobreescribir el valor calculado tecleando manualmente y el change handler onRowInputChange propaga la edicion al backend   -->
-                                                            <Input
-                                                                value="{corrientesModel>NMES}"
-                                                                editable="true"
-                                                                change=".onRowInputChange"
-                                                                class="flatCellInput"
+                                                            <!--     <Input> -> <vn:DecimalesInput> en la fila main-editable del desglose para que NMES use el formatter de moneda y no muestre "12,00000" (Nmes es Decimal[5,2]).   -->
+                                                            <vn:DecimalesInput
                                                                 width="100%"
+                                                                decimalNumbers="{dashboardModel>/decimales}"
                                                                 textAlign="Center"
+                                                                editable="true"
+                                                                value="{
+                                                                    parts: [
+                                                                        'corrientesModel>NMES',
+                                                                        'dashboardModel>/decimales',
+                                                                        'appData>/userData/CurrencyFormat'
+                                                                    ],
+                                                                    formatter: '.formatDecimales'
+                                                                }"
+                                                                class="flatCellInput"
+                                                                change=".onRowInputChange"
                                                                 visible="{= ${corrientesModel>__isEditable} === true }"
                                                             />
                                                             <!--    -->
@@ -2083,35 +2164,37 @@
                                                                         ],
                                                                         formatter: '.formatDecimales'
                                                                     }"
-                                                                    class="flatCellInput"
+                                                                    class="{= ${corrientesModel>PenPlan} !== 0 ? 'flatCellInput penPlanNegative' : 'flatCellInput' }"
                                                                     change=".onRowInputChange"
                                                                 />
                                                             </HBox>
-                                                            <Input
-                                                                value="{corrientesModel>PenPlan}"
-                                                                editable="false"
-                                                                class="flatCellInput borderRightPend"
-                                                                width="100%"
-                                                                textAlign="Center"
-                                                                visible="{= ${corrientesModel>__isHeader} === true }"
-                                                            />
-                                                            <Input
-                                                                value="{corrientesModel>PenPlan}"
-                                                                editable="false"
-                                                                class="flatCellInput borderRightPend"
-                                                                width="100%"
-                                                                textAlign="Center"
-                                                                visible="{= ${corrientesModel>__isSinProveedor} === true }"
-                                                            />
-                                                            <Input
-                                                                value="{corrientesModel>PenPlan}"
-                                                                class="sapUiSizeCompact borderRightPend"
-                                                                editable="false"
-                                                                width="100%"
-                                                                textAlign="Center"
-                                                                visible="{= ${corrientesModel>__isEditable} === true }"
-                                                            />
-                                                        </VBox>
+                                                             <Input
+                                                                 value="{corrientesModel>PenPlan}"
+                                                                 editable="false"
+                                                                 class="{= ${corrientesModel>PenPlan} !== 0 ? 'flatCellInput borderRightPend penPlanNegative' : 'flatCellInput borderRightPend' }"
+                                                                 width="100%"
+                                                                 textAlign="Center"
+                                                                 visible="{= ${corrientesModel>__isHeader} === true }"
+                                                             />
+                                                             <Input
+                                                                 value="{corrientesModel>PenPlan}"
+                                                                 editable="false"
+                                                                 class="{= ${corrientesModel>PenPlan} !== 0 ? 'flatCellInput borderRightPend penPlanNegative' : 'flatCellInput borderRightPend' }"
+                                                                 width="100%"
+                                                                 textAlign="Center"
+                                                                 visible="{= ${corrientesModel>__isSinProveedor} === true }"
+                                                             />
+                                                             <!--     change=onRowInputChange anyadido como safety-net: hoy el Input es editable=false (PenPlan no se edita) y change no se dispara, pero si en el futuro se hace editable la llamada al backend ya quedara cableada sin tocar la view.   -->
+                                                             <Input
+                                                                 value="{corrientesModel>PenPlan}"
+                                                                 class="{= ${corrientesModel>PenPlan} !== 0 ? 'sapUiSizeCompact borderRightPend penPlanNegative' : 'sapUiSizeCompact borderRightPend' }"
+                                                                 editable="false"
+                                                                 width="100%"
+                                                                 textAlign="Center"
+                                                                 change=".onRowInputChange"
+                                                                 visible="{= ${corrientesModel>__isEditable} === true }"
+                                                             />
+                                                         </VBox>
                                                     </t:template>
                                                 </t:Column>
                                                 <!-- COLUMNA 10: Months -->
@@ -2725,7 +2808,7 @@
                                                                     }"
                                                                     decimalNumbers="{dashboardModel>/decimales}"
                                                                     editable="false"
-                                                                    class="flatCellInput borderRightPend"
+                                                                    class="{= ${panelModel>PenPlan} !== 0 ? 'flatCellInput borderRightPend penPlanNegative' : 'flatCellInput borderRightPend' }"
                                                                     width="100%"
                                                                     textAlign="End"
                                                                 />

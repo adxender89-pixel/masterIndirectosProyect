@@ -1,7 +1,32 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx ui5 serve --open index.html)"
+      "Bash(npx ui5 serve --open index.html)",
+      "PowerShell($edgePaths = @\\(\"C:\\\\Program Files \\(x86\\)\\\\Microsoft\\\\Edge\\\\Application\\\\msedge.exe\", \"C:\\\\Program Files\\\\Microsoft\\\\Edge\\\\Application\\\\msedge.exe\"\\); $edge = $edgePaths | Where-Object { Test-Path $_ } | Select-Object -First 1; if \\($edge\\) { Write-Output \"Edge found at: $edge\" } else { Write-Output \"Edge not found, checking Chrome\"; $chromePaths = @\\(\"C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe\", \"C:\\\\Program Files \\(x86\\)\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe\"\\); $chrome = $chromePaths | Where-Object { Test-Path $_ } | Select-Object -First 1; if \\($chrome\\) { Write-Output \"Chrome found at: $chrome\" } else { Write-Output \"Neither Edge nor Chrome found\" } })",
+      "PowerShell(Write-Output \"USERPROFILE: $env:USERPROFILE\"; Write-Output \"Desktop via Shell:\"; [Environment]::GetFolderPath\\(\"Desktop\"\\); Write-Output \"---\"; Write-Output \"All Desktop folders:\"; Get-ChildItem -Path \"C:\\\\Users\\\\vasqu\" -Filter \"Desktop\" -Recurse -Directory -Depth 2 -ErrorAction SilentlyContinue | Select-Object FullName)",
+      "Read(//c/Users/vasqu/**)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\vasqu\\\\Desktop\" -Force -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -gt \\(Get-Date\\).AddHours\\(-2\\) } | Select-Object Name, LastWriteTime | Format-Table -AutoSize)",
+      "WebFetch(domain:careers.emeal.nttdata.com)",
+      "WebFetch(domain:careers.minsait.com)",
+      "WebFetch(domain:jobs.sap.com)",
+      "WebFetch(domain:careers.capgemini.com)",
+      "WebFetch(domain:careers.indragroup.com)",
+      "WebFetch(domain:www.inetum.com)",
+      "WebFetch(domain:emealjobs.nttdata.com)",
+      "WebFetch(domain:www.accenture.com)",
+      "WebFetch(domain:www.tecnoempleo.com)",
+      "WebFetch(domain:es.indeed.com)",
+      "WebFetch(domain:www.infojobs.net)",
+      "WebFetch(domain:es.linkedin.com)",
+      "WebFetch(domain:www.grupodigital.eu)",
+      "WebFetch(domain:ofertasempleo.grupodigital.eu)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 8081 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue })",
+      "Bash(curl -s -o /tmp/metadata_live.xml -w 'HTTP_CODE=%{http_code} SIZE=%{size_download}\\\\n' --max-time 15 'http://fsapl09l.ferrovial.int:8000/sap/opu/odata/SAP/ZFERR_MASTER_SRV/$metadata')",
+      "mcp__playwright__browser_handle_dialog",
+      "Bash(echo snapshot-initial.md >> .git/info/exclude && git status --short)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\vasqu\\projects\\masterIndirectosProyect\\.git\\info"
     ]
   }
 }

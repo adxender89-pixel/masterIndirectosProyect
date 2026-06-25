@@ -310,7 +310,12 @@ sap.ui.define(
        */
       onToggleSideBar: function () {
         const oSideBar = this.byId("sideActionToolbar");
-        oSideBar.setVisible(!oSideBar.getVisible());
+        //    al ocultar la barra lateral de acciones se cierran tambien todos los paneles laterales derechos (catalogo de recursos, historial, fichero, hipervinculo) porque dependen visualmente del propio sideActionToolbar (sus iconos viven en esa barra); si el toolbar desaparece y el panel sigue visible queda flotando huerfano sin manera de cerrarlo desde el icono original. Se reutiliza _hideOtherSidePanels(null) para que el comparador sId !== sKeepId acierte siempre y se oculten los cuatro paneles sin necesidad de iterar de nuevo la lista  
+        const bNewVisible = !oSideBar.getVisible();
+        oSideBar.setVisible(bNewVisible);
+        if (!bNewVisible) {
+          this._hideOtherSidePanels(null);
+        }
       },
 
       //     Se alterna la visibilidad del panel lateral de historial
@@ -322,6 +327,9 @@ sap.ui.define(
         const oHistoryBar = this.byId("historySideBar");
         if (!oHistoryBar) return;
         const bNuevaVis = !oHistoryBar.getVisible();
+        if (bNuevaVis) {
+          this._hideOtherSidePanels("historySideBar");
+        }
         oHistoryBar.setVisible(bNuevaVis);
         if (bNuevaVis) {
           this._refreshHistoryMaxDate();
@@ -815,17 +823,61 @@ sap.ui.define(
       //  
 
       /**
-       *   Se abre la gestión de adjuntos a nivel de obra (visualizar/adjuntar fichero).
+       *   Oculta el resto de paneles laterales derechos para que solo uno este
+       *   visible a la vez (todos se anclan al mismo borde derecho y se solaparian).
+       *   Recibe el id del panel que se quiere mantener abierto.
        */
-      onAdjuntarFichero: function () {
-        MessageToast.show(this.getTranslatedText("workInPregress"));
+      _hideOtherSidePanels: function (sKeepId) {
+        ["historySideBar", "catalogoRecursosSideBar", "ficheroSideBar", "hipervinculoSideBar"].forEach(function (sId) {
+          if (sId !== sKeepId) {
+            var oPanel = this.byId(sId);
+            if (oPanel) oPanel.setVisible(false);
+          }
+        }.bind(this));
       },
 
       /**
-       *   Se abre la gestión de hipervínculos a nivel de obra (visualizar/adjuntar enlace).
+       *   Se abre la gestión de adjuntos a nivel de obra (visualizar/adjuntar fichero)
+       *   como panel lateral derecho, replicando el patrón del catálogo de recursos.
+       *   Segunda pulsación: toggle (se cierra). El contenido es placeholder por ahora.
+       */
+      onAdjuntarFichero: function () {
+        var oSideBar = this.byId("ficheroSideBar");
+        if (!oSideBar) return;
+        if (oSideBar.getVisible()) {
+          oSideBar.setVisible(false);
+          return;
+        }
+        this._hideOtherSidePanels("ficheroSideBar");
+        oSideBar.setVisible(true);
+      },
+
+      //     Handler del botón X del panel lateral de fichero: oculta el panel.
+      onFicheroSideBarClose: function () {
+        var oSideBar = this.byId("ficheroSideBar");
+        if (oSideBar) oSideBar.setVisible(false);
+      },
+
+      /**
+       *   Se abre la gestión de hipervínculos a nivel de obra (visualizar/adjuntar enlace)
+       *   como panel lateral derecho, replicando el patrón del catálogo de recursos.
+       *   Segunda pulsación: toggle (se cierra). El contenido es placeholder por ahora.
        */
       onAdjuntarHipervinculo: function () {
-        MessageToast.show(this.getTranslatedText("workInPregress"));
+        var oSideBar = this.byId("hipervinculoSideBar");
+        if (!oSideBar) return;
+        if (oSideBar.getVisible()) {
+          oSideBar.setVisible(false);
+          return;
+        }
+        this._hideOtherSidePanels("hipervinculoSideBar");
+        oSideBar.setVisible(true);
+      },
+
+      //     Handler del botón X del panel lateral de hipervínculo: oculta el panel.
+      onHipervinculoSideBarClose: function () {
+        var oSideBar = this.byId("hipervinculoSideBar");
+        if (oSideBar) oSideBar.setVisible(false);
       },
 
        onAbrirCatalogoRecursos: async function () {
@@ -913,6 +965,7 @@ sap.ui.define(
           } else {
             var oSideBar = this.byId("catalogoRecursosSideBar");
             if (oSideBar) {
+              this._hideOtherSidePanels("catalogoRecursosSideBar");
               oSideBar.setVisible(true);
             }
           }
@@ -1422,13 +1475,14 @@ sap.ui.define(
         //   
         oAddModel.setProperty("/busy", true);
         try {
-          //    en alta solo se envian las 4 properties que rellena el usuario; en edit se clona el objeto completo (que ya trae Mandt, Version y demas campos no editables del Select) y se sobreescriben las 3 properties editables con lo que haya en el modelo del popup, para que backend reciba la fila completa y pueda identificar la clave  
+          //    en alta solo se envian las 4 properties que rellena el usuario; en edit se clona el objeto completo (que ya trae Mandt, Version y demas campos no editables del Select) y se sobreescriben las 3 properties editables con lo que haya en el modelo del popup, para que backend reciba la fila completa y pueda identificar la clave
           var oRowEnvio;
           if (bEdit) {
             oRowEnvio = Object.assign({}, oData);
             // limpieza de campos que solo sirven al popup
             delete oRowEnvio.mode;
             delete oRowEnvio.busy;
+            delete oRowEnvio.__originalIdRecurso; //     no enviar el snapshot al backend
           } else {
             oRowEnvio = {
               IdRecurso: oData.IdRecurso,
@@ -1437,8 +1491,37 @@ sap.ui.define(
               Prctr: oData.Prctr || ""
             };
           }
-          //   
-          await this._callMantCatalogoIndirSet([oRowEnvio], sEstatus);
+          //
+          //     
+          //   Si el usuario ha cambiado IdRecurso durante el edit (parte de la clave
+          //   primaria del catalogo: Mandt+Version+Prctr+IdRecurso), un Update plano
+          //   falla porque el backend busca el registro con la nueva clave y no existe.
+          //   Se transforma en una secuencia atomica desde el punto de vista de UX:
+          //     1) Insert (I) con la fila completa y el nuevo IdRecurso
+          //     2) Solo si el insert ha tenido exito, Delete (D) del registro antiguo
+          //   El orden Insert-primero es deliberado: si la inserción falla, el original
+          //   queda intacto y el usuario no pierde datos. Si el delete falla despues,
+          //   quedan dos registros (viejo+nuevo) pero el dato no se pierde.
+          var sOriginalId = (oData.__originalIdRecurso || "") + "";
+          var sCurrentId = (oData.IdRecurso || "") + "";
+          var bIdChanged = bEdit && sOriginalId !== "" && sOriginalId !== sCurrentId;
+          if (bIdChanged) {
+            //   Insert con la fila nueva (incluye los datos modificados Puesto/Fee).
+            await this._callMantCatalogoIndirSet([oRowEnvio], "I");
+            //   Delete del registro original: se construye un payload minimo con las
+            //   claves que el backend necesita para identificarlo (Mandt+Version+Prctr
+            //   estan ya en oData porque vienen del Select original; solo se
+            //   sobreescribe el IdRecurso con el valor antiguo).
+            var oRowDelete = Object.assign({}, oData);
+            delete oRowDelete.mode;
+            delete oRowDelete.busy;
+            delete oRowDelete.__originalIdRecurso;
+            oRowDelete.IdRecurso = sOriginalId;
+            await this._callMantCatalogoIndirSet([oRowDelete], "D");
+          } else {
+            await this._callMantCatalogoIndirSet([oRowEnvio], sEstatus);
+          }
+          //    
           //    en caso de exito se cierra el popup y se recarga el catalogo desde backend; asi la nueva fila se sincroniza sin tener que duplicar la logica de normalizacion (campos Puesto por idioma, etc.)  
           if (this._oAddRecursoCatalogoDialog) {
             this._oAddRecursoCatalogoDialog.close();
@@ -1491,6 +1574,14 @@ sap.ui.define(
         delete oRowClon.__isNew;
         oRowClon.mode = "edit";
         oRowClon.busy = false;
+        //     
+        //   Se snapshot del IdRecurso original ANTES de que el usuario edite el campo
+        //   en el popup. El IdRecurso forma parte de la clave (Mandt+Version+Prctr+IdRecurso)
+        //   y si el usuario lo cambia, el backend ya no puede aplicar un Update sobre el
+        //   registro original. onSaveAddRecursoCatalogo usa este snapshot para detectar
+        //   el cambio de clave y disparar Insert(nuevo)+Delete(viejo) en lugar de Update.
+        //    
+        oRowClon.__originalIdRecurso = oRecurso.IdRecurso || "";
         var oAddModel = new JSONModel(oRowClon);
         this.getView().setModel(oAddModel, "addRecursoModel");
         //   
@@ -1608,14 +1699,94 @@ sap.ui.define(
       onExportCatalogoRecursos: function () {
         MessageToast.show(this.getTranslatedText("workInPregress"));
       },
+      //    Importacion del catalogo de recursos (boton Importar del Dialog y del panel
+      //  lateral). El FileUploader entrega el fichero seleccionado; se lee como base64 y se
+      //  envia a /ImportCatalogoRecursosSet replicando el flujo de "directos". El master no se
+      //  serializa en el payload: el backend lo reconstruye a partir del header token (mismo
+      //  patron que el resto de llamadas de la app, p.ej. /SelectCatalogoIndirSet o
+      //  /MasterSearchSet), por eso NavClase se envia vacio.
       onCatalogoRecursosFileSelected: function (oEvent) {
-        MessageToast.show(this.getTranslatedText("workInPregress"));
+        var oFile = oEvent.getParameter("files") && oEvent.getParameter("files")[0];
         var oFU = oEvent.getSource();
+        if (!oFile) {
+          if (oFU && oFU.clear) oFU.clear();
+          return;
+        }
+
+        var that = this;
+        var oReader = new FileReader();
+        oReader.onload = function (oLoadEvent) {
+          var sResult = (oLoadEvent.target && oLoadEvent.target.result) || "";
+          //   readAsDataURL devuelve "data:<mime>;base64,<contenido>"; se aisla el base64.
+          var iComma = sResult.indexOf(",");
+          var sBase64 = iComma >= 0 ? sResult.substring(iComma + 1) : sResult;
+          that._uploadCatalogoRecursos({
+            FILE_NAME: oFile.name,
+            FILE_TYPE: oFile.type || "",
+            FILE_SIZE: String(oFile.size || 0),
+            FILE_CONTENTS: sBase64
+          });
+        };
+        oReader.onerror = function () {
+          MessageBox.error(that.getTranslatedText("catalogoRecursosFileReadError") || "No se ha podido leer el fichero seleccionado.");
+        };
+        oReader.readAsDataURL(oFile);
+
+        //   Reset del FileUploader para permitir reseleccionar el mismo fichero despues.
         if (oFU && oFU.clear) oFU.clear();
       },
 
       onCatalogoRecursosFileTypeMismatch: function () {
         MessageBox.error(this.getTranslatedText("catalogoRecursosFileTypeError") || "Tipo de fichero no soportado. Use xlsx, xls o csv.");
+      },
+
+      //    Envia el fichero al backend y refresca el catalogo. Estructura de payload tomada de
+      //  la entidad ImportCatalogoRecursos (NavUpload con el fichero; NavClase / NavRecursosCatalogo /
+      //  NavChanges / NavMensajes vacios, el backend los devuelve poblados en la respuesta).
+      _uploadCatalogoRecursos: async function (oUploadRow) {
+        try {
+          var oAppData = this.getGlobalModel("appData").getData();
+          var oResp = await this.post(
+            this.getGlobalModel("mainService"),
+            "/ImportCatalogoRecursosSet",
+            {
+              "NavUpload": [oUploadRow],
+              "NavClase": [],
+              "NavRecursosCatalogo": [],
+              "NavChanges": [],
+              "NavMensajes": []
+            },
+            {
+              headers: {
+                ambito: oAppData.userData.initialNode,
+                token: oAppData.EvToken || "",
+                lang: oAppData.userData.AplicationLangu
+              }
+            }
+          );
+
+          //   El modelo OData v2 normalmente desenvuelve "d"; se contempla por si llega crudo.
+          var oRespD = (oResp && oResp.d) ? oResp.d : oResp;
+          var aMensajes = (oRespD && oRespD.NavMensajes && oRespD.NavMensajes.results) || [];
+          var aMensajesError = aMensajes.filter(function (m) { return m.Tipo === "E"; });
+          if (aMensajesError.length > 0) {
+            this.createMessageDialog({
+              title: this.getTranslatedText("ERROR"),
+              textAccept: this.getTranslatedText("ACEPTAR"),
+              messages: aMensajesError.map(function (m) {
+                return { text: m.Mensaje || m.Message || m.text || "", type: "Error" };
+              })
+            });
+            return;
+          }
+
+          MessageToast.show(this.getTranslatedText("catalogoRecursosImportOk") || "Catálogo importado correctamente");
+          //   Se recarga el catalogo para reflejar los recursos importados.
+          await this._loadCatalogoRecursos();
+        } catch (error) {
+          console.error("[_uploadCatalogoRecursos]", error);
+          MessageBox.error(this.getTranslatedText("catalogoRecursosImportError") || "Error al importar el catálogo de recursos");
+        }
       },
 
     
@@ -2429,9 +2600,10 @@ sap.ui.define(
         // Se diferencia el modo de navegacion segun el entorno:
         // - En LOCAL se abre la app de Directos en una pestanya nueva (_blank) para no perder la
         //   sesion del dev server que el desarrollador esta usando para trabajar.
-        // - En DESA/TEST/PRO se sustituye la pagina actual (comportamiento estandar), porque las
-        //   dos apps conviven en el mismo servidor SAP y no hay sesion local que preservar.
-        if (sEntorno === "LOCAL") {
+        // -    en DESA y TEST se pasa tambien a abrir en pestanya nueva (_blank), antes se hacia window.location.href con lo que la pagina actual era reemplazada por la de Directos y se perdia el contexto de Indirectos: el usuario tenia que recargar para volver. En PRO el flujo entra normalmente desde Fiori Launchpad y la apertura se gestiona arriba, por lo que se mantiene window.location.href para no introducir regresiones (un cambio a _blank ahi podria provocar pestanyas duplicadas o bloqueo de popups segun la politica del navegador del usuario PRO)  
+        // - En PRO se sustituye la pagina actual (comportamiento estandar) porque las dos apps
+        //   conviven en el mismo servidor SAP y no hay sesion local que preservar.
+        if (sEntorno === "LOCAL" || sEntorno === "DESA" || sEntorno === "TEST") {
           window.open(sUrlDirectos, "_blank");
         } else {
           window.location.href = sUrlDirectos;
@@ -2566,15 +2738,23 @@ sap.ui.define(
           };
 
           // Se realiza la llamada al servicio de guardado
-          await this.post(
+          var oSaveResponse = await this.post(
             this.getGlobalModel("mainService"),
             "/GuardarIndirectosSet",
             oPayload,
             oParams
           );
 
-          // Se muestra un mensaje de éxito al usuario
-          MessageToast.show(this.getTranslatedText("DATOS_GUARDADOS_CORRECTAMENTE") || "Datos guardados correctamente");
+          // Se muestran los mensajes devueltos por el backend en el MessagePopover.
+          // Si NavMensajes viene vacío se genera un mensaje de éxito genérico.
+          var oSaveResp = (oSaveResponse && oSaveResponse.d) ? oSaveResponse.d : oSaveResponse;
+          var aMensajesResp = (oSaveResp && oSaveResp.NavMensajes && oSaveResp.NavMensajes.results) || [];
+          if (aMensajesResp.length > 0) {
+            this.showMessageInMessageView(aMensajesResp, true);
+          } else {
+            var sOkMsg = this.getTranslatedText("DATOS_GUARDADOS_CORRECTAMENTE") || "Datos guardados correctamente";
+            this.showMessageInMessageView([{ Tipo: "S", Mensaje: sOkMsg }], true);
+          }
   // (INICIO)
           //   Tras un guardado definitivo correcto se limpia el flag _hasPendingChanges
           //   del controller de la vista detalle activa: ya no hay cambios pendientes en
@@ -2590,7 +2770,8 @@ sap.ui.define(
 
         } catch (error) {
           // Se captura y muestra cualquier error que ocurra durante el proceso
-          MessageBox.error(this.getTranslatedText("ERROR_AL_GUARDAR") || "Error al guardar los datos: " + error.message);
+          var sErrMsg = this.getTranslatedText("ERROR_AL_GUARDAR") || ("Error al guardar los datos: " + (error && error.message));
+          this.showMessageInMessageView([{ Tipo: "E", Mensaje: sErrMsg }], true);
           console.error("[onSave] Error al guardar:", error);
         }
       },

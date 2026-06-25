@@ -107,8 +107,7 @@ sap.ui.define([
             }.bind(this);
             $(window).on("resize", this._boundResizeHandler);
 
-            this._boundBrowserClose = this.onBrowserClose.bind(this);
-            window.addEventListener("beforeunload", this._boundBrowserClose);
+            this._setupBrowserCloseHandler();
         },
 
         /**
@@ -139,6 +138,9 @@ sap.ui.define([
             
             // Calcular filas dinámicas
             this._calculateDynamicRows();
+
+            // Menú contextual con clic derecho sobre filas
+            this._attachContextMenuToTable("TreeTableInmovilizados");
         },
 
         /**
@@ -1198,50 +1200,19 @@ sap.ui.define([
                 return;
             }
             
-            // Validación 2: No se puede seleccionar la primera línea (OEO con PhPspnr = "D")
-            if (sPhPspnr === "D") {
-                this.createMessageDialog({
-                    title: this.getTranslatedText("ERROR"),
-                    textAccept: this.getTranslatedText("ACEPTAR"),
-                    messages: [{
-                        text: this.getTranslatedText("ERROR_NO_ANADIR_OEO"),
-                        type: "Error"
-                    }]
-                });
-                return;
-            }
-            
+            //    se delegan al backend las validaciones de fila OEO ("D"), de operacion de nivel 3 y de operacion con datos ejecutados (AmoEje > 0 y sin hijos). El servicio rechaza esas combinaciones con su propio mensaje y duplicarlas en cliente generaba mantenimiento adicional cada vez que cambiaba la regla de negocio. Se mantiene en local unicamente el bloqueo por desgloses preexistentes porque deriva del estado del modelo cargado y permite ahorrar un viaje innecesario al backend  
+
             // Determinar el nivel de la operación basado en PhPspnr
             var iLevel = this._getOperationLevel(sPhPspnr);
-            
-            // Validación 3: No se puede seleccionar una operación de nivel 3 o desglose
-            if (iLevel === 3) {
-                this.createMessageDialog({
-                    title: this.getTranslatedText("ERROR"),
-                    textAccept: this.getTranslatedText("ACEPTAR"),
-                    messages: [{
-                        text: this.getTranslatedText("ERROR_NO_ANADIR_NIVEL3"),
-                        type: "Error"
-                    }]
-                });
-                return;
-            }
-            
+
             // Si es nivel 1 (capítulo): Abrir popup con catálogo de operaciones
             if (iLevel === 1) {
                 this._openOperationsCatalog(oSelectedRow, oContext);
                 return;
             }
-            
+
             // Si es nivel 2 (operación)
             if (iLevel === 2) {
-                // Obtener todos los elementos del modelo para determinar si la fila tiene hijos reales.
-                // Los hijos de una fila nivel 2 son los elementos cuyo ParentPath coincide con el PhPspnr de la fila.
-                var aInmovilizadosData = oModel.getData() || [];
-                var bTieneHijos = aInmovilizadosData.some(function (oItem) {
-                    return oItem.ParentPath === oSelectedRow.PhPspnr;
-                });
-
                 // Validación 4: No se puede seleccionar una operación de nivel 2 con desgloses (hijos)
                 if (oSelectedRow.children && oSelectedRow.children.length > 0) {
                     this.createMessageDialog({
@@ -1254,21 +1225,7 @@ sap.ui.define([
                     });
                     return;
                 }
-                
-                // Validación 5: No se puede seleccionar una operación de nivel 2 con datos ejecutados y sin hijos
-                var fAmoEje = parseFloat(oSelectedRow.AmoEje) || 0;
-                if (fAmoEje > 0 && !bTieneHijos) {
-                    this.createMessageDialog({
-                        title: this.getTranslatedText("ERROR"),
-                        textAccept: this.getTranslatedText("ACEPTAR"),
-                        messages: [{
-                            text: this.getTranslatedText("ERROR_NO_ANADIR_CON_EJECUTADO"),
-                            type: "Error"
-                        }]
-                    });
-                    return;
-                }
-                
+
                 // Crear línea vacía de nivel 3
                 this._createLevel3Row(oSelectedRow, oContext);
             }
@@ -2353,22 +2310,12 @@ sap.ui.define([
          * que onInit lanzaba "Cannot read properties of undefined (reading 'bind')". Se replica
          * el comportamiento de las otras pestanas, comprobando hasUnsavedChanges de forma segura.
          */
-        onBrowserClose: function (oEvent) {
-            if (typeof this.hasUnsavedChanges === "function" && this.hasUnsavedChanges()) {
-                oEvent.preventDefault();
-                oEvent.returnValue = "";
-                return "";
-            }
-        },
 
         /**
          * Limpia los event listeners al destruir el controlador
          */
         onExit: function () {
-
-            if (this._boundBrowserClose) {
-                window.removeEventListener("beforeunload", this._boundBrowserClose);
-            }
+            this._teardownBrowserCloseHandler();
             if (this._boundResizeHandler) {
                 $(window).off("resize", this._boundResizeHandler);
             }

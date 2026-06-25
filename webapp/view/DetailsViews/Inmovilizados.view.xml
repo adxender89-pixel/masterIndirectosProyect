@@ -1,4 +1,4 @@
-<mvc:View controllerName="zindirect_costs.controller.DetailsControllers.Inmovilizados" xmlns:mvc="sap.ui.core.mvc" xmlns:core="sap.ui.core" displayBlock="true" height="100%" xmlns="sap.m" xmlns:t="sap.ui.table" xmlns:uxap="sap.uxap" xmlns:vn="zindirect_costs.control">
+﻿<mvc:View controllerName="zindirect_costs.controller.DetailsControllers.Inmovilizados" xmlns:mvc="sap.ui.core.mvc" xmlns:core="sap.ui.core" displayBlock="true" height="100%" xmlns="sap.m" xmlns:t="sap.ui.table" xmlns:uxap="sap.uxap" xmlns:vn="zindirect_costs.control">
     <uxap:ObjectPageLayout id="objectPageInmovilizados" showHeaderContent="true" toggleHeaderOnTitleClick="true" alwaysShowContentHeader="false" headerContentPinnable="true" preserveHeaderStateOnScroll="true" height="100%">
         <uxap:headerTitle>
             <uxap:ObjectPageDynamicHeaderTitle>
@@ -62,9 +62,9 @@
                                             <Label text="{i18n>reales}" class="sapUiSmallMarginBegin" />
                                             <Label text="{path: 'dashboardModel>/NavMasterLt/0/Freal', type: 'sap.ui.model.type.Date', formatOptions: {pattern: 'dd/MM/yyyy'}}" />
                                             <Label text="{i18n>OEO}" class="sapUiMediumMarginBegin" />
-                                            <Label text="{path: 'dashboardModel>/NavMasterLt/0/Oeo', type: 'sap.ui.model.type.Float', formatOptions: {decimals: 2, groupingEnabled: true}}" class="sapUiMediumMarginEnd" />
-                                            <CheckBox id="checkboxInversion" text="Inversión" selected="true" select="onFilterTipoIndChange" />
-                                            <CheckBox id="checkboxAmortizacion" text="Amortización" selected="true" select="onFilterTipoIndChange" />
+                                            <Label text="{parts: ['dashboardModel>/NavMasterLt/0/Oeo', 'dashboardModel>/decimales', 'appData>/userData/CurrencyFormat'], formatter: '.formatDecimales'}" class="sapUiMediumMarginEnd" />
+                                            <CheckBox id="checkboxInversion" text="{i18n>inversion}" selected="true" select="onFilterTipoIndChange" />
+                                            <CheckBox id="checkboxAmortizacion" text="{i18n>amortizacion}" selected="true" select="onFilterTipoIndChange" />
                                             <ToolbarSpacer />
                                             <CheckBox id="idEjecutadoCheckBox2" text="{i18n>cbEjecutado}" class="alignTextCheckBox" select="onEjecutadoCheckBoxSelect" />
                                             <CheckBox id="idAjustesCheckBox" text="{i18n>cbAjustes}" class="alignTextCheckBox" select="onAjustesCheckBox" />
@@ -431,7 +431,7 @@
                                                             editable="{= ${inmovilizadosModel>isNew} === false &amp;&amp; ${modeloBloqueo>/isBlocked} === true }"
                                                             enabled="{= ${inmovilizadosModel>__isAgrupadorTotal} !== true }"
                                                             items="{path: 'inmovilizadosModel>repartoItems', templateShareable: false}">
-                                                            <core:Item key="{inmovilizadosModel>key}" text="{inmovilizadosModel>text}" />
+                                                            <core:Item key="{inmovilizadosModel>key}" text="{path: 'inmovilizadosModel>key', formatter: '.formatRepartoTipo'}" />
                                                         </Select>
                                                         <Button
                                                             icon="sap-icon://calendar"
@@ -455,7 +455,7 @@
                                                         <Select selectedKey="{inmovilizadosModel>TIPO}" width="auto" class="flatCellInput"
                                                             enabled="{= ${modeloBloqueo>/isBlocked} === true }"
                                                             items="{path: 'inmovilizadosModel>repartoItems', templateShareable: false}">
-                                                            <core:Item key="{inmovilizadosModel>key}" text="{inmovilizadosModel>text}" />
+                                                            <core:Item key="{inmovilizadosModel>key}" text="{path: 'inmovilizadosModel>key', formatter: '.formatRepartoTipo'}" />
                                                         </Select>
                                                         <Button
                                                             icon="sap-icon://calendar"
@@ -496,7 +496,7 @@
                                                         <Button icon="sap-icon://filter" press="filterTableRow" class="bottomFilter" width="0.9rem" visible="{= ${cabecera} === true}"><customData><core:CustomData key="filterProp" value="PenPlan" /></customData></Button>
                                                         <vn:DecimalesInput width="4.2rem" decimalNumbers="{dashboardModel>/decimales}" textAlign="Center" editable="false"
                                                             value="{parts: ['inmovilizadosModel>PenPlan','dashboardModel>/decimales','appData>/userData/CurrencyFormat'], formatter: '.formatDecimales'}"
-                                                            class="flatCellInput" />
+                                                            class="{= ${inmovilizadosModel>PenPlan} !== 0 ? 'flatCellInput penPlanNegative' : 'flatCellInput' }" />
                                                     </HBox>
                                                     <!-- Fila editable desglose: PENPLAN no editable, resaltado si != 0 -->
                                                     <vn:DecimalesInput width="100%" decimalNumbers="{dashboardModel>/decimales}" textAlign="Center" editable="false"

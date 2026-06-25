@@ -1,4 +1,4 @@
-<mvc:View
+﻿<mvc:View
     controllerName="zindirect_costs.controller.DetailsControllers.Anticipados"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns:core="sap.ui.core"
@@ -108,9 +108,9 @@
                                             <Label text="{i18n>reales}" class="sapUiSmallMarginBegin" />
                                             <Label text="{path: 'dashboardModel>/NavMasterLt/0/Freal', type: 'sap.ui.model.type.Date', formatOptions: {pattern: 'dd/MM/yyyy'}}" />
                                             <Label text="{i18n>OEO}" class="sapUiMediumMarginBegin" />
-                                            <Label text="{path: 'dashboardModel>/NavMasterLt/0/Oeo', type: 'sap.ui.model.type.Float', formatOptions: {decimals: 2, groupingEnabled: true}}" class="sapUiMediumMarginEnd" />
-                                            <CheckBox id="checkboxInversion" text="Inversión" selected="true" select="onFilterTipoIndChange" />
-                                            <CheckBox id="checkboxAmortizacion" text="Amortización" selected="true" select="onFilterTipoIndChange" />
+                                            <Label text="{parts: ['dashboardModel>/NavMasterLt/0/Oeo', 'dashboardModel>/decimales', 'appData>/userData/CurrencyFormat'], formatter: '.formatDecimales'}" class="sapUiMediumMarginEnd" />
+                                            <CheckBox id="checkboxInversion" text="{i18n>inversion}" selected="true" select="onFilterTipoIndChange" />
+                                            <CheckBox id="checkboxAmortizacion" text="{i18n>amortizacion}" selected="true" select="onFilterTipoIndChange" />
                                             <ToolbarSpacer />
                                             <CheckBox id="idEjecutadoCheckBox2" text="{i18n>cbEjecutado}" class="alignTextCheckBox" select="onEjecutadoCheckBoxSelect" />
                                             <CheckBox id="idAjustesCheckBox" text="{i18n>cbAjustes}" class="alignTextCheckBox" select="onAjustesCheckBox" />
@@ -540,7 +540,7 @@
                                                             enabled="{= ${anticipadosModel>__isAgrupadorTotal} !== true }"
                                                             items="{path: 'anticipadosModel>repartoItems', templateShareable: false}"
                                                         >
-                                                            <core:Item key="{anticipadosModel>key}" text="{anticipadosModel>text}" />
+                                                            <core:Item key="{anticipadosModel>key}" text="{path: 'anticipadosModel>key', formatter: '.formatRepartoTipo'}" />
                                                         </Select>
                                                         <Button
                                                             icon="sap-icon://calendar"
@@ -567,7 +567,7 @@
                                                         enabled="{= ${modeloBloqueo>/isBlocked} === true }"
                                                         visible="{= ${anticipadosModel>__isEditable} === true }"
                                                     >
-                                                        <core:Item key="MAN" text="Manual" />
+                                                        <core:Item key="MAN" text="{i18n>tipoManual}" />
                                                     </Select>
                                                     <!-- Fila "Resto de proveedores": vacío -->
                                                     <Input value="" editable="false" width="100%" textAlign="Center" class="flatCellInput placeholderLike"
@@ -601,7 +601,7 @@
                                                         </Button>
                                                         <vn:DecimalesInput width="4.2rem" decimalNumbers="{dashboardModel>/decimales}" textAlign="Center" editable="false"
                                                             value="{parts: ['anticipadosModel>PenPlan','dashboardModel>/decimales','appData>/userData/CurrencyFormat'], formatter: '.formatDecimales'}"
-                                                            class="flatCellInput" />
+                                                            class="{= ${anticipadosModel>PenPlan} !== 0 ? 'flatCellInput penPlanNegative' : 'flatCellInput' }" />
                                                     </HBox>
                                                     <!-- Fila editable desglose: PENPLAN no editable, resaltado si != 0 -->
                                                     <vn:DecimalesInput width="100%" decimalNumbers="{dashboardModel>/decimales}" textAlign="Center" editable="false"

@@ -25,12 +25,14 @@
                     width="100%"
                     class="sapUiTinyMarginBottom"
                 />
-                <!--   Opción 3: se exporta el catálogo del capítulo de Corrientes -->
+                <!--   Opción 3: se exporta el catálogo del capítulo de Corrientes.
+                       Sólo aplica en Corrientes, por lo que se oculta en el resto de capítulos -->
                 <Button
                     text="{i18n>exportOptionCatalogoCapitulo}"
                     icon="sap-icon://product"
                     press="onExportarCatalogoCapitulo"
                     width="100%"
+                    visible="{= ${ui>/activeTab} === 'corrientes' }"
                 />
             </VBox>
         </content>

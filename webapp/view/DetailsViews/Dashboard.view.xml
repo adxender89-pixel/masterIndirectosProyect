@@ -1,4 +1,4 @@
-<mvc:View controllerName="zindirect_costs.controller.DetailsControllers.Dashboard"
+﻿<mvc:View controllerName="zindirect_costs.controller.DetailsControllers.Dashboard"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
     xmlns:t="sap.ui.table" height="100%"

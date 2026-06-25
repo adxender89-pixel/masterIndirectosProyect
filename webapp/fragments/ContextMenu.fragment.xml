@@ -1,0 +1,11 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+    <Menu itemSelected="onContextMenuItemSelected">
+        <items>
+            <MenuItem key="addOperation"  icon="sap-icon://add"         text="{i18n>ctxMenuAddOperation}" />
+            <MenuItem key="addDesglose"   icon="sap-icon://detail-view" text="{i18n>ctxMenuAddDesglose}" />
+            <MenuItem key="delete"        icon="sap-icon://delete"       text="{i18n>ctxMenuDelete}" />
+            <MenuItem key="upload"        icon="sap-icon://upload"       text="{i18n>ctxMenuUpload}" />
+            <MenuItem key="distribute"    icon="sap-icon://share-2"      text="{i18n>ctxMenuDistribute}" />
+        </items>
+    </Menu>
+</core:FragmentDefinition>

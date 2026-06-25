@@ -1,4 +1,4 @@
-<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core" xmlns:u="sap.ui.unified">
     <!--     Se monta el "Catalogo de recursos" como panel lateral
          derecho, replicando el patron del Historico de modificaciones
          (HistorialModificaciones.fragment.xml). El popup Dialog
@@ -82,6 +82,21 @@
                     type="Transparent"
                     visible="{= ${catalogoRecursosModel>/activeKey} === 'obra' }"
                     press="onDeleteRecursoCatalogo"
+                />
+                <!--   Boton Importar (mismo flujo que el del Dialog): sube un Excel/CSV y lo
+                       envia a ImportCatalogoRecursosSet. Solo visible en la pestaña Obra. -->
+                <u:FileUploader
+                    id="sbCatalogoRecursosFileUploader"
+                    buttonOnly="true"
+                    buttonText="{i18n>catalogoRecursosImport}"
+                    tooltip="{i18n>catalogoRecursosImport}"
+                    style="Transparent"
+                    fileType="xlsx,xls,csv"
+                    sameFilenameAllowed="true"
+                    maximumFileSize="10"
+                    visible="{= ${catalogoRecursosModel>/activeKey} === 'obra' }"
+                    change="onCatalogoRecursosFileSelected"
+                    typeMissmatch="onCatalogoRecursosFileTypeMismatch"
                 />
             </Toolbar>
 
